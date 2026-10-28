@@ -132,6 +132,7 @@ code { font-size: 0.85em; }
   font-weight: 700; color: #fff; background: var(--accent);
 }
 .tile-core { background: #5b6170; }
+.tile-inventory { background: #2f7d6e; }
 .tile-name { font-weight: 600; }
 .tile-desc { font-size: 0.85rem; }
 
@@ -339,3 +340,10 @@ td input { margin-top: 0; }
 /* Demo mode banner (see DemoApp.tsx) */
 .demo-banner { display: flex; gap: 1rem; align-items: center; justify-content: center; padding: 0.4rem 1rem; background: #fff3cd; color: #5c4400; font-size: 0.85rem; border-bottom: 1px solid #e6d08a; }
 .demo-banner select { margin-left: 0.25rem; }
+
+/* Inventory demo screens */
+.st-submitted { background: #fdf3e1; border-color: #f2dcae; color: #8a5a00; }
+.st-approved { background: #e7eefe; border-color: #c4d4fb; color: #2a4fa0; }
+.st-issued { background: #e3f5ea; border-color: #b9e3c8; color: #1f6b3d; }
+.st-rejected, .st-cancelled { color: var(--muted); }
+.narrow-select { width: auto; margin-top: 0; }

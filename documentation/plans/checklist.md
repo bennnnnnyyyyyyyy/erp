@@ -73,8 +73,11 @@ Template for further blocks; update them in the same change as the work:
 - [x] Shell, sign-in, org picker, password set/reset, Home, list view, modal
 - [x] Settings: General, Users, Apps, Audit log screens (carried over)
 - [x] Demo mode on sample data: `npm run dev:demo -w apps/web`, role switcher, working Users/Apps/General/Audit screens
-- [ ] Manual review of the Home and Settings pages in the demo; list fixes
-- [ ] Home page: replace the CRM-era wording and the "switch on" notice logic (it does not clear when Inventory is on)
+- [x] Demo of the first slice on sample data: stock, requests, approve/reject, issue (blocked without approval), ledger, history
+- [ ] Manual review of Home, Settings and the inventory demo in a browser; list fixes
+- [ ] Split demo code out of normal builds before any deploy
+- [ ] Remove leftover CRM-era CSS from `styles.css` (record page, pills, board)
+- [ ] Home page: the "switch on" notice only checks for a business app tile, so it can stay up when a module is on but has no app yet
 - [ ] Arabic and English strings (no hard-coded text) and RTL layout for the shell and settings
 - [ ] Responsive check in a phone browser (web first, phone app later)
 - [ ] Inventory screens (see E)

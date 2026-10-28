@@ -4,6 +4,8 @@ import { AppsSettings } from './core/settings/AppsSettings';
 import { AuditLog } from './core/settings/AuditLog';
 import { GeneralSettings } from './core/settings/GeneralSettings';
 import { UsersSettings } from './core/settings/UsersSettings';
+import { demoMode } from '../lib/demo';
+import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/InventoryDemo';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -31,8 +33,26 @@ export type AppDef = {
   pages: AppPage[];
 };
 
+// DEMO ONLY (npm run dev:demo): sample-data inventory screens. The real inventory app replaces this
+// entry when the inventory module is built from its plan; in normal builds it is not registered.
+const DEMO_INVENTORY_APP: AppDef = {
+  key: 'inventory',
+  module: 'inventory',
+  name: 'Inventory',
+  description: 'Stock, requests, approvals and the ledger (demo data)',
+  suite: 'Warehouse',
+  basePath: '/inventory',
+  pages: [
+    { path: '', label: 'Stock on hand', component: StockPage },
+    { path: '/requests', label: 'Stock requests', component: RequestsList },
+    { path: '/requests/new', label: 'New request', component: NewRequest, nav: false, parent: '/requests' },
+    { path: '/requests/:id', label: 'Request', component: RequestPage, nav: false, parent: '/requests' },
+    { path: '/ledger', label: 'Stock ledger', component: LedgerPage },
+  ],
+};
 
 export const APPS: AppDef[] = [
+  ...(demoMode ? [DEMO_INVENTORY_APP] : []),
   {
     key: 'settings',
     module: 'core',

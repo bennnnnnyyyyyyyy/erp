@@ -1,3 +1,4 @@
+import { handleInventory, ACTOR_NAMES } from './demoInventory';
 import { MODULES, type AuditEntry, type InviteResult, type Member, type ModuleStatus, type OrgSettings, type Role } from '@erp/shared';
 
 // Demo mode (`npm run dev:demo -w apps/web`): the web app runs on sample data held in memory, with no
@@ -35,7 +36,7 @@ const members: Member[] = [
   { id: 'm5', userId: 'u5', email: 'former.employee@demo.example', name: 'Omar Fathy', role: 'member', status: 'disabled', joinedAt: ago(1200), lastSignInAt: ago(400) },
 ];
 
-const enabledModules = new Set<string>(MODULES.filter((m) => m.core).map((m) => m.key));
+const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory']);
 
 let auditId = 0;
 const audit: (AuditEntry & { before: unknown; after: unknown })[] = [];
@@ -48,8 +49,8 @@ log(300, 'u2', 'member.invited', 'membership', 'm3', 'mona.storekeeper@demo.exam
 log(30, 'u2', 'member.invited', 'membership', 'm4', 'auditor@demo.example invited as viewer');
 log(8, 'u1', 'organization.updated', 'organization', org.id, 'Organization settings changed: defaultCurrency, timezone');
 
-/** The signed-in demo user acts as this member; the role is switched from the demo banner. */
-export const DEMO_USER_ID = 'u1';
+/** The demo user acts as this member; the role is switched from the demo banner (see DemoApp.tsx). */
+export const demoActor: { id: string; role: Role } = { id: 'u1', role: 'owner' };
 
 function body<T>(init: RequestInit): T {
   return (init.body ? JSON.parse(String(init.body)) : {}) as T;
@@ -59,6 +60,16 @@ export async function demoApi<T>(path: string, init: RequestInit = {}): Promise<
   await new Promise((r) => setTimeout(r, 120)); // so loading states are visible
   const method = (init.method ?? 'GET').toUpperCase();
   const [pathname] = path.split('?');
+  if ((pathname ?? '').startsWith('/v1/inventory')) {
+    const rest = (pathname ?? '').replace(/^\/v1\/inventory\/?/, '').split('/').filter(Boolean);
+    const actor = {
+      id: demoActor.id,
+      name: ACTOR_NAMES[demoActor.id] ?? demoActor.id,
+      role: demoActor.role,
+      log: (action: string, entityType: string, entityId: string, summary: string) => log(0, demoActor.id, action, entityType, entityId, summary),
+    };
+    return structuredClone(handleInventory(method, rest, body<Record<string, unknown>>(init), actor)) as T;
+  }
   const parts = (pathname ?? '').replace(/^\/v1\/core\/?/, '').split('/').filter(Boolean);
   const [area, id, action] = parts;
   const result = handle(method, area, id, action, init);
@@ -70,7 +81,7 @@ function handle(method: string, area: string | undefined, id: string | undefined
     if (method === 'PATCH') {
       const changes = body<Partial<OrgSettings>>(init);
       Object.assign(org, changes);
-      log(0, DEMO_USER_ID, 'organization.updated', 'organization', org.id, `Organization settings changed: ${Object.keys(changes).join(', ')}`);
+      log(0, demoActor.id, 'organization.updated', 'organization', org.id, `Organization settings changed: ${Object.keys(changes).join(', ')}`);
     }
     return org;
   }
@@ -83,7 +94,7 @@ function handle(method: string, area: string | undefined, id: string | undefined
     if (!mod) throw new DemoError(404, 'Unknown module', 'not_found');
     if (action === 'enable') enabledModules.add(id);
     else if (action === 'disable') enabledModules.delete(id);
-    log(0, DEMO_USER_ID, `module.${action}d`, 'module', id, `${mod.name} switched ${action === 'enable' ? 'on' : 'off'}`);
+    log(0, demoActor.id, `module.${action}d`, 'module', id, `${mod.name} switched ${action === 'enable' ? 'on' : 'off'}`);
     return { key: id, enabled: action === 'enable' };
   }
 
@@ -97,7 +108,7 @@ function handle(method: string, area: string | undefined, id: string | undefined
       if (members.some((m) => m.email.toLowerCase() === email.toLowerCase())) throw new DemoError(409, 'That person is already a member', 'conflict');
       const member: Member = { id: `m${members.length + 1}`, userId: `u${members.length + 1}`, email, name: null, role, status: 'invited', joinedAt: new Date().toISOString(), lastSignInAt: null };
       members.push(member);
-      log(0, DEMO_USER_ID, 'member.invited', 'membership', member.id, `${email} invited as ${role}`);
+      log(0, demoActor.id, 'member.invited', 'membership', member.id, `${email} invited as ${role}`);
       const result: InviteResult = { member, inviteLink: 'https://demo.invalid/accept-invite#demo' };
       return result;
     }
@@ -106,13 +117,13 @@ function handle(method: string, area: string | undefined, id: string | undefined
     if (action === 'invite-link') return { inviteLink: 'https://demo.invalid/accept-invite#demo' };
     if (action === 'disable') {
       member.status = 'disabled';
-      log(0, DEMO_USER_ID, 'member.disabled', 'membership', member.id, `${member.email} disabled`);
+      log(0, demoActor.id, 'member.disabled', 'membership', member.id, `${member.email} disabled`);
     } else if (action === 'enable') {
       member.status = member.lastSignInAt ? 'active' : 'invited';
-      log(0, DEMO_USER_ID, 'member.enabled', 'membership', member.id, `${member.email} enabled`);
+      log(0, demoActor.id, 'member.enabled', 'membership', member.id, `${member.email} enabled`);
     } else if (method === 'PATCH') {
       const { role } = body<{ role: Role }>(init);
-      log(0, DEMO_USER_ID, 'member.role_changed', 'membership', member.id, `${member.email}: ${member.role} to ${role}`);
+      log(0, demoActor.id, 'member.role_changed', 'membership', member.id, `${member.email}: ${member.role} to ${role}`);
       member.role = role;
     }
     return member;
