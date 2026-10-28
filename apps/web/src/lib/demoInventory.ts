@@ -33,6 +33,8 @@ export type DemoRequest = {
   decisionComment: string | null;
   decidedAt: string | null;
   issuedAt: string | null;
+  /** Set when the request was raised from a sales order. */
+  source: { type: 'sales_order'; id: string; number: string } | null;
 };
 export type LedgerMove = {
   id: number;
@@ -41,6 +43,8 @@ export type LedgerMove = {
   qty: number;
   kind: 'receipt' | 'issue';
   requestId: string | null;
+  /** Free-text origin for movements that are not a request, e.g. a purchase order number. */
+  ref: string | null;
   postedBy: string;
   postedAt: string;
 };
@@ -75,8 +79,8 @@ const bal = (itemId: string, warehouseId: string) => {
 
 const ledger: LedgerMove[] = [];
 let moveId = 0;
-function post(itemId: string, warehouseId: string, qty: number, kind: LedgerMove['kind'], requestId: string | null, postedBy: string, postedAt = new Date().toISOString()) {
-  ledger.unshift({ id: ++moveId, itemId, warehouseId, qty, kind, requestId, postedBy, postedAt });
+function post(itemId: string, warehouseId: string, qty: number, kind: LedgerMove["kind"], requestId: string | null, postedBy: string, postedAt = new Date().toISOString(), ref: string | null = null) {
+  ledger.unshift({ id: ++moveId, itemId, warehouseId, qty, kind, requestId, ref, postedBy, postedAt });
   bal(itemId, warehouseId).onHand += qty;
 }
 
@@ -88,11 +92,11 @@ for (const [itemId, qty1, qty2] of [['i1', 120, 40], ['i2', 60, 0], ['i3', 500, 
 
 const requests: DemoRequest[] = [];
 let requestSeq = 0;
-function makeRequest(requesterId: string, warehouseId: string, reason: string, lines: DemoRequest['lines'], createdAt = new Date().toISOString()): DemoRequest {
+function makeRequest(requesterId: string, warehouseId: string, reason: string, lines: DemoRequest['lines'], createdAt = new Date().toISOString(), source: DemoRequest['source'] = null): DemoRequest {
   const n = ++requestSeq;
   const r: DemoRequest = {
     id: `r${n}`, number: `OUT-${String(n).padStart(4, '0')}`, requesterId, requesterName: ACTOR_NAMES[requesterId] ?? requesterId,
-    warehouseId, reason, status: 'submitted', lines, createdAt, decidedBy: null, decisionComment: null, decidedAt: null, issuedAt: null,
+    warehouseId, reason, status: 'submitted', lines, createdAt, decidedBy: null, decisionComment: null, decidedAt: null, issuedAt: null, source,
   };
   requests.unshift(r);
   for (const l of lines) bal(l.itemId, warehouseId).reserved += l.qty;
@@ -132,6 +136,38 @@ function release(r: DemoRequest) {
   for (const l of r.lines) bal(l.itemId, r.warehouseId).reserved -= l.qty;
 }
 
+/** Submits a stock request and reserves the stock. Also used by sales orders ("request stock"). */
+export function createRequest(actor: Actor, warehouseId: string, reason: string, rawLines: { itemId: string; qty: number }[], source: DemoRequest['source'] = null): DemoRequest {
+  if (!canWrite(actor.role)) throw forbid();
+  const lines = rawLines.filter((l) => l.itemId && Number(l.qty) > 0).map((l) => ({ itemId: l.itemId, qty: Number(l.qty) }));
+  if (!warehouses.some((w) => w.id === warehouseId)) throw new DemoRuleError(400, 'Choose a warehouse', 'invalid_input');
+  if (lines.length === 0) throw new DemoRuleError(400, 'Add at least one item with a quantity', 'invalid_input');
+  // Reservation: the same item twice is summed, then checked against what is still available.
+  const wanted = new Map<string, number>();
+  for (const l of lines) wanted.set(l.itemId, (wanted.get(l.itemId) ?? 0) + l.qty);
+  for (const [itemId, qty] of wanted) {
+    const b = bal(itemId, warehouseId);
+    if (b.onHand - b.reserved < qty) {
+      throw new DemoRuleError(409, `Not enough stock available for ${itemName(itemId)}: ${b.onHand - b.reserved} available, ${qty} requested`, 'insufficient_available');
+    }
+  }
+  const r = makeRequest(actor.id, warehouseId, reason, lines, undefined, source);
+  actor.log('inventory.request.submitted', 'stock_request', r.id, `${r.number} submitted by ${actor.name}${source ? ` for ${source.number}` : ''}: ${lines.map((l) => `${l.qty} x ${itemName(l.itemId)}`).join(', ')}`);
+  return r;
+}
+
+/** Adds received goods to stock as a ledger receipt (purchasing). */
+export function receiveGoods(actor: Actor, warehouseId: string, lines: { itemId: string; qty: number }[], ref: string) {
+  if (!canWrite(actor.role)) throw forbid();
+  for (const l of lines) post(l.itemId, warehouseId, l.qty, 'receipt', null, actor.id, undefined, ref);
+}
+
+export function getRequest(id: string): DemoRequest | undefined {
+  return requests.find((x) => x.id === id);
+}
+
+export const catalog = { items: () => items, warehouses: () => warehouses, itemName };
+
 export function handleInventory(method: string, parts: string[], body: Record<string, unknown>, actor: Actor): unknown {
   const [area, id, action] = parts;
 
@@ -158,23 +194,7 @@ export function handleInventory(method: string, parts: string[], body: Record<st
 
   if (!id) {
     if (method === 'GET') return requests;
-    if (!canWrite(actor.role)) throw forbid();
-    const warehouseId = String(body.warehouseId ?? '');
-    const lines = ((body.lines as { itemId: string; qty: number }[] | undefined) ?? []).filter((l) => l.itemId && Number(l.qty) > 0).map((l) => ({ itemId: l.itemId, qty: Number(l.qty) }));
-    if (!warehouses.some((w) => w.id === warehouseId)) throw new DemoRuleError(400, 'Choose a warehouse', 'invalid_input');
-    if (lines.length === 0) throw new DemoRuleError(400, 'Add at least one item with a quantity', 'invalid_input');
-    // Reservation: the same item twice is summed, then checked against what is still available.
-    const wanted = new Map<string, number>();
-    for (const l of lines) wanted.set(l.itemId, (wanted.get(l.itemId) ?? 0) + l.qty);
-    for (const [itemId, qty] of wanted) {
-      const b = bal(itemId, warehouseId);
-      if (b.onHand - b.reserved < qty) {
-        throw new DemoRuleError(409, `Not enough stock available for ${itemName(itemId)}: ${b.onHand - b.reserved} available, ${qty} requested`, 'insufficient_available');
-      }
-    }
-    const r = makeRequest(actor.id, warehouseId, String(body.reason ?? '').trim(), lines);
-    actor.log('inventory.request.submitted', 'stock_request', r.id, `${r.number} submitted by ${actor.name}: ${lines.map((l) => `${l.qty} x ${itemName(l.itemId)}`).join(', ')}`);
-    return r;
+    return createRequest(actor, String(body.warehouseId ?? ''), String(body.reason ?? '').trim(), (body.lines as { itemId: string; qty: number }[] | undefined) ?? []);
   }
 
   const r = findRequest(id);

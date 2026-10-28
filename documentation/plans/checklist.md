@@ -117,7 +117,10 @@ Template for further blocks; update them in the same change as the work:
 - [ ] Hosting region for first customers
 
 ### I. Deployment and operations
-- [ ] Hosting for the web app; first deploy of the API
+- [x] Demo deployed to Cloudflare Pages: https://erp-demo-bas.pages.dev (sample data, public, manual updates)
+- [ ] Restrict the demo to named people (Cloudflare Access) or confirm public is acceptable
+- [ ] Connect the GitHub repo to Cloudflare Pages for automatic demo deploys
+- [ ] Hosting for the real web app; first deploy of the API
 - [ ] Staging and production separation
 - [ ] CI running typecheck, tests and SQL tests
 - [ ] Backups and restore check

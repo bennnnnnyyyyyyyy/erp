@@ -1,4 +1,5 @@
 import { handleInventory, ACTOR_NAMES } from './demoInventory';
+import { handleTrade } from './demoTrade';
 import { MODULES, type AuditEntry, type InviteResult, type Member, type ModuleStatus, type OrgSettings, type Role } from '@erp/shared';
 
 // Demo mode (`npm run dev:demo -w apps/web`): the web app runs on sample data held in memory, with no
@@ -36,7 +37,12 @@ const members: Member[] = [
   { id: 'm5', userId: 'u5', email: 'former.employee@demo.example', name: 'Omar Fathy', role: 'member', status: 'disabled', joinedAt: ago(1200), lastSignInAt: ago(400) },
 ];
 
-const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory']);
+// Purchasing and Sales exist only in the demo, to show where the product grows; they are not in the real module manifest yet.
+const DEMO_MODULES: Omit<ModuleStatus, 'enabled'>[] = [
+  { key: 'purchasing', name: 'Purchasing', description: 'Suppliers, purchase orders and receiving goods into stock (demo).', suite: 'Sales & Purchasing', core: false },
+  { key: 'sales', name: 'Sales', description: 'Customers and sales orders that raise stock requests (demo).', suite: 'Sales & Purchasing', core: false },
+];
+const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales']);
 
 let auditId = 0;
 const audit: (AuditEntry & { before: unknown; after: unknown })[] = [];
@@ -60,15 +66,18 @@ export async function demoApi<T>(path: string, init: RequestInit = {}): Promise<
   await new Promise((r) => setTimeout(r, 120)); // so loading states are visible
   const method = (init.method ?? 'GET').toUpperCase();
   const [pathname] = path.split('?');
-  if ((pathname ?? '').startsWith('/v1/inventory')) {
-    const rest = (pathname ?? '').replace(/^\/v1\/inventory\/?/, '').split('/').filter(Boolean);
+  const area0 = /^\/v1\/(inventory|purchasing|sales)(?:\/|$)/.exec(pathname ?? '')?.[1] as 'inventory' | 'purchasing' | 'sales' | undefined;
+  if (area0) {
+    const rest = (pathname ?? '').replace(/^\/v1\/[a-z]+\/?/, '').split('/').filter(Boolean);
     const actor = {
       id: demoActor.id,
       name: ACTOR_NAMES[demoActor.id] ?? demoActor.id,
       role: demoActor.role,
       log: (action: string, entityType: string, entityId: string, summary: string) => log(0, demoActor.id, action, entityType, entityId, summary),
     };
-    return structuredClone(handleInventory(method, rest, body<Record<string, unknown>>(init), actor)) as T;
+    const data = body<Record<string, unknown>>(init);
+    const result = area0 === 'inventory' ? handleInventory(method, rest, data, actor) : handleTrade(area0, method, rest, data, actor);
+    return structuredClone(result) as T;
   }
   const parts = (pathname ?? '').replace(/^\/v1\/core\/?/, '').split('/').filter(Boolean);
   const [area, id, action] = parts;
@@ -88,9 +97,9 @@ function handle(method: string, area: string | undefined, id: string | undefined
 
   if (area === 'modules') {
     if (!id) {
-      return MODULES.map<ModuleStatus>((m) => ({ key: m.key, name: m.name, description: m.description, suite: m.suite, core: m.core, enabled: enabledModules.has(m.key) }));
+      return [...MODULES, ...DEMO_MODULES].map<ModuleStatus>((m) => ({ key: m.key, name: m.name, description: m.description, suite: m.suite, core: m.core, enabled: enabledModules.has(m.key) }));
     }
-    const mod = MODULES.find((m) => m.key === id);
+    const mod = [...MODULES, ...DEMO_MODULES].find((m) => m.key === id);
     if (!mod) throw new DemoError(404, 'Unknown module', 'not_found');
     if (action === 'enable') enabledModules.add(id);
     else if (action === 'disable') enabledModules.delete(id);
