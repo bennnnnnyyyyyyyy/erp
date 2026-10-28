@@ -335,3 +335,7 @@ td input { margin-top: 0; }
   .search { width: auto; flex: 1; }
   .topbar-org { display: none; }
 }
+
+/* Demo mode banner (see DemoApp.tsx) */
+.demo-banner { display: flex; gap: 1rem; align-items: center; justify-content: center; padding: 0.4rem 1rem; background: #fff3cd; color: #5c4400; font-size: 0.85rem; border-bottom: 1px solid #e6d08a; }
+.demo-banner select { margin-left: 0.25rem; }

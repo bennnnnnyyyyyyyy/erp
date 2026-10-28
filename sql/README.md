@@ -9,6 +9,10 @@ against any Supabase project yet.** Log every run in
 |---|---|---|
 | `001_tenancy_core.sql` | organizations, memberships, org_modules, append-only audit_log, RLS | Carried over, not run |
 | `002_core_user_lookup.sql` | user lookup helper for invites | Carried over, not run |
+| `003_audit_chain_and_core_rpc.sql` | audit hash chain, `audit_verify`, `audit_append_admin`, `current_org_id`, `core_set_module`, `core_update_org` (ADR-0003) | Written, not run, untested |
 
-Planned next (see `documentation/plans/` once approved): JWT claims hook, audit v2 (same-transaction
-triggers, hash chain), then module files named `NNN_<key>_*.sql` with tables prefixed by module.
+Run order: 001, 002, 003. Run on a staging project first and record each run in the worklog.
+
+Planned next (see `documentation/plans/` once approved): SQL tests in `sql/tests/` (state machine,
+self-approval refusal, cross-organization isolation, audit chain), then module files named
+`NNN_<key>_*.sql` with tables prefixed by module.

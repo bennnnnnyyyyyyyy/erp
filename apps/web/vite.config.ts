@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(env.SUPABASE_PUBLISHABLE_KEY ?? ''),
       // Show "Continue with Google" only once the provider is set up in Supabase Auth.
       'import.meta.env.VITE_AUTH_GOOGLE_ENABLED': JSON.stringify(env.AUTH_GOOGLE_ENABLED ?? ''),
+      // Sample-data demo (npm run dev:demo): no API, database or sign-in. Off in every other mode.
+      'import.meta.env.VITE_DEMO_MODE': JSON.stringify(mode === 'demo' ? 'true' : ''),
     },
   };
 });

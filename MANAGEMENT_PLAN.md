@@ -19,7 +19,7 @@ We reviewed nine ERP systems used by small and mid-size businesses that hold sto
 | **Weak or missing change history.** Edara shows only deleted documents. We found no change log at Daftra or Wafeq. | Edara, Daftra, Wafeq | When stock goes missing, nobody can show who changed what. |
 | **Prices in dollars or hidden.** Only Wafeq shows Egyptian pound prices. Edara, Zoho and NetSuite want a quote. | Almost everyone | Egyptian customers cannot easily budget, and the exchange rate hurts them. |
 | **Warehouse features locked behind higher plans or paid add-ons.** | Wafeq (top plan), Zoho (premium tier), Odoo (add-ons) | A small business pays for a tier it does not otherwise need. |
-| **Weak mobile apps and Arabic.** Reviewers complain about Edara's mobile. Zoho's Arabic is not well tuned. We found no Egyptian-dialect voice at all. | Edara, Zoho, NetSuite | Warehouse staff work on phones, in Arabic. |
+| **Weak mobile apps and Arabic.** Reviewers complain about Edara's mobile. Zoho's Arabic is not well tuned. We found no Egyptian-dialect voice at all. | Edara, Zoho, NetSuite | Warehouse staff work on phones, in Arabic. We start with a web app that also works in a phone browser; a phone app comes later. |
 | **Heavy, expensive setup.** | Odoo, ERPNext, SAP, NetSuite | Implementation can cost thousands to over a hundred thousand dollars. A small business cannot afford it. |
 
 What is **not** a gap: approvals, audit logs and AI-with-approval already exist in several products, and Edara and Daftra already handle Egyptian e-invoicing. Being cheap is also not a gap: local prices are already low, around USD 35-70 a month for a small team.
@@ -35,7 +35,7 @@ A **warehouse-first ERP for Egyptian and Gulf SMEs**, with three promises:
 Plus, as the business position:
 
 - **Clear prices in Egyptian pounds.** Every warehouse feature is included. No hidden add-ons.
-- **Arabic first, and usable on a phone.**
+- **Arabic first. A web app now, with a phone app later;** WhatsApp approvals reach phones without an app.
 - **Quick to start.** A small warehouse should be set up in an afternoon without a consultant.
 
 ## 4. What we will build first
@@ -68,9 +68,9 @@ Because modules switch on per company, adding a wave does not mean rebuilding th
 | Step | What happens | How we know it worked |
 |---|---|---|
 | **0. Prove the demand** | Try the six competitors hands-on (a checklist is ready). Interview 8-10 Egyptian businesses that hold stock. | Customers say they would use WhatsApp or voice approvals, and say what they would pay. If they do not, we stop or change direction before spending on the build. |
-| **1. First version** | Item, request, approval, issue, audit log, in Arabic and English. | A manager completes the whole flow on a phone. We prove that stock cannot be moved without approval. |
+| **1. First version** | Item, request, approval, issue, audit log, in Arabic and English. | A manager completes the whole flow in the web app. We prove that stock cannot be moved without approval. |
 | **2. Pilot with a real customer** | WhatsApp approvals (if step 0 says yes), easy data import, receipts and transfers, batches and expiry dates. | A pilot customer is set up in one afternoon and uses it daily. |
-| **3. Differentiate and charge** | Tasks over WhatsApp, voice in Egyptian Arabic, billing in Egyptian pounds. | Voice reaches an agreed accuracy on Egyptian Arabic phrases. The public price list matches what is charged. |
+| **3. Differentiate and charge** | Tasks over WhatsApp, voice in Egyptian Arabic, billing in Egyptian pounds, and the phone app. | Voice reaches an agreed accuracy on Egyptian Arabic phrases. The public price list matches what is charged. |
 
 We are reusing the generic foundation of our existing internal ERP (sign-in, multi-company support, permissions). We are rewriting the parts that record changes, because the current approach could let a stock change exist without a record. This is a fix to make before we rely on the "audit log" promise.
 

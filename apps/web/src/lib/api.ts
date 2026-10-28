@@ -1,4 +1,5 @@
 import type { ApiResponse } from '@erp/shared';
+import { demoApi, demoMode } from './demo';
 import { supabase } from './supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
@@ -32,6 +33,7 @@ export function setActiveOrgId(orgId: string | null) {
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (demoMode) return demoApi<T>(path, init);
   const { data } = await supabase.auth.getSession();
   const headers = new Headers(init.headers);
   if (data.session) headers.set('Authorization', `Bearer ${data.session.access_token}`);
