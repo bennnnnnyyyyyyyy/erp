@@ -15,6 +15,12 @@ export function DemoApp() {
   const [role, setRole] = useState<Role>('owner');
   const [tick, setTick] = useState(0);
   const [modules, setModules] = useState<string[] | null>(null);
+  const [rtl, setRtl] = useState(false);
+  // Flips the whole layout to right-to-left. Screen text is still English: translations come later.
+  useEffect(() => {
+    document.documentElement.dir = rtl ? 'rtl' : 'ltr';
+    document.documentElement.lang = rtl ? 'ar' : 'en';
+  }, [rtl]);
   // Set before any screen loads, so every call is made as the person currently chosen.
   demoActor.id = ACTOR_BY_ROLE[role];
   demoActor.role = role;
@@ -41,7 +47,8 @@ export function DemoApp() {
   return (
     <SessionContext.Provider value={{ session, reload: () => setTick((t) => t + 1) }}>
       <div className="demo-banner" role="status">
-        <strong>Demo mode</strong>: sample data in memory, no database. Reload resets it.
+        <span className="demo-tag">DEMO</span>
+        <span>Sample data in memory, no database. Reload resets it.</span>
         <label>
           Acting as{' '}
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
@@ -52,6 +59,9 @@ export function DemoApp() {
             ))}
           </select>
         </label>
+        <button className="secondary" onClick={() => setRtl((v) => !v)} aria-pressed={rtl}>
+          {rtl ? 'LTR · English layout' : 'RTL · عربي layout'}
+        </button>
       </div>
       <Shell key={role} onSwitchOrg={() => undefined} onSignOut={() => undefined} />
     </SessionContext.Provider>

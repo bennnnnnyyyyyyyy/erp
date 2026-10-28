@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import type { AuditEntry } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -23,6 +23,26 @@ const STATUS_LABEL: Record<RequestStatus, string> = {
 
 function StatusPill({ status }: { status: RequestStatus }) {
   return <span className={`pill st-${status}`}>{STATUS_LABEL[status]}</span>;
+}
+
+// Submitted, approved, issued: where this request is on the way out of the warehouse.
+function Steps({ status }: { status: RequestStatus }) {
+  const order: RequestStatus[] = ['submitted', 'approved', 'issued'];
+  const ended = status === 'rejected' || status === 'cancelled';
+  const at = order.indexOf(status);
+  const label = ['Submitted', ended ? (status === 'rejected' ? 'Rejected' : 'Cancelled') : 'Approved', 'Issued'];
+  return (
+    <ol className="steps" aria-label="Request progress">
+      {label.map((text, i) => {
+        const cls = ended ? (i === 0 ? 'done' : i === 1 ? 'bad' : '') : i < at ? 'done' : i === at ? (status === 'issued' ? 'done' : 'current') : '';
+        return (
+          <li key={text} className={`step ${cls}`} data-n={i + 1}>
+            {text}
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 function useCatalog() {
@@ -83,6 +103,7 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
 export function StockPage() {
   const cat = useCatalog();
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
+  const requests = useLoad(() => api<DemoRequest[]>('/v1/inventory/requests'));
   const [warehouseId, setWarehouseId] = useState('all');
   const [adding, setAdding] = useState(false);
   const session = useSession();
@@ -95,19 +116,62 @@ export function StockPage() {
   });
 
   const columns: Column<StockLine>[] = [
-    { key: 'sku', label: 'SKU', value: (r) => r.sku },
-    { key: 'name', label: 'Item', value: (r) => r.name },
+    { key: 'sku', label: 'SKU', value: (r) => r.sku, render: (r) => <code>{r.sku}</code> },
+    { key: 'name', label: 'Item', value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
     { key: 'ar', label: 'Arabic name', value: (r) => r.nameAr, render: (r) => <span dir="rtl">{r.nameAr}</span> },
     { key: 'uom', label: 'Unit', value: (r) => r.uom },
+    {
+      key: 'level',
+      label: 'Stock level',
+      value: (r) => r.available,
+      render: (r) => {
+        const total = Math.max(r.onHand, 1);
+        const low = r.available / total < 0.2;
+        return (
+          <span className={low ? 'bar low' : 'bar'} title={`${r.available} available, ${r.reserved} reserved, ${r.onHand} on hand`}>
+            <i className="fill-avail" style={{ width: `${(r.available / total) * 100}%` }} />
+            <i className="fill-resv" style={{ width: `${(r.reserved / total) * 100}%` }} />
+          </span>
+        );
+      },
+    },
     { key: 'onHand', label: 'On hand', value: (r) => r.onHand, align: 'right' },
     { key: 'reserved', label: 'Reserved', value: (r) => r.reserved, align: 'right' },
     { key: 'available', label: 'Available', value: (r) => r.available, align: 'right', render: (r) => <strong>{r.available}</strong> },
   ];
 
+  const totalOnHand = rows.reduce((a, r) => a + r.onHand, 0);
+  const totalReserved = rows.reduce((a, r) => a + r.reserved, 0);
+  const waiting = (requests.data ?? []).filter((r) => r.status === 'submitted').length;
+
   return (
     <section className="page">
       <h1>Stock on hand</h1>
       <p className="muted">Reserved stock is promised to a request that is waiting for approval or not yet issued. Available = on hand minus reserved.</p>
+      {cat.ready && stock.data && (
+        <div className="stats">
+          <div className="stat" style={{ '--i': 0 } as CSSProperties}>
+            <div className="stat-label">Items</div>
+            <div className="stat-value">{rows.length}</div>
+            <div className="stat-note">in {warehouseId === 'all' ? `${cat.warehouses.data?.length ?? 0} warehouses` : cat.warehouseName(warehouseId)}</div>
+          </div>
+          <div className="stat" style={{ '--i': 1 } as CSSProperties}>
+            <div className="stat-label">Units on hand</div>
+            <div className="stat-value">{totalOnHand.toLocaleString('en-US')}</div>
+            <div className="stat-note">{(totalOnHand - totalReserved).toLocaleString('en-US')} available</div>
+          </div>
+          <div className="stat" style={{ '--i': 2 } as CSSProperties}>
+            <div className="stat-label">Reserved</div>
+            <div className="stat-value">{totalReserved.toLocaleString('en-US')}</div>
+            <div className="stat-note">held for open requests</div>
+          </div>
+          <Link to="/inventory/requests" className={waiting > 0 ? 'stat warn' : 'stat'} style={{ '--i': 3, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
+            <div className="stat-label">Waiting for approval</div>
+            <div className="stat-value">{waiting}</div>
+            <div className="stat-note">{waiting > 0 ? 'a manager needs to decide' : 'nothing pending'}</div>
+          </Link>
+        </div>
+      )}
       {cat.ready && stock.data ? (
         <ListView
           title="Stock on hand"
@@ -144,7 +208,7 @@ export function RequestsList() {
   const rows = (requests.data ?? []).filter((r) => filter === 'all' || r.status === 'submitted');
 
   const columns: Column<DemoRequest>[] = [
-    { key: 'number', label: 'Request', value: (r) => r.number, render: (r) => <Link to={`/inventory/requests/${r.id}`}>{r.number}</Link> },
+    { key: 'number', label: 'Request', value: (r) => r.number, render: (r) => <Link to={`/inventory/requests/${r.id}`}><code>{r.number}</code></Link> },
     { key: 'by', label: 'Requested by', value: (r) => r.requesterName },
     { key: 'wh', label: 'Warehouse', value: (r) => cat.warehouseName(r.warehouseId) },
     { key: 'items', label: 'Items', value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
@@ -291,9 +355,10 @@ export function RequestPage() {
     <section className="page">
       <Link to="/inventory/requests" className="back-link">← Stock requests</Link>
       <div className="page-head">
-        <h1>{r.number}</h1>
+        <h1 className="mono">{r.number}</h1>
         <StatusPill status={r.status} />
       </div>
+      <Steps status={r.status} />
       <p className="muted">
         Requested by {r.requesterName} on {formatDateTime(r.createdAt, session.org)} from {cat.warehouseName(r.warehouseId)}. Reason: {r.reason || 'none given'}.
         {r.decidedBy && <> Decision by {who(r.decidedBy)}{r.decisionComment ? `: "${r.decisionComment}"` : ''}.</>}

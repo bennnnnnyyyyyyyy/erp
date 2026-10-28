@@ -76,6 +76,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
             ☰
           </button>
         )}
+        <span className="brand-mark" aria-hidden="true" />
         <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label="All apps">
           <span className="grid-icon" aria-hidden="true" />
           Apps
