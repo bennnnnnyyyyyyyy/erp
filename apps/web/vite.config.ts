@@ -7,7 +7,8 @@ const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 export default defineConfig(({ mode }) => {
   // One .env at the repo root serves both apps. Only the two public values are handed to the
   // browser; SUPABASE_SECRET_KEY never leaves the API.
-  const env = loadEnv(mode, repoRoot, '');
+  // A demo build is meant to be put on a public URL, so it never picks up real Supabase values.
+  const env = mode === 'demo' ? {} : loadEnv(mode, repoRoot, '');
   return {
     envDir: repoRoot,
     plugins: [react()],
