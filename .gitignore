@@ -1,1 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.wrangler/
+*.tsbuildinfo
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+.dev.vars
+!.dev.vars.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Test and coverage
+coverage/
+
+# Scratch space (never committed)
+.temp/
+temp/
+.test-tmp*/
+
+# Supabase CLI local state
+supabase/.branches/
+supabase/.temp/
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# project
 temp/

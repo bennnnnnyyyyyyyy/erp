@@ -1,0 +1,3 @@
+# Not needed for local development: `npm run dev` loads the repo-root .env
+# (see ../../.env.example). Use .dev.vars only to override a value for this app.
+# Deployed secrets are set with `wrangler secret put SUPABASE_SECRET_KEY`.

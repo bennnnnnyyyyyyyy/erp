@@ -1,0 +1,10 @@
+name = "ggo-erp-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret settings only. Secrets (SUPABASE_SERVICE_ROLE_KEY) go in
+# `wrangler secret put`, and in .dev.vars for local development.
+[vars]
+APP_ENV = "development"
+ALLOWED_ORIGINS = "http://localhost:5173"
