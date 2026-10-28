@@ -46,7 +46,22 @@ A deliberately small first version that tests the idea:
 
 The approval step is built so that WhatsApp and voice plug in later without redoing anything. We do not build WhatsApp or voice until we know customers want them.
 
-We are **not** building: CRM, HR, payroll, time tracking or full accounting. This is a stock product.
+We are **not** building yet: CRM, HR, payroll, time tracking or full accounting.
+
+### Why start narrow, and how it grows into a full ERP
+
+The first version is the wedge that tests our idea, not the finished product. On its own it is not enough: a business needs to know *why* stock moved and what it was worth, and buyers comparing us with Edara or Daftra will expect invoicing. So the product grows in waves, and each wave is unlocked by evidence from the one before.
+
+| Wave | What it adds | Why at that point |
+|---|---|---|
+| **1. The wedge** (this proposal) | Stock, manager approvals, audit log, WhatsApp/voice-ready approvals | Tests the one thing nobody else offers |
+| **2. Close the stock loop** | Buying and receiving goods, sales orders and delivery notes, customers and suppliers | Approvals then attach to real orders, and the product is usable end to end for a warehouse business |
+| **3. Money** | Invoicing, Egyptian e-invoicing (see decision 2), and export to the customer's accounting tool | Needed to compete with Edara and Daftra |
+| **Later, only if customers ask** | Point of sale, manufacturing, full accounting | Not committed |
+
+For wave 3 we propose to **export to accounting rather than build our own accounting**. Accounting is where the local leaders are strongest and it is the costliest thing to match, and it is not where our advantage is.
+
+Because modules switch on per company, adding a wave does not mean rebuilding the earlier ones. In this document we call the product a **warehouse-first ERP**, so the narrow first release reads as a deliberate order of work and not as a gap.
 
 ## 5. Steps and checkpoints
 

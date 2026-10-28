@@ -120,10 +120,34 @@ Follows the existing module convention exactly:
 | `inventory`  | items, warehouses, stock ledger, requests, approvals                     | 1                            |
 | `messaging`  | channel adapters, outbox, conversations, templates, identity binding     | 1 (interface) / 2 (WhatsApp) |
 | `tasks`      | assignable warehouse tasks (pick, count, receive) over the same channels | 2                            |
-| `billing`    | plans, EGP price list, metering                                          | before first paying customer |
+| `billing`    | plans, EGP price list, metering (our own subscriptions)                  | before first paying customer |
 | `einvoicing` | ETA/ZATCA adapters                                                       | gated, section 2A C15        |
+| *(waves 2-3)* | `parties`, `purchasing`, `sales`, `invoicing`, `accounting_export`      | see 3.5                      |
 
-Tables are prefixed by module (`inv_`, `msg_`, `tsk_`, `bil_`).
+Tables are prefixed by module (`inv_`, `msg_`, `tsk_`, `bil_`, `pur_`, `sal_`, `prt_`, `acc_`).
+
+### 3.5 Module roadmap beyond the first slice
+
+The slice is the wedge, not the product. The modules below close the stock loop and then add money. Each wave is gated by pilot evidence; none is built before the one above it is validated.
+
+| Wave | Module key | Purpose | Depends on | Notes |
+|---|---|---|---|---|
+| 1 | `core`, `inventory`, `messaging` | as 3.3 | | Slice 1 |
+| 2 | `parties` (`prt_`) | customers and suppliers, tax registration numbers, contacts | core | Needed by purchasing, sales and e-invoicing; tax fields already planned in 12.1 |
+| 2 | `purchasing` (`pur_`) | purchase orders, goods receipt, supplier returns | inventory, parties | Receipts post `receipt` moves through the same ledger functions |
+| 2 | `sales` (`sal_`) | sales orders, delivery notes, customer returns | inventory, parties | **Outgoing stock requests link to a sales order or delivery note**; the approval policy can key on order value |
+| 3 | `invoicing` (`inv` is taken, use `bil_`/`doc_` prefix decision pending) | customer invoices, credit/debit notes, payments received | sales, parties | Issued documents locked, see 12.1 |
+| 3 | `einvoicing` | ETA/ZATCA adapter | invoicing | Gated by C15 decision |
+| 3 | `accounting_export` (`acc_`) | scheduled/manual export of invoices, payments and stock valuation to the customer's accounting tool | invoicing, inventory | **Deliberately not a general ledger**: valuation is posted as journal summaries per period |
+| Later | `pos`, `manufacturing`, `ledger` | | | Not planned; revisit on customer demand |
+
+Design consequences now (cheap to do in slice 1, expensive to retrofit):
+
+- Every ledger movement and request has nullable `source_type`/`source_id` so a later order or delivery note can link to it without altering `inv_stock_moves`.
+- Approval policies match on a generic "document value and type", not on stock requests only, so sales and purchasing documents reuse the same engine and audit trail.
+- The messaging layer's decision schema is document-agnostic (`entity_type`, `entity_id`, `decision`), so WhatsApp/voice approvals work for purchase orders and discounts without a new channel.
+- Costing method and currency are org settings from slice 1, because Wave 3 valuation exports depend on them.
+- Naming clash to resolve in phase 0: the `inv_` prefix is used by inventory, so invoicing needs a different prefix (`doc_` or `bil_`; `bil_` is already billing for our own subscriptions, so `doc_` is the likely choice).
 
 ---
 
