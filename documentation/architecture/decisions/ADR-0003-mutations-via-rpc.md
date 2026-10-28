@@ -36,8 +36,7 @@ row, and an approval check lives only in application code.
 - More logic lives in SQL: it needs SQL-level tests (state machine, self-approval refusal, isolation) and
   reviewed, rerun-safe migrations.
 - `apps/api/src/lib/db.ts` and `audit.ts` are replaced (`db.user.ts`, `db.admin.ts`, `rpc.ts`, a reduced
-  `audit.ts`), . No custom login-token hook is needed: membership is checked in the database on every call.
-- Slightly more round-trip structure for simple CRUD; accepted, because stock and approvals are the product.
+  `audit.ts`). No custom login-token hook is needed: membership is checked in the database on every call.- Slightly more round-trip structure for simple CRUD; accepted, because stock and approvals are the product.
 
 ## Alternatives considered
 
