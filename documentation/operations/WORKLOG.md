@@ -13,6 +13,16 @@ run or deployed.
 
 ---
 
+## 2026-10-28 — UI restyle: "loading dock" look, logical CSS, Home and stock screens
+
+**Objective.** Make the web UI look designed and ready for right-to-left use, and remove CRM-era leftovers.
+
+**Actions Completed.** `apps/web/src/styles.css` rewritten (warm paper and ink palette with cargo-green accent and signal amber for items that need a person, light and dark, logical properties for RTL, motion that respects reduced-motion; CRM-only styles removed). Self-hosted IBM Plex Sans Arabic and IBM Plex Mono via `@fontsource` (new dependencies in `apps/web`). Home page: line icons, date, staggered tiles. Stock screen: summary cards, stock-level bars. Request page: progress steps. Topbar brand mark. Demo bar: RTL layout toggle.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 17/17; dev server compiles the changed files. **Not looked at in a browser by me**, so spacing, contrast and the RTL flip are unchecked. Screen text is still English only; the toggle flips layout, not language.
+
 ## 2026-10-28 — Demo mode: clickable sample of the app and the first inventory slice
 
 **Objective.** Let the screens and the first vertical slice (item, stock request, manager approval, issue, audit entry) be tried in a browser before the real inventory module and a running API exist.

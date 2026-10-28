@@ -76,7 +76,8 @@ Template for further blocks; update them in the same change as the work:
 - [x] Demo of the first slice on sample data: stock, requests, approve/reject, issue (blocked without approval), ledger, history
 - [ ] Manual review of Home, Settings and the inventory demo in a browser; list fixes
 - [ ] Split demo code out of normal builds before any deploy
-- [ ] Remove leftover CRM-era CSS from `styles.css` (record page, pills, board)
+- [x] Remove leftover CRM-era CSS from `styles.css`; restyle (palette, fonts, motion, logical properties)
+- [ ] Browser check of the restyle: contrast, spacing, dark mode, RTL flip, phone width
 - [ ] Home page: the "switch on" notice only checks for a business app tile, so it can stay up when a module is on but has no app yet
 - [ ] Arabic and English strings (no hard-coded text) and RTL layout for the shell and settings
 - [ ] Responsive check in a phone browser (web first, phone app later)
