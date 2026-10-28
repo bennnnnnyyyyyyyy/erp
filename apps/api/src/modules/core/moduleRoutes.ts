@@ -1,8 +1,8 @@
 import { Hono, type Context } from 'hono';
 import { MODULES, findModule, type ModuleStatus } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { writeAudit } from '../../lib/audit';
-import { db } from '../../lib/db';
+import { callRpc } from '../../lib/rpc';
+import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -42,24 +42,8 @@ for (const action of ['enable', 'disable'] as const) {
       if (dependents.length) throw new HttpError(400, `Switch off ${dependents.map((m) => m.name).join(', ')} first`, 'invalid_input');
     }
 
-    const { error } = await db(c.env)
-      .from('org_modules')
-      .upsert(
-        {
-          org_id: c.var.tenant.orgId,
-          module_key: mod.key,
-          enabled_by: c.var.user.id,
-          ...(action === 'enable' ? { enabled_at: new Date().toISOString(), disabled_at: null } : { disabled_at: new Date().toISOString() }),
-        },
-        { onConflict: 'org_id,module_key' },
-      );
-    if (error) throw error;
-    await writeAudit(c, {
-      action: `module.${action}d`,
-      entityType: 'module',
-      entityId: mod.key,
-      summary: `${mod.name} switched ${action === 'enable' ? 'on' : 'off'}`,
-    });
+    // The database function switches the module and writes the audit row in one transaction (ADR-0003).
+    await callRpc<void>(userDb(c), 'core_set_module', { p_module_key: mod.key, p_enabled: action === 'enable' });
     return ok(c, { key: mod.key, enabled: action === 'enable' });
   });
 }

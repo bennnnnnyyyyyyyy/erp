@@ -1,9 +1,9 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { DATE_FORMATS, type DateFormat, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { writeAudit } from '../../lib/audit';
 import { invalid, jsonBody } from '../../lib/body';
-import { db } from '../../lib/db';
+import { callRpc } from '../../lib/rpc';
+import { userDb } from '../../lib/db.user';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 
@@ -69,8 +69,8 @@ export function parseOrgUpdate(body: Record<string, unknown>): OrgSettingsUpdate
 
 export const orgRoutes = new Hono<AppEnv>();
 
-async function loadOrg(c: Parameters<typeof writeAudit>[0]): Promise<OrgRow> {
-  const { data, error } = await db(c.env)
+async function loadOrg(c: Context<AppEnv>): Promise<OrgRow> {
+  const { data, error } = await userDb(c)
     .from('organizations')
     .select(ORG_COLUMNS)
     .eq('id', c.var.tenant.orgId)
@@ -83,30 +83,12 @@ orgRoutes.get('/', requirePermission('core.org.read'), async (c) => ok(c, toSett
 
 orgRoutes.patch('/', requirePermission('core.org.manage'), async (c) => {
   const update = parseOrgUpdate(await jsonBody(c));
-  const current = await loadOrg(c);
-
-  const row: Record<string, unknown> = {};
-  if (update.name !== undefined) row.name = update.name;
-  if (update.defaultCurrency !== undefined) row.default_currency = update.defaultCurrency;
-  if (update.timezone !== undefined) row.timezone = update.timezone;
-  if (update.dateFormat !== undefined) row.settings = { ...(current.settings ?? {}), date_format: update.dateFormat };
-
-  const { data, error } = await db(c.env)
-    .from('organizations')
-    .update(row)
-    .eq('id', c.var.tenant.orgId)
-    .select(ORG_COLUMNS)
-    .single<OrgRow>();
-  if (error) throw error;
-
-  const after = toSettings(data);
-  await writeAudit(c, {
-    action: 'organization.updated',
-    entityType: 'organization',
-    entityId: after.id,
-    summary: `Organization settings changed: ${Object.keys(update).join(', ')}`,
-    before: toSettings(current),
-    after,
+  // One database function changes the settings and writes the audit row in the same transaction (ADR-0003).
+  const after = await callRpc<OrgSettings>(userDb(c), 'core_update_org', {
+    p_name: update.name ?? null,
+    p_default_currency: update.defaultCurrency ?? null,
+    p_timezone: update.timezone ?? null,
+    p_date_format: update.dateFormat ?? null,
   });
   return ok(c, after);
 });

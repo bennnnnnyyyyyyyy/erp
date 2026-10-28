@@ -4,7 +4,7 @@ import { ROLES, type InviteResult, type Member, type Role } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { writeAudit } from '../../lib/audit';
 import { invalid, jsonBody } from '../../lib/body';
-import { db } from '../../lib/db';
+import { adminDb } from '../../lib/db.admin';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -34,13 +34,13 @@ function toMember(row: MembershipRow, user: User | null): Member {
 }
 
 async function loadUser(c: Ctx, userId: string): Promise<User | null> {
-  const { data, error } = await db(c.env).auth.admin.getUserById(userId);
+  const { data, error } = await adminDb(c.env).auth.admin.getUserById(userId);
   if (error) return null;
   return data.user;
 }
 
 async function loadMembership(c: Ctx, id: string): Promise<MembershipRow> {
-  const { data, error } = await db(c.env)
+  const { data, error } = await adminDb(c.env)
     .from('memberships')
     .select(MEMBERSHIP_COLUMNS)
     .eq('org_id', c.var.tenant.orgId)
@@ -52,7 +52,7 @@ async function loadMembership(c: Ctx, id: string): Promise<MembershipRow> {
 }
 
 async function countActiveOwners(c: Ctx): Promise<number> {
-  const { count, error } = await db(c.env)
+  const { count, error } = await adminDb(c.env)
     .from('memberships')
     .select('id', { count: 'exact', head: true })
     .eq('org_id', c.var.tenant.orgId)
@@ -80,7 +80,7 @@ function refuse(reason: string | null) {
 export const memberRoutes = new Hono<AppEnv>();
 
 memberRoutes.get('/', requirePermission('core.users.read'), async (c) => {
-  const { data, error } = await db(c.env)
+  const { data, error } = await adminDb(c.env)
     .from('memberships')
     .select(MEMBERSHIP_COLUMNS)
     .eq('org_id', c.var.tenant.orgId)
@@ -100,7 +100,7 @@ memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
   refuse(refuseInvite(actor(c), role));
 
-  const client = db(c.env);
+  const client = adminDb(c.env);
   const orgId = c.var.tenant.orgId;
   const { data: existingId, error: lookupErr } = await client.rpc('find_auth_user_id', { p_email: email });
   if (lookupErr) {
@@ -169,7 +169,7 @@ memberRoutes.patch('/:id', requirePermission('core.users.manage'), async (c) => 
     refuseRoleChange(actor(c), { userId: target.user_id, role: target.role, disabled: !!target.disabled_at }, role, await countActiveOwners(c)),
   );
 
-  const { data, error } = await db(c.env)
+  const { data, error } = await adminDb(c.env)
     .from('memberships')
     .update({ role })
     .eq('org_id', c.var.tenant.orgId)
@@ -200,7 +200,7 @@ for (const action of ['disable', 'enable'] as const) {
       if (target.role === 'owner' && c.var.tenant.role !== 'owner') refuse('Only an owner can re-enable an owner');
     }
 
-    const { data, error } = await db(c.env)
+    const { data, error } = await adminDb(c.env)
       .from('memberships')
       .update({ disabled_at: action === 'disable' ? new Date().toISOString() : null })
       .eq('org_id', c.var.tenant.orgId)
@@ -227,7 +227,7 @@ memberRoutes.post('/:id/invite-link', requirePermission('core.users.manage'), as
   if (!user?.email || user.last_sign_in_at || user.app_metadata?.invited_org_id !== c.var.tenant.orgId) {
     refuse('A new link can only be made for someone this organization invited who has not signed in yet');
   }
-  const { data, error } = await db(c.env).auth.admin.generateLink({
+  const { data, error } = await adminDb(c.env).auth.admin.generateLink({
     type: 'recovery',
     email: user!.email!,
     options: { redirectTo: appOrigin(c) },

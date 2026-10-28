@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { MODULES, defaultPermissionsFor, hasPermission, type Role } from '@erp/shared';
 import type { AppEnv } from '../env';
-import { db } from '../lib/db';
+import { userDb } from '../lib/db.user';
 import { HttpError } from '../lib/errors';
 
 type MembershipRow = {
@@ -25,7 +25,7 @@ export const requireTenant = createMiddleware<AppEnv>(async (c, next) => {
   const orgId = c.req.header('X-Org-Id');
   if (!orgId) throw new HttpError(400, 'Choose an organization first', 'org_required');
 
-  const client = db(c.env);
+  const client = userDb(c);
   const { data: membership, error } = await client
     .from('memberships')
     .select('role, organizations!inner(id, name, slug, default_currency, timezone, settings, deleted_at)')

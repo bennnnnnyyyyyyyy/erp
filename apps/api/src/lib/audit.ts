@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import type { AppEnv } from '../env';
-import { db } from './db';
+import { adminDb } from './db.admin';
 
 export type AuditEvent = {
   action: string;
@@ -10,25 +10,26 @@ export type AuditEvent = {
   before?: unknown;
   after?: unknown;
   metadata?: Record<string, unknown>;
+  channel?: string;
 };
 
-/** Appends one row to `audit_log` for the caller's organization, as the signed-in user. */
+// ADR-0003: changes to business data are audited by the database function that makes the change,
+// in the same transaction (see sql/003). This helper is only for events that are not a database
+// change made by a user-scoped function: Auth-admin paths such as member invites. It goes through
+// the service-role-only `audit_append_admin` function, never a bare insert into audit_log.
 export async function writeAudit(c: Context<AppEnv>, event: AuditEvent): Promise<void> {
-  const { error } = await db(c.env)
-    .from('audit_log')
-    .insert({
-      org_id: c.var.tenant.orgId,
-      actor_user_id: c.var.user.id,
-      action: event.action,
-      entity_type: event.entityType,
-      entity_id: event.entityId ?? null,
-      summary: event.summary ?? null,
-      before: event.before ?? null,
-      after: event.after ?? null,
-      metadata: event.metadata ?? {},
-    });
+  const { error } = await adminDb(c.env).rpc('audit_append_admin', {
+    p_org_id: c.var.tenant.orgId,
+    p_actor: c.var.user.id,
+    p_action: event.action,
+    p_entity_type: event.entityType,
+    p_entity_id: event.entityId ?? null,
+    p_summary: event.summary ?? null,
+    p_before: event.before ?? null,
+    p_after: event.after ?? null,
+    p_metadata: event.metadata ?? {},
+    p_channel: event.channel ?? 'api',
+    p_request_id: c.req.header('X-Request-Id') ?? null,
+  });
   if (error) throw error;
 }
-
-// TODO(ADR-0003): stock and approval audit rows must be written by database triggers/functions in
-// the same transaction as the change. This separate-call insert is for non-stock events only.

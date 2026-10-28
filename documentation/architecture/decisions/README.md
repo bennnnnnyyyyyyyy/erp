@@ -8,6 +8,7 @@ old one `Superseded by ADR-NNNN`.
 |---|---|---|
 | [0001](ADR-0001-stack.md) | Stack: TypeScript monorepo, Hono on Cloudflare Workers, React + Vite, Supabase | Proposed |
 | [0002](ADR-0002-multi-tenancy.md) | Multi-tenancy: shared database, `org_id` on every row | Proposed |
+| [0003](ADR-0003-mutations-via-rpc.md) | Business mutations go through database functions called with the user's own JWT | Proposed |
 
 ## Template
 

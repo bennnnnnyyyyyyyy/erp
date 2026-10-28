@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { SessionInfo } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { db } from '../../lib/db';
+import { userDb } from '../../lib/db.user';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 import { memberRoutes } from './memberRoutes';
@@ -36,7 +36,7 @@ coreRoutes.get('/session', (c) => {
 
 coreRoutes.get('/audit', requirePermission('core.audit.read'), async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 50) || 50, 200);
-  const { data, error } = await db(c.env)
+  const { data, error } = await userDb(c)
     .from('audit_log')
     .select('id, occurred_at, actor_user_id, action, entity_type, entity_id, summary')
     .eq('org_id', c.var.tenant.orgId)
