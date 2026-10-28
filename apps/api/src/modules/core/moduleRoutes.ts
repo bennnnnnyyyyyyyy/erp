@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono';
-import { DEFAULT_STAGES, MODULES, findModule, type ModuleStatus } from '@ggo/shared';
+import { MODULES, findModule, type ModuleStatus } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { writeAudit } from '../../lib/audit';
 import { db } from '../../lib/db';
@@ -10,24 +10,7 @@ import { requirePermission } from '../../middleware/tenant';
 type Ctx = Context<AppEnv>;
 
 // Set-up a module needs the first time an org switches it on. Must be safe to run again.
-const ON_ENABLE: Record<string, (c: Ctx) => Promise<void>> = {
-  crm: async (c) => {
-    const client = db(c.env);
-    const orgId = c.var.tenant.orgId;
-    const { count, error } = await client
-      .from('crm_pipeline_stages')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
-      .is('deleted_at', null);
-    if (error) {
-      if (error.code === '42P01' || error.code === 'PGRST205') throw new HttpError(503, 'Run sql/003_crm_and_activities.sql first', 'migration_missing');
-      throw error;
-    }
-    if (count) return;
-    const { error: insErr } = await client.from('crm_pipeline_stages').insert(DEFAULT_STAGES.map((s) => ({ ...s, org_id: orgId })));
-    if (insErr) throw insErr;
-  },
-};
+const ON_ENABLE: Record<string, (c: Ctx) => Promise<void>> = {};
 
 export const moduleRoutes = new Hono<AppEnv>();
 

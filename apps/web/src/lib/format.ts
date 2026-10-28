@@ -1,4 +1,4 @@
-import type { SessionInfo } from '@ggo/shared';
+import type { SessionInfo } from '@erp/shared';
 
 type OrgPrefs = Pick<NonNullable<SessionInfo['org']>, 'timezone' | 'dateFormat'>;
 

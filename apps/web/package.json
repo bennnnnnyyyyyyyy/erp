@@ -1,5 +1,5 @@
 {
-  "name": "@ggo/web",
+  "name": "@erp/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@ggo/shared": "*",
+    "@erp/shared": "*",
     "@supabase/supabase-js": "^2.118.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

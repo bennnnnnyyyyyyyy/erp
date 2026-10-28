@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import type { SessionInfo } from '@ggo/shared';
+import type { SessionInfo } from '@erp/shared';
 import { api, getActiveOrgId, setActiveOrgId } from './lib/api';
 import { arrivedFromInvite, arrivedToSetPassword, supabase } from './lib/supabase';
 import { SessionContext } from './session';

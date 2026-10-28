@@ -11,3 +11,6 @@ export function db(env: Bindings): SupabaseClient {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+// TODO(ADR-0003): replace with a user-scoped client for request routes and a separate admin
+// client for provisioning/webhooks/jobs. See documentation/architecture/decisions once written.

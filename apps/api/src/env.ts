@@ -1,4 +1,4 @@
-import type { Role } from '@ggo/shared';
+import type { Role } from '@erp/shared';
 
 export type Bindings = {
   APP_ENV: string;

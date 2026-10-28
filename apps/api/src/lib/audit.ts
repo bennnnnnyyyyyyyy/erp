@@ -29,3 +29,6 @@ export async function writeAudit(c: Context<AppEnv>, event: AuditEvent): Promise
     });
   if (error) throw error;
 }
+
+// TODO(ADR-0003): stock and approval audit rows must be written by database triggers/functions in
+// the same transaction as the change. This separate-call insert is for non-stock events only.

@@ -1,4 +1,4 @@
-import { hasPermission, type AuditEntry, type Member } from '@ggo/shared';
+import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { DATE_FORMATS, type DateFormat, type OrgSettings, type OrgSettingsUpdate } from '@ggo/shared';
+import { DATE_FORMATS, type DateFormat, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { writeAudit } from '../../lib/audit';
 import { invalid, jsonBody } from '../../lib/body';
@@ -54,7 +54,7 @@ export function parseOrgUpdate(body: Record<string, unknown>): OrgSettingsUpdate
   }
   if ('timezone' in body) {
     const tz = typeof body.timezone === 'string' ? body.timezone.trim() : '';
-    if (!tz || !isTimeZone(tz)) invalid('Time zone must be an IANA name, such as Asia/Dubai');
+    if (!tz || !isTimeZone(tz)) invalid('Time zone must be an IANA name, such as Africa/Cairo');
     update.timezone = tz;
   }
   if ('dateFormat' in body) {

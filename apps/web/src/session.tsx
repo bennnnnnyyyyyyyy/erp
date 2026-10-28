@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { SessionInfo } from '@ggo/shared';
+import type { SessionInfo } from '@erp/shared';
 
 type SessionValue = { session: SessionInfo; reload: () => void };
 

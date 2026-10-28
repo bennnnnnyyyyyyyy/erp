@@ -321,7 +321,6 @@ td .pill { margin-left: 0; }
 .app-list { display: flex; flex-direction: column; gap: 0.6rem; max-width: 720px; margin-top: 1rem; }
 .app-row { display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.9rem 1rem; }
 .app-name { font-weight: 600; }
-.tile-crm { background: #2f9e6e; }
 .add-row { display: flex; gap: 0.5rem; max-width: 480px; margin-top: 0.75rem; }
 .add-row input { margin-top: 0; }
 td input { margin-top: 0; }

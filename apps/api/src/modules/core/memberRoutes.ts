@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono';
 import type { User } from '@supabase/supabase-js';
-import { ROLES, type InviteResult, type Member, type Role } from '@ggo/shared';
+import { ROLES, type InviteResult, type Member, type Role } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { writeAudit } from '../../lib/audit';
 import { invalid, jsonBody } from '../../lib/body';

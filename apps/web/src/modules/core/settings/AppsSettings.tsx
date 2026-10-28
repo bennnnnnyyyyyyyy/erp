@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { hasPermission, type ModuleStatus } from '@ggo/shared';
+import { hasPermission, type ModuleStatus } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';

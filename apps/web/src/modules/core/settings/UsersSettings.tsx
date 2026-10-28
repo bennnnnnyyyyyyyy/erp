@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ROLES, hasPermission, type InviteResult, type Member, type Role } from '@ggo/shared';
+import { ROLES, hasPermission, type InviteResult, type Member, type Role } from '@erp/shared';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
 import { formatDate } from '../../../lib/format';

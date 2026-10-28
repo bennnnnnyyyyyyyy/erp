@@ -14,7 +14,7 @@ export type ModuleManifest = {
   /** Extra keys the built-in member role gets (members otherwise get only `.read` keys). */
   memberGrants?: string[];
   /** Suite on the home screen and in Settings → Apps. */
-  suite: 'Core' | 'Sales & Clients' | 'People' | 'Work' | 'Finance' | 'Operations';
+  suite: 'Core' | 'Warehouse' | 'Sales & Purchasing' | 'Finance';
 };
 
 export const MODULES: readonly ModuleManifest[] = [
@@ -27,15 +27,16 @@ export const MODULES: readonly ModuleManifest[] = [
     permissions: ['core.org.read', 'core.org.manage', 'core.users.read', 'core.users.manage', 'core.audit.read'],
     suite: 'Core',
   },
+  // Placeholder: the module folder exists so conventions are in place. Its permissions, tables and
+  // screens are defined by its approved plan (documentation/plans/), not here.
   {
-    key: 'crm',
-    name: 'CRM',
-    description: 'Companies, contacts, deals and the sales pipeline.',
+    key: 'inventory',
+    name: 'Inventory',
+    description: 'Items, warehouses, stock, outgoing stock requests and approvals.',
     core: false,
     dependsOn: [],
-    permissions: ['crm.records.read', 'crm.records.manage', 'crm.records.delete', 'crm.settings.manage'],
-    memberGrants: ['crm.records.manage'],
-    suite: 'Sales & Clients',
+    permissions: [],
+    suite: 'Warehouse',
   },
 ];
 

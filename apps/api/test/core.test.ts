@@ -36,10 +36,10 @@ describe('member role rules', () => {
 
 describe('org settings validation', () => {
   it('normalises and accepts valid values', () => {
-    expect(parseOrgUpdate({ name: ' GGO ', defaultCurrency: 'aed', timezone: 'Asia/Dubai', dateFormat: 'DD/MM/YYYY' })).toEqual({
-      name: 'GGO',
-      defaultCurrency: 'AED',
-      timezone: 'Asia/Dubai',
+    expect(parseOrgUpdate({ name: ' Acme ', defaultCurrency: 'egp', timezone: 'Africa/Cairo', dateFormat: 'DD/MM/YYYY' })).toEqual({
+      name: 'Acme',
+      defaultCurrency: 'EGP',
+      timezone: 'Africa/Cairo',
       dateFormat: 'DD/MM/YYYY',
     });
   });

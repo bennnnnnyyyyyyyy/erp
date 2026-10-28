@@ -37,31 +37,6 @@ export type InviteRequest = { email: string; role: Role };
 /** `inviteLink` is null when the person already had an account and was simply added. */
 export type InviteResult = { member: Member; inviteLink: string | null };
 
-export const ACTIVITY_KINDS = ['note', 'call', 'meeting', 'task'] as const;
-export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
-
-export type Activity = {
-  id: string;
-  entityType: string;
-  entityId: string;
-  kind: ActivityKind;
-  subject: string | null;
-  body: string | null;
-  dueAt: string | null;
-  doneAt: string | null;
-  assigneeId: string | null;
-  createdBy: string | null;
-  createdAt: string;
-};
-
-/** An open task with the record it belongs to, for "My tasks". */
-export type MyTask = Activity & { entityTitle: string | null };
-
-/** One item on a record's timeline: an activity, or a change from the audit log. */
-export type TimelineItem =
-  | { type: 'activity'; at: string; activity: Activity }
-  | { type: 'change'; at: string; change: AuditEntry & { before: unknown; after: unknown } };
-
 export type ModuleStatus = { key: string; name: string; description: string; suite: string; core: boolean; enabled: boolean };
 
 export type AuditEntry = {

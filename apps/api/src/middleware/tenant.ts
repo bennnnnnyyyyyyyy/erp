@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory';
-import { MODULES, defaultPermissionsFor, hasPermission, type Role } from '@ggo/shared';
+import { MODULES, defaultPermissionsFor, hasPermission, type Role } from '@erp/shared';
 import type { AppEnv } from '../env';
 import { db } from '../lib/db';
 import { HttpError } from '../lib/errors';

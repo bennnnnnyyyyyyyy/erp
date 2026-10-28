@@ -1,8 +1,7 @@
-import { hasPermission } from '@ggo/shared';
+import { hasPermission } from '@erp/shared';
 import { Link } from '../../lib/router';
 import { useSession } from '../../session';
 import { SUITE_ORDER, type AppDef } from '../registry';
-import { MyTasks } from './MyTasks';
 
 function greeting(timeZone: string): string {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
@@ -25,15 +24,10 @@ export function Home({ apps }: { apps: AppDef[] }) {
 
       {!hasBusinessApps && canManageApps && (
         <p className="notice">
-          No business apps are switched on yet. <Link to="/settings/apps">Switch on CRM</Link> to start adding clients and deals.
+          No business apps are switched on yet. <Link to="/settings/apps">Switch on Inventory</Link> to start managing stock.
         </p>
       )}
 
-      {session.modules.includes('crm') && (
-        <div className="home-grid">
-          <MyTasks />
-        </div>
-      )}
 
       {suites.length === 0 && <p className="muted">No apps are available to you yet. Ask an admin for access.</p>}
       {suites.map(({ suite, apps }) => (

@@ -1,4 +1,4 @@
-import type { Role } from '@ggo/shared';
+import type { Role } from '@erp/shared';
 
 // Who may change whom. Pure so it can be unit tested; the routes load the facts and call these.
 

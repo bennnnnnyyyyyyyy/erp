@@ -23,7 +23,7 @@ create table if not exists public.organizations (
   id               uuid primary key default gen_random_uuid(),
   name             text not null check (length(trim(name)) between 1 and 200),
   slug             text not null unique check (slug ~ '^[a-z0-9][a-z0-9-]{1,62}$'),
-  default_currency char(3) not null default 'USD' check (default_currency ~ '^[A-Z]{3}$'),
+  default_currency char(3) not null default 'EGP' check (default_currency ~ '^[A-Z]{3}$'),
   timezone         text not null default 'UTC',
   settings         jsonb not null default '{}'::jsonb,
   created_at       timestamptz not null default now(),

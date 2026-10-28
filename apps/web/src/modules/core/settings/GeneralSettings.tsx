@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@ggo/shared';
+import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, ParamsContext, usePath } from '../lib/router';
-import { GlobalSearch } from './GlobalSearch';
 import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
 import { useSession } from '../session';
@@ -84,7 +83,6 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         <span className="topbar-org">{session.org?.name}</span>
         {route && <span className="topbar-app">/ {route.app.name}</span>}
         <span className="spacer" />
-        {session.modules.includes('crm') && <GlobalSearch />}
         <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
       </header>
 
