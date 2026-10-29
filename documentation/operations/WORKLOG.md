@@ -13,6 +13,16 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — Real-login check script written (not run)
+
+**Objective.** Prove over the real path (sign-in, then Supabase REST calls with `X-Org-Id`) what the SQL tests could only simulate.
+
+**Actions Completed.** `scripts/real-login-check.mjs`: signs in with `TEST_EMAIL`/`TEST_PASSWORD`, then checks that the user sees only their organizations and audit rows, that `current_org_id` accepts their own organization header and refuses a random organization (`NOT_A_MEMBER`) and a missing header (`ORG_REQUIRED`), that direct update of `organizations`, delete from and insert into `audit_log` are refused, that `audit_append_admin` and `audit_verify` are not callable, and, for a plain member, that `core_update_org` is `FORBIDDEN` (skipped for owners and admins because it would change data). Never prints the password or token. Reads settings from environment variables or the repo-root `.env`. Supabase Auth currently has two users (from a screenshot): `ben@prime-ad.com` (signed in) and `ben.arthur.wiz@gmail.com` (invited 28 Oct, not yet accepted).
+
+**Database / System Result.** None yet; the script has not been run against Supabase.
+
+**Safety Status.** Syntax checked with `node --check`, and confirmed to stop with a clear message when settings are missing. The only write it attempts is the member-role call, which must be refused; the other write attempts must also be refused. The password is entered by the user in their own terminal, never in chat or a file.
+
 ## 2026-10-29 — SQL test script run: all passed
 
 **Objective.** Record the run of `sql/tests/001_core_isolation_and_audit.sql`.

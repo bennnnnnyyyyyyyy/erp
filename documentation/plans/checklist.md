@@ -57,7 +57,8 @@ Template for further blocks; update them in the same change as the work:
 - [x] `sql/001`-`003` run by Ben in Supabase (reported)
 - [x] `sql/003` verified on a database (chain, append-only, privileges) 2026-10-29
 - [x] `sql/004` run and verified 2026-10-29 (extra privileges revoked; TRUNCATE refused on audit_log)
-- [ ] Browser-path check: `X-Org-Id` through PostgREST with a real token; cross-organization refusal (second org and user)
+- [x] Script written for the real-login check: `scripts/real-login-check.mjs` (syntax checked, not yet run against Supabase)
+- [ ] Run `scripts/real-login-check.mjs` with a real user (X-Org-Id through PostgREST, no direct writes, member refused) and record the result
 - [ ] Set `default_currency` default to EGP on an already-created `organizations` table
 - [x] SQL test script written: `sql/tests/001_core_isolation_and_audit.sql` (isolation, header check, roles, direct writes, admin functions, audit chain, append-only); run 2026-10-29: all passed
 - [x] `sql/tests/001_core_isolation_and_audit.sql` run in Supabase 2026-10-29: ALL TESTS PASSED
