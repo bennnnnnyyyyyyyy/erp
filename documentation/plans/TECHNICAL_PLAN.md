@@ -95,7 +95,7 @@ Rules:
 
 ### 3.4 Rework of `db.ts` and `audit.ts` (decided)
 
-Old files, from the GGO repo: `db.ts` returns one secret-key client (bypasses RLS); `audit.ts` inserts the audit row in a second call after the mutation.
+Old files, from the previous internal ERP: `db.ts` returns one secret-key client (bypasses RLS); `audit.ts` inserts the audit row in a second call after the mutation.
 
 
 | New file (new repo) | Replaces   | Behaviour                                                                                                                                                                                                                                                                                                                                                                          |

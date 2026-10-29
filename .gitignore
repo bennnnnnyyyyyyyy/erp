@@ -43,3 +43,6 @@ temp/
 
 # local helper scripts that hold project settings
 test.ps1
+
+# extra build output folders
+dist-*/

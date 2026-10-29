@@ -46,6 +46,26 @@ export const MODULES: readonly ModuleManifest[] = [
     memberGrants: ['inventory.items.manage', 'inventory.request.create', 'inventory.stock.issue'],
     suite: 'Warehouse',
   },
+  // Slice 2 (documentation/plans/TASKS_AND_OUTBOX_PLAN.md).
+  {
+    key: 'tasks',
+    name: 'Tasks',
+    description: 'Assign warehouse work with a due time, and follow it up.',
+    core: false,
+    dependsOn: [],
+    permissions: ['tasks.tasks.read', 'tasks.tasks.create', 'tasks.tasks.update'],
+    memberGrants: ['tasks.tasks.update'],
+    suite: 'Warehouse',
+  },
+  {
+    key: 'messaging',
+    name: 'Messaging',
+    description: 'Notifications, reminders and escalation. Delivery goes through channels; approvals stay in the database.',
+    core: false,
+    dependsOn: [],
+    permissions: ['messaging.notifications.read', 'messaging.outbox.manage'],
+    suite: 'Warehouse',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {

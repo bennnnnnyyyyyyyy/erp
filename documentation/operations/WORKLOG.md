@@ -13,6 +13,73 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — Slice 2 built end to end: job, routes, screens, demo seed, deploy; demo path verified over the live API
+
+**Objective.** Finish slice 2 for the demo path in `neworder.md` task 8: manager gets a notification for the pending request, staff gets a task, a reminder fires if nobody answers.
+
+**Actions Completed.**
+- API: channel adapter interface with in-app and fake adapters (`lib/channels/index.ts`; WhatsApp, voice and email fail visibly as "not configured"); the delivery and chasing job (`jobs/outbox.ts`, admin client, only calls the service-role functions); routes `tasks` (`GET/POST /v1/tasks`, `POST /v1/tasks/:id/status`) and `messaging` (`GET /notifications`, `POST /notifications/read`, `GET /outbox`, `POST /process`); Cloudflare cron trigger `*/5 * * * *` plus the Worker `scheduled` handler; boundary test allow-list extended by exactly the job and the adapter file. New modules `tasks` and `messaging` with permission keys in `packages/shared/src/modules.ts` (`messaging.outbox.manage`, not `.read`, so members do not receive it).
+- Web: notification bell in the top bar (unread count, latest messages, mark read, opens the request or task), Tasks page (my/all, new task, start/done/cancel), Messages app (notifications; message outbox with "Run delivery and reminders now"). Real API only; the sample-data demo is unchanged.
+- Demo data: `sql/seed/002_demo_slice2.sql` (run via CLI): messaging and tasks on for the demo organization, chasing times 1 minute (reminder) and 3 minutes (escalation), joseph assigns grant the task "Count aisle 4" due in 3 minutes, grant submits a request for 20 gloves (OUT-0003). 3 messages queued.
+- Deploys: Worker `erp-api` version `3d6ff8ce` (cron schedule confirmed in the deploy output; secret still set); web `erp-live` deployment `91bdab5d`, bundle scanned clean (no passwords, no secret keys) and confirmed to contain the new screens.
+
+**Database / System Result.** Seed 002 only (rows in `tsk_tasks`, `msg_outbox`, `org_modules`, organization settings, plus the new request and audit rows). Live API run with real logins for chris, joseph and grant: grant gets 403 on running the job, reading the outbox and creating a task; chris runs delivery: 2 reminders and 1 escalation queued (for the older waiting request OUT-0002), 6 messages claimed, 6 sent, 0 failed; joseph has 2 unread ("OUT-0003 needs your approval", "Reminder: OUT-0002 is still waiting for approval"); chris has 3 (adds "Escalation: OUT-0002 has had no decision"); grant has 1 ("New task: Count aisle 4"); the outbox shows all 6 as sent; an immediate second run queued and sent nothing; mark-all-read changed 2 rows.
+
+**Safety Status.** Typecheck clean; 17 tests pass; SQL tests 001, 002, 003 pass (CLI). The screens have **not** been opened in a browser by me. The cron trigger is deployed but its first scheduled run has not been observed. Not done: slice 3 (WhatsApp adapter, identity binding, decision tokens), slice 4 (voice), a concurrency test for two job runs at once, outbox retention. The demo's first delivery pass already happened during my test, so Ben will see reminders for OUT-0003 and the overdue task only after the reminder and due times pass (1 and 3 minutes after the seed) and a pass runs (cron or the "Run now" button).
+
+## 2026-10-29 — Slice 2 database layer: plan, sql/007 applied, sql/tests/003 passes
+
+**Objective.** Start slice 2 of `neworder.md` (tasks and the notification outbox with a fake channel adapter) database-first, and review it against ADR-0003 before building screens.
+
+**Actions Completed.**
+- Plan: `documentation/plans/TASKS_AND_OUTBOX_PLAN.md` (modules `tasks` and `messaging`, tables `tsk_`/`msg_`, behaviour, permissions, tests, rollout).
+- Migration `sql/007_tasks_and_outbox.sql` applied via CLI (twice more after edits; rerun-safe). Tables `tsk_tasks`, `msg_outbox`, `msg_notifications` (RLS on, select-only for signed-in users). Functions: `tsk_create_task`, `tsk_set_status`, `msg_mark_read` (signed-in users, role and module checked, audit in the same transaction); `msg_claim_due`, `msg_complete`, `msg_deliver_in_app`, `msg_run_chasing` (service role only, for the scheduled job); internal `mod__guard`, `msg__managers`, `msg__enqueue`; triggers that write outbox rows in the same transaction as the event (`inv_requests_notify`, `tsk_tasks_notify`) and transition guards. Verification: 3 tables RLS on; no non-SELECT privilege for anon/authenticated; signed-in users can execute exactly `tsk_create_task`, `tsk_set_status`, `msg_mark_read` of these.
+- **Review of 007 against ADR-0003.** Conforms: changes only through security-definer functions with pinned `search_path`, called with the user's identity; organization from the validated header; direct writes revoked; audit written in the same transaction as the change; the admin client is needed only by the scheduled job (service-role functions), not by request routes. Gaps found and fixed: (1) delivery outcomes were not audited, so sent, failed and expired messages are now written to the append-only, hash-chained audit log (`messaging.message.sent/failed/expired`, metadata: channel, kind, recipient, attempts); (2) a task could be "changed" to the status it already had, which rewrote the completion time: now `INVALID_STATE`. Accepted: outbox rows are operational state and mutable by the service role (retries need that); the audit entries are the permanent record of outcomes. Not covered by this slice: retention and cleanup of old outbox rows.
+- `sql/tests/003_tasks_and_outbox.sql`: covers outbox row in the same transaction as its event (S1, S2), idempotent enqueue and idempotent delivery (S1c-d, S3), retry with backoff and giving up (S4), expiry (S5), stuck-message recovery (S6), reminders and escalation fire once and only when due, and stop after a decision or completion (S7-S9), task rules (S9), notifications and outbox visibility (S10-S11), service functions and direct writes closed to signed-in users (S12), channel cannot change stock or approve (S14: requests stay submitted, no approvals, ledger and balances unchanged, messaging functions contain no inventory writes), organization isolation (S11, S2), audit chain clean (S13).
+
+**Database / System Result.** Project `plhuuhcpvlytozyedamt` now holds `sql/001`-`007`. Test runs through the CLI, all rolled back: `003` first run **ALL TESTS PASSED** (before the audit additions); after the audit-of-outcomes edit and re-applying 007: `003`, `002` and `001` **all ALL TESTS PASSED**.
+
+**Safety Status.** Not yet built: API routes, the scheduled job (cron), screens, demo seed for this slice, deploy. The demo organization does not have the `tasks` and `messaging` modules enabled yet, so nothing is queued there.
+
+## 2026-10-29 — Worker secret set; audit log ordering fix; Worker redeployed
+
+**Objective.** Close the open item from task 1 (Settings → Users error, "Someone" names) and check it works.
+
+**Actions Completed.** Ben ran `npx wrangler secret put SUPABASE_SECRET_KEY --name erp-api` himself (pasted at the prompt; I did not see the value). `wrangler secret list --name erp-api` now shows the name `SUPABASE_SECRET_KEY` (type `secret_text`), the only secret. Through the deployed Worker as chris (owner): `GET /v1/core/members` returns 200 with all three users and their roles (so Settings → Users and names on request pages work); `GET /v1/core/audit` returns 200. The check also showed the audit log shuffling entries that share one timestamp (one database function writes several rows in one transaction): `apps/api/src/modules/core/routes.ts` now orders by `id` (insertion order) instead of `occurred_at`. Worker redeployed (version `0ec3eb58`), secret confirmed still set after the redeploy.
+
+**Database / System Result.** None.
+
+**Safety Status.** Typecheck clean; 17 tests pass. The Settings → Users page and the audit screen were checked at API level only, not in a browser. B1 remains open until Ben's browser click-through.
+
+## 2026-10-29 — neworder.md tasks 1-7: branding, demo banner, hygiene, tests re-run, redeploy
+
+**Objective.** Work through `neworder.md` ("Next tasks"), tasks 1 to 7. Task 8 (slice 2) not started.
+
+**Actions Completed.**
+- Task 1 (verify deploy): the Worker holds the Supabase URL, publishable key and allowed origins (checked through behaviour: sign-in token accepted, CORS correct). **`SUPABASE_SECRET_KEY` is not set**: `wrangler secret list --name erp-api` returns `[]`. Ben's first attempt failed because he ran `wrangler secret put` from the repo root (no Worker name there); the command needs `cd apps\api` or `--name erp-api`. So the "Supabase isn't configured on this server" error on Settings → Users is **still present**, and user names fall back to "Someone" on request pages because the members list also needs the admin client. Sign-in in a real browser as the three users has **not** been done by me (no browser testing); the same sign-in was proven over the API.
+- Task 2 (GGO branding): no "GGO" in any code, UI string, style, seed or script. The header showed "GGO" because the old organization was literally named GGO in the database: renamed it to "Test Organization" (slug `test-organization`) through SQL with an `organization.updated` audit row (written with `audit_append_admin`), chain still clean. Doc mentions neutralised in `TECHNICAL_PLAN.md` and `WORKLOG.md`. `migration.md` and `neworder.md` are Ben's own files and still mention GGO as history. The Supabase project's dashboard name is "ggoerp" (not user-facing; rename in the dashboard if wanted).
+- Task 3 (banner): new `components/EnvBanner.tsx`, "Demo environment: sample data only. Changes are saved to a test database; do not enter real customer data." on the live build (flag `DEMO_ENVIRONMENT=true` at build time via `vite.config.ts`); the sample-data build's own bar now starts with "Demo environment: sample data only. Nothing is saved; reload resets it." Both redeployed (erp-live deployment `2cf38fa4`, erp-demo deployment `55f75635`); both bundles confirmed to contain the text.
+- Task 4 (hygiene): `.temp/demo-credentials.txt`, `.env`, `.env.local`, `apps/api/.dev.vars`, `test.ps1`, `supabase/.temp/linked-project.json` are git-ignored; added `dist-*/` to `.gitignore`. Scanned all 124 non-ignored files, both web bundles, the worklog and update.md for the three demo passwords, `sb_secret_` keys and JWTs: none found. Worker secrets by name: none set yet (plain variables: `APP_ENV`, `ALLOWED_ORIGINS`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`). Recommendations: rotate the three demo passwords after the demo; set Supabase Authentication → URL Configuration → Site URL to `https://erp-live.pages.dev` and add it to the redirect URLs so invite and reset links return to the app; the Supabase secret key will become visible in your shell history if typed instead of pasted at the prompt (paste at the prompt).
+- Task 5 (tests): `sql/tests/` already covers every listed item. `002_inventory_approval.sql`: direct ledger insert refused (S6b signed-in user, S6c privileged role), issue without approval refused (S6a, S10c), self-approval refused (S5b function, S7a table constraint), reservation (S3, S4, S10, S11), audit entry per step (S1c, S15a-e), hash chain verifies (S15f, S15g), other-organization isolation (S12a-f). `001_core_isolation_and_audit.sql` covers core isolation and the chain. Both re-run via CLI after the rename: **ALL TESTS PASSED**, nothing left behind (2 organizations, 5 users, 2 requests, audit rows unchanged apart from the rename entry).
+- Task 6 (commit grouping) and task 7 (status block and backlog in `neworder.md`; the brief names it `CLAUDE_CODE_LIVING_BRIEF.md`, the actual file is `neworder.md`) done; see `update.md`.
+
+**Database / System Result.** One organization renamed (name and slug) with an audit row. No migration run. Cloudflare: both Pages projects redeployed; Worker unchanged.
+
+**Safety Status.** Typecheck clean; 17 tests pass; SQL tests pass. Not browser-tested by me. Open: Worker secret key, browser sign-in check by Ben, Supabase Site URL, names without the admin client (idea: a user-scoped database function that returns the organization's people; not built), slice 2.
+
+## 2026-10-29 — Deploy: API Worker `erp-api` and real web app `erp-live` on Cloudflare
+
+**Objective.** Put the real inventory slice (real sign-in, real database) behind a URL Ben and management can click through.
+
+**Actions Completed.**
+- Cloudflare account `meetings.dmedeskai@gmail.com` (login still active). Created Pages project `erp-live` (`wrangler pages project create ... --force`) and deployed the real web build: `https://erp-live.pages.dev` (deployment `3f93bfc5`). Built with `npx vite build` in `apps/web` (the `build` script's `&&` fails in this shell) with `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (public by design) and `VITE_API_BASE_URL` set for the build only. Demo mode is off in this build; the demo code is still bundled (checklist item open).
+- Deployed Worker `erp-api` from `apps/api`: `https://erp-api.meetings-dmedeskai.workers.dev` (version `31028900`). `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` passed at deploy time with `--var` (not stored in the repo); `ALLOWED_ORIGINS` set in `apps/api/wrangler.toml` to `https://erp-live.pages.dev,http://localhost:5173` after a first deploy with the value passed via `--var` produced no CORS header at all (cause not investigated; the toml value works).
+- **`SUPABASE_SECRET_KEY` is not set on the Worker yet** (Ben sets it with `wrangler secret put`; I must not see it). Without it, only the routes that use the admin client fail with 503: Settings → Users (invite, role changes) and member audit events. The inventory flow does not need it.
+
+**Database / System Result.** None.
+
+**Safety Status.** Smoke test through the deployed Worker with a real login as grant (member): `/health` ok, no token gives 401, session 200 (Demo Trading Co., role member, modules core and inventory), items 5, stock 9 rows, requests OUT-0001 issued and OUT-0002 submitted, ledger 11 rows, a foreign `X-Org-Id` gives 403 `not_a_member`. CORS: `erp-live.pages.dev` and `localhost:5173` allowed, an unknown origin gets no allow header. The web app pages return 200; the sign-in screen and the click-through are **not yet tested by anyone in a browser**. Supabase Auth "Site URL" and redirect URLs still point to defaults, so password-reset and invite links will not return to `erp-live`.
+
 ## 2026-10-29 — Demo users created, demo organization seeded, real-login checks pass (all via the CLI)
 
 **Objective.** Put real data and real sign-in behind the inventory slice, per `neworder.md` (slice 1) and "run the Supabase stuff using the CLI".
@@ -188,8 +255,8 @@ run or deployed.
 **Actions Completed.**
 - Documentation system: `agents.md` (rewritten for this product, logging rules kept, stock/approval/audit and competitor-licensing rules added), `CLAUDE.md`, `PLANS.md`, `documentation/` structure with reset worklog, checklist, plan template, ADR format and research/teardown template, competitor index (Edara, Daftra, Odoo, Wafeq, Zoho, ERPNext, Business Central).
 - Code foundation: monorepo tooling; `apps/api` (auth, tenant resolution, permission/module guards, response helpers, core org/members/modules/audit routes); `apps/web` (module-driven shell, sign-in, org picker, core settings screens, list view); `packages/shared` (API types, permissions, module manifest, money); `sql/001`, `sql/002`.
-- Changed on the way: package scope `@ggo/*` to `@erp/*`; default currency `USD` to `EGP` in `sql/001`; CRM manifest replaced by an empty `inventory` placeholder module (API routes file, empty web and shared folders); CRM wiring removed from the API and web registries, Home and Shell.
-- Left behind: CRM and activities/timeline/my-tasks code and SQL, the generic record-page/field components built for CRM, GGO plans, discovery notes, old worklog and checklist content.
+- Changed on the way: the old package scope to `@erp/*`; default currency `USD` to `EGP` in `sql/001`; CRM manifest replaced by an empty `inventory` placeholder module (API routes file, empty web and shared folders); CRM wiring removed from the API and web registries, Home and Shell.
+- Left behind: CRM and activities/timeline/my-tasks code and SQL, the generic record-page/field components built for CRM, the old internal plans, discovery notes, old worklog and checklist content.
 - `apps/api/src/lib/db.ts` and `audit.ts` copied as-is and marked `TODO(ADR-0003)`: they use the secret key and a separate-call audit insert, which must be reworked before the stock and approval features (see `TECHNICAL_PLAN.md`).
 
 **Database / System Result.** None. `sql/001` and `sql/002` have not been run against any Supabase project.

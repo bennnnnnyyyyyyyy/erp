@@ -65,24 +65,27 @@ When Ben gives a feature:
 
 ## 7. Backlog (keep current)
 
-| ID  | Feature                                                                      | From             | Priority | Status                                                         | Proof (test or click path) |
-| --- | ---------------------------------------------------------------------------- | ---------------- | -------- | -------------------------------------------------------------- | -------------------------- |
-| B1  | Real inventory flow with DB-enforced approval                                | Management       | P1       | Database, seed and real sign-in done and tested; Worker deploy and screen check pending | sql/tests/002, scripts/real-login-check.mjs |
-| B2  | Tasks and notification outbox (fake channel)                                 | Star feature     | P1       | Not started                                                    | idempotency/retry tests    |
-| B3  | Approvals and tasks over messaging (fake WhatsApp adapter, identity binding) | Star feature     | P1       | Not started                                                    | contract test              |
-| B4  | Voice assistant (browser speech demo, tool calling, read-back)               | Star feature     | P1       | Not started                                                    | click path + tests         |
-| B5  | Purchasing and goods receipt on the ledger                                   | Feature set v0.1 | P2       | Not started                                                    |                            |
-| B6  | Sales orders linked to stock requests                                        | Feature set v0.1 | P2       | Not started                                                    |                            |
-| B7  | Reports and dashboard                                                        | Feature set v0.1 | P2       | Not started                                                    |                            |
-| B8  | CSV import/export, custom fields, print templates                            | Feature set v0.1 | P2       | Not started                                                    |                            |
-| B9  | Responsive/installable phone experience                                      | Feature set v0.1 | P2       | Not started                                                    |                            |
+| ID  | Feature                                                                      | From             | Priority | Status                                                                                                 | Proof (test or click path)                  |
+| --- | ---------------------------------------------------------------------------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| B1  | Real inventory flow with DB-enforced approval                                | Management       | P1       | NOT fully done: database, API, screens, seed, deploy, SQL tests and API-level real-login checks are done and passing; still open: Worker secret key (Users page, names), Ben browser click-through | sql/tests/002, scripts/real-login-check.mjs |
+| B2  | Tasks and notification outbox (fake channel)                                 | Star feature     | P1       | Built, deployed and verified over the live API (notifications, task, reminder and escalation, idempotent reruns); waiting on Ben click-through | sql/tests/003, live API run in WORKLOG |
+| B3  | Approvals and tasks over messaging (fake WhatsApp adapter, identity binding) | Star feature     | P1       | Not started                                                                                            | contract test                               |
+| B4  | Voice assistant (browser speech demo, tool calling, read-back)               | Star feature     | P1       | Not started                                                                                            | click path + tests                          |
+| B5  | Purchasing and goods receipt on the ledger                                   | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
+| B6  | Sales orders linked to stock requests                                        | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
+| B7  | Reports and dashboard                                                        | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
+| B8  | CSV import/export, custom fields, print templates                            | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
+| B9  | Responsive/installable phone experience                                      | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
+| B10 | User names without the admin client (database function returning the organization people)  | Found in task 1  | P2       | Not started | test: names show with no secret key |
 
 ## 8. Status block (update at the end of every turn; paste-ready for Ben)
 
-- **Last done (2026-10-29):** Slice 1 database side is live and tested on the linked Supabase project (`sql/001`-`006`, tests 001 and 002 pass, advisor warnings fixed). Created the three demo users (chris owner, joseph manager/admin, grant requester/member) via CLI, seeded "Demo Trading Co." (2 warehouses, 5 items, 1 issued and 1 waiting request, 21 audit rows, chain clean). Real sign-in plus REST checks pass for all three (15/15, 15/15, 17/17). Inventory API routes and the screens wired to the real API are written (typecheck clean, 17 tests pass) but not yet run against the real database through the Worker.
-- **Doing now:** nothing running; waiting on Ben for the Worker secrets step.
-- **Next:** (1) deploy the Worker, (2) build and deploy a web build against it, (3) Ben clicks through as grant (request), joseph (approve), grant (issue), (4) then slice 2 (tasks and notification outbox with a fake channel adapter).
-- **Needs Ben:** open `.temp\demo-credentials.txt` (git-ignored) for the three passwords; at deploy time run the two `wrangler secret put` commands I will give you (one needs the Supabase secret key from the dashboard); decide leaked-password protection; management items in `orders.md` (trials, interviews, e-invoicing, WhatsApp provider, payment gateway).
+- **Last done (2026-10-29), tasks 1-7 of "Next tasks":** Real app deployed and smoke-tested through the Worker with a real login (web https://erp-live.pages.dev, API https://erp-api.meetings-dmedeskai.workers.dev, fallback sample-data demo https://erp-demo-bas.pages.dev). Old "GGO" organization renamed to "Test Organization" in the database (the only GGO in the UI; no GGO in code). "Demo environment: sample data only" banner on both builds, both redeployed. Hygiene: credentials, env and build folders ignored; no passwords or secret keys in any tracked file, bundle, worklog or update.md. SQL tests 001 and 002 cover every item you listed and pass (re-run via CLI). Commit grouping prepared (see update.md).
+- **Also done (2026-10-29), task 8 slice 2:** plan (`TASKS_AND_OUTBOX_PLAN.md`), `sql/007` (tasks, transactional outbox, in-app notifications, retry with backoff, expiry, reminders and escalation, delivery outcomes audited) reviewed against ADR-0003 and applied; `sql/tests/003` passes (also covers: a channel cannot change stock or approve); API routes, delivery job with cron every 5 minutes, screens (bell, Tasks, Messages, outbox) built and deployed; demo seed run; demo path verified over the live API with real logins (details in WORKLOG).
+- **Doing now:** nothing running. Slice 3 (WhatsApp adapter with a fake provider, identity binding, decision tokens) is next in the build order; I will not start it before your click-through unless you say so.
+- **Next:** (1) Ben clicks through (slice 1 path, then the slice 2 path in update.md) and reports; (2) fix findings; (3) Slice 3.
+- **Worker secret:** set by Ben 2026-10-29 (`SUPABASE_SECRET_KEY`, the only secret on `erp-api`); Users page and names verified at API level.
+- **Needs Ben:** your browser click-through; Supabase Site URL; passwords in `.temp\demo-credentials.txt`; rotate them after the demo; leaked-password protection; management items in `orders.md`. Open: B1 not fully done until your click-through; B10 (names without the admin key).
 - **Where to look:** WORKLOG.md, checklist.md, this file, `sql/seed/001_demo_organization.sql`, `scripts/real-login-check.mjs`.
 
 ## 9. Things Ben may ask that you should challenge
@@ -91,3 +94,16 @@ When Ben gives a feature:
 - Putting provider keys or tokens in source.
 - Claims in the UI or docs that a feature "works" when it only works on sample data.
 - Copying a competitor's code, text or assets.
+
+Next tasks, in this order. Report after each.
+
+1. Finish and verify the deploy. Confirm the Worker has the Supabase URL, publishable key and allowed origins set, that the "Supabase isn't configured on this server" error on Settings > Users is gone, and that sign-in works in a browser as the requester, manager and owner. Run the real click path via the deployed Worker: requester creates a request, manager approves, requester issues, owner reads Settings > Audit log. Tell me exactly what I should click and what should appear. Keep the sample-data demo link as a fallback.
+2. Remove all "GGO" branding from the UI (header, settings text, page titles, empty states, seed or sample data) and from user-facing docs. Use the neutral product-name placeholder everywhere. List every file you changed.
+3. Add a visible "Demo environment: sample data only" banner on both the live and fallback builds.
+4. Hygiene: confirm .temp/demo-credentials.txt and any .env/.dev.vars are git-ignored; no secrets in logs, worklog, update.md or the build output; list which secrets the Worker holds by name only. Recommend a password rotation for the three demo users after the demo and the Supabase Site URL setting for auth links.
+5. Confirm sql/tests/ contains the SQL tests for: direct ledger insert refused, issue without approval refused, self-approval refused, reservation, one audit entry per step, hash chain verifies, other-organization isolation. Add whatever is missing, run them, and record results in the worklog.
+6. Prepare the changes for my commit: summarize the changed files in logical groups so I can make a few clear commits. Do not commit.
+7. Update CLAUDE_CODE_LIVING_BRIEF.md status block and backlog (B1 done or not, with evidence).
+8. Then start Slice 2 from the living brief: tasks and the notification outbox with a fake channel adapter, in-app notifications, reminders and escalation by scheduled job, with tests (idempotency, retry, expiry). Show it in the demo as: manager gets a notification for the pending request; staff gets a task; reminder fires if nobody answers.
+
+Rules unchanged: follow agents.md and the living brief; WORKLOG entry for every migration and deploy; no real customer data; no destructive SQL without my confirmation.

@@ -16,6 +16,7 @@ Run the whole file at once with nothing else in the editor.
 |---|---|
 | `001_core_isolation_and_audit.sql` | Organization isolation (RLS), the `X-Org-Id` header check, role checks, no direct writes, admin-only functions, append-only and chained audit log, TRUNCATE refused |
 | `002_inventory_approval.sql` | Inventory slice: approval blocks stock (even for direct inserts), no self-approval, reservation, ledger append-only, audit per step, isolation, module switch |
+| `003_tasks_and_outbox.sql` | Slice 2: outbox in the same transaction, idempotency, retry with backoff, expiry, reminders and escalation once, task rules, who sees what, no direct writes, a channel cannot change stock, isolation |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 
