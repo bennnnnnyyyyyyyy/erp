@@ -40,3 +40,6 @@ Thumbs.db
 
 # project
 temp/
+
+# local helper scripts that hold project settings
+test.ps1

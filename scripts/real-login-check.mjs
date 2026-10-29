@@ -43,8 +43,8 @@ const signIn = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, 
 });
 const session = await signIn.json().catch(() => ({}));
 if (!signIn.ok || !session.access_token) {
-  console.log(`Sign-in failed (${signIn.status}): ${session.error_description ?? session.msg ?? 'unknown error'}`);
-  console.log('If this user has only been invited, accept the invite or set a password first.');
+  console.log(`Sign-in failed (${signIn.status}): ${session.error_description ?? session.msg ?? session.message ?? session.error ?? 'unknown error'}`);
+  console.log('A 401 or "Invalid API key" means the URL or publishable key is wrong (no < > brackets, no spaces). "invalid_credentials" means email or password is wrong, or the user was only invited: accept the invite or set a password first.');
   process.exit(2);
 }
 console.log(`Signed in as ${TEST_EMAIL}`);
