@@ -13,15 +13,25 @@ run or deployed.
 
 ---
 
-## 2026-10-29 — sql/004 run in Supabase (partly checked)
+## 2026-10-29 — Root README and PRODUCT_BRIEF written
+
+**Objective.** Complete the migration documents from `migration.md` step 3 (README and product brief; `agents.md`, research README and first worklog entry were done earlier).
+
+**Actions Completed.** `README.md` (what it is, four hypotheses with the demand caveat, architecture table, how to run the demo and the real app, the PowerShell `&&` caveat) and `PRODUCT_BRIEF.md` (what it is, why it might win, first vertical slice and its rules, module table by wave, out of scope, open decisions, non-negotiable rules). Product name stays `{{PRODUCT_NAME}}`.
+
+**Database / System Result.** None.
+
+**Safety Status.** Documents only. Commands in the README were written from the existing scripts (`npm run dev:demo -w apps/web`, `build:demo`, `dev:api`, `dev:web`); only the demo commands have been run. The "run the real app" steps have not been tried against the new Supabase project.
+
+## 2026-10-29 — sql/004 run in Supabase and verified
 
 **Objective.** Record the run of `sql/004_revoke_extra_privileges.sql`.
 
-**Actions Completed.** Ben ran `sql/004` and its verification query 2 (screenshot): triggers on `audit_log` are `audit_log_append_only`, `audit_log_chain`, `audit_log_no_truncate` (PASS). Verification query 1 (no non-SELECT privileges for `anon`/`authenticated` on the four core tables, expect zero rows) not yet seen. The TRUNCATE refusal itself was not exercised (deliberately not tested on real data).
+**Actions Completed.** Ben ran `sql/004` and both verification queries (screenshots): query 2, triggers on `audit_log` are `audit_log_append_only`, `audit_log_chain`, `audit_log_no_truncate` (PASS); query 1, no non-SELECT privileges for `anon`/`authenticated` on the four core tables (PASS, zero rows). The TRUNCATE refusal itself was not exercised (deliberately not tested on real data).
 
-**Database / System Result.** `audit_log` now has the `audit_log_no_truncate` trigger. Whether the privilege revokes took effect is **not confirmed** until query 1 returns no rows.
+**Database / System Result.** `audit_log` has the `audit_log_no_truncate` trigger (query 2: three triggers). Query 1 then returned "Success. No rows returned" (screenshot): `anon` and `authenticated` hold no privilege other than SELECT on `organizations`, `memberships`, `org_modules` and `audit_log`. **`sql/004` is verified; the privilege gap is closed** for those four tables and, by default privileges, for future tables created by the same role.
 
-**Safety Status.** Treat the privilege gap as open until query 1 is confirmed.
+**Safety Status.** The TRUNCATE refusal was not exercised on real data (deliberately). Still unproven, as before: the browser path (`X-Org-Id` through PostgREST with a real token) and cross-organization refusal.
 
 ## 2026-10-29 — sql/003 verified on a database; privilege gap found, sql/004 written
 

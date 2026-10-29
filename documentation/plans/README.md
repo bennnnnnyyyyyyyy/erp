@@ -12,6 +12,7 @@ the research teardown(s) it came from.
 
 | Document | Focus | Status |
 |---|---|---|
+| [`TECHNICAL_PLAN.md`](TECHNICAL_PLAN.md) | Technical plan: attack plan against competitor weaknesses, architecture, data layer, messaging, phases | `[📝 Draft / RFC]` |
 | [`MODULE_PLAN_TEMPLATE.md`](MODULE_PLAN_TEMPLATE.md) | Template for a new module plan | Template |
 | [`checklist.md`](checklist.md) | Execution status of every plan | Active tracking |
 

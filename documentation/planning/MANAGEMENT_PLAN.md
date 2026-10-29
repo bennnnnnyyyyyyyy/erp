@@ -107,4 +107,4 @@ We are reusing the generic foundation of our existing internal ERP (sign-in, mul
 
 If you approve decision 1, we start the trials and interviews immediately and come back with a firm recommendation, including the cost and timeline, before any build budget is requested.
 
-*Supporting documents: the market gap research, the meeting Q&A and the technical plan (`TECHNICAL_PLAN.md`) for the engineering team.*
+*Supporting documents: the market gap research, the meeting Q&A and the technical plan (`documentation/plans/TECHNICAL_PLAN.md`) for the engineering team.*

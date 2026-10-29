@@ -8,18 +8,18 @@
 | Status | Plans |
 |---|---|
 | ✅ Live | none |
-| 🟡 In progress | Phase 0 foundation ([TECHNICAL_PLAN.md](../../TECHNICAL_PLAN.md) section 9) |
+| 🟡 In progress | Phase 0 foundation ([TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) section 9) |
 | 📋 Approved / ready | none |
-| 📝 Draft / RFC | [TECHNICAL_PLAN.md](../../TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../../MANAGEMENT_PLAN.md), [ADR-0001](../architecture/decisions/ADR-0001-stack.md), [ADR-0002](../architecture/decisions/ADR-0002-multi-tenancy.md), [ADR-0003](../architecture/decisions/ADR-0003-mutations-via-rpc.md) |
+| 📝 Draft / RFC | [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md), [ADR-0001](../architecture/decisions/ADR-0001-stack.md), [ADR-0002](../architecture/decisions/ADR-0002-multi-tenancy.md), [ADR-0003](../architecture/decisions/ADR-0003-mutations-via-rpc.md) |
 | 💡 Backlog | none |
 
 ## Detail
 
-- [ ] **[TECHNICAL_PLAN.md](../../TECHNICAL_PLAN.md) Phase 0: Foundation**
+- [ ] **[TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) Phase 0: Foundation**
   - **Done (2026-10-28):** docs system and `agents.md`; generic code foundation copied, typecheck and tests green; ADR-0003 rework in code (user-scoped client, RPC functions, boundary test); `sql/003` written.
   - **Waiting on:** a Supabase project (new or cleared) to run `sql/001`-`003`; product name; ADR deciders.
   - **Remaining:** run and verify the SQL; SQL isolation and audit tests; root `README.md` and `PRODUCT_BRIEF.md`; move the two plans into `documentation/`; accept or revise the ADRs.
-- [ ] **Step 0: demand proof** (see [MANAGEMENT_PLAN.md](../../MANAGEMENT_PLAN.md) section 5)
+- [ ] **Step 0: demand proof** (see [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md) section 5)
   - **Done:** nothing yet.
   - **Remaining:** hands-on trials of the six competitors; 8-10 customer interviews.
 - [ ] **Inventory module plan** (`documentation/plans/INVENTORY_PLAN.md`)
@@ -35,7 +35,7 @@ Template for further blocks; update them in the same change as the work:
 
 ## Task list by area
 
-`[x]` done and verified as stated, `[ ]` not done. Sources: [TECHNICAL_PLAN.md](../../TECHNICAL_PLAN.md) (phases in section 9) and [MANAGEMENT_PLAN.md](../../MANAGEMENT_PLAN.md).
+`[x]` done and verified as stated, `[ ]` not done. Sources: [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) (phases in section 9) and [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md).
 
 ### A. Repository and documentation
 - [x] Docs structure, `agents.md`, worklog, checklist, plan and research templates, ADR format
@@ -43,9 +43,9 @@ Template for further blocks; update them in the same change as the work:
 - [x] Worklog entries for the migration and the ADR-0003 rework
 - [ ] Accept or revise ADR-0001, 0002, 0003 and fill `{{DECIDERS}}`
 - [ ] Choose the product name and replace `{{PRODUCT_NAME}}`
-- [ ] Root `README.md` (what it is, hypotheses, how to run)
-- [ ] `PRODUCT_BRIEF.md` (scope, modules, out of scope, first slice)
-- [ ] Move `TECHNICAL_PLAN.md` and `MANAGEMENT_PLAN.md` into `documentation/`
+- [x] Root `README.md` (what it is, hypotheses, how to run) 2026-10-29
+- [x] `PRODUCT_BRIEF.md` (scope, modules, out of scope, first slice) 2026-10-29
+- [x] Moved `TECHNICAL_PLAN.md` to `documentation/plans/` and `MANAGEMENT_PLAN.md` to `documentation/planning/` 2026-10-29
 - [ ] `documentation/architecture/ARCHITECTURE.md` written once something runs
 - [ ] ADR-0004 channel ports and adapters, ADR-0005 e-invoicing route, ADR-0006 payment gateway
 - [ ] Decide GitHub organization (remote is a personal account)
@@ -56,7 +56,7 @@ Template for further blocks; update them in the same change as the work:
 - [ ] Choose project: reuse the existing one (it already has the four 001 tables) or a new staging project
 - [x] `sql/001`-`003` run by Ben in Supabase (reported)
 - [x] `sql/003` verified on a database (chain, append-only, privileges) 2026-10-29
-- [ ] Run `sql/004` (revoke TRUNCATE/REFERENCES/TRIGGER; block TRUNCATE on audit_log) and its two checks
+- [x] `sql/004` run and verified 2026-10-29 (extra privileges revoked; TRUNCATE refused on audit_log)
 - [ ] Browser-path check: `X-Org-Id` through PostgREST with a real token; cross-organization refusal (second org and user)
 - [ ] Set `default_currency` default to EGP on an already-created `organizations` table
 - [ ] SQL tests in `sql/tests/`: cross-organization isolation, audit chain verify, direct-write refusal
