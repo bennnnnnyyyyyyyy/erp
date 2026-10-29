@@ -13,6 +13,22 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — Workstream C started: sql/005 and sql/006 applied via the Supabase CLI, inventory tests pass
+
+**Objective.** Start the live demo on a real database (orders.md, workstream C): database layer for the inventory slice.
+
+**Actions Completed.**
+- Ben ran `supabase init` and `supabase link --project-ref plhuuhcpvlytozyedamt` in the repo; from now on Supabase work uses the CLI (`supabase db query --linked -f <file>`, `supabase db advisors --linked`). Read-only state check first: 4 core tables with RLS, 14 functions, 3 audit triggers, 1 organization, 5 audit rows, 0 chain problems.
+- `supabase db advisors --linked`: warnings only. Fixed by new `sql/005_advisor_fixes.sql` (pinned `search_path` on `set_updated_at`, `audit_log_is_append_only`, `audit_log_no_truncate`; `auth.uid()` wrapped in the `memberships_own_read` policy). Applied via CLI; verified (all three functions show `search_path=public`, the policy shows the wrapped call, the advisors no longer list those items). `001` and `004` edited to carry the same changes for fresh installs. Remaining advisor warnings are intentional (four `SECURITY DEFINER` functions callable by signed-in users by design) plus **leaked password protection is off** (Auth setting in the dashboard; Ben to decide).
+- `documentation/plans/INVENTORY_PLAN.md` written (slice 1 only, approved by Ben through `orders.md`).
+- `sql/006_inventory_core.sql` applied via CLI: eight `inv_` tables (warehouses, items, counters, requests, request lines, approvals, stock moves, stock balances), RLS select-only, seven public functions (`inv_create_warehouse`, `inv_create_item`, `inv_receive_stock`, `inv_submit_request`, `inv_decide_request`, `inv_post_issue`, `inv_cancel_request`), triggers: request status transitions, issue only for an approved request, ledger and approvals append-only. Table check: nobody decides their own request. Verification: 8 tables RLS on; no non-SELECT privilege for anon/authenticated; exactly the 7 public functions executable by signed-in users.
+- `sql/tests/002_inventory_approval.sql` run via CLI: **ALL TESTS PASSED (everything rolled back)** on first run. Covers viewer read-only, reservation and over-reservation refusal, member cannot approve, owner cannot approve own request, issue without approval refused (function, signed-in direct insert, and even a privileged direct insert), table refuses self-approval and a skipped state, manager approves, issue once only, reject and cancel release reservations, organization isolation, module switch enforced in the database, ledger and approvals append-only, audit row per step, audit chains clean. `sql/tests/001` re-run via CLI: still passes.
+- API: `lib/rpc.ts` maps `INVALID_STATE`, `NOT_FOUND`, `MODULE_DISABLED` and includes the database's detail text (for example "30 available, 80 requested").
+
+**Database / System Result.** Project `plhuuhcpvlytozyedamt` now holds `sql/001`-`006`. After the rolled-back tests: 1 organization, 0 items, 0 requests, 2 auth users, 5 audit rows (nothing left behind).
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 17/17. Not done yet: API routes for inventory, wiring the web screens to the API, test users and demo organization, Worker deploy with secrets, web deploy against the real API, the real-login script for inventory calls. Known limit (in INVENTORY_PLAN): a refused action raises an error, so the refusal is not itself audit-logged.
+
 ## 2026-10-29 — Real-login check script written (not run)
 
 **Objective.** Prove over the real path (sign-in, then Supabase REST calls with `X-Org-Id`) what the SQL tests could only simulate.

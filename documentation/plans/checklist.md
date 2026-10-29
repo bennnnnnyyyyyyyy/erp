@@ -87,17 +87,19 @@ Template for further blocks; update them in the same change as the work:
 - [ ] Home page: the "switch on" notice only checks for a business app tile, so it can stay up when a module is on but has no app yet
 - [ ] Arabic and English strings (no hard-coded text) and RTL layout for the shell and settings
 - [ ] Responsive check in a phone browser (web first, phone app later)
-- [ ] Inventory screens (see E)
+- [ ] Inventory screens wired to the real API (see E, workstream C)
 - [ ] Audit log screen: entity history view, filters, chain status
 
-### E. Inventory module, wave 1 (needs an approved plan first)
-- [ ] `INVENTORY_PLAN.md` from the template, after step 0
-- [ ] Tables `inv_*`: items, warehouses, stock moves (append-only), balances, requests, request lines, approvals, approval policies
-- [ ] Functions: submit request (reserve), decide request, post issue; request state machine trigger
-- [ ] Revoke direct writes on ledger, balances and approvals
-- [ ] Permissions and module manifest entries
+### E. Inventory module, wave 1 (slice 1 plan approved via orders.md)
+- [x] `INVENTORY_PLAN.md` (slice 1) written 2026-10-29
+- [x] Tables `inv_*` (`sql/006`, applied and verified 2026-10-29): warehouses, items, counters, requests, request lines, approvals, stock moves, stock balances. Approval policies are later.
+- [x] Functions: submit (reserve), decide, issue, cancel, create item and warehouse, receive stock; request state machine trigger
+- [x] Direct writes revoked; ledger and approvals append-only; an issue is refused without approval even for direct inserts
+- [ ] Permissions and module manifest entries (API side)
+- [ ] Workstream C: inventory API routes, web screens on the real API, test users and demo organization, Worker and web deploy (see update.md)
 - [ ] Screens: items, warehouses, new request, approvals inbox, request detail, stock on hand
-- [ ] Tests: state machine, self-approval refusal, reservation, negative stock, concurrency, audit coverage
+- [x] SQL tests `sql/tests/002_inventory_approval.sql` pass: state machine, self-approval, reservation, audit coverage, isolation, module switch
+- [ ] Still open: concurrency test, API tests, real-login script for inventory calls
 
 ### F. Messaging layer (wave 1 interface, wave 2 WhatsApp)
 - [ ] Channel adapter interface and in-app adapter

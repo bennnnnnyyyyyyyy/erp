@@ -15,7 +15,7 @@ revoke truncate, references, trigger on public.organizations, public.memberships
 
 -- The audit log refuses TRUNCATE for everyone, including the table owner.
 create or replace function public.audit_log_no_truncate() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   raise exception 'audit_log is append-only (TRUNCATE refused)';
 end $$;

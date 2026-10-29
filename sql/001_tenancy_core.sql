@@ -11,7 +11,7 @@ begin;
 -- ---------------------------------------------------------------- helpers
 
 create or replace function public.set_updated_at() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   new.updated_at := now();
   return new;
@@ -88,7 +88,7 @@ create index if not exists audit_log_org_time_idx on public.audit_log (org_id, o
 create index if not exists audit_log_entity_idx on public.audit_log (org_id, entity_type, entity_id);
 
 create or replace function public.audit_log_is_append_only() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   raise exception 'audit_log is append-only (% refused)', tg_op;
 end $$;
@@ -136,7 +136,7 @@ create policy organizations_member_read on public.organizations
 
 drop policy if exists memberships_own_read on public.memberships;
 create policy memberships_own_read on public.memberships
-  for select to authenticated using (user_id = auth.uid());
+  for select to authenticated using (user_id = (select auth.uid()));
 
 drop policy if exists org_modules_member_read on public.org_modules;
 create policy org_modules_member_read on public.org_modules

@@ -10,6 +10,9 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   APPROVAL_REQUIRED: { status: 409, message: 'This needs an approved request first', code: 'approval_required' },
   SELF_APPROVAL: { status: 403, message: 'You cannot approve your own request', code: 'self_approval' },
   INSUFFICIENT_AVAILABLE: { status: 409, message: 'Not enough stock available', code: 'insufficient_available' },
+  INVALID_STATE: { status: 409, message: 'That is not possible in the current state', code: 'invalid_state' },
+  NOT_FOUND: { status: 404, message: 'Not found', code: 'not_found' },
+  MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */
@@ -17,7 +20,8 @@ export async function callRpc<T>(client: SupabaseClient, fn: string, args: Recor
   const { data, error } = await client.rpc(fn, args);
   if (error) {
     const reason = REASONS[error.message.trim()];
-    if (reason) throw new HttpError(reason.status, reason.message, reason.code);
+    // The database puts the specifics (for example "30 available, 80 requested") in `details`.
+    if (reason) throw new HttpError(reason.status, error.details ? `${reason.message}: ${error.details}` : reason.message, reason.code);
     throw error;
   }
   return data as T;
