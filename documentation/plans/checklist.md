@@ -74,7 +74,8 @@ Template for further blocks; update them in the same change as the work:
 - [x] Settings: General, Users, Apps, Audit log screens (carried over)
 - [x] Demo mode on sample data: `npm run dev:demo -w apps/web`, role switcher, working Users/Apps/General/Audit screens
 - [x] Demo of the first slice on sample data: stock, requests, approve/reject, issue (blocked without approval), ledger, history
-- [ ] Manual review of Home, Settings and the inventory demo in a browser; list fixes
+- [x] Demo of wave 2 on sample data: suppliers, purchase orders (receive adds stock), customers, sales orders (request stock links to the approval flow)
+- [ ] Manual review of Home, Settings, inventory, purchasing and sales demo in a browser; list fixes
 - [ ] Split demo code out of normal builds before any deploy
 - [x] Remove leftover CRM-era CSS from `styles.css`; restyle (palette, fonts, motion, logical properties)
 - [ ] Browser check of the restyle: contrast, spacing, dark mode, RTL flip, phone width

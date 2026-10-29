@@ -264,8 +264,8 @@ td input { margin-top: 0; }
 }
 .pill::before, .status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .status { text-transform: capitalize; }
-.status-active, .st-issued { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); color: var(--ok); }
-.status-invited, .st-submitted { background: var(--signal-soft); border-color: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal-ink); }
+.status-active, .st-issued, .st-received, .st-delivered { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); color: var(--ok); }
+.status-invited, .st-submitted, .st-ordered, .st-stock_requested, .st-open { background: var(--signal-soft); border-color: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal-ink); }
 .st-approved { background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 30%, transparent); color: var(--info); }
 .status-disabled, .st-rejected, .st-cancelled { color: var(--muted); }
 
@@ -358,3 +358,8 @@ td input { margin-top: 0; }
   .steps { max-width: none; }
   .home h1 { font-size: 1.6rem; }
 }
+
+/* trade demo screens */
+.form-row.three { grid-template-columns: 2fr 1fr 1fr; }
+.steps.wide { max-width: 760px; }
+@media (max-width: 720px) { .form-row.three { grid-template-columns: 1fr; } }

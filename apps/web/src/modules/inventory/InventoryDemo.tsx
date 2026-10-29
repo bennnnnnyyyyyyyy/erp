@@ -361,6 +361,7 @@ export function RequestPage() {
       <Steps status={r.status} />
       <p className="muted">
         Requested by {r.requesterName} on {formatDateTime(r.createdAt, session.org)} from {cat.warehouseName(r.warehouseId)}. Reason: {r.reason || 'none given'}.
+        {r.source && <> For sales order <Link to={`/sales/orders/${r.source.id}`}><code>{r.source.number}</code></Link>.</>}
         {r.decidedBy && <> Decision by {who(r.decidedBy)}{r.decisionComment ? `: "${r.decisionComment}"` : ''}.</>}
       </p>
 
@@ -432,7 +433,7 @@ export function LedgerPage() {
     { key: 'wh', label: 'Warehouse', value: (m) => cat.warehouseName(m.warehouseId) },
     { key: 'kind', label: 'Type', value: (m) => m.kind },
     { key: 'qty', label: 'Quantity', value: (m) => m.qty, align: 'right', render: (m) => <strong className={m.qty < 0 ? 'overdue' : undefined}>{m.qty > 0 ? `+${m.qty}` : m.qty}</strong> },
-    { key: 'req', label: 'Request', value: (m) => m.requestId ?? '', render: (m) => (m.requestId ? <Link to={`/inventory/requests/${m.requestId}`}>{`OUT-${m.requestId.slice(1).padStart(4, '0')}`}</Link> : <span className="muted">none</span>) },
+    { key: 'req', label: 'Request', value: (m) => m.requestId ?? '', render: (m) => (m.requestId ? <Link to={`/inventory/requests/${m.requestId}`}>{`OUT-${m.requestId.slice(1).padStart(4, '0')}`}</Link> : m.ref?.startsWith('PO-') ? <Link to={`/purchasing/orders/p${Number(m.ref.slice(3))}`}>{m.ref}</Link> : <span className="muted">opening stock</span>) },
     { key: 'by', label: 'Posted by', value: (m) => who(m.postedBy) },
   ];
 

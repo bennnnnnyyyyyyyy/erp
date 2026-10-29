@@ -6,6 +6,8 @@ import { GeneralSettings } from './core/settings/GeneralSettings';
 import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
 import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/InventoryDemo';
+import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
+import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -51,8 +53,41 @@ const DEMO_INVENTORY_APP: AppDef = {
   ],
 };
 
+// DEMO ONLY: sample purchasing and sales (wave 2 in the plan), registered only in demo mode.
+const DEMO_PURCHASING_APP: AppDef = {
+  key: 'purchasing',
+  module: 'purchasing',
+  name: 'Purchasing',
+  description: 'Suppliers and purchase orders; receiving adds stock (demo data)',
+  suite: 'Sales & Purchasing',
+  basePath: '/purchasing',
+  pages: [
+    { path: '', label: 'Purchase orders', component: PurchaseOrders },
+    { path: '/orders', label: 'Purchase orders', component: PurchaseOrders, nav: false, parent: '' },
+    { path: '/orders/new', label: 'New purchase order', component: NewPurchaseOrder, nav: false, parent: '' },
+    { path: '/orders/:id', label: 'Purchase order', component: PurchaseOrderPage, nav: false, parent: '' },
+    { path: '/suppliers', label: 'Suppliers', component: Suppliers },
+  ],
+};
+
+const DEMO_SALES_APP: AppDef = {
+  key: 'sales',
+  module: 'sales',
+  name: 'Sales',
+  description: 'Customers and sales orders that raise stock requests (demo data)',
+  suite: 'Sales & Purchasing',
+  basePath: '/sales',
+  pages: [
+    { path: '', label: 'Sales orders', component: SalesOrders },
+    { path: '/orders', label: 'Sales orders', component: SalesOrders, nav: false, parent: '' },
+    { path: '/orders/new', label: 'New sales order', component: NewSalesOrder, nav: false, parent: '' },
+    { path: '/orders/:id', label: 'Sales order', component: SalesOrderPage, nav: false, parent: '' },
+    { path: '/customers', label: 'Customers', component: Customers },
+  ],
+};
+
 export const APPS: AppDef[] = [
-  ...(demoMode ? [DEMO_INVENTORY_APP] : []),
+  ...(demoMode ? [DEMO_INVENTORY_APP, DEMO_SALES_APP, DEMO_PURCHASING_APP] : []),
   {
     key: 'settings',
     module: 'core',
