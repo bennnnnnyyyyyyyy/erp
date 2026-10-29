@@ -20,6 +20,9 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_AUTH_GOOGLE_ENABLED': JSON.stringify(env.AUTH_GOOGLE_ENABLED ?? ''),
       // Sample-data demo (npm run dev:demo): no API, database or sign-in. Off in every other mode.
       'import.meta.env.VITE_DEMO_MODE': JSON.stringify(mode === 'demo' ? 'true' : ''),
+      // Shows the "Demo environment: sample data only" bar. On in the sample-data build, and in a real build
+      // when it is made for a demo (set DEMO_ENVIRONMENT=true for that build only).
+      'import.meta.env.VITE_DEMO_ENV': JSON.stringify(mode === 'demo' || env.DEMO_ENVIRONMENT === 'true' ? 'true' : ''),
     },
   };
 });

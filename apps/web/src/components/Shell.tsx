@@ -3,6 +3,7 @@ import { Link, ParamsContext, usePath } from '../lib/router';
 import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
 import { useSession } from '../session';
+import { NotificationBell } from './NotificationBell';
 
 function initials(email: string): string {
   const name = email.split('@')[0] ?? '';
@@ -84,6 +85,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         <span className="topbar-org">{session.org?.name}</span>
         {route && <span className="topbar-app">/ {route.app.name}</span>}
         <span className="spacer" />
+        <NotificationBell />
         <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
       </header>
 

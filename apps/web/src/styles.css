@@ -363,3 +363,30 @@ td input { margin-top: 0; }
 .form-row.three { grid-template-columns: 2fr 1fr 1fr; }
 .steps.wide { max-width: 760px; }
 @media (max-width: 720px) { .form-row.three { grid-template-columns: 1fr; } }
+
+/* slice 2: notification bell, task and outbox statuses */
+.bell { position: relative; }
+.bell-btn { position: relative; padding: 0.3rem 0.45rem; }
+.bell-badge {
+  position: absolute; top: -2px; inset-inline-end: -2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--signal); color: #2a1c00; font-size: 0.7rem; font-weight: 700; display: grid; place-items: center; line-height: 1;
+}
+.bell-menu { min-width: 340px; max-width: min(380px, 92vw); padding: 0; }
+.bell-head { display: flex; align-items: center; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); }
+.bell-head .link-btn { padding: 0; font-size: 0.82rem; }
+.bell-list { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; }
+.bell-item {
+  display: flex; flex-direction: column; gap: 0.1rem; text-align: start; background: transparent; color: var(--text);
+  padding: 0.6rem 0.8rem; border-radius: 0; border-bottom: 1px solid var(--border); border-inline-start: 3px solid transparent;
+}
+.bell-item:hover:not(:disabled) { background: var(--surface-2); }
+.bell-item.unread { background: color-mix(in srgb, var(--signal) 10%, var(--surface)); border-inline-start-color: var(--signal); }
+.bell-title { font-weight: 600; }
+.bell-empty { padding: 0.8rem; margin: 0; }
+.bell-all { display: block; text-align: center; padding: 0.55rem; font-size: 0.88rem; text-decoration: none; }
+.st-in_progress, .st-sending { background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 30%, transparent); color: var(--info); }
+.st-sent { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); color: var(--ok); }
+.st-pending { background: var(--signal-soft); border-color: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal-ink); }
+.st-failed { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, transparent); color: var(--danger); }
+.st-done { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); color: var(--ok); }
+.st-expired { color: var(--muted); }

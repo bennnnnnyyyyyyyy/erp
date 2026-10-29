@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import type { AppEnv } from './env';
+import type { AppEnv, Bindings } from './env';
+import { runOutboxPass } from './jobs/outbox';
 import { HttpError } from './lib/errors';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
@@ -35,4 +36,15 @@ app.onError((err, c) => {
   return fail(c, 500, 'Something went wrong on our side');
 });
 
-export default app;
+// `fetch` is the Hono app (tests call `app.request`); `scheduled` is the cron trigger from wrangler.toml, which
+// delivers queued messages and sends reminders and escalations.
+export default Object.assign(app, {
+  async scheduled(_event: ScheduledController, env: Bindings, ctx: ExecutionContext) {
+    ctx.waitUntil(
+      runOutboxPass(env).then(
+        (r) => console.log('outbox pass', JSON.stringify(r)),
+        (e) => console.error('outbox pass failed', e instanceof Error ? e.message : String(e)),
+      ),
+    );
+  },
+});

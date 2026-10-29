@@ -48,7 +48,7 @@ export function DemoApp() {
     <SessionContext.Provider value={{ session, reload: () => setTick((t) => t + 1) }}>
       <div className="demo-banner" role="status">
         <span className="demo-tag">DEMO</span>
-        <span>Sample data in memory, no database. Reload resets it.</span>
+        <span>Demo environment: sample data only. Nothing is saved; reload resets it.</span>
         <label>
           Acting as{' '}
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>

@@ -7,6 +7,8 @@ import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
 import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
+import { NotificationsPage, OutboxPage } from './messaging/Messaging';
+import { TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
@@ -87,8 +89,33 @@ const DEMO_SALES_APP: AppDef = {
   ],
 };
 
+// Slice 2 (documentation/plans/TASKS_AND_OUTBOX_PLAN.md). Real API only: the sample-data demo has no backend for these.
+const TASKS_APP: AppDef = {
+  key: 'tasks',
+  module: 'tasks',
+  name: 'Tasks',
+  description: 'Assign work with a due time and follow it up',
+  suite: 'Warehouse',
+  basePath: '/tasks',
+  pages: [{ path: '', label: 'Tasks', permission: 'tasks.tasks.read', component: TasksPage }],
+};
+
+const MESSAGING_APP: AppDef = {
+  key: 'messaging',
+  module: 'messaging',
+  name: 'Messages',
+  description: 'Notifications, and delivery status for managers',
+  suite: 'Warehouse',
+  basePath: '/messaging',
+  pages: [
+    { path: '', label: 'Notifications', permission: 'messaging.notifications.read', component: NotificationsPage },
+    { path: '/outbox', label: 'Message outbox', permission: 'messaging.outbox.manage', component: OutboxPage },
+  ],
+};
+
 export const APPS: AppDef[] = [
   INVENTORY_APP,
+  ...(demoMode ? [] : [TASKS_APP, MESSAGING_APP]),
   ...(demoMode ? [DEMO_SALES_APP, DEMO_PURCHASING_APP] : []),
   {
     key: 'settings',

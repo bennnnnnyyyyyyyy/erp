@@ -8,7 +8,20 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { DemoApp } from './DemoApp';
+import { EnvBanner, demoEnvironment } from './components/EnvBanner';
 import { demoMode } from './lib/demo';
 import './styles.css';
 
-createRoot(document.getElementById('root')!).render(<StrictMode>{demoMode ? <DemoApp /> : <App />}</StrictMode>);
+// The sample-data build has its own bar (with the role switcher). A real build made for a demo gets the plain one.
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    {demoMode ? (
+      <DemoApp />
+    ) : (
+      <>
+        {demoEnvironment && <EnvBanner />}
+        <App />
+      </>
+    )}
+  </StrictMode>,
+);

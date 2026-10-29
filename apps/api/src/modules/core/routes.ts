@@ -40,7 +40,9 @@ coreRoutes.get('/audit', requirePermission('core.audit.read'), async (c) => {
     .from('audit_log')
     .select('id, occurred_at, actor_user_id, action, entity_type, entity_id, summary')
     .eq('org_id', c.var.tenant.orgId)
-    .order('occurred_at', { ascending: false })
+    // `id` is the insertion order. Several entries from one database function share the same timestamp,
+    // so ordering by time alone would shuffle them.
+    .order('id', { ascending: false })
     .limit(limit);
   if (error) throw error;
   return ok(c, data);

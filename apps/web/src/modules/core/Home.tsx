@@ -23,6 +23,18 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M3 8l9 5 9-5M12 13v8" />
     </svg>
   ),
+  tasks: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M9 11l2 2 4-4" />
+      <rect x="4" y="4" width="16" height="16" rx="2.5" />
+    </svg>
+  ),
+  messaging: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8" />
+      <path d="M10.3 20a1.9 1.9 0 003.4 0" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 24 24" {...stroke}>
       <circle cx="12" cy="12" r="3" />
