@@ -13,6 +13,19 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — Feature set and tech stack written; task detail screen with acknowledge and complete
+
+**Objective.** Ben asked for "no fake shit": a real feature set and the tech stack needed, written down. Two pasted notes arrived at the same time: "Activating Stock Requests" and "the employee receives an in-app notification; clicking it takes them to the Task Details screen where they can acknowledge or complete the task."
+
+**Actions Completed.**
+- `documentation/plans/FEATURE_SET_AND_TECH_STACK.md`: what is real today with evidence; every feature with status, phase, how and dependencies (star feature S1-S10, inventory I1-I11, purchasing and sales, platform, reporting, compliance, security and operations O1-O10); current stack; needed stack per capability with labelled outside claims; the real path for the star feature step by step (Meta Cloud API free test number, up to 5 verified recipients, no customer messages, then business verification); decisions table with owners. Outside facts were checked by web search and are labelled; unconfirmed items say **Unverified** (Egyptian-Arabic speech accuracy, ETA signing details, Supabase email limits, Egypt WhatsApp rates, availability of WhatsApp calling for Egypt and the GCC). The `fake` channel is documented as a test seam only. No costs or dates.
+- Intake loop (`neworder.md` section 6) for the pasted notes: **"Activating Stock Requests"** is ambiguous (module switch, a draft step, or re-opening); recorded as B12 with one question for Ben, nothing built. **Task details** (B11): `GET /v1/tasks/:id`; web route `/tasks/:id` with the task, status, who and when, **Acknowledge** (sets `in_progress`; labelled "Acknowledged" in lists), **Complete**, **Cancel task**, and its audit history; task notifications now open it (the bell and the Notifications page); the task list links to it and the "Start" button is now "Acknowledge". No database change: acknowledge reuses the existing `in_progress` transition and every button calls `tsk_set_status` with the person's rights (opening the page changes nothing). Rule check: a notification only navigates; it never changes a task by itself.
+- Deployed: Worker version `9d7095fc`, web deployment `232a6013`; bundle scanned clean.
+
+**Database / System Result.** None.
+
+**Safety Status.** Typecheck clean; 17 tests pass. Live API check as grant: `GET /v1/tasks/:id` 200 for "Count aisle 4" (still open, untouched), the task notification's entity id equals the task id, a malformed id gives 404. The page itself has not been opened in a browser by me. "Acknowledge" is not a separate stored fact (no timestamp of when it was acknowledged beyond the audit entry); if the reminder logic should stop on acknowledgement, that is a design change to ask Ben about.
+
 ## 2026-10-29 — Slice 2 built end to end: job, routes, screens, demo seed, deploy; demo path verified over the live API
 
 **Objective.** Finish slice 2 for the demo path in `neworder.md` task 8: manager gets a notification for the pending request, staff gets a task, a reminder fires if nobody answers.

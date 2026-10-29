@@ -10,7 +10,7 @@ export type AppNotification = { id: string; title: string; body: string; entityT
 /** Where a notification leads when clicked. */
 export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId'>): string | null {
   if (n.entityType === 'stock_request' && n.entityId) return `/inventory/requests/${n.entityId}`;
-  if (n.entityType === 'task') return '/tasks';
+  if (n.entityType === 'task' && n.entityId) return `/tasks/${n.entityId}`;
   return null;
 }
 

@@ -38,6 +38,12 @@ tasksRoutes.get('/', requirePermission('tasks.tasks.read'), async (c) => {
   return ok(c, ((data ?? []) as TaskRow[]).map(toTask));
 });
 
+tasksRoutes.get('/:id', requirePermission('tasks.tasks.read'), async (c) => {
+  const id = c.req.param('id') ?? '';
+  if (!UUID_RE.test(id)) throw new HttpError(404, 'Task not found', 'not_found');
+  return ok(c, await loadTask(c, id));
+});
+
 tasksRoutes.post('/', requirePermission('tasks.tasks.create'), async (c) => {
   const body = await jsonBody(c);
   const title = text(body.title);

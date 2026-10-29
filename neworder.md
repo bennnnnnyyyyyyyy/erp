@@ -69,7 +69,7 @@ When Ben gives a feature:
 | --- | ---------------------------------------------------------------------------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
 | B1  | Real inventory flow with DB-enforced approval                                | Management       | P1       | NOT fully done: database, API, screens, seed, deploy, SQL tests and API-level real-login checks are done and passing; still open: Worker secret key (Users page, names), Ben browser click-through | sql/tests/002, scripts/real-login-check.mjs |
 | B2  | Tasks and notification outbox (fake channel)                                 | Star feature     | P1       | Built, deployed and verified over the live API (notifications, task, reminder and escalation, idempotent reruns); waiting on Ben click-through | sql/tests/003, live API run in WORKLOG |
-| B3  | Approvals and tasks over messaging (fake WhatsApp adapter, identity binding) | Star feature     | P1       | Not started                                                                                            | contract test                               |
+| B3  | Approvals and tasks over messaging: REAL WhatsApp (Meta Cloud API on a free test number first), identity binding, decision tokens | Star feature | P1 | Not started; plan in documentation/plans/FEATURE_SET_AND_TECH_STACK.md section 5; needs Ben: Meta developer app and 3 secrets | contract test on a real phone |
 | B4  | Voice assistant (browser speech demo, tool calling, read-back)               | Star feature     | P1       | Not started                                                                                            | click path + tests                          |
 | B5  | Purchasing and goods receipt on the ledger                                   | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
 | B6  | Sales orders linked to stock requests                                        | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
@@ -77,6 +77,9 @@ When Ben gives a feature:
 | B8  | CSV import/export, custom fields, print templates                            | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
 | B9  | Responsive/installable phone experience                                      | Feature set v0.1 | P2       | Not started                                                                                            |                                             |
 | B10 | User names without the admin client (database function returning the organization people)  | Found in task 1  | P2       | Not started | test: names show with no secret key |
+| B11 | Task details screen: notification opens it; assignee acknowledges or completes | Ben (pasted notes) | P1 | Built and deployed; API checked, not clicked in a browser | live API: GET task, notification entity link |
+| B12 | "Activating Stock Requests" | Ben (pasted notes) | P1 | Waiting on one question (see update.md) | |
+| B13 | Feature set and tech stack, no fake channels | Ben | P1 | Written: documentation/plans/FEATURE_SET_AND_TECH_STACK.md | review by Ben |
 
 ## 8. Status block (update at the end of every turn; paste-ready for Ben)
 

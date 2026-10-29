@@ -8,7 +8,7 @@ import { demoMode } from '../lib/demo';
 import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { NotificationsPage, OutboxPage } from './messaging/Messaging';
-import { TasksPage } from './tasks/Tasks';
+import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
@@ -97,7 +97,10 @@ const TASKS_APP: AppDef = {
   description: 'Assign work with a due time and follow it up',
   suite: 'Warehouse',
   basePath: '/tasks',
-  pages: [{ path: '', label: 'Tasks', permission: 'tasks.tasks.read', component: TasksPage }],
+  pages: [
+    { path: '', label: 'Tasks', permission: 'tasks.tasks.read', component: TasksPage },
+    { path: '/:id', label: 'Task', permission: 'tasks.tasks.read', component: TaskPage, nav: false, parent: '' },
+  ],
 };
 
 const MESSAGING_APP: AppDef = {

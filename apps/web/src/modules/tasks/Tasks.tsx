@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { hasPermission, type Member } from '@erp/shared';
+import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { usePeople } from '../../lib/people';
+import { Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
@@ -16,7 +17,7 @@ type Task = {
   status: 'open' | 'in_progress' | 'done' | 'cancelled'; completedAt: string | null; createdAt: string;
 };
 
-const STATUS_LABEL: Record<Task['status'], string> = { open: 'To do', in_progress: 'In progress', done: 'Done', cancelled: 'Cancelled' };
+const STATUS_LABEL: Record<Task['status'], string> = { open: 'To do', in_progress: 'Acknowledged', done: 'Done', cancelled: 'Cancelled' };
 
 function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose: () => void; onDone: () => void }) {
   const choices = members.filter((m) => m.status !== 'disabled');
@@ -85,7 +86,7 @@ export function TasksPage() {
   const overdue = (t: Task) => Boolean(t.dueAt) && (t.status === 'open' || t.status === 'in_progress') && new Date(t.dueAt as string).getTime() < Date.now();
 
   const columns: Column<Task>[] = [
-    { key: 'title', label: 'Task', value: (t) => t.title, render: (t) => (<><strong>{t.title}</strong>{t.description && <div className="muted small">{t.description}</div>}</>) },
+    { key: 'title', label: 'Task', value: (t) => t.title, render: (t) => (<><Link to={`/tasks/${t.id}`}><strong>{t.title}</strong></Link>{t.description && <div className="muted small">{t.description}</div>}</>) },
     { key: 'for', label: 'For', value: (t) => who(t.assigneeId) },
     { key: 'by', label: 'Assigned by', value: (t) => who(t.createdBy) },
     { key: 'due', label: 'Due', value: (t) => t.dueAt ?? '', render: (t) => (t.dueAt ? <span className={overdue(t) ? 'overdue nowrap' : 'nowrap'}>{formatDateTime(t.dueAt, session.org)}{overdue(t) ? ' (overdue)' : ''}</span> : <span className="muted">none</span>) },
@@ -118,7 +119,7 @@ export function TasksPage() {
           actions={(t) =>
             canAct(t) ? (
               <>
-                {t.status === 'open' && <button className="secondary" onClick={() => setStatus(t, 'in_progress')}>Start</button>}{' '}
+                {t.status === 'open' && <button className="secondary" onClick={() => setStatus(t, 'in_progress')}>Acknowledge</button>}{' '}
                 <button onClick={() => setStatus(t, 'done')}>Done</button>{' '}
                 <button className="secondary" onClick={() => setStatus(t, 'cancelled')}>Cancel</button>
               </>
@@ -129,6 +130,91 @@ export function TasksPage() {
         <p className="muted">{tasks.error ?? members.error ?? 'Loading…'}</p>
       )}
       {adding && members.data && <NewTaskModal members={members.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); tasks.reload(); }} />}
+    </section>
+  );
+}
+
+// Task details: where a task notification leads. The assignee acknowledges (so the manager knows it was seen) and
+// completes it here. Opening the page changes nothing; each button calls the database function with the person's rights.
+export function TaskPage() {
+  const id = useParam('id');
+  const session = useSession();
+  const who = usePeople();
+  const task = useLoad(() => api<Task>(`/v1/tasks/${id}`));
+  const audit = useLoad(() => api<AuditEntry[]>('/v1/core/audit?limit=200'));
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const t = task.data;
+  const isManager = session.role === 'owner' || session.role === 'admin';
+
+  async function act(status: 'in_progress' | 'done' | 'cancelled', done: string) {
+    setBusy(true);
+    setResult(null);
+    try {
+      await api(`/v1/tasks/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
+      setResult({ ok: true, text: done });
+    } catch (err) {
+      setResult({ ok: false, text: (err as Error).message });
+    } finally {
+      setBusy(false);
+      task.reload();
+      audit.reload();
+    }
+  }
+
+  if (task.error) return <section className="page"><Link to="/tasks" className="back-link">← Tasks</Link><p className="error">{task.error}</p></section>;
+  if (!t) return <section className="page"><p className="muted">Loading…</p></section>;
+
+  const open = t.status === 'open' || t.status === 'in_progress';
+  const canAct = open && (t.assigneeId === session.userId || t.createdBy === session.userId || isManager);
+  const late = Boolean(t.dueAt) && open && new Date(t.dueAt as string).getTime() < Date.now();
+  const history = (audit.data ?? []).filter((a) => a.entity_id === t.id);
+
+  return (
+    <section className="page">
+      <Link to="/tasks" className="back-link">← Tasks</Link>
+      <div className="page-head">
+        <h1>{t.title}</h1>
+        <span className={`pill st-${t.status}`}>{STATUS_LABEL[t.status]}</span>
+      </div>
+      <p className="muted">
+        For {who(t.assigneeId)}, assigned by {who(t.createdBy)} on {formatDateTime(t.createdAt, session.org)}.
+        {t.dueAt && <> Due <span className={late ? 'overdue' : undefined}>{formatDateTime(t.dueAt, session.org)}{late ? ' (overdue)' : ''}</span>.</>}
+        {t.completedAt && <> Completed {formatDateTime(t.completedAt, session.org)}.</>}
+      </p>
+      {t.description && <p>{t.description}</p>}
+
+      {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
+
+      {canAct && (
+        <div className="form-card stack">
+          <strong>{t.assigneeId === session.userId ? 'Your task' : 'Task actions'}</strong>
+          <p className="hint muted small">Acknowledge tells {who(t.createdBy)} you have seen it and are on it. Complete when it is done.</p>
+          <div className="form-actions">
+            {t.status === 'open' && <button className="secondary" disabled={busy} onClick={() => act('in_progress', 'Acknowledged. The person who assigned it can see that you are on it.')}>Acknowledge</button>}
+            <button disabled={busy} onClick={() => act('done', 'Marked as done. The person who assigned it will be notified.')}>Complete</button>
+            <button className="secondary" disabled={busy} onClick={() => act('cancelled', 'Task cancelled.')}>Cancel task</button>
+          </div>
+        </div>
+      )}
+
+      <h2 className="related">History</h2>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+          <tbody>
+            {history.map((a) => (
+              <tr key={a.id}>
+                <td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td>
+                <td>{who(a.actor_user_id)}</td>
+                <td><code>{a.action}</code></td>
+                <td>{a.summary}</td>
+              </tr>
+            ))}
+            {history.length === 0 && <tr><td colSpan={4} className="muted empty">No history yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
