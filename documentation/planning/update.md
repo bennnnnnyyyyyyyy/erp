@@ -3,27 +3,25 @@
 Kept current by Claude at the end of every turn. Last updated: 2026-10-29.
 
 ## Last done
-- Built the **Purchasing and Sales demo apps** on sample data and redeployed. Live: https://erp-demo-bas.pages.dev
-  - Purchasing: suppliers, purchase orders, "Receive goods" adds stock to the ledger.
-  - Sales: customers, sales orders, "Request stock" raises a stock request that still needs a manager's approval; the order becomes Delivered once that request is issued.
-  - Links both ways: request page shows its sales order, ledger shows its purchase order.
-- Typecheck clean, 17 tests pass, live URL answers 200 on the new build. **Not clicked through in a browser by me.**
-- Worklog and checklist updated. Not yet committed (you commit).
-- Earlier today: SQL `003` verification query 2 looked as expected (anon/authenticated blocked from admin functions).
+- **`sql/003` verified on your database.** Hash chain works: seq 1 (prev null, hash 4fc1aa5dae), seq 2 (prev 4fc1aa5dae, hash 8ccaa9eeec), `audit_verify` found 0 bad rows. Editing the audit log is refused ("audit_log is append-only (UPDATE refused)"). Admin functions are not callable by anon or signed-in users.
+- **Found a real gap:** signed-in users still hold TRUNCATE, REFERENCES and TRIGGER on the four core tables (`sql/001` only removed INSERT/UPDATE/DELETE). Not reachable through the Supabase API, but it would let a direct database connection empty the audit log.
+- Wrote **`sql/004_revoke_extra_privileges.sql`** to fix it (revokes those rights, blocks TRUNCATE on `audit_log`, and stops future tables getting them). **Not run yet.** Added a rule to `agents.md` so new tables start locked down.
+- Worklog, checklist and `sql/README.md` updated. Purchasing and Sales demo is live at https://erp-demo-bas.pages.dev (earlier today).
 
 ## Doing now
-- Nothing running. The local dev server stays stopped (it was stopped for low memory); start it only if you want it: `npm run dev:demo -w apps/web`.
+- Nothing running. Local dev server stays stopped.
 
-## Next (my suggestion)
-1. Your quick click-through of the live demo, then tell me what looks wrong.
+## Next
+1. **You:** run `sql/004` in the Supabase SQL Editor (whole file, nothing selected), then its two verification queries one at a time and paste the results.
 2. Real foundation: SQL tests in `sql/tests/`, root `README.md`, `PRODUCT_BRIEF.md`, move the plans into `documentation/`.
-3. Later: `INVENTORY_PLAN.md` after the trials and interviews. Purchasing and Sales are demo-only until then.
+3. API test with a real login for the `X-Org-Id` path and cross-organization refusal (needs a second org and user).
+4. Later: `INVENTORY_PLAN.md` after trials and interviews.
 
 ## Needs your input
-- **Cloudflare naming fix:** still unclear which one you meant: (a) `-bas` in `erp-demo-bas.pages.dev` (new project = new link), (b) the account name `Meetings.dmedeskai@gmail.com's Account` (dashboard rename, I can't), (c) the email spelling in my notes. Nothing changed yet.
-- SQL `003` verification queries 1, 3 and 4 (3 and 4 should be empty).
+- Run `sql/004` and send me the two result grids (query 1 should be "no rows", query 2 should list `audit_log_append_only`, `audit_log_chain`, `audit_log_no_truncate`).
+- **Cloudflare naming fix:** still unclear which one you meant: (a) `-bas` in `erp-demo-bas.pages.dev`, (b) the account name `Meetings.dmedeskai@gmail.com's Account`, (c) email spelling in my notes. Nothing changed.
 - Management: go-ahead for trials and interviews, e-invoicing now or later, WhatsApp provider, payment gateway.
-- Product name stays a placeholder; demo stays public (both your decisions).
+- Product name stays a placeholder; demo stays public (your decisions).
 
 ## Where to look
-`documentation/operations/WORKLOG.md`, `documentation/plans/checklist.md`, `TECHNICAL_PLAN.md`, `apps/web/src/lib/demoTrade.ts`, `apps/web/src/modules/sales/SalesDemo.tsx`.
+`documentation/operations/WORKLOG.md`, `sql/004_revoke_extra_privileges.sql`, `sql/003_audit_chain_and_core_rpc.sql`, `documentation/plans/checklist.md`, `TECHNICAL_PLAN.md`.

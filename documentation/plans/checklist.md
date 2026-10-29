@@ -54,7 +54,10 @@ Template for further blocks; update them in the same change as the work:
 - [x] `sql/001` tenancy core, `sql/002` user lookup (carried over)
 - [x] `sql/003` audit hash chain and core functions (written)
 - [ ] Choose project: reuse the existing one (it already has the four 001 tables) or a new staging project
-- [ ] Run `sql/001`, `002`, `003` in order and the verification queries; log in the worklog
+- [x] `sql/001`-`003` run by Ben in Supabase (reported)
+- [x] `sql/003` verified on a database (chain, append-only, privileges) 2026-10-29
+- [ ] Run `sql/004` (revoke TRUNCATE/REFERENCES/TRIGGER; block TRUNCATE on audit_log) and its two checks
+- [ ] Browser-path check: `X-Org-Id` through PostgREST with a real token; cross-organization refusal (second org and user)
 - [ ] Set `default_currency` default to EGP on an already-created `organizations` table
 - [ ] SQL tests in `sql/tests/`: cross-organization isolation, audit chain verify, direct-write refusal
 - [ ] Scheduled `audit_verify` job and alert on a broken chain

@@ -30,6 +30,7 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 - Modules are switched on per organization (`org_modules`). New features belong to a module; the core stays small.
 - Money is stored as integer minor units (`bigint`) plus an ISO 4217 currency code. Timestamps are `timestamptz` in UTC.
 - Business records are soft-deleted (`deleted_at`) and changes are written to the append-only `audit_log`.
+- Every new business table: `revoke all` from `anon` and `authenticated`, then `grant select` only (writes go through database functions, ADR-0003). Do not rely on `revoke insert, update, delete` alone: TRUNCATE, REFERENCES and TRIGGER must go too (found in sql/001, fixed in sql/004).
 - Arabic and English from the first screen: no hard-coded UI strings, logical CSS properties (RTL-safe).
 
 ## Stock, approval and audit rules (non-negotiable)
