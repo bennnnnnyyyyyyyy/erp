@@ -13,6 +13,16 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — sql/004 run in Supabase (partly checked)
+
+**Objective.** Record the run of `sql/004_revoke_extra_privileges.sql`.
+
+**Actions Completed.** Ben ran `sql/004` and its verification query 2 (screenshot): triggers on `audit_log` are `audit_log_append_only`, `audit_log_chain`, `audit_log_no_truncate` (PASS). Verification query 1 (no non-SELECT privileges for `anon`/`authenticated` on the four core tables, expect zero rows) not yet seen. The TRUNCATE refusal itself was not exercised (deliberately not tested on real data).
+
+**Database / System Result.** `audit_log` now has the `audit_log_no_truncate` trigger. Whether the privilege revokes took effect is **not confirmed** until query 1 returns no rows.
+
+**Safety Status.** Treat the privilege gap as open until query 1 is confirmed.
+
 ## 2026-10-29 — sql/003 verified on a database; privilege gap found, sql/004 written
 
 **Objective.** Record the verification results Ben pasted and the gap they exposed.

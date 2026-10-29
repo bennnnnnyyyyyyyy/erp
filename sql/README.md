@@ -10,7 +10,7 @@ Log every run in
 | `001_tenancy_core.sql` | organizations, memberships, org_modules, append-only audit_log, RLS | Carried over; run by Ben (reported) |
 | `002_core_user_lookup.sql` | user lookup helper for invites | Carried over; run by Ben (reported) |
 | `003_audit_chain_and_core_rpc.sql` | audit hash chain, `audit_verify`, `audit_append_admin`, `current_org_id`, `core_set_module`, `core_update_org` (ADR-0003) | Run by Ben; verified on a database 2026-10-29 (see worklog), except the browser path and cross-organization refusal |
-| `004_revoke_extra_privileges.sql` | revoke TRUNCATE/REFERENCES/TRIGGER from `authenticated`, refuse TRUNCATE on audit_log | Written, not run |
+| `004_revoke_extra_privileges.sql` | revoke TRUNCATE/REFERENCES/TRIGGER from `authenticated`, refuse TRUNCATE on audit_log | Run by Ben 2026-10-29; query 2 pass (three triggers listed), query 1 not yet seen |
 
 Run order: 001, 002, 003, 004. Run on a staging project first and record each run in the worklog.
 
