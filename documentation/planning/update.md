@@ -1,32 +1,29 @@
 # Update (paste this into the chat)
 
-Kept current by Claude at the end of every turn. Last updated: 2026-10-29. Source: `orders.md`, workstream C (live demo on a real database).
+Kept current by Claude at the end of every turn. Last updated: 2026-10-29. Standing brief: `neworder.md` (Status block mirrors this).
 
 ## Last done
-- Used the Supabase CLI on your linked project (`plhuuhcpvlytozyedamt`): state check, advisors, applied migrations, ran tests. Nothing needed pasting from you.
-- **`sql/005`** applied: fixes the Supabase advisor warnings (pinned function search paths, faster membership policy). Verified.
-- **`INVENTORY_PLAN.md`** written (slice 1 only).
-- **`sql/006_inventory_core.sql`** applied and verified: items, warehouses, stock ledger, balances, stock requests, approvals, and seven functions. The approval is enforced in the database: stock can only be issued for an approved request, nobody can approve their own request, the ledger can't be edited, every step writes an audit row in the same transaction.
-- **`sql/tests/002_inventory_approval.sql`** passed on the first run on your real database (rolled back, nothing left behind: still 1 org, 0 items, 2 users). `sql/tests/001` still passes.
-- API error codes extended (state, not found, module off). Typecheck clean, 17 tests pass.
-- Worklog, checklist, SQL READMEs updated. Not committed (you commit).
+- Read `neworder.md` (the living brief: star feature = outbound voice/WhatsApp approvals and tasks; build order slice 1 to 5). We are finishing **slice 1**.
+- Everything Supabase now goes through the CLI. Created the 3 demo users by SQL (no emails): **chris = owner, joseph = manager (admin), grant = requester (member)**. Passwords are random and saved only in `.temp\demo-credentials.txt` (git-ignored, on your machine). Not printed anywhere else.
+- Ran the demo seed: **Demo Trading Co.** with 2 warehouses, 5 items with Arabic names, 1 issued request, 1 waiting for approval, 21 audit rows, audit chain clean. Stock read back correctly (gloves 120 with 30 reserved, cartons 460, tape 54).
+- **Real sign-in test passed for all three users** (15/15, 15/15, 17/17 checks) through Supabase's REST API: own organization accepted, other/missing refused, isolation, no direct writes, issue without approval refused, member cannot approve. This was the one path the SQL tests could not prove.
+- Inventory API routes and screens on the real API are written; typecheck clean, 17 tests pass. Not yet run through the Worker.
+- Worklog, `neworder.md` status/backlog, update.md updated. Not committed (you commit).
 
 ## Doing now
-- Nothing running. Local dev server stays stopped.
+- Nothing running; waiting on you for the deploy step below.
 
-## Next (workstream C, in order)
-1. Inventory API routes in the Worker (call the seven functions; reads through your login).
-2. Switch the demo screens to the real API (same screens, real data); keep the sample-data demo as the fallback link.
-3. Test users and a demo organization in your Supabase; enable the inventory module for it.
-4. Deploy the Worker and a second web build, then you click through.
-5. SQL/real-login test for the inventory calls.
+## Next
+1. Deploy the Worker (needs your two `wrangler secret put` commands) and a web build against it.
+2. You click through: grant submits a request, joseph approves, grant issues; check the history and audit log.
+3. Slice 2 (from `neworder.md`): tasks and the notification outbox with a fake channel adapter.
 
 ## Needs your input
-- **Test users:** in Supabase dashboard, Authentication, Users, "Add user", tick auto-confirm, create three with a password you choose (and can share with management for the demo): a requester (becomes member), a manager (becomes admin), and an owner. Tell me the three emails, not the passwords. `ben@prime-ad.com` can be the owner if you prefer.
-- **Cloudflare Worker secrets (you run these, I must not see them):** when I reach the deploy step I will give you two `wrangler secret put` commands; one needs the Supabase secret key from the dashboard (Project Settings, API).
-- **Decide:** turn on "leaked password protection" in Supabase Auth settings (advisor warning; may need a paid plan).
-- Management: go-ahead for the trials and interviews, e-invoicing now or later, WhatsApp provider, payment gateway (orders.md "decisions only you or management can make").
-- Your click-through of the sample-data demo (orders.md item 5).
+- Say **go** for the deploy and I will give you the two `wrangler secret put` commands: `SUPABASE_URL` is not secret but the **Supabase secret key** is, so you run that one yourself (Project Settings, API). I will not see it.
+- Passwords: open `C:\Users\ben.arthur\Desktop\ERP\.temp\demo-credentials.txt`.
+- Leaked-password protection (Supabase advisor warning): turn on or ignore.
+- Management items in `orders.md`: trials and interviews, e-invoicing, WhatsApp provider, payment gateway.
+- Note for the star feature: I will need a decision later on the voice/LLM key (Worker secret) and which WhatsApp provider; not needed yet (fake adapters first).
 
 ## Where to look
-`orders.md`, `documentation/plans/INVENTORY_PLAN.md`, `sql/006_inventory_core.sql`, `sql/tests/002_inventory_approval.sql`, `documentation/operations/WORKLOG.md`.
+`neworder.md`, `documentation/operations/WORKLOG.md`, `sql/seed/001_demo_organization.sql`, `scripts/real-login-check.mjs`, `.temp\demo-credentials.txt` (yours only).

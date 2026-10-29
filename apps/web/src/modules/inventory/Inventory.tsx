@@ -4,14 +4,14 @@ import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoRequest, DemoWarehouse, LedgerMove, RequestStatus, StockRow } from '../../lib/demoInventory';
-import { ACTOR_NAMES } from '../../lib/demoInventory';
+import { usePeople } from '../../lib/people';
 import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
-// DEMO ONLY: these screens run on sample data (lib/demoInventory.ts) so the first vertical slice can be
-// tried before the real inventory module exists. The real module is built from its approved plan.
+// Inventory slice 1 screens. They call /v1/inventory/... : the real API in the real app, and the in-browser sample
+// (lib/demoInventory.ts) in demo mode. Plan: documentation/plans/INVENTORY_PLAN.md.
 
 const STATUS_LABEL: Record<RequestStatus, string> = {
   submitted: 'Waiting for approval',
@@ -53,14 +53,13 @@ function useCatalog() {
   return { items, warehouses, itemName, warehouseName, ready: Boolean(items.data && warehouses.data) };
 }
 
-const who = (id: string | null) => (id ? (ACTOR_NAMES[id] ?? id) : 'System');
 
 // ------------------------------------------------------------------ stock on hand and items
 
 type StockLine = DemoItem & { onHand: number; reserved: number; available: number };
 
 function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehouse[]; onClose: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? 'w1' });
+  const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -202,6 +201,7 @@ export function StockPage() {
 
 export function RequestsList() {
   const cat = useCatalog();
+  const who = usePeople();
   const requests = useLoad(() => api<DemoRequest[]>('/v1/inventory/requests'));
   const session = useSession();
   const [filter, setFilter] = useState<'all' | 'submitted'>('all');
@@ -209,7 +209,7 @@ export function RequestsList() {
 
   const columns: Column<DemoRequest>[] = [
     { key: 'number', label: 'Request', value: (r) => r.number, render: (r) => <Link to={`/inventory/requests/${r.id}`}><code>{r.number}</code></Link> },
-    { key: 'by', label: 'Requested by', value: (r) => r.requesterName },
+    { key: 'by', label: 'Requested by', value: (r) => who(r.requesterId) },
     { key: 'wh', label: 'Warehouse', value: (r) => cat.warehouseName(r.warehouseId) },
     { key: 'items', label: 'Items', value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
     { key: 'status', label: 'Status', value: (r) => r.status, render: (r) => <StatusPill status={r.status} /> },
@@ -247,7 +247,9 @@ export function RequestsList() {
 export function NewRequest() {
   const cat = useCatalog();
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
-  const [warehouseId, setWarehouseId] = useState('w1');
+  const [chosenWarehouse, setWarehouseId] = useState('');
+  // The first warehouse until the person picks one (ids are not fixed in a real organization).
+  const warehouseId = chosenWarehouse || cat.warehouses.data?.[0]?.id || '';
   const [reason, setReason] = useState('');
   const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
   const [error, setError] = useState<string | null>(null);
@@ -318,6 +320,7 @@ export function NewRequest() {
 }
 
 export function RequestPage() {
+  const who = usePeople();
   const id = useParam('id');
   const session = useSession();
   const cat = useCatalog();
@@ -360,7 +363,7 @@ export function RequestPage() {
       </div>
       <Steps status={r.status} />
       <p className="muted">
-        Requested by {r.requesterName} on {formatDateTime(r.createdAt, session.org)} from {cat.warehouseName(r.warehouseId)}. Reason: {r.reason || 'none given'}.
+        Requested by {who(r.requesterId)} on {formatDateTime(r.createdAt, session.org)} from {cat.warehouseName(r.warehouseId)}. Reason: {r.reason || 'none given'}.
         {r.source && <> For sales order <Link to={`/sales/orders/${r.source.id}`}><code>{r.source.number}</code></Link>.</>}
         {r.decidedBy && <> Decision by {who(r.decidedBy)}{r.decisionComment ? `: "${r.decisionComment}"` : ''}.</>}
       </p>
@@ -423,6 +426,7 @@ export function RequestPage() {
 // ------------------------------------------------------------------ ledger
 
 export function LedgerPage() {
+  const who = usePeople();
   const cat = useCatalog();
   const moves = useLoad(() => api<LedgerMove[]>('/v1/inventory/ledger'));
   const session = useSession();

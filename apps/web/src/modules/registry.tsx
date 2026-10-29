@@ -5,7 +5,7 @@ import { AuditLog } from './core/settings/AuditLog';
 import { GeneralSettings } from './core/settings/GeneralSettings';
 import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
-import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/InventoryDemo';
+import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 
@@ -35,21 +35,22 @@ export type AppDef = {
   pages: AppPage[];
 };
 
-// DEMO ONLY (npm run dev:demo): sample-data inventory screens. The real inventory app replaces this
-// entry when the inventory module is built from its plan; in normal builds it is not registered.
-const DEMO_INVENTORY_APP: AppDef = {
+// Inventory slice 1 (documentation/plans/INVENTORY_PLAN.md). Runs on the real API; in demo mode the same
+// screens run on the in-browser sample data.
+const READ = 'inventory.items.read';
+const INVENTORY_APP: AppDef = {
   key: 'inventory',
   module: 'inventory',
   name: 'Inventory',
-  description: 'Stock, requests, approvals and the ledger (demo data)',
+  description: demoMode ? 'Stock, requests, approvals and the ledger (demo data)' : 'Stock, requests, approvals and the ledger',
   suite: 'Warehouse',
   basePath: '/inventory',
   pages: [
-    { path: '', label: 'Stock on hand', component: StockPage },
-    { path: '/requests', label: 'Stock requests', component: RequestsList },
-    { path: '/requests/new', label: 'New request', component: NewRequest, nav: false, parent: '/requests' },
-    { path: '/requests/:id', label: 'Request', component: RequestPage, nav: false, parent: '/requests' },
-    { path: '/ledger', label: 'Stock ledger', component: LedgerPage },
+    { path: '', label: 'Stock on hand', permission: READ, component: StockPage },
+    { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
+    { path: '/requests/new', label: 'New request', permission: READ, component: NewRequest, nav: false, parent: '/requests' },
+    { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },
+    { path: '/ledger', label: 'Stock ledger', permission: READ, component: LedgerPage },
   ],
 };
 
@@ -87,7 +88,8 @@ const DEMO_SALES_APP: AppDef = {
 };
 
 export const APPS: AppDef[] = [
-  ...(demoMode ? [DEMO_INVENTORY_APP, DEMO_SALES_APP, DEMO_PURCHASING_APP] : []),
+  INVENTORY_APP,
+  ...(demoMode ? [DEMO_SALES_APP, DEMO_PURCHASING_APP] : []),
   {
     key: 'settings',
     module: 'core',

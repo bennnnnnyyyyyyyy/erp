@@ -106,6 +106,34 @@ if (role === 'owner' || role === 'admin') {
   check('a plain member cannot change organization settings', refused(update) && message(update).includes('FORBIDDEN'), message(update));
 }
 
+// ---- inventory (sql/006), only when the organization has inventory data
+const items = await rest(`inv_items?select=id&org_id=eq.${orgId}`);
+if (items.status === 200 && Array.isArray(items.json) && items.json.length > 0) {
+  check('can read inventory items of their organization', true, `${items.json.length} items`);
+  const move = await rest('inv_stock_moves', { method: 'POST', body: { org_id: orgId, item_id: items.json[0].id, warehouse_id: crypto.randomUUID(), qty: -1, kind: 'issue', request_id: crypto.randomUUID(), posted_by: crypto.randomUUID() } });
+  check('direct insert into the stock ledger is refused', refused(move), `status ${move.status}`);
+  // With a filter, so a refusal can only be about permissions (an unfiltered PATCH is rejected by PostgREST anyway).
+  const bal = await rest(`inv_stock_balances?org_id=eq.${orgId}`, { method: 'PATCH', body: { on_hand: 999999 } });
+  check('direct change of stock balances is refused (permission)', bal.status === 403 || bal.status === 401, `status ${bal.status}`);
+  const waiting = await rest(`inv_requests?select=id,status&org_id=eq.${orgId}&status=eq.submitted&limit=1`);
+  const pending = Array.isArray(waiting.json) ? waiting.json[0] : null;
+  if (pending) {
+    const issue = await rest('rpc/inv_post_issue', { method: 'POST', org: orgId, body: { p_request_id: pending.id } });
+    const issueOk = role === 'viewer' ? message(issue).includes('FORBIDDEN') : message(issue).includes('APPROVAL_REQUIRED');
+    check('issuing a request that is not approved is refused', refused(issue) && issueOk, message(issue));
+    if (role === 'member' || role === 'viewer') {
+      const decide = await rest('rpc/inv_decide_request', { method: 'POST', org: orgId, body: { p_request_id: pending.id, p_decision: 'approved' } });
+      check('a member or viewer cannot approve', refused(decide) && message(decide).includes('FORBIDDEN'), message(decide));
+    } else {
+      console.log('SKIP  approve check: owners and admins can approve, and the call would change data.');
+    }
+  } else {
+    console.log('SKIP  no request is waiting for approval, so the issue and approve checks were not run.');
+  }
+} else {
+  console.log('SKIP  inventory checks: no inventory items visible to this user.');
+}
+
 const failed = results.filter((r) => !r).length;
 console.log(failed === 0 ? `\nALL ${results.length} CHECKS PASSED` : `\n${failed} OF ${results.length} CHECKS FAILED`);
 process.exit(failed === 0 ? 0 : 1);

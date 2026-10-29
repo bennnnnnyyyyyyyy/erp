@@ -13,6 +13,34 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — Demo users created, demo organization seeded, real-login checks pass (all via the CLI)
+
+**Objective.** Put real data and real sign-in behind the inventory slice, per `neworder.md` (slice 1) and "run the Supabase stuff using the CLI".
+
+**Actions Completed.**
+- Created three Supabase Auth users by SQL through the CLI (`auth.users` plus `auth.identities`, bcrypt via `extensions.crypt`, email pre-confirmed; no email sent): `chris.johnson.wiz@gmail.com`, `joseph.brown.wiz@gmail.com`, `grant.holden.wiz@gmail.com`. Passwords were generated randomly and saved only to `.temp/demo-credentials.txt` (git-ignored); they were not printed or committed. The temporary SQL file that held them was blanked.
+- Ran `sql/seed/001_demo_organization.sql` via CLI. Result: organization "Demo Trading Co." (EGP, Africa/Cairo), 3 members (chris owner, joseph admin, grant member), module `inventory` on, 2 warehouses, 5 items, 2 requests (one issued, one waiting for approval), 21 audit rows, `audit_verify` 0 problems. Stock read back: cartons 460 (500 − 40 issued), tape 54 (60 − 6), gloves 120 on hand with 30 reserved for the waiting request.
+- `scripts/real-login-check.mjs` extended with inventory checks (items readable, direct ledger insert refused, direct balance change refused with a permission error, issue of an unapproved request refused, member cannot approve) and a clearer sign-in error message.
+
+**Database / System Result.** Project `plhuuhcpvlytozyedamt` now holds the demo organization and 3 more auth users (5 in total). Real sign-in worked for all three through Supabase's password sign-in, which also shows the SQL-created users are accepted by Supabase Auth.
+
+**Safety Status.** Real-login check (real password sign-in, then Supabase REST calls with `X-Org-Id`): **chris 15/15, joseph 15/15, grant 17/17 passed**. This proves the browser path the SQL tests could only simulate: header accepted for own organization and refused for another or missing, isolation, no direct writes, admin functions closed, approval enforced for real users. Skipped on purpose (would change data): approving as owner/admin. Not yet tested: the Worker routes and the screens against this data. Credentials created by direct SQL is non-standard; if Supabase Auth ever misbehaves for these users, recreate them from the dashboard.
+
+## 2026-10-29 — Workstream C: inventory API routes, screens on the real API, demo seed script (not run)
+
+**Objective.** Connect the inventory database layer (`sql/006`) to the API and the web screens, and prepare the demo organization.
+
+**Actions Completed.**
+- Roles for the demo users (from Ben): `chris.johnson.wiz@gmail.com` owner, `joseph.brown.wiz@gmail.com` manager (admin), `grant.holden.wiz@gmail.com` requester (member). **These three users do not exist in Supabase Auth yet** (checked via CLI: only `ben@prime-ad.com` and `ben.arthur.wiz@gmail.com`).
+- `packages/shared/src/modules.ts`: inventory permissions (`inventory.items.read`, `.items.manage`, `.warehouses.manage`, `.request.create`, `.request.approve`, `.stock.issue`) and member grants.
+- `apps/api/src/modules/inventory/routes.ts`: reads (warehouses, items, stock, ledger, requests) filtered by the caller's organization, and changes through the seven `sql/006` functions; response shapes match the existing screens. No admin client used.
+- Web: `modules/inventory/InventoryDemo.tsx` renamed `Inventory.tsx` and now registered in every build (sales and purchasing stay demo-only); new `lib/people.ts` resolves user ids to names from the members list (fixed names in demo mode); the warehouse default no longer assumes a demo id.
+- `sql/seed/001_demo_organization.sql` (written, **not run**): creates "Demo Trading Co." with the three users above, two warehouses, five items with opening stock, one issued request and one waiting for approval, all through the real functions. Stops with a clear message if a user is missing; does nothing if the organization already exists.
+
+**Database / System Result.** None from this entry.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 17/17. API routes and screens not run against the real database yet (needs the users, the seed, a running API). Known gaps: no API test for the new routes; Worker not deployed; web not built against the real API.
+
 ## 2026-10-29 — Workstream C started: sql/005 and sql/006 applied via the Supabase CLI, inventory tests pass
 
 **Objective.** Start the live demo on a real database (orders.md, workstream C): database layer for the inventory slice.

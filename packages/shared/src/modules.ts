@@ -27,15 +27,23 @@ export const MODULES: readonly ModuleManifest[] = [
     permissions: ['core.org.read', 'core.org.manage', 'core.users.read', 'core.users.manage', 'core.audit.read'],
     suite: 'Core',
   },
-  // Placeholder: the module folder exists so conventions are in place. Its permissions, tables and
-  // screens are defined by its approved plan (documentation/plans/), not here.
+  // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for
+  // every change (sql/006); these keys give the API an early, clear refusal.
   {
     key: 'inventory',
     name: 'Inventory',
     description: 'Items, warehouses, stock, outgoing stock requests and approvals.',
     core: false,
     dependsOn: [],
-    permissions: [],
+    permissions: [
+      'inventory.items.read',
+      'inventory.items.manage',
+      'inventory.warehouses.manage',
+      'inventory.request.create',
+      'inventory.request.approve',
+      'inventory.stock.issue',
+    ],
+    memberGrants: ['inventory.items.manage', 'inventory.request.create', 'inventory.stock.issue'],
     suite: 'Warehouse',
   },
 ];
