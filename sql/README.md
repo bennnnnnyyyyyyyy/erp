@@ -14,6 +14,8 @@ Log every run in
 
 Run order: 001, 002, 003, 004. Run on a staging project first and record each run in the worklog.
 
-Planned next (see `documentation/plans/` once approved): SQL tests in `sql/tests/` (state machine,
+Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database (run 2026-10-29: all passed).
+
+Planned next (see `documentation/plans/` once approved): more SQL tests in `sql/tests/` (state machine,
 self-approval refusal, cross-organization isolation, audit chain), then module files named
 `NNN_<key>_*.sql` with tables prefixed by module.

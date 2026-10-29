@@ -59,7 +59,8 @@ Template for further blocks; update them in the same change as the work:
 - [x] `sql/004` run and verified 2026-10-29 (extra privileges revoked; TRUNCATE refused on audit_log)
 - [ ] Browser-path check: `X-Org-Id` through PostgREST with a real token; cross-organization refusal (second org and user)
 - [ ] Set `default_currency` default to EGP on an already-created `organizations` table
-- [ ] SQL tests in `sql/tests/`: cross-organization isolation, audit chain verify, direct-write refusal
+- [x] SQL test script written: `sql/tests/001_core_isolation_and_audit.sql` (isolation, header check, roles, direct writes, admin functions, audit chain, append-only); run 2026-10-29: all passed
+- [x] `sql/tests/001_core_isolation_and_audit.sql` run in Supabase 2026-10-29: ALL TESTS PASSED
 - [ ] Scheduled `audit_verify` job and alert on a broken chain
 
 ### C. API (Cloudflare Worker)

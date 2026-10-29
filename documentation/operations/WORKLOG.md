@@ -13,6 +13,26 @@ run or deployed.
 
 ---
 
+## 2026-10-29 — SQL test script run: all passed
+
+**Objective.** Record the run of `sql/tests/001_core_isolation_and_audit.sql`.
+
+**Actions Completed.** Ben ran the script in the Supabase SQL Editor (postgres role). Result: `ERROR: P0001: ALL TESTS PASSED (everything rolled back)`, raised at line 144 of the block, i.e. the final deliberate `raise exception` after every check (T1 to T11) had passed. No setup problem with `auth.users` occurred.
+
+**Database / System Result.** Proven on the real database: organizations cannot see each other (RLS), the `X-Org-Id` header is refused when missing or for a non-member, owners can change settings and plain members get `FORBIDDEN`, signed-in users have no direct writes (no inserts, updates, deletes, forged audit rows or TRUNCATE), `audit_append_admin` and `audit_verify` are closed to signed-in users, anon is blocked, each organization has its own gapless audit chain that verifies clean, and even the owner cannot update, delete or truncate `audit_log`. Everything was rolled back; no test data remains.
+
+**Safety Status.** Still unproven: the browser path (`X-Org-Id` through PostgREST with a real token from the API) and a real second sign-in. The script simulates sign-in with `set_config`, which matches what PostgREST does but is not the same path. Re-run this script after every change to `sql/`.
+
+## 2026-10-29 — Plans moved into documentation; SQL test script written
+
+**Objective.** Finish the documentation layout from the migration brief and add runnable proof for the database rules.
+
+**Actions Completed.** `TECHNICAL_PLAN.md` moved to `documentation/plans/`, `MANAGEMENT_PLAN.md` to `documentation/planning/`; links in the checklist, `PRODUCT_BRIEF.md`, plans README and planning README fixed (the dead `INPUT_NEEDED.md` pointer replaced by `update.md`). A relative-link check over all repo markdown found only the two intentional template placeholders. New `sql/tests/001_core_isolation_and_audit.sql` plus `sql/tests/README.md`: creates three throwaway users and two organizations, then checks organization isolation (RLS), the `X-Org-Id` header (missing and non-member refused), owner versus member roles, no direct writes by signed-in users (including forged audit rows and TRUNCATE), admin-only functions closed, anon blocked, separate gapless audit chains verified clean, and append-only refusal even for the owner. It always rolls back by ending with a deliberate error: "ALL TESTS PASSED (everything rolled back)" means pass.
+
+**Database / System Result.** None. The test script has **not been run**; it was written without access to the database and may need small fixes (for example if inserting into `auth.users` needs more columns).
+
+**Safety Status.** Link check passed. Not covered by this script and still open: the browser path through PostgREST with a real token. Typecheck and tests unchanged.
+
 ## 2026-10-29 — Root README and PRODUCT_BRIEF written
 
 **Objective.** Complete the migration documents from `migration.md` step 3 (README and product brief; `agents.md`, research README and first worklog entry were done earlier).
