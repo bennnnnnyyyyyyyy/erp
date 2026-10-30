@@ -3,7 +3,10 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // ADR-0003: the secret-key client bypasses row level security. Only these files may import it.
-const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/audit.ts', 'modules/core/memberRoutes.ts', 'jobs/outbox.ts', 'lib/channels/index.ts', 'lib/channels/whatsapp.ts', 'lib/whatsappInbound.ts']);
+// No request route is on this list: member routes reach Supabase Auth only through lib/authAdmin.ts (sql/025).
+const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/authAdmin.ts', 'jobs/outbox.ts', 'lib/channels/index.ts', 'lib/channels/whatsapp.ts', 'lib/whatsappInbound.ts']);
+// Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.
+const AUTH_ADMIN_ALLOWED = new Set(['modules/core/memberRoutes.ts']);
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -20,6 +23,14 @@ describe('database client boundaries (ADR-0003)', () => {
       .map((f) => relative(srcDir, f).split(sep).join('/'))
       .filter((rel) => !ADMIN_DB_ALLOWED.has(rel))
       .filter((rel) => /from\s+['"][^'"]*db\.admin['"]/.test(readFileSync(join(srcDir, rel), 'utf8')));
+    expect(offenders).toEqual([]);
+  });
+
+  it('only the member routes use the Auth admin helpers', () => {
+    const offenders = sourceFiles(srcDir)
+      .map((f) => relative(srcDir, f).split(sep).join('/'))
+      .filter((rel) => !AUTH_ADMIN_ALLOWED.has(rel))
+      .filter((rel) => /from\s+['"][^'"]*authAdmin['"]/.test(readFileSync(join(srcDir, rel), 'utf8')));
     expect(offenders).toEqual([]);
   });
 

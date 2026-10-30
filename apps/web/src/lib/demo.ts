@@ -118,9 +118,10 @@ function handle(method: string, area: string | undefined, id: string | undefined
       const member: Member = { id: `m${members.length + 1}`, userId: `u${members.length + 1}`, email, name: null, role, status: 'invited', joinedAt: new Date().toISOString(), lastSignInAt: null };
       members.push(member);
       log(0, demoActor.id, 'member.invited', 'membership', member.id, `${email} invited as ${role}`);
-      const result: InviteResult = { member, inviteLink: 'https://demo.invalid/accept-invite#demo' };
+      const result: InviteResult = { kind: 'added', member, inviteLink: 'https://demo.invalid/accept-invite#demo' };
       return result;
     }
+    if (id === 'invitations' && method === 'GET') return [];
     const member = members.find((m) => m.id === id);
     if (!member) throw new DemoError(404, 'Member not found', 'not_found');
     if (action === 'invite-link') return { inviteLink: 'https://demo.invalid/accept-invite#demo' };

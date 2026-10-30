@@ -3,7 +3,7 @@ import app from '../src/index';
 import { makeWhatsAppAdapter } from '../src/lib/channels/whatsapp';
 import type { OutboxMessage } from '../src/lib/channels';
 import { replyFor } from '../src/lib/whatsappInbound';
-import { parseWebhook, sendText, toGraphNumber, verifySignature } from '../src/lib/whatsapp';
+import { parseWebhook, safeEqual, sendText, toGraphNumber, verifySignature } from '../src/lib/whatsapp';
 
 // Unit tests for the WhatsApp code. They do NOT talk to Meta: they check the signature rule, the payload parsing, the
 // request we would send and the refusal paths. Real delivery needs the Meta credentials and is checked by hand.
@@ -29,6 +29,16 @@ describe('signature', () => {
     expect(await verifySignature(body, 'sha256=zz', SECRET)).toBe(false);
     expect(await verifySignature(body + ' ', await sign(body), SECRET)).toBe(false);
     expect(await verifySignature(body, await sign(body), '')).toBe(false);
+  });
+});
+
+describe('safeEqual', () => {
+  it('matches only identical strings, including different lengths and empty values', () => {
+    expect(safeEqual('verify-me', 'verify-me')).toBe(true);
+    expect(safeEqual('verify-me', 'verify-mf')).toBe(false);
+    expect(safeEqual('verify-me', 'verify-me-longer')).toBe(false);
+    expect(safeEqual('', 'verify-me')).toBe(false);
+    expect(safeEqual('', '')).toBe(true);
   });
 });
 

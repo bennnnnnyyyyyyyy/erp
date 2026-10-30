@@ -69,6 +69,15 @@ export async function verifySignature(rawBody: string, header: string | null | u
   return diff === 0;
 }
 
+/** Compares two secrets without stopping at the first difference, so timing does not reveal how much matched. */
+export function safeEqual(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
 export type InboundText = { from: string; id: string; text: string };
 
 /** Pulls the plain text messages out of a webhook payload. Status updates, voice notes and anything else are ignored here. */

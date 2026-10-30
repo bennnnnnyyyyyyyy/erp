@@ -34,8 +34,17 @@ export type Member = {
 
 export type InviteRequest = { email: string; role: Role };
 
-/** `inviteLink` is null when the person already had an account and was simply added. */
-export type InviteResult = { member: Member; inviteLink: string | null };
+/** A pending invitation for someone who already has an account. They become a member only when they accept it. */
+export type Invitation = { id: string; userId: string; email: string; role: Role; invitedBy: string; createdAt: string };
+
+/** The invited person's own view of a pending invitation (read with `core_my_invitations`, sql/025). */
+export type MyInvitation = { id: string; orgId: string; orgName: string; role: Role; invitedByName: string | null; createdAt: string };
+
+/**
+ * `added`: a new account was created and added; send them `inviteLink`.
+ * `invited`: the email already had an account; they see the invitation after signing in and must accept it.
+ */
+export type InviteResult = { kind: 'added'; member: Member; inviteLink: string } | { kind: 'invited'; invitation: Invitation };
 
 export type ModuleStatus = { key: string; name: string; description: string; suite: string; core: boolean; enabled: boolean };
 

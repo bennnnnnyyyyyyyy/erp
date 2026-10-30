@@ -1,3 +1,8 @@
 # Not needed for local development: `npm run dev` loads the repo-root .env
 # (see ../../.env.example). Use .dev.vars only to override a value for this app.
 # Deployed secrets are set with `wrangler secret put SUPABASE_SECRET_KEY`.
+#
+# wrangler.toml holds the PRODUCTION values (only the live origin). For local development, put these two lines in the
+# repo-root .env (or here), so the local web app at localhost:5173 is allowed:
+# APP_ENV=development
+# ALLOWED_ORIGINS=http://localhost:5173

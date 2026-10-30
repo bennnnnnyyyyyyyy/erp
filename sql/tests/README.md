@@ -33,6 +33,7 @@ Run the whole file at once with nothing else in the editor.
 | `020_finance_expenses_payments.sql` | expenses, payments, no overpayment, void rules, owner/admin only, isolation |
 | `022_batches_expiry_storage.sql` | FEFO, quarantine, expiry, storage mismatch, batch total equals ledger, roles, isolation |
 | `023_owner_insights.sql` | known-answer test for the owner numbers (revenue, cost, expenses, net, owed), roles, isolation |
+| `021_security_audit_fixes.sql` | existing accounts must accept an invitation, invitations isolated, member role rules and audit in the database, sign-in link refused across organizations, no user-claimed 'whatsapp' channel, per-org delivery closed to users |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 

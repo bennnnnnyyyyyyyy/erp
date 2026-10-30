@@ -31,10 +31,11 @@ Log every run in
 | `023_item_cost.sql` | slice F: average cost per item, cost log, cost hidden from members | Run via CLI 2026-10-30; test 019 passes |
 | `024_finance_expenses_payments.sql` | slice F: finance module, expenses, payments (never above what is owed) | Run via CLI 2026-10-30; test 020 passes |
 | `026_batches_expiry_storage.sql` | slice B: batches, expiry, FEFO issuing, quarantine, storage conditions (025 is the audit branch) | Run via CLI 2026-10-30; test 022 passes |
-| `025_security_audit_fixes.sql` | audit fixes M-1, M-2, L-2..L-5 (file lives on the audit branch worktree) | Run via CLI 2026-10-30; test 021 passes |
 | `027_owner_insights.sql` | `insights_home()` for the owner home page | Run via CLI 2026-10-30; test 023 passes |
 
 Run order: 001 to 027. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
+| `025_security_audit_fixes.sql` | security audit 2026-10-30: member functions with audit (no secret key), invitations that must be accepted, decision channel vouched by the webhook, WhatsApp across organizations, per-org delivery pass | **Not run yet**; run on staging, then test 021 |
+
 
 Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database (run 2026-10-29: all passed).
 
