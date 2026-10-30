@@ -5,9 +5,11 @@ compatibility_flags = ["nodejs_compat"]
 
 # Non-secret settings only. SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are passed at deploy time with --var (public, but kept out of the repo). Secrets (SUPABASE_SECRET_KEY) go in
 # `wrangler secret put`, and in .dev.vars for local development.
+# These are the deployed (production) values: only the live web app may call the API. Local development overrides
+# APP_ENV and ALLOWED_ORIGINS from the repo-root .env (see .dev.vars.example).
 [vars]
-APP_ENV = "development"
-ALLOWED_ORIGINS = "https://erp-live.pages.dev,http://localhost:5173"
+APP_ENV = "production"
+ALLOWED_ORIGINS = "https://erp-live.pages.dev"
 
 # Delivers queued messages and sends reminders and escalations (src/jobs/outbox.ts). Also runnable on demand.
 [triggers]

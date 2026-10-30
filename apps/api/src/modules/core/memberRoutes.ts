@@ -1,65 +1,54 @@
 import { Hono, type Context } from 'hono';
-import type { User } from '@supabase/supabase-js';
-import { ROLES, type InviteResult, type Member, type Role } from '@erp/shared';
+import { ROLES, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { writeAudit } from '../../lib/audit';
+import { createInvitedAccount, recoveryLink } from '../../lib/authAdmin';
 import { invalid, jsonBody } from '../../lib/body';
-import { adminDb } from '../../lib/db.admin';
+import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
+import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
-import { refuseDisable, refuseInvite, refuseRoleChange } from './members';
+
+// Members and invitations (sql/025). Every check and audit row is in the database functions, called as the signed-in user;
+// the secret key is used only for Supabase Auth account calls (lib/authAdmin.ts), after the database has said yes.
 
 type Ctx = Context<AppEnv>;
 
-type MembershipRow = { id: string; user_id: string; role: Role; created_at: string; disabled_at: string | null };
-
-const MEMBERSHIP_COLUMNS = 'id, user_id, role, created_at, disabled_at';
+type MemberRow = {
+  id: string; user_id: string; role: Role; created_at: string; disabled_at: string | null;
+  email: string; name: string | null; last_sign_in_at: string | null;
+};
+type InvitationRow = { id: string; user_id: string; email: string; role: Role; invited_by: string; created_at: string };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function toMember(row: MembershipRow, user: User | null): Member {
-  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const name = typeof meta.full_name === 'string' ? meta.full_name : typeof meta.name === 'string' ? meta.name : null;
+function toMember(r: MemberRow): Member {
   return {
-    id: row.id,
-    userId: row.user_id,
-    email: user?.email ?? '',
-    name,
-    role: row.role,
-    status: row.disabled_at ? 'disabled' : user?.last_sign_in_at ? 'active' : 'invited',
-    joinedAt: row.created_at,
-    lastSignInAt: user?.last_sign_in_at ?? null,
+    id: r.id,
+    userId: r.user_id,
+    email: r.email ?? '',
+    name: r.name,
+    role: r.role,
+    status: r.disabled_at ? 'disabled' : r.last_sign_in_at ? 'active' : 'invited',
+    joinedAt: r.created_at,
+    lastSignInAt: r.last_sign_in_at,
   };
 }
 
-async function loadUser(c: Ctx, userId: string): Promise<User | null> {
-  const { data, error } = await adminDb(c.env).auth.admin.getUserById(userId);
-  if (error) return null;
-  return data.user;
-}
+const toInvitation = (r: InvitationRow): Invitation => ({ id: r.id, userId: r.user_id, email: r.email, role: r.role, invitedBy: r.invited_by, createdAt: r.created_at });
 
-async function loadMembership(c: Ctx, id: string): Promise<MembershipRow> {
-  const { data, error } = await adminDb(c.env)
-    .from('memberships')
-    .select(MEMBERSHIP_COLUMNS)
-    .eq('org_id', c.var.tenant.orgId)
-    .eq('id', id)
-    .maybeSingle<MembershipRow>();
-  if (error) throw error;
-  if (!data) throw new HttpError(404, 'Member not found', 'not_found');
-  return data;
-}
+const idParam = (c: Ctx) => {
+  const id = c.req.param('id') ?? '';
+  if (!UUID_RE.test(id)) throw new HttpError(404, 'Member not found', 'not_found');
+  return id;
+};
 
-async function countActiveOwners(c: Ctx): Promise<number> {
-  const { count, error } = await adminDb(c.env)
-    .from('memberships')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', c.var.tenant.orgId)
-    .eq('role', 'owner')
-    .is('disabled_at', null);
-  if (error) throw error;
-  return count ?? 0;
+async function loadMember(c: Ctx, id: string): Promise<Member> {
+  const rows = await callRpc<MemberRow[]>(userDb(c), 'core_list_members');
+  const row = rows.find((r) => r.id === id);
+  if (!row) throw new HttpError(404, 'Member not found', 'not_found');
+  return toMember(row);
 }
 
 /** Where invite and reset links send people: the calling app if it is an allowed origin. */
@@ -69,27 +58,16 @@ function appOrigin(c: Ctx): string {
   return origin && allowed.includes(origin) ? origin : (allowed[0] ?? origin ?? '');
 }
 
-function actor(c: Ctx) {
-  return { userId: c.var.user.id, role: c.var.tenant.role };
-}
-
-function refuse(reason: string | null) {
-  if (reason) throw new HttpError(403, reason, 'not_allowed');
-}
-
 export const memberRoutes = new Hono<AppEnv>();
 
 memberRoutes.get('/', requirePermission('core.users.read'), async (c) => {
-  const { data, error } = await adminDb(c.env)
-    .from('memberships')
-    .select(MEMBERSHIP_COLUMNS)
-    .eq('org_id', c.var.tenant.orgId)
-    .order('created_at');
-  if (error) throw error;
-  const rows = (data ?? []) as MembershipRow[];
-  // One Auth lookup per member. Fine for tens of members; revisit with a profiles table if orgs grow large.
-  const users = await Promise.all(rows.map((r) => loadUser(c, r.user_id)));
-  return ok(c, rows.map((r, i) => toMember(r, users[i] ?? null)));
+  const rows = await callRpc<MemberRow[]>(userDb(c), 'core_list_members');
+  return ok(c, rows.map(toMember));
+});
+
+memberRoutes.get('/invitations', requirePermission('core.users.manage'), async (c) => {
+  const rows = await callRpc<InvitationRow[]>(userDb(c), 'core_list_invitations');
+  return ok(c, rows.map(toInvitation));
 });
 
 memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
@@ -98,146 +76,49 @@ memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
   if (!EMAIL_RE.test(email)) invalid('Enter a valid email address');
   const role = body.role as Role;
   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
-  refuse(refuseInvite(actor(c), role));
 
-  const client = adminDb(c.env);
-  const orgId = c.var.tenant.orgId;
-  const { data: existingId, error: lookupErr } = await client.rpc('find_auth_user_id', { p_email: email });
-  if (lookupErr) {
-    if (lookupErr.code === 'PGRST202') throw new HttpError(503, 'Run sql/002_core_user_lookup.sql first', 'migration_missing');
-    throw lookupErr;
+  // An existing account only gets an invitation they must accept (it never becomes a member without consent).
+  const step = await callRpc<{ kind: 'invitation' | 'needs_account'; id?: string }>(userDb(c), 'core_invite_member', { p_email: email, p_role: role });
+  if (step.kind === 'invitation') {
+    const rows = await callRpc<InvitationRow[]>(userDb(c), 'core_list_invitations');
+    const row = rows.find((r) => r.id === step.id);
+    if (!row) throw new HttpError(500, 'The invitation was not found after creating it');
+    const result: InviteResult = { kind: 'invited', invitation: toInvitation(row) };
+    return ok(c, result, 201);
   }
 
-  let userId: string;
-  let inviteLink: string | null = null;
-  if (existingId) {
-    userId = existingId as string;
-    const { data: already, error } = await client
-      .from('memberships')
-      .select('id, disabled_at')
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .maybeSingle<{ id: string; disabled_at: string | null }>();
-    if (error) throw error;
-    if (already) {
-      throw new HttpError(
-        409,
-        already.disabled_at ? 'This person is a disabled member. Re-enable them instead.' : 'This person is already a member',
-        'already_member',
-      );
-    }
-  } else {
-    const { data, error } = await client.auth.admin.generateLink({
-      type: 'invite',
-      email,
-      options: { redirectTo: appOrigin(c) },
-    });
-    if (error) throw new HttpError(502, `Couldn't create the invite: ${error.message}`, 'invite_failed');
-    userId = data.user.id;
-    inviteLink = data.properties.action_link;
-    // Records which org created the account, so only that org may issue it a new link later.
-    const { error: metaErr } = await client.auth.admin.updateUserById(userId, { app_metadata: { invited_org_id: orgId } });
-    if (metaErr) throw metaErr;
-  }
-
-  const { data: row, error: insErr } = await client
-    .from('memberships')
-    .insert({ org_id: orgId, user_id: userId, role, invited_by: c.var.user.id })
-    .select(MEMBERSHIP_COLUMNS)
-    .single<MembershipRow>();
-  if (insErr) throw insErr;
-
-  const member = toMember(row, await loadUser(c, userId));
-  await writeAudit(c, {
-    action: inviteLink ? 'member.invited' : 'member.added',
-    entityType: 'membership',
-    entityId: row.id,
-    summary: `${email} ${inviteLink ? 'invited' : 'added'} as ${role}`,
-    after: { email, role },
-  });
-  const result: InviteResult = { member, inviteLink };
+  // A new email: create the account (Auth admin), then the database checks it is this org's fresh account and adds it.
+  const account = await createInvitedAccount(c.env, email, c.var.tenant.orgId, appOrigin(c));
+  const membershipId = await callRpc<string>(userDb(c), 'core_add_invited_account', { p_user_id: account.userId, p_role: role });
+  const result: InviteResult = { kind: 'added', member: await loadMember(c, membershipId), inviteLink: account.link };
   return ok(c, result, 201);
 });
 
-memberRoutes.patch('/:id', requirePermission('core.users.manage'), async (c) => {
-  const body = await jsonBody(c);
-  const role = body.role as Role;
-  if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
-  const target = await loadMembership(c, c.req.param('id'));
-  if (target.role === role) return ok(c, toMember(target, await loadUser(c, target.user_id)));
-  refuse(
-    refuseRoleChange(actor(c), { userId: target.user_id, role: target.role, disabled: !!target.disabled_at }, role, await countActiveOwners(c)),
-  );
+memberRoutes.delete('/invitations/:id', requirePermission('core.users.manage'), async (c) => {
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'core_revoke_invitation', { p_invitation_id: id });
+  return ok(c, { id, status: 'revoked' });
+});
 
-  const { data, error } = await adminDb(c.env)
-    .from('memberships')
-    .update({ role })
-    .eq('org_id', c.var.tenant.orgId)
-    .eq('id', target.id)
-    .select(MEMBERSHIP_COLUMNS)
-    .single<MembershipRow>();
-  if (error) throw error;
-  const member = toMember(data, await loadUser(c, data.user_id));
-  await writeAudit(c, {
-    action: 'member.role_changed',
-    entityType: 'membership',
-    entityId: target.id,
-    summary: `${member.email} changed from ${target.role} to ${role}`,
-    before: { role: target.role },
-    after: { role },
-  });
-  return ok(c, member);
+memberRoutes.patch('/:id', requirePermission('core.users.manage'), async (c) => {
+  const id = idParam(c);
+  const role = (await jsonBody(c)).role as Role;
+  if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
+  await callRpc<void>(userDb(c), 'core_set_member_role', { p_membership_id: id, p_role: role });
+  return ok(c, await loadMember(c, id));
 });
 
 for (const action of ['disable', 'enable'] as const) {
   memberRoutes.post(`/:id/${action}`, requirePermission('core.users.manage'), async (c) => {
-    const target = await loadMembership(c, c.req.param('id'));
-    if (action === 'disable') {
-      if (target.disabled_at) invalid('This member is already disabled');
-      refuse(refuseDisable(actor(c), { userId: target.user_id, role: target.role, disabled: false }, await countActiveOwners(c)));
-    } else {
-      if (!target.disabled_at) invalid('This member is already active');
-      if (target.role === 'owner' && c.var.tenant.role !== 'owner') refuse('Only an owner can re-enable an owner');
-    }
-
-    const { data, error } = await adminDb(c.env)
-      .from('memberships')
-      .update({ disabled_at: action === 'disable' ? new Date().toISOString() : null })
-      .eq('org_id', c.var.tenant.orgId)
-      .eq('id', target.id)
-      .select(MEMBERSHIP_COLUMNS)
-      .single<MembershipRow>();
-    if (error) throw error;
-    const member = toMember(data, await loadUser(c, data.user_id));
-    await writeAudit(c, {
-      action: `member.${action}d`,
-      entityType: 'membership',
-      entityId: target.id,
-      summary: `${member.email} ${action}d`,
-    });
-    return ok(c, member);
+    const id = idParam(c);
+    await callRpc<void>(userDb(c), 'core_set_member_disabled', { p_membership_id: id, p_disabled: action === 'disable' });
+    return ok(c, await loadMember(c, id));
   });
 }
 
 memberRoutes.post('/:id/invite-link', requirePermission('core.users.manage'), async (c) => {
-  const target = await loadMembership(c, c.req.param('id'));
-  const user = await loadUser(c, target.user_id);
-  // A sign-in link is a credential. Only issue one for an account this org created that has
-  // never been used; anyone else resets their own password.
-  if (!user?.email || user.last_sign_in_at || user.app_metadata?.invited_org_id !== c.var.tenant.orgId) {
-    refuse('A new link can only be made for someone this organization invited who has not signed in yet');
-  }
-  const { data, error } = await adminDb(c.env).auth.admin.generateLink({
-    type: 'recovery',
-    email: user!.email!,
-    options: { redirectTo: appOrigin(c) },
-  });
-  if (error) throw new HttpError(502, `Couldn't create the link: ${error.message}`, 'invite_failed');
-  await writeAudit(c, {
-    action: 'member.invite_link_created',
-    entityType: 'membership',
-    entityId: target.id,
-    summary: `New invite link made for ${user!.email}`,
-  });
-  return ok(c, { inviteLink: data.properties.action_link });
+  // A sign-in link is a credential. The database allows it only for an account this org created, that has never signed in
+  // and belongs to no other organization, and audits the request.
+  const target = await callRpc<{ user_id: string; email: string }>(userDb(c), 'core_invite_link_target', { p_membership_id: idParam(c) });
+  return ok(c, { inviteLink: await recoveryLink(c.env, target.email, appOrigin(c)) });
 });

@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runOutboxPass } from './jobs/outbox';
-import { parseWebhook, verifySignature } from './lib/whatsapp';
+import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
 import { processInbound } from './lib/whatsappInbound';
 import { HttpError } from './lib/errors';
 import { fail, ok } from './lib/response';
@@ -37,7 +37,7 @@ app.get('/webhooks/whatsapp', (c) => {
   const token = c.env.WHATSAPP_VERIFY_TOKEN;
   if (!token) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');
   const ok =
-    c.req.query('hub.mode') === 'subscribe' && c.req.query('hub.verify_token') === token && Boolean(c.req.query('hub.challenge'));
+    c.req.query('hub.mode') === 'subscribe' && safeEqual(c.req.query('hub.verify_token') ?? '', token) && Boolean(c.req.query('hub.challenge'));
   return ok ? c.text(c.req.query('hub.challenge') ?? '') : fail(c, 403, 'Verification failed', 'forbidden');
 });
 

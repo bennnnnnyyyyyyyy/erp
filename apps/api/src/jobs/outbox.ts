@@ -17,16 +17,23 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
   const chased = (chase.data ?? {}) as { reminders?: number; escalations?: number; low_stock?: number };
 
   // At most once an hour (the database skips the rest): verify every organization's audit chain; a break queues an alert to the owners.
-  let auditCheck: OutboxPassResult['auditCheck'] = 'error';
-  const audit = await client.rpc('audit_check_all', { p_force: false });
-  if (audit.error) console.error('audit check failed', audit.error.message);
-  else {
-    const a = (audit.data ?? {}) as { skipped?: boolean; broken?: unknown[] };
-    auditCheck = a.skipped ? 'skipped' : (a.broken?.length ?? 0) > 0 ? 'BROKEN' : 'clean';
-    if (auditCheck === 'BROKEN') console.error('AUDIT CHAIN BROKEN', JSON.stringify(a.broken));
+  // Only the scheduled pass does this: an on-demand pass for one organization must not act for, or report on, the others.
+  let auditCheck: OutboxPassResult['auditCheck'] = 'skipped';
+  if (!opts.orgId) {
+    const audit = await client.rpc('audit_check_all', { p_force: false });
+    if (audit.error) {
+      auditCheck = 'error';
+      console.error('audit check failed', audit.error.message);
+    } else {
+      const a = (audit.data ?? {}) as { skipped?: boolean; broken?: unknown[] };
+      auditCheck = a.skipped ? 'skipped' : (a.broken?.length ?? 0) > 0 ? 'BROKEN' : 'clean';
+      if (auditCheck === 'BROKEN') console.error('AUDIT CHAIN BROKEN', JSON.stringify(a.broken));
+    }
   }
 
-  const claim = await client.rpc('msg_claim_due', { p_limit: opts.limit ?? 50 });
+  const claim = opts.orgId
+    ? await client.rpc('msg_claim_due_for_org', { p_org: opts.orgId, p_limit: opts.limit ?? 50 })
+    : await client.rpc('msg_claim_due', { p_limit: opts.limit ?? 50 });
   if (claim.error) throw claim.error;
   const messages = (claim.data ?? []) as OutboxMessage[];
 

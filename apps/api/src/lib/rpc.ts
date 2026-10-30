@@ -15,6 +15,10 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },
   BILL_QTY_EXCEEDS_RECEIVED: { status: 409, message: 'Billed quantity cannot exceed received quantity', code: 'bill_qty_exceeds_received' },
   DUPLICATE_INVOICE: { status: 409, message: 'That supplier invoice number is already recorded', code: 'duplicate_invoice' },
+  SELF_CHANGE: { status: 403, message: "You can't change or disable yourself", code: 'not_allowed' },
+  OWNER_ONLY: { status: 403, message: 'Only an owner can invite, change or disable an owner', code: 'not_allowed' },
+  LAST_OWNER: { status: 403, message: 'An organization needs at least one owner', code: 'not_allowed' },
+  ALREADY_MEMBER: { status: 409, message: 'This person is already a member (re-enable them if they are disabled)', code: 'already_member' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */

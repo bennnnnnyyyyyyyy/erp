@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Security audit fixes (branch worktree-security-audit-fixes), synced with main
+
+**Objective.** Fix the findings of the 2026-10-30 security audit ([report](../reviews/2026-10-30-security-audit.md)), then bring the branch up to date with main (now `b8aabec`).
+
+**Actions Completed.**
+- Synced: audit changes stashed, branch fast-forwarded to main `68c6c31`, changes reapplied; conflicts only in `sql/README.md` and `sql/tests/README.md` (kept main's text plus the 025 / 021 rows). Then fast-forwarded to `b8aabec` (no conflicts). The audit also covered main's new finance module (`sql/024`, `modules/finance/routes.ts`, `Finance.tsx`): no findings.
+- Found: `68c6c31` and `b8aabec` committed this worktree folder into main as a gitlink (`.claude/worktrees/security-audit-fixes`). `.gitignore` now ignores `.claude/worktrees/`; the gitlink still has to be untracked on main (`git rm --cached .claude/worktrees/security-audit-fixes`).
+- Review report written: `documentation/reviews/2026-10-30-security-audit.md` (findings and what was done about each).
+- `sql/025_security_audit_fixes.sql` + `sql/tests/021_security_audit_fixes.sql`: M-1 member list / invite / role / disable / enable as database functions run with the caller's login, rules and audit in the same transaction (API no longer writes these rows with the secret key; `apps/api/src/lib/audit.ts` and `modules/core/members.ts` removed); M-2 an existing account gets a `core_invitations` row it must accept (`OrgPicker.tsx` shows and accepts invitations; `UsersSettings.tsx` lists pending ones); L-2 decision channel other than `app` only when vouched by the webhook function; L-3 a WhatsApp number verified in several orgs works in all; L-4 `msg_claim_due_for_org` so "process now" delivers only the caller's org; L-5 a new sign-in link only for an account that belongs to no other org.
+- API: `lib/authAdmin.ts` holds the only Auth admin calls (create invited account, recovery link); on-demand outbox pass is per org and skips the all-org audit check (`jobs/outbox.ts`); timing-safe compare of the WhatsApp verify token (`lib/whatsapp.ts`, `index.ts`); `wrangler.toml` now production values (`APP_ENV=production`, only `https://erp-live.pages.dev` allowed), local values documented in `.dev.vars.example`.
+- Web: security headers in `public/_headers` (HSTS, frame denial, permissions policy, content security policy).
+
+**Database / System Result.** None. `sql/025` and test 021 not run; nothing deployed.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 31/31 (shared 4, api 27, including a new `safeEqual` test and a boundary test that only member routes use the Auth admin helpers); web build passes and the built page has no inline script (CSP-compatible). Not run: `sql/025`, `sql/tests/021`, real-login check, browser. Not done: I-2 (stale comment in `sql/001`; the file is write-protected for agents) and I-3 (Cloudflare rate-limiting rule; dashboard setting). Local API needs `APP_ENV=development` and `ALLOWED_ORIGINS=http://localhost:5173` in the root `.env` now that `wrangler.toml` holds production values. The CSP allows `https://*.supabase.co`; if Supabase moves to a custom domain, add it to `connect-src` in `apps/web/public/_headers`. Deploy order: run `sql/025` before deploying the Worker, or member pages fail until it is run.
+
 ## 2026-10-30 — Finance foundation: item cost (023), expenses and payments (024), Finance screens; Ben's answers recorded
 
 **Objective.** Slice F of `OWNER_INSIGHTS_PLAN.md`: cost per item, expenses, payments, so profit and "who owes whom" can be computed. Ben answered `QUESTIONS_FOR_BEN.md` (average cost; manufacturing later; language is an organization-wide setting chosen at sign-up; teams are named groups; EGP changeable; profit without VAT; deny rules yes; no password rotation). Decisions are written into that file and the plan.

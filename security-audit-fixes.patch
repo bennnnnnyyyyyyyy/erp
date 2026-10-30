@@ -1,0 +1,1763 @@
+diff --git a/.gitignore b/.gitignore
+index 8c99506..07a39f3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -31,6 +31,9 @@ temp/
+ supabase/.branches/
+ supabase/.temp/
+ 
++# Agent worktrees (separate git checkouts; never commit them into this repo)
++.claude/worktrees/
++
+ # Editors and OS
+ .vscode/*
+ !.vscode/extensions.json
+diff --git a/apps/api/.dev.vars.example b/apps/api/.dev.vars.example
+index d0a2c42..bfde16a 100644
+--- a/apps/api/.dev.vars.example
++++ b/apps/api/.dev.vars.example
+@@ -1,3 +1,8 @@
+ # Not needed for local development: `npm run dev` loads the repo-root .env
+ # (see ../../.env.example). Use .dev.vars only to override a value for this app.
+ # Deployed secrets are set with `wrangler secret put SUPABASE_SECRET_KEY`.
++#
++# wrangler.toml holds the PRODUCTION values (only the live origin). For local development, put these two lines in the
++# repo-root .env (or here), so the local web app at localhost:5173 is allowed:
++# APP_ENV=development
++# ALLOWED_ORIGINS=http://localhost:5173
+diff --git a/apps/api/src/index.ts b/apps/api/src/index.ts
+index 9cb226d..1d2ae61 100644
+--- a/apps/api/src/index.ts
++++ b/apps/api/src/index.ts
+@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
+ import type { ContentfulStatusCode } from 'hono/utils/http-status';
+ import type { AppEnv, Bindings } from './env';
+ import { runOutboxPass } from './jobs/outbox';
+-import { parseWebhook, verifySignature } from './lib/whatsapp';
++import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
+ import { processInbound } from './lib/whatsappInbound';
+ import { HttpError } from './lib/errors';
+ import { fail, ok } from './lib/response';
+@@ -37,7 +37,7 @@ app.get('/webhooks/whatsapp', (c) => {
+   const token = c.env.WHATSAPP_VERIFY_TOKEN;
+   if (!token) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');
+   const ok =
+-    c.req.query('hub.mode') === 'subscribe' && c.req.query('hub.verify_token') === token && Boolean(c.req.query('hub.challenge'));
++    c.req.query('hub.mode') === 'subscribe' && safeEqual(c.req.query('hub.verify_token') ?? '', token) && Boolean(c.req.query('hub.challenge'));
+   return ok ? c.text(c.req.query('hub.challenge') ?? '') : fail(c, 403, 'Verification failed', 'forbidden');
+ });
+ 
+diff --git a/apps/api/src/jobs/outbox.ts b/apps/api/src/jobs/outbox.ts
+index db0c503..d308deb 100644
+--- a/apps/api/src/jobs/outbox.ts
++++ b/apps/api/src/jobs/outbox.ts
+@@ -17,16 +17,23 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
+   const chased = (chase.data ?? {}) as { reminders?: number; escalations?: number; low_stock?: number };
+ 
+   // At most once an hour (the database skips the rest): verify every organization's audit chain; a break queues an alert to the owners.
+-  let auditCheck: OutboxPassResult['auditCheck'] = 'error';
+-  const audit = await client.rpc('audit_check_all', { p_force: false });
+-  if (audit.error) console.error('audit check failed', audit.error.message);
+-  else {
+-    const a = (audit.data ?? {}) as { skipped?: boolean; broken?: unknown[] };
+-    auditCheck = a.skipped ? 'skipped' : (a.broken?.length ?? 0) > 0 ? 'BROKEN' : 'clean';
+-    if (auditCheck === 'BROKEN') console.error('AUDIT CHAIN BROKEN', JSON.stringify(a.broken));
++  // Only the scheduled pass does this: an on-demand pass for one organization must not act for, or report on, the others.
++  let auditCheck: OutboxPassResult['auditCheck'] = 'skipped';
++  if (!opts.orgId) {
++    const audit = await client.rpc('audit_check_all', { p_force: false });
++    if (audit.error) {
++      auditCheck = 'error';
++      console.error('audit check failed', audit.error.message);
++    } else {
++      const a = (audit.data ?? {}) as { skipped?: boolean; broken?: unknown[] };
++      auditCheck = a.skipped ? 'skipped' : (a.broken?.length ?? 0) > 0 ? 'BROKEN' : 'clean';
++      if (auditCheck === 'BROKEN') console.error('AUDIT CHAIN BROKEN', JSON.stringify(a.broken));
++    }
+   }
+ 
+-  const claim = await client.rpc('msg_claim_due', { p_limit: opts.limit ?? 50 });
++  const claim = opts.orgId
++    ? await client.rpc('msg_claim_due_for_org', { p_org: opts.orgId, p_limit: opts.limit ?? 50 })
++    : await client.rpc('msg_claim_due', { p_limit: opts.limit ?? 50 });
+   if (claim.error) throw claim.error;
+   const messages = (claim.data ?? []) as OutboxMessage[];
+ 
+diff --git a/apps/api/src/lib/audit.ts b/apps/api/src/lib/audit.ts
+deleted file mode 100644
+index 988689f..0000000
+--- a/apps/api/src/lib/audit.ts
++++ /dev/null
+@@ -1,35 +0,0 @@
+-import type { Context } from 'hono';
+-import type { AppEnv } from '../env';
+-import { adminDb } from './db.admin';
+-
+-export type AuditEvent = {
+-  action: string;
+-  entityType: string;
+-  entityId?: string;
+-  summary?: string;
+-  before?: unknown;
+-  after?: unknown;
+-  metadata?: Record<string, unknown>;
+-  channel?: string;
+-};
+-
+-// ADR-0003: changes to business data are audited by the database function that makes the change,
+-// in the same transaction (see sql/003). This helper is only for events that are not a database
+-// change made by a user-scoped function: Auth-admin paths such as member invites. It goes through
+-// the service-role-only `audit_append_admin` function, never a bare insert into audit_log.
+-export async function writeAudit(c: Context<AppEnv>, event: AuditEvent): Promise<void> {
+-  const { error } = await adminDb(c.env).rpc('audit_append_admin', {
+-    p_org_id: c.var.tenant.orgId,
+-    p_actor: c.var.user.id,
+-    p_action: event.action,
+-    p_entity_type: event.entityType,
+-    p_entity_id: event.entityId ?? null,
+-    p_summary: event.summary ?? null,
+-    p_before: event.before ?? null,
+-    p_after: event.after ?? null,
+-    p_metadata: event.metadata ?? {},
+-    p_channel: event.channel ?? 'api',
+-    p_request_id: c.req.header('X-Request-Id') ?? null,
+-  });
+-  if (error) throw error;
+-}
+diff --git a/apps/api/src/lib/authAdmin.ts b/apps/api/src/lib/authAdmin.ts
+new file mode 100644
+index 0000000..7a0f3f7
+--- /dev/null
++++ b/apps/api/src/lib/authAdmin.ts
+@@ -0,0 +1,24 @@
++import type { Bindings } from '../env';
++import { adminDb } from './db.admin';
++import { HttpError } from './errors';
++
++// Supabase Auth admin calls (creating accounts and sign-in links). These need the secret key and touch only Auth, never
++// business rows: who may do what, and the audit, are checked by the database functions the routes call first (sql/025).
++
++/** Creates the account for a new email, tags it with the inviting organization, and returns its id and one-time link. */
++export async function createInvitedAccount(env: Bindings, email: string, orgId: string, redirectTo: string): Promise<{ userId: string; link: string }> {
++  const client = adminDb(env);
++  const { data, error } = await client.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo } });
++  if (error) throw new HttpError(502, `Couldn't create the invite: ${error.message}`, 'invite_failed');
++  // Records which org created the account, so only that org may add it directly or issue it a new link later.
++  const { error: metaErr } = await client.auth.admin.updateUserById(data.user.id, { app_metadata: { invited_org_id: orgId } });
++  if (metaErr) throw metaErr;
++  return { userId: data.user.id, link: data.properties.action_link };
++}
++
++/** A fresh one-time sign-in link for an invited account that has not signed in yet. */
++export async function recoveryLink(env: Bindings, email: string, redirectTo: string): Promise<string> {
++  const { data, error } = await adminDb(env).auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
++  if (error) throw new HttpError(502, `Couldn't create the link: ${error.message}`, 'invite_failed');
++  return data.properties.action_link;
++}
+diff --git a/apps/api/src/lib/rpc.ts b/apps/api/src/lib/rpc.ts
+index f3b0887..86d4d8d 100644
+--- a/apps/api/src/lib/rpc.ts
++++ b/apps/api/src/lib/rpc.ts
+@@ -15,6 +15,10 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
+   MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },
+   BILL_QTY_EXCEEDS_RECEIVED: { status: 409, message: 'Billed quantity cannot exceed received quantity', code: 'bill_qty_exceeds_received' },
+   DUPLICATE_INVOICE: { status: 409, message: 'That supplier invoice number is already recorded', code: 'duplicate_invoice' },
++  SELF_CHANGE: { status: 403, message: "You can't change or disable yourself", code: 'not_allowed' },
++  OWNER_ONLY: { status: 403, message: 'Only an owner can invite, change or disable an owner', code: 'not_allowed' },
++  LAST_OWNER: { status: 403, message: 'An organization needs at least one owner', code: 'not_allowed' },
++  ALREADY_MEMBER: { status: 409, message: 'This person is already a member (re-enable them if they are disabled)', code: 'already_member' },
+ };
+ 
+ /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */
+diff --git a/apps/api/src/lib/whatsapp.ts b/apps/api/src/lib/whatsapp.ts
+index eb507e9..cabf659 100644
+--- a/apps/api/src/lib/whatsapp.ts
++++ b/apps/api/src/lib/whatsapp.ts
+@@ -69,6 +69,15 @@ export async function verifySignature(rawBody: string, header: string | null | u
+   return diff === 0;
+ }
+ 
++/** Compares two secrets without stopping at the first difference, so timing does not reveal how much matched. */
++export function safeEqual(a: string, b: string): boolean {
++  const x = new TextEncoder().encode(a);
++  const y = new TextEncoder().encode(b);
++  let diff = x.length ^ y.length;
++  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
++  return diff === 0;
++}
++
+ export type InboundText = { from: string; id: string; text: string };
+ 
+ /** Pulls the plain text messages out of a webhook payload. Status updates, voice notes and anything else are ignored here. */
+diff --git a/apps/api/src/modules/core/memberRoutes.ts b/apps/api/src/modules/core/memberRoutes.ts
+index 49b9c94..f9c99e5 100644
+--- a/apps/api/src/modules/core/memberRoutes.ts
++++ b/apps/api/src/modules/core/memberRoutes.ts
+@@ -1,65 +1,54 @@
+ import { Hono, type Context } from 'hono';
+-import type { User } from '@supabase/supabase-js';
+-import { ROLES, type InviteResult, type Member, type Role } from '@erp/shared';
++import { ROLES, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
+ import type { AppEnv } from '../../env';
+-import { writeAudit } from '../../lib/audit';
++import { createInvitedAccount, recoveryLink } from '../../lib/authAdmin';
+ import { invalid, jsonBody } from '../../lib/body';
+-import { adminDb } from '../../lib/db.admin';
++import { userDb } from '../../lib/db.user';
+ import { HttpError } from '../../lib/errors';
+ import { ok } from '../../lib/response';
++import { callRpc } from '../../lib/rpc';
+ import { requirePermission } from '../../middleware/tenant';
+-import { refuseDisable, refuseInvite, refuseRoleChange } from './members';
+ 
+-type Ctx = Context<AppEnv>;
++// Members and invitations (sql/025). Every check and audit row is in the database functions, called as the signed-in user;
++// the secret key is used only for Supabase Auth account calls (lib/authAdmin.ts), after the database has said yes.
+ 
+-type MembershipRow = { id: string; user_id: string; role: Role; created_at: string; disabled_at: string | null };
++type Ctx = Context<AppEnv>;
+ 
+-const MEMBERSHIP_COLUMNS = 'id, user_id, role, created_at, disabled_at';
++type MemberRow = {
++  id: string; user_id: string; role: Role; created_at: string; disabled_at: string | null;
++  email: string; name: string | null; last_sign_in_at: string | null;
++};
++type InvitationRow = { id: string; user_id: string; email: string; role: Role; invited_by: string; created_at: string };
+ 
+ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
++const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+ 
+-function toMember(row: MembershipRow, user: User | null): Member {
+-  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+-  const name = typeof meta.full_name === 'string' ? meta.full_name : typeof meta.name === 'string' ? meta.name : null;
++function toMember(r: MemberRow): Member {
+   return {
+-    id: row.id,
+-    userId: row.user_id,
+-    email: user?.email ?? '',
+-    name,
+-    role: row.role,
+-    status: row.disabled_at ? 'disabled' : user?.last_sign_in_at ? 'active' : 'invited',
+-    joinedAt: row.created_at,
+-    lastSignInAt: user?.last_sign_in_at ?? null,
++    id: r.id,
++    userId: r.user_id,
++    email: r.email ?? '',
++    name: r.name,
++    role: r.role,
++    status: r.disabled_at ? 'disabled' : r.last_sign_in_at ? 'active' : 'invited',
++    joinedAt: r.created_at,
++    lastSignInAt: r.last_sign_in_at,
+   };
+ }
+ 
+-async function loadUser(c: Ctx, userId: string): Promise<User | null> {
+-  const { data, error } = await adminDb(c.env).auth.admin.getUserById(userId);
+-  if (error) return null;
+-  return data.user;
+-}
++const toInvitation = (r: InvitationRow): Invitation => ({ id: r.id, userId: r.user_id, email: r.email, role: r.role, invitedBy: r.invited_by, createdAt: r.created_at });
+ 
+-async function loadMembership(c: Ctx, id: string): Promise<MembershipRow> {
+-  const { data, error } = await adminDb(c.env)
+-    .from('memberships')
+-    .select(MEMBERSHIP_COLUMNS)
+-    .eq('org_id', c.var.tenant.orgId)
+-    .eq('id', id)
+-    .maybeSingle<MembershipRow>();
+-  if (error) throw error;
+-  if (!data) throw new HttpError(404, 'Member not found', 'not_found');
+-  return data;
+-}
++const idParam = (c: Ctx) => {
++  const id = c.req.param('id') ?? '';
++  if (!UUID_RE.test(id)) throw new HttpError(404, 'Member not found', 'not_found');
++  return id;
++};
+ 
+-async function countActiveOwners(c: Ctx): Promise<number> {
+-  const { count, error } = await adminDb(c.env)
+-    .from('memberships')
+-    .select('id', { count: 'exact', head: true })
+-    .eq('org_id', c.var.tenant.orgId)
+-    .eq('role', 'owner')
+-    .is('disabled_at', null);
+-  if (error) throw error;
+-  return count ?? 0;
++async function loadMember(c: Ctx, id: string): Promise<Member> {
++  const rows = await callRpc<MemberRow[]>(userDb(c), 'core_list_members');
++  const row = rows.find((r) => r.id === id);
++  if (!row) throw new HttpError(404, 'Member not found', 'not_found');
++  return toMember(row);
+ }
+ 
+ /** Where invite and reset links send people: the calling app if it is an allowed origin. */
+@@ -69,27 +58,16 @@ function appOrigin(c: Ctx): string {
+   return origin && allowed.includes(origin) ? origin : (allowed[0] ?? origin ?? '');
+ }
+ 
+-function actor(c: Ctx) {
+-  return { userId: c.var.user.id, role: c.var.tenant.role };
+-}
+-
+-function refuse(reason: string | null) {
+-  if (reason) throw new HttpError(403, reason, 'not_allowed');
+-}
+-
+ export const memberRoutes = new Hono<AppEnv>();
+ 
+ memberRoutes.get('/', requirePermission('core.users.read'), async (c) => {
+-  const { data, error } = await adminDb(c.env)
+-    .from('memberships')
+-    .select(MEMBERSHIP_COLUMNS)
+-    .eq('org_id', c.var.tenant.orgId)
+-    .order('created_at');
+-  if (error) throw error;
+-  const rows = (data ?? []) as MembershipRow[];
+-  // One Auth lookup per member. Fine for tens of members; revisit with a profiles table if orgs grow large.
+-  const users = await Promise.all(rows.map((r) => loadUser(c, r.user_id)));
+-  return ok(c, rows.map((r, i) => toMember(r, users[i] ?? null)));
++  const rows = await callRpc<MemberRow[]>(userDb(c), 'core_list_members');
++  return ok(c, rows.map(toMember));
++});
++
++memberRoutes.get('/invitations', requirePermission('core.users.manage'), async (c) => {
++  const rows = await callRpc<InvitationRow[]>(userDb(c), 'core_list_invitations');
++  return ok(c, rows.map(toInvitation));
+ });
+ 
+ memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
+@@ -98,146 +76,49 @@ memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
+   if (!EMAIL_RE.test(email)) invalid('Enter a valid email address');
+   const role = body.role as Role;
+   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
+-  refuse(refuseInvite(actor(c), role));
+-
+-  const client = adminDb(c.env);
+-  const orgId = c.var.tenant.orgId;
+-  const { data: existingId, error: lookupErr } = await client.rpc('find_auth_user_id', { p_email: email });
+-  if (lookupErr) {
+-    if (lookupErr.code === 'PGRST202') throw new HttpError(503, 'Run sql/002_core_user_lookup.sql first', 'migration_missing');
+-    throw lookupErr;
+-  }
+ 
+-  let userId: string;
+-  let inviteLink: string | null = null;
+-  if (existingId) {
+-    userId = existingId as string;
+-    const { data: already, error } = await client
+-      .from('memberships')
+-      .select('id, disabled_at')
+-      .eq('org_id', orgId)
+-      .eq('user_id', userId)
+-      .maybeSingle<{ id: string; disabled_at: string | null }>();
+-    if (error) throw error;
+-    if (already) {
+-      throw new HttpError(
+-        409,
+-        already.disabled_at ? 'This person is a disabled member. Re-enable them instead.' : 'This person is already a member',
+-        'already_member',
+-      );
+-    }
+-  } else {
+-    const { data, error } = await client.auth.admin.generateLink({
+-      type: 'invite',
+-      email,
+-      options: { redirectTo: appOrigin(c) },
+-    });
+-    if (error) throw new HttpError(502, `Couldn't create the invite: ${error.message}`, 'invite_failed');
+-    userId = data.user.id;
+-    inviteLink = data.properties.action_link;
+-    // Records which org created the account, so only that org may issue it a new link later.
+-    const { error: metaErr } = await client.auth.admin.updateUserById(userId, { app_metadata: { invited_org_id: orgId } });
+-    if (metaErr) throw metaErr;
++  // An existing account only gets an invitation they must accept (it never becomes a member without consent).
++  const step = await callRpc<{ kind: 'invitation' | 'needs_account'; id?: string }>(userDb(c), 'core_invite_member', { p_email: email, p_role: role });
++  if (step.kind === 'invitation') {
++    const rows = await callRpc<InvitationRow[]>(userDb(c), 'core_list_invitations');
++    const row = rows.find((r) => r.id === step.id);
++    if (!row) throw new HttpError(500, 'The invitation was not found after creating it');
++    const result: InviteResult = { kind: 'invited', invitation: toInvitation(row) };
++    return ok(c, result, 201);
+   }
+ 
+-  const { data: row, error: insErr } = await client
+-    .from('memberships')
+-    .insert({ org_id: orgId, user_id: userId, role, invited_by: c.var.user.id })
+-    .select(MEMBERSHIP_COLUMNS)
+-    .single<MembershipRow>();
+-  if (insErr) throw insErr;
+-
+-  const member = toMember(row, await loadUser(c, userId));
+-  await writeAudit(c, {
+-    action: inviteLink ? 'member.invited' : 'member.added',
+-    entityType: 'membership',
+-    entityId: row.id,
+-    summary: `${email} ${inviteLink ? 'invited' : 'added'} as ${role}`,
+-    after: { email, role },
+-  });
+-  const result: InviteResult = { member, inviteLink };
++  // A new email: create the account (Auth admin), then the database checks it is this org's fresh account and adds it.
++  const account = await createInvitedAccount(c.env, email, c.var.tenant.orgId, appOrigin(c));
++  const membershipId = await callRpc<string>(userDb(c), 'core_add_invited_account', { p_user_id: account.userId, p_role: role });
++  const result: InviteResult = { kind: 'added', member: await loadMember(c, membershipId), inviteLink: account.link };
+   return ok(c, result, 201);
+ });
+ 
++memberRoutes.delete('/invitations/:id', requirePermission('core.users.manage'), async (c) => {
++  const id = idParam(c);
++  await callRpc<void>(userDb(c), 'core_revoke_invitation', { p_invitation_id: id });
++  return ok(c, { id, status: 'revoked' });
++});
++
+ memberRoutes.patch('/:id', requirePermission('core.users.manage'), async (c) => {
+-  const body = await jsonBody(c);
+-  const role = body.role as Role;
++  const id = idParam(c);
++  const role = (await jsonBody(c)).role as Role;
+   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
+-  const target = await loadMembership(c, c.req.param('id'));
+-  if (target.role === role) return ok(c, toMember(target, await loadUser(c, target.user_id)));
+-  refuse(
+-    refuseRoleChange(actor(c), { userId: target.user_id, role: target.role, disabled: !!target.disabled_at }, role, await countActiveOwners(c)),
+-  );
+-
+-  const { data, error } = await adminDb(c.env)
+-    .from('memberships')
+-    .update({ role })
+-    .eq('org_id', c.var.tenant.orgId)
+-    .eq('id', target.id)
+-    .select(MEMBERSHIP_COLUMNS)
+-    .single<MembershipRow>();
+-  if (error) throw error;
+-  const member = toMember(data, await loadUser(c, data.user_id));
+-  await writeAudit(c, {
+-    action: 'member.role_changed',
+-    entityType: 'membership',
+-    entityId: target.id,
+-    summary: `${member.email} changed from ${target.role} to ${role}`,
+-    before: { role: target.role },
+-    after: { role },
+-  });
+-  return ok(c, member);
++  await callRpc<void>(userDb(c), 'core_set_member_role', { p_membership_id: id, p_role: role });
++  return ok(c, await loadMember(c, id));
+ });
+ 
+ for (const action of ['disable', 'enable'] as const) {
+   memberRoutes.post(`/:id/${action}`, requirePermission('core.users.manage'), async (c) => {
+-    const target = await loadMembership(c, c.req.param('id'));
+-    if (action === 'disable') {
+-      if (target.disabled_at) invalid('This member is already disabled');
+-      refuse(refuseDisable(actor(c), { userId: target.user_id, role: target.role, disabled: false }, await countActiveOwners(c)));
+-    } else {
+-      if (!target.disabled_at) invalid('This member is already active');
+-      if (target.role === 'owner' && c.var.tenant.role !== 'owner') refuse('Only an owner can re-enable an owner');
+-    }
+-
+-    const { data, error } = await adminDb(c.env)
+-      .from('memberships')
+-      .update({ disabled_at: action === 'disable' ? new Date().toISOString() : null })
+-      .eq('org_id', c.var.tenant.orgId)
+-      .eq('id', target.id)
+-      .select(MEMBERSHIP_COLUMNS)
+-      .single<MembershipRow>();
+-    if (error) throw error;
+-    const member = toMember(data, await loadUser(c, data.user_id));
+-    await writeAudit(c, {
+-      action: `member.${action}d`,
+-      entityType: 'membership',
+-      entityId: target.id,
+-      summary: `${member.email} ${action}d`,
+-    });
+-    return ok(c, member);
++    const id = idParam(c);
++    await callRpc<void>(userDb(c), 'core_set_member_disabled', { p_membership_id: id, p_disabled: action === 'disable' });
++    return ok(c, await loadMember(c, id));
+   });
+ }
+ 
+ memberRoutes.post('/:id/invite-link', requirePermission('core.users.manage'), async (c) => {
+-  const target = await loadMembership(c, c.req.param('id'));
+-  const user = await loadUser(c, target.user_id);
+-  // A sign-in link is a credential. Only issue one for an account this org created that has
+-  // never been used; anyone else resets their own password.
+-  if (!user?.email || user.last_sign_in_at || user.app_metadata?.invited_org_id !== c.var.tenant.orgId) {
+-    refuse('A new link can only be made for someone this organization invited who has not signed in yet');
+-  }
+-  const { data, error } = await adminDb(c.env).auth.admin.generateLink({
+-    type: 'recovery',
+-    email: user!.email!,
+-    options: { redirectTo: appOrigin(c) },
+-  });
+-  if (error) throw new HttpError(502, `Couldn't create the link: ${error.message}`, 'invite_failed');
+-  await writeAudit(c, {
+-    action: 'member.invite_link_created',
+-    entityType: 'membership',
+-    entityId: target.id,
+-    summary: `New invite link made for ${user!.email}`,
+-  });
+-  return ok(c, { inviteLink: data.properties.action_link });
++  // A sign-in link is a credential. The database allows it only for an account this org created, that has never signed in
++  // and belongs to no other organization, and audits the request.
++  const target = await callRpc<{ user_id: string; email: string }>(userDb(c), 'core_invite_link_target', { p_membership_id: idParam(c) });
++  return ok(c, { inviteLink: await recoveryLink(c.env, target.email, appOrigin(c)) });
+ });
+diff --git a/apps/api/src/modules/core/members.ts b/apps/api/src/modules/core/members.ts
+deleted file mode 100644
+index 8778aa4..0000000
+--- a/apps/api/src/modules/core/members.ts
++++ /dev/null
+@@ -1,32 +0,0 @@
+-import type { Role } from '@erp/shared';
+-
+-// Who may change whom. Pure so it can be unit tested; the routes load the facts and call these.
+-
+-export type MemberFacts = { userId: string; role: Role; disabled: boolean };
+-
+-export type Actor = { userId: string; role: Role };
+-
+-/** Returns why the change is refused, or null if it is allowed. */
+-export function refuseRoleChange(actor: Actor, target: MemberFacts, newRole: Role, activeOwners: number): string | null {
+-  if (actor.userId === target.userId) return "You can't change your own role";
+-  if ((target.role === 'owner' || newRole === 'owner') && actor.role !== 'owner') {
+-    return 'Only an owner can make someone an owner or change an owner';
+-  }
+-  if (target.role === 'owner' && newRole !== 'owner' && !target.disabled && activeOwners <= 1) {
+-    return 'An organization needs at least one owner';
+-  }
+-  return null;
+-}
+-
+-export function refuseDisable(actor: Actor, target: MemberFacts, activeOwners: number): string | null {
+-  if (actor.userId === target.userId) return "You can't disable yourself";
+-  if (target.role === 'owner' && actor.role !== 'owner') return 'Only an owner can disable an owner';
+-  if (target.role === 'owner' && activeOwners <= 1) return 'An organization needs at least one owner';
+-  return null;
+-}
+-
+-/** Inviting someone straight in as owner is limited to owners. */
+-export function refuseInvite(actor: Actor, role: Role): string | null {
+-  if (role === 'owner' && actor.role !== 'owner') return 'Only an owner can invite an owner';
+-  return null;
+-}
+diff --git a/apps/api/test/boundaries.test.ts b/apps/api/test/boundaries.test.ts
+index 909297d..db8dd85 100644
+--- a/apps/api/test/boundaries.test.ts
++++ b/apps/api/test/boundaries.test.ts
+@@ -3,7 +3,10 @@ import { join, relative, sep } from 'node:path';
+ import { describe, expect, it } from 'vitest';
+ 
+ // ADR-0003: the secret-key client bypasses row level security. Only these files may import it.
+-const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/audit.ts', 'modules/core/memberRoutes.ts', 'jobs/outbox.ts', 'lib/channels/index.ts', 'lib/channels/whatsapp.ts', 'lib/whatsappInbound.ts']);
++// No request route is on this list: member routes reach Supabase Auth only through lib/authAdmin.ts (sql/025).
++const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/authAdmin.ts', 'jobs/outbox.ts', 'lib/channels/index.ts', 'lib/channels/whatsapp.ts', 'lib/whatsappInbound.ts']);
++// Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.
++const AUTH_ADMIN_ALLOWED = new Set(['modules/core/memberRoutes.ts']);
+ 
+ function sourceFiles(dir: string): string[] {
+   return readdirSync(dir).flatMap((name) => {
+@@ -23,6 +26,14 @@ describe('database client boundaries (ADR-0003)', () => {
+     expect(offenders).toEqual([]);
+   });
+ 
++  it('only the member routes use the Auth admin helpers', () => {
++    const offenders = sourceFiles(srcDir)
++      .map((f) => relative(srcDir, f).split(sep).join('/'))
++      .filter((rel) => !AUTH_ADMIN_ALLOWED.has(rel))
++      .filter((rel) => /from\s+['"][^'"]*authAdmin['"]/.test(readFileSync(join(srcDir, rel), 'utf8')));
++    expect(offenders).toEqual([]);
++  });
++
+   it('nothing inserts into audit_log directly from the API', () => {
+     const offenders = sourceFiles(srcDir)
+       .map((f) => relative(srcDir, f).split(sep).join('/'))
+diff --git a/apps/api/test/core.test.ts b/apps/api/test/core.test.ts
+index 3c82128..84a4528 100644
+--- a/apps/api/test/core.test.ts
++++ b/apps/api/test/core.test.ts
+@@ -1,38 +1,8 @@
+ import { describe, expect, it } from 'vitest';
+-import { refuseDisable, refuseInvite, refuseRoleChange } from '../src/modules/core/members';
+ import { parseOrgUpdate } from '../src/modules/core/org';
+ 
+-const owner = { userId: 'u-owner', role: 'owner' as const };
+-const admin = { userId: 'u-admin', role: 'admin' as const };
+-
+-describe('member role rules', () => {
+-  it('stops people changing their own role', () => {
+-    expect(refuseRoleChange(admin, { userId: 'u-admin', role: 'admin', disabled: false }, 'member', 1)).toMatch(/own role/);
+-  });
+-
+-  it('lets only owners touch the owner role', () => {
+-    expect(refuseRoleChange(admin, { userId: 'x', role: 'member', disabled: false }, 'owner', 1)).toMatch(/Only an owner/);
+-    expect(refuseRoleChange(admin, { userId: 'x', role: 'owner', disabled: false }, 'admin', 2)).toMatch(/Only an owner/);
+-    expect(refuseRoleChange(owner, { userId: 'x', role: 'member', disabled: false }, 'owner', 1)).toBeNull();
+-  });
+-
+-  it('keeps at least one active owner', () => {
+-    expect(refuseRoleChange(owner, { userId: 'x', role: 'owner', disabled: false }, 'admin', 1)).toMatch(/at least one owner/);
+-    expect(refuseRoleChange(owner, { userId: 'x', role: 'owner', disabled: false }, 'admin', 2)).toBeNull();
+-    expect(refuseDisable(owner, { userId: 'x', role: 'owner', disabled: false }, 1)).toMatch(/at least one owner/);
+-  });
+-
+-  it('stops self-disable and admins disabling owners', () => {
+-    expect(refuseDisable(admin, { userId: 'u-admin', role: 'admin', disabled: false }, 1)).toMatch(/yourself/);
+-    expect(refuseDisable(admin, { userId: 'x', role: 'owner', disabled: false }, 3)).toMatch(/Only an owner/);
+-    expect(refuseDisable(admin, { userId: 'x', role: 'member', disabled: false }, 1)).toBeNull();
+-  });
+-
+-  it('lets only owners invite owners', () => {
+-    expect(refuseInvite(admin, 'owner')).not.toBeNull();
+-    expect(refuseInvite(admin, 'admin')).toBeNull();
+-  });
+-});
++// Member role rules (own role, owners only by owners, at least one owner) are enforced by the database functions in
++// sql/025 and tested in sql/tests/021_security_audit_fixes.sql.
+ 
+ describe('org settings validation', () => {
+   it('normalises and accepts valid values', () => {
+diff --git a/apps/api/test/whatsapp.test.ts b/apps/api/test/whatsapp.test.ts
+index 10b61df..5e10e41 100644
+--- a/apps/api/test/whatsapp.test.ts
++++ b/apps/api/test/whatsapp.test.ts
+@@ -3,7 +3,7 @@ import app from '../src/index';
+ import { makeWhatsAppAdapter } from '../src/lib/channels/whatsapp';
+ import type { OutboxMessage } from '../src/lib/channels';
+ import { replyFor } from '../src/lib/whatsappInbound';
+-import { parseWebhook, sendText, toGraphNumber, verifySignature } from '../src/lib/whatsapp';
++import { parseWebhook, safeEqual, sendText, toGraphNumber, verifySignature } from '../src/lib/whatsapp';
+ 
+ // Unit tests for the WhatsApp code. They do NOT talk to Meta: they check the signature rule, the payload parsing, the
+ // request we would send and the refusal paths. Real delivery needs the Meta credentials and is checked by hand.
+@@ -32,6 +32,16 @@ describe('signature', () => {
+   });
+ });
+ 
++describe('safeEqual', () => {
++  it('matches only identical strings, including different lengths and empty values', () => {
++    expect(safeEqual('verify-me', 'verify-me')).toBe(true);
++    expect(safeEqual('verify-me', 'verify-mf')).toBe(false);
++    expect(safeEqual('verify-me', 'verify-me-longer')).toBe(false);
++    expect(safeEqual('', 'verify-me')).toBe(false);
++    expect(safeEqual('', '')).toBe(true);
++  });
++});
++
+ describe('parseWebhook', () => {
+   const payload = (messages: unknown[]) => ({ entry: [{ changes: [{ value: { messages } }] }] });
+   it('extracts plain text messages and ignores everything else', () => {
+diff --git a/apps/api/wrangler.toml b/apps/api/wrangler.toml
+index 6e8caab..31394ed 100644
+--- a/apps/api/wrangler.toml
++++ b/apps/api/wrangler.toml
+@@ -5,9 +5,11 @@ compatibility_flags = ["nodejs_compat"]
+ 
+ # Non-secret settings only. SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are passed at deploy time with --var (public, but kept out of the repo). Secrets (SUPABASE_SECRET_KEY) go in
+ # `wrangler secret put`, and in .dev.vars for local development.
++# These are the deployed (production) values: only the live web app may call the API. Local development overrides
++# APP_ENV and ALLOWED_ORIGINS from the repo-root .env (see .dev.vars.example).
+ [vars]
+-APP_ENV = "development"
+-ALLOWED_ORIGINS = "https://erp-live.pages.dev,http://localhost:5173"
++APP_ENV = "production"
++ALLOWED_ORIGINS = "https://erp-live.pages.dev"
+ 
+ # Delivers queued messages and sends reminders and escalations (src/jobs/outbox.ts). Also runnable on demand.
+ [triggers]
+diff --git a/apps/web/public/_headers b/apps/web/public/_headers
+index 66e82ea..02aec39 100644
+--- a/apps/web/public/_headers
++++ b/apps/web/public/_headers
+@@ -2,3 +2,7 @@
+   X-Robots-Tag: noindex, nofollow
+   X-Content-Type-Options: nosniff
+   Referrer-Policy: no-referrer
++  Strict-Transport-Security: max-age=31536000; includeSubDomains
++  X-Frame-Options: DENY
++  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
++  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://erp-api.meetings-dmedeskai.workers.dev https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+diff --git a/apps/web/src/components/OrgPicker.tsx b/apps/web/src/components/OrgPicker.tsx
+index f36f758..1b921cb 100644
+--- a/apps/web/src/components/OrgPicker.tsx
++++ b/apps/web/src/components/OrgPicker.tsx
+@@ -1,38 +1,82 @@
+-import { useEffect, useState } from 'react';
++import { useCallback, useEffect, useState } from 'react';
++import type { MyInvitation } from '@erp/shared';
+ import { supabase } from '../lib/supabase';
+ 
+ type OrgOption = { id: string; name: string };
++type InvitationRow = { id: string; org_id: string; org_name: string; role: MyInvitation['role']; invited_by_name: string | null; created_at: string };
+ 
+-// Lists the organizations the signed-in user belongs to. Reads through Supabase directly,
+-// which RLS limits to the user's own memberships (see sql/001).
++// Lists the organizations the signed-in user belongs to, and invitations waiting for them. Reads through Supabase
++// directly: RLS limits memberships to the user's own (sql/001), and core_my_invitations returns only their own (sql/025).
++// Someone who already had an account joins another organization only by accepting here.
+ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
+   const [orgs, setOrgs] = useState<OrgOption[] | null>(null);
++  const [invitations, setInvitations] = useState<MyInvitation[]>([]);
+   const [error, setError] = useState<string | null>(null);
++  const [busyId, setBusyId] = useState<string | null>(null);
++
++  const load = useCallback(async (autoOpen: boolean) => {
++    const [orgRes, invRes] = await Promise.all([
++      supabase.from('memberships').select('organizations(id, name)').is('disabled_at', null),
++      supabase.rpc('core_my_invitations'),
++    ]);
++    if (orgRes.error) return setError(orgRes.error.message);
++    // An invitations error (for example the migration not run yet) must not lock people out of their organizations.
++    const pending = invRes.error
++      ? []
++      : ((invRes.data ?? []) as InvitationRow[]).map((r) => ({
++          id: r.id, orgId: r.org_id, orgName: r.org_name, role: r.role, invitedByName: r.invited_by_name, createdAt: r.created_at,
++        }));
++    const rows = (orgRes.data ?? []) as unknown as { organizations: OrgOption | null }[];
++    const list = rows.flatMap((r) => (r.organizations ? [r.organizations] : []));
++    // Most people belong to one organization: open it instead of asking, unless an invitation is waiting.
++    if (autoOpen && list.length === 1 && list[0] && pending.length === 0) return onPick(list[0].id);
++    setInvitations(pending);
++    setOrgs(list);
++  }, [onPick]);
+ 
+   useEffect(() => {
+-    supabase
+-      .from('memberships')
+-      .select('organizations(id, name)')
+-      .is('disabled_at', null)
+-      .then(({ data, error }) => {
+-        if (error) return setError(error.message);
+-        const rows = (data ?? []) as unknown as { organizations: OrgOption | null }[];
+-        const list = rows.flatMap((r) => (r.organizations ? [r.organizations] : []));
+-        // Most people belong to one organization: open it instead of asking.
+-        if (list.length === 1 && list[0]) onPick(list[0].id);
+-        else setOrgs(list);
+-      });
++    void load(true);
+     // Runs once on mount; `onPick` is stable for this purpose.
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []);
+ 
+-  if (error) return <main className="center"><p className="error">{error}</p></main>;
++  async function respond(inv: MyInvitation, accept: boolean) {
++    setBusyId(inv.id);
++    setError(null);
++    const { error: rpcError } = await supabase.rpc('core_respond_invitation', { p_invitation_id: inv.id, p_accept: accept });
++    setBusyId(null);
++    if (rpcError) return setError(rpcError.message);
++    await load(false);
++  }
++
++  if (!orgs && error) return <main className="center"><p className="error">{error}</p></main>;
+   if (!orgs) return <main className="center"><p className="muted">Loading organizations…</p></main>;
+ 
+   return (
+     <main className="center">
+       <div className="card stack">
++        {invitations.length > 0 && (
++          <>
++            <h1>Invitations</h1>
++            {invitations.map((inv) => (
++              <div key={inv.id} className="stack">
++                <p>
++                  {inv.invitedByName ?? 'Someone'} invited you to join <strong>{inv.orgName}</strong> as {inv.role}.
++                </p>
++                <div className="form-actions">
++                  <button disabled={busyId === inv.id} onClick={() => respond(inv, true)}>
++                    Accept
++                  </button>
++                  <button className="secondary" disabled={busyId === inv.id} onClick={() => respond(inv, false)}>
++                    Decline
++                  </button>
++                </div>
++              </div>
++            ))}
++          </>
++        )}
+         <h1>Choose an organization</h1>
++        {error && <p className="error">{error}</p>}
+         {orgs.length === 0 && <p className="muted">You aren't a member of any organization yet. Ask an admin to invite you.</p>}
+         {orgs.map((o) => (
+           <button key={o.id} onClick={() => onPick(o.id)}>
+diff --git a/apps/web/src/lib/demo.ts b/apps/web/src/lib/demo.ts
+index ce5fad5..0dad4f3 100644
+--- a/apps/web/src/lib/demo.ts
++++ b/apps/web/src/lib/demo.ts
+@@ -118,9 +118,10 @@ function handle(method: string, area: string | undefined, id: string | undefined
+       const member: Member = { id: `m${members.length + 1}`, userId: `u${members.length + 1}`, email, name: null, role, status: 'invited', joinedAt: new Date().toISOString(), lastSignInAt: null };
+       members.push(member);
+       log(0, demoActor.id, 'member.invited', 'membership', member.id, `${email} invited as ${role}`);
+-      const result: InviteResult = { member, inviteLink: 'https://demo.invalid/accept-invite#demo' };
++      const result: InviteResult = { kind: 'added', member, inviteLink: 'https://demo.invalid/accept-invite#demo' };
+       return result;
+     }
++    if (id === 'invitations' && method === 'GET') return [];
+     const member = members.find((m) => m.id === id);
+     if (!member) throw new DemoError(404, 'Member not found', 'not_found');
+     if (action === 'invite-link') return { inviteLink: 'https://demo.invalid/accept-invite#demo' };
+diff --git a/apps/web/src/modules/core/settings/UsersSettings.tsx b/apps/web/src/modules/core/settings/UsersSettings.tsx
+index d2958ec..1b08d39 100644
+--- a/apps/web/src/modules/core/settings/UsersSettings.tsx
++++ b/apps/web/src/modules/core/settings/UsersSettings.tsx
+@@ -1,5 +1,5 @@
+ import { useState, type FormEvent } from 'react';
+-import { ROLES, hasPermission, type InviteResult, type Member, type Role } from '@erp/shared';
++import { ROLES, hasPermission, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
+ import { ListView, type Column } from '../../../components/views/ListView';
+ import { api } from '../../../lib/api';
+ import { formatDate } from '../../../lib/format';
+@@ -94,6 +94,7 @@ export function UsersSettings() {
+   const canManage = hasPermission(session.permissions, 'core.users.manage');
+   const isOwner = session.role === 'owner';
+   const members = useLoad(() => api<Member[]>('/v1/core/members'));
++  const invitations = useLoad(() => (canManage ? api<Invitation[]>('/v1/core/members/invitations') : Promise.resolve([] as Invitation[])));
+   const [inviting, setInviting] = useState(false);
+   const [link, setLink] = useState<{ email: string; link: string } | null>(null);
+   const [notice, setNotice] = useState<string | null>(null);
+@@ -133,6 +134,20 @@ export function UsersSettings() {
+       setLink({ email: m.email, link: r.inviteLink });
+     });
+ 
++  async function withdraw(inv: Invitation) {
++    setBusyId(inv.id);
++    setError(null);
++    setNotice(null);
++    try {
++      await api(`/v1/core/members/invitations/${inv.id}`, { method: 'DELETE' });
++      invitations.setData((invitations.data ?? []).filter((i) => i.id !== inv.id));
++    } catch (err) {
++      setError((err as Error).message);
++    } finally {
++      setBusyId(null);
++    }
++  }
++
+   const columns: Column<Member>[] = [
+     {
+       key: 'email',
+@@ -194,10 +209,15 @@ export function UsersSettings() {
+         <InviteForm
+           canInviteOwner={isOwner}
+           onInvited={(r) => {
+-            members.setData([...(members.data ?? []), r.member]);
+             setInviting(false);
+-            if (r.inviteLink) setLink({ email: r.member.email, link: r.inviteLink });
+-            else setNotice(`${r.member.email} already had an account and has been added. They can sign in now.`);
++            if (r.kind === 'added') {
++              members.setData([...(members.data ?? []), r.member]);
++              setLink({ email: r.member.email, link: r.inviteLink });
++            } else {
++              const others = (invitations.data ?? []).filter((i) => i.id !== r.invitation.id);
++              invitations.setData([...others, r.invitation]);
++              setNotice(`${r.invitation.email} has been invited. They will see the invitation when they sign in and join once they accept it.`);
++            }
+           }}
+         />
+       )}
+@@ -205,6 +225,24 @@ export function UsersSettings() {
+       {error && <p className="error">{error}</p>}
+       {members.error && <p className="error">{members.error}</p>}
+ 
++      {canManage && (invitations.data?.length ?? 0) > 0 && (
++        <div className="form-card stack">
++          <strong>Waiting to accept</strong>
++          {invitations.data?.map((i) => (
++            <div key={i.id} className="copy-row">
++              <span>
++                {i.email} <span className="muted small capitalize">({i.role})</span>
++              </span>
++              {(isOwner || i.role !== 'owner') && (
++                <button className="link-btn" disabled={busyId === i.id} onClick={() => withdraw(i)}>
++                  Withdraw
++                </button>
++              )}
++            </div>
++          ))}
++        </div>
++      )}
++
+       {members.data ? (
+         <ListView
+           title="Users"
+diff --git a/documentation/operations/WORKLOG.md b/documentation/operations/WORKLOG.md
+index 7772433..f61df7e 100644
+--- a/documentation/operations/WORKLOG.md
++++ b/documentation/operations/WORKLOG.md
+@@ -11,6 +11,22 @@ gets an entry with these four headings:
+ Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
+ run or deployed.
+ 
++## 2026-10-30 — Security audit fixes (branch worktree-security-audit-fixes), synced with main
++
++**Objective.** Fix the findings of the 2026-10-30 security audit ([report](../reviews/2026-10-30-security-audit.md)), then bring the branch up to date with main (now `b8aabec`).
++
++**Actions Completed.**
++- Synced: audit changes stashed, branch fast-forwarded to main `68c6c31`, changes reapplied; conflicts only in `sql/README.md` and `sql/tests/README.md` (kept main's text plus the 025 / 021 rows). Then fast-forwarded to `b8aabec` (no conflicts). The audit also covered main's new finance module (`sql/024`, `modules/finance/routes.ts`, `Finance.tsx`): no findings.
++- Found: `68c6c31` and `b8aabec` committed this worktree folder into main as a gitlink (`.claude/worktrees/security-audit-fixes`). `.gitignore` now ignores `.claude/worktrees/`; the gitlink still has to be untracked on main (`git rm --cached .claude/worktrees/security-audit-fixes`).
++- Review report written: `documentation/reviews/2026-10-30-security-audit.md` (findings and what was done about each).
++- `sql/025_security_audit_fixes.sql` + `sql/tests/021_security_audit_fixes.sql`: M-1 member list / invite / role / disable / enable as database functions run with the caller's login, rules and audit in the same transaction (API no longer writes these rows with the secret key; `apps/api/src/lib/audit.ts` and `modules/core/members.ts` removed); M-2 an existing account gets a `core_invitations` row it must accept (`OrgPicker.tsx` shows and accepts invitations; `UsersSettings.tsx` lists pending ones); L-2 decision channel other than `app` only when vouched by the webhook function; L-3 a WhatsApp number verified in several orgs works in all; L-4 `msg_claim_due_for_org` so "process now" delivers only the caller's org; L-5 a new sign-in link only for an account that belongs to no other org.
++- API: `lib/authAdmin.ts` holds the only Auth admin calls (create invited account, recovery link); on-demand outbox pass is per org and skips the all-org audit check (`jobs/outbox.ts`); timing-safe compare of the WhatsApp verify token (`lib/whatsapp.ts`, `index.ts`); `wrangler.toml` now production values (`APP_ENV=production`, only `https://erp-live.pages.dev` allowed), local values documented in `.dev.vars.example`.
++- Web: security headers in `public/_headers` (HSTS, frame denial, permissions policy, content security policy).
++
++**Database / System Result.** None. `sql/025` and test 021 not run; nothing deployed.
++
++**Safety Status.** `npm run typecheck` clean; `npm test` 31/31 (shared 4, api 27, including a new `safeEqual` test and a boundary test that only member routes use the Auth admin helpers); web build passes and the built page has no inline script (CSP-compatible). Not run: `sql/025`, `sql/tests/021`, real-login check, browser. Not done: I-2 (stale comment in `sql/001`; the file is write-protected for agents) and I-3 (Cloudflare rate-limiting rule; dashboard setting). Local API needs `APP_ENV=development` and `ALLOWED_ORIGINS=http://localhost:5173` in the root `.env` now that `wrangler.toml` holds production values. The CSP allows `https://*.supabase.co`; if Supabase moves to a custom domain, add it to `connect-src` in `apps/web/public/_headers`. Deploy order: run `sql/025` before deploying the Worker, or member pages fail until it is run.
++
+ ## 2026-10-30 — Finance foundation: item cost (023), expenses and payments (024), Finance screens; Ben's answers recorded
+ 
+ **Objective.** Slice F of `OWNER_INSIGHTS_PLAN.md`: cost per item, expenses, payments, so profit and "who owes whom" can be computed. Ben answered `QUESTIONS_FOR_BEN.md` (average cost; manufacturing later; language is an organization-wide setting chosen at sign-up; teams are named groups; EGP changeable; profit without VAT; deny rules yes; no password rotation). Decisions are written into that file and the plan.
+diff --git a/packages/shared/src/core.ts b/packages/shared/src/core.ts
+index a147a17..251df6e 100644
+--- a/packages/shared/src/core.ts
++++ b/packages/shared/src/core.ts
+@@ -34,8 +34,17 @@ export type Member = {
+ 
+ export type InviteRequest = { email: string; role: Role };
+ 
+-/** `inviteLink` is null when the person already had an account and was simply added. */
+-export type InviteResult = { member: Member; inviteLink: string | null };
++/** A pending invitation for someone who already has an account. They become a member only when they accept it. */
++export type Invitation = { id: string; userId: string; email: string; role: Role; invitedBy: string; createdAt: string };
++
++/** The invited person's own view of a pending invitation (read with `core_my_invitations`, sql/025). */
++export type MyInvitation = { id: string; orgId: string; orgName: string; role: Role; invitedByName: string | null; createdAt: string };
++
++/**
++ * `added`: a new account was created and added; send them `inviteLink`.
++ * `invited`: the email already had an account; they see the invitation after signing in and must accept it.
++ */
++export type InviteResult = { kind: 'added'; member: Member; inviteLink: string } | { kind: 'invited'; invitation: Invitation };
+ 
+ export type ModuleStatus = { key: string; name: string; description: string; suite: string; core: boolean; enabled: boolean };
+ 
+diff --git a/sql/025_security_audit_fixes.sql b/sql/025_security_audit_fixes.sql
+new file mode 100644
+index 0000000..044e275
+--- /dev/null
++++ b/sql/025_security_audit_fixes.sql
+@@ -0,0 +1,552 @@
++-- 025_security_audit_fixes.sql
++-- Fixes from the security audit of 2026-10-30 (documentation/reviews/2026-10-30-security-audit.md).
++--   M-1  Member management moves into database functions called with the caller's own login: the role rules are checked
++--        here and the audit row is written in the same transaction. The API no longer uses the secret key for these rows.
++--   M-2  Adding someone who already has an account creates an INVITATION they must accept, instead of a membership.
++--   L-2  inv_decide_request / inv_decide_adjustment accept a channel other than 'app' only when the messaging webhook
++--        function vouches for it (a signed-in user can no longer label their own decision 'whatsapp' in the audit log).
++--   L-3  A WhatsApp number verified in more than one organization works for all of them (lookups were per org).
++--   L-4  msg_claim_due_for_org: the on-demand "process now" button delivers only the caller's organization's messages.
++--   L-5  A new invite link can only be made for an account that belongs to no other organization.
++-- Depends on sql/001-024. Rerun-safe. Run the whole file, then sql/tests/021_security_audit_fixes.sql.
++
++begin;
++
++-- ---------------------------------------------------------------- invitations (M-2)
++
++create table if not exists public.core_invitations (
++  id          uuid primary key default gen_random_uuid(),
++  org_id      uuid not null references public.organizations(id),
++  user_id     uuid not null references auth.users(id),
++  role        text not null check (role in ('owner', 'admin', 'member', 'viewer')),
++  invited_by  uuid not null references auth.users(id),
++  status      text not null default 'pending' check (status in ('pending', 'accepted', 'declined', 'revoked')),
++  created_at  timestamptz not null default now(),
++  decided_at  timestamptz,
++  updated_at  timestamptz not null default now(),
++  deleted_at  timestamptz
++);
++
++create unique index if not exists core_invitations_pending_uidx on public.core_invitations (org_id, user_id) where status = 'pending';
++create index if not exists core_invitations_user_idx on public.core_invitations (user_id) where status = 'pending';
++
++drop trigger if exists core_invitations_updated_at on public.core_invitations;
++create trigger core_invitations_updated_at before update on public.core_invitations for each row execute function public.set_updated_at();
++
++alter table public.core_invitations enable row level security;
++revoke all on public.core_invitations from anon, authenticated;
++grant select on public.core_invitations to authenticated;
++-- The invited person sees their own invitations; owners and admins see their organization's.
++drop policy if exists core_invitations_read on public.core_invitations;
++create policy core_invitations_read on public.core_invitations for select to authenticated using (
++  user_id = (select auth.uid())
++  or exists (select 1 from public.memberships m
++             where m.org_id = core_invitations.org_id and m.user_id = (select auth.uid()) and m.disabled_at is null and m.role in ('owner', 'admin'))
++);
++
++-- ---------------------------------------------------------------- helpers
++
++-- Caller's role in their current organization (after require_org_role has passed).
++create or replace function public.core__my_role(p_org uuid) returns text
++language sql stable security definer set search_path = public as $$
++  select m.role from public.memberships m where m.org_id = p_org and m.user_id = auth.uid() and m.disabled_at is null
++$$;
++
++create or replace function public.core__display_name(p_user uuid) returns text
++language sql stable security definer set search_path = public as $$
++  select coalesce(nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''), nullif(btrim(u.raw_user_meta_data ->> 'name'), ''), split_part(u.email, '@', 1))
++  from auth.users u where u.id = p_user
++$$;
++
++-- ---------------------------------------------------------------- members (M-1)
++
++-- Members of the caller's organization with their sign-in facts. Any member may list (core.users.read is granted to every role).
++create or replace function public.core_list_members()
++returns table (id uuid, user_id uuid, role text, created_at timestamptz, disabled_at timestamptz, email text, name text, last_sign_in_at timestamptz)
++language plpgsql stable security definer set search_path = public as $$
++declare v_org uuid := public.require_org_role(array['owner', 'admin', 'member', 'viewer']);
++begin
++  return query
++    select m.id, m.user_id, m.role, m.created_at, m.disabled_at, u.email::text,
++           coalesce(nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''), nullif(btrim(u.raw_user_meta_data ->> 'name'), '')),
++           u.last_sign_in_at
++      from public.memberships m
++      join auth.users u on u.id = m.user_id
++     where m.org_id = v_org
++     order by m.created_at;
++end $$;
++
++-- Pending invitations of the caller's organization. Owners and admins.
++create or replace function public.core_list_invitations()
++returns table (id uuid, user_id uuid, email text, role text, invited_by uuid, created_at timestamptz)
++language plpgsql stable security definer set search_path = public as $$
++declare v_org uuid := public.require_org_role(array['owner', 'admin']);
++begin
++  return query
++    select i.id, i.user_id, u.email::text, i.role, i.invited_by, i.created_at
++      from public.core_invitations i join auth.users u on u.id = i.user_id
++     where i.org_id = v_org and i.status = 'pending'
++     order by i.created_at;
++end $$;
++
++-- Step 1 of adding someone. An existing account gets a pending invitation (they accept it after signing in); for an unknown
++-- email this returns {kind: needs_account} and the API creates the account, then calls core_add_invited_account.
++create or replace function public.core_invite_member(p_email text, p_role text) returns jsonb
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org   uuid := public.require_org_role(array['owner', 'admin']);
++  v_email text := lower(btrim(coalesce(p_email, '')));
++  v_user  uuid;
++  v_id    uuid;
++begin
++  if v_email !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' or p_role not in ('owner', 'admin', 'member', 'viewer') then raise exception 'INVALID_INPUT'; end if;
++  if p_role = 'owner' and public.core__my_role(v_org) <> 'owner' then raise exception 'OWNER_ONLY'; end if;
++
++  select u.id into v_user from auth.users u where lower(u.email) = v_email;
++  if v_user is null then return jsonb_build_object('kind', 'needs_account'); end if;
++
++  if exists (select 1 from public.memberships m where m.org_id = v_org and m.user_id = v_user) then raise exception 'ALREADY_MEMBER'; end if;
++  select i.id into v_id from public.core_invitations i where i.org_id = v_org and i.user_id = v_user and i.status = 'pending';
++  if v_id is not null then return jsonb_build_object('kind', 'invitation', 'id', v_id); end if;
++
++  insert into public.core_invitations (org_id, user_id, role, invited_by) values (v_org, v_user, p_role, auth.uid()) returning id into v_id;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, after)
++  values (v_org, auth.uid(), 'member.invitation_created', 'invitation', v_id::text, format('%s invited as %s (waiting for them to accept)', v_email, p_role),
++          jsonb_build_object('email', v_email, 'role', p_role));
++  return jsonb_build_object('kind', 'invitation', 'id', v_id);
++end $$;
++
++-- Step 2 for a brand-new account: only an account this organization just created (app_metadata.invited_org_id), that has
++-- never signed in and belongs to no organization, can be made a member directly. Any other account must accept an invitation.
++create or replace function public.core_add_invited_account(p_user_id uuid, p_role text) returns uuid
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org uuid := public.require_org_role(array['owner', 'admin']);
++  u     auth.users;
++  v_id  uuid;
++begin
++  if p_role not in ('owner', 'admin', 'member', 'viewer') then raise exception 'INVALID_INPUT'; end if;
++  if p_role = 'owner' and public.core__my_role(v_org) <> 'owner' then raise exception 'OWNER_ONLY'; end if;
++  select * into u from auth.users x where x.id = p_user_id;
++  if not found or u.last_sign_in_at is not null or (u.raw_app_meta_data ->> 'invited_org_id') is distinct from v_org::text
++     or exists (select 1 from public.memberships m where m.user_id = p_user_id) then
++    raise exception 'FORBIDDEN' using detail = 'only an account this organization has just created can be added directly';
++  end if;
++  insert into public.memberships (org_id, user_id, role, invited_by) values (v_org, p_user_id, p_role, auth.uid()) returning id into v_id;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, after)
++  values (v_org, auth.uid(), 'member.invited', 'membership', v_id::text, format('%s invited as %s', u.email, p_role),
++          jsonb_build_object('email', u.email, 'role', p_role));
++  return v_id;
++end $$;
++
++-- Change a member's role. Same rules the API used to check, now with the organization's owner rows locked so two
++-- concurrent changes cannot remove the last owner.
++create or replace function public.core_set_member_role(p_membership_id uuid, p_role text) returns void
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org    uuid := public.require_org_role(array['owner', 'admin']);
++  v_me     text := public.core__my_role(v_org);
++  t        public.memberships;
++  v_owners int;
++begin
++  if p_role not in ('owner', 'admin', 'member', 'viewer') then raise exception 'INVALID_INPUT'; end if;
++  perform 1 from public.memberships m where m.org_id = v_org and m.role = 'owner' for update;
++  select * into t from public.memberships m where m.org_id = v_org and m.id = p_membership_id for update;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if t.role = p_role then return; end if;
++  if t.user_id = auth.uid() then raise exception 'SELF_CHANGE'; end if;
++  if (t.role = 'owner' or p_role = 'owner') and v_me <> 'owner' then raise exception 'OWNER_ONLY'; end if;
++  select count(*) into v_owners from public.memberships m where m.org_id = v_org and m.role = 'owner' and m.disabled_at is null;
++  if t.role = 'owner' and t.disabled_at is null and v_owners <= 1 then raise exception 'LAST_OWNER'; end if;
++
++  update public.memberships m set role = p_role where m.id = t.id;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, before, after)
++  values (v_org, auth.uid(), 'member.role_changed', 'membership', t.id::text,
++          format('%s changed from %s to %s', public.core__display_name(t.user_id), t.role, p_role),
++          jsonb_build_object('role', t.role), jsonb_build_object('role', p_role));
++end $$;
++
++create or replace function public.core_set_member_disabled(p_membership_id uuid, p_disabled boolean) returns void
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org    uuid := public.require_org_role(array['owner', 'admin']);
++  v_me     text := public.core__my_role(v_org);
++  t        public.memberships;
++  v_owners int;
++begin
++  if p_disabled is null then raise exception 'INVALID_INPUT'; end if;
++  perform 1 from public.memberships m where m.org_id = v_org and m.role = 'owner' for update;
++  select * into t from public.memberships m where m.org_id = v_org and m.id = p_membership_id for update;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if (t.disabled_at is not null) = p_disabled then
++    raise exception 'INVALID_STATE' using detail = case when p_disabled then 'already disabled' else 'already active' end;
++  end if;
++  if t.user_id = auth.uid() then raise exception 'SELF_CHANGE'; end if;
++  if t.role = 'owner' and v_me <> 'owner' then raise exception 'OWNER_ONLY'; end if;
++  if p_disabled and t.role = 'owner' then
++    select count(*) into v_owners from public.memberships m where m.org_id = v_org and m.role = 'owner' and m.disabled_at is null;
++    if v_owners <= 1 then raise exception 'LAST_OWNER'; end if;
++  end if;
++
++  update public.memberships m set disabled_at = case when p_disabled then now() else null end where m.id = t.id;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary)
++  values (v_org, auth.uid(), case when p_disabled then 'member.disabled' else 'member.enabled' end, 'membership', t.id::text,
++          format('%s %s', public.core__display_name(t.user_id), case when p_disabled then 'disabled' else 'enabled' end));
++end $$;
++
++-- L-5: before the API issues a new sign-in link (a credential) for a member, check it is safe and audit it. Allowed only
++-- for an account this organization created, that has never signed in and belongs to (or is invited by) no other organization.
++create or replace function public.core_invite_link_target(p_membership_id uuid) returns jsonb
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org uuid := public.require_org_role(array['owner', 'admin']);
++  t     public.memberships;
++  u     auth.users;
++begin
++  select * into t from public.memberships m where m.org_id = v_org and m.id = p_membership_id;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if t.role = 'owner' and public.core__my_role(v_org) <> 'owner' then raise exception 'OWNER_ONLY'; end if;
++  select * into u from auth.users x where x.id = t.user_id;
++  if u.email is null or u.last_sign_in_at is not null or (u.raw_app_meta_data ->> 'invited_org_id') is distinct from v_org::text
++     or exists (select 1 from public.memberships m where m.user_id = t.user_id and m.org_id <> v_org)
++     or exists (select 1 from public.core_invitations i where i.user_id = t.user_id and i.org_id <> v_org and i.status = 'pending') then
++    raise exception 'FORBIDDEN' using detail = 'a new link can only be made for someone this organization invited who has not signed in yet';
++  end if;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary)
++  values (v_org, auth.uid(), 'member.invite_link_created', 'membership', t.id::text, format('New invite link made for %s', u.email));
++  return jsonb_build_object('user_id', u.id, 'email', u.email);
++end $$;
++
++-- ---------------------------------------------------------------- the invited person's side (M-2)
++
++-- Pending invitations for the signed-in person, across organizations (no organization header needed).
++create or replace function public.core_my_invitations()
++returns table (id uuid, org_id uuid, org_name text, role text, invited_by_name text, created_at timestamptz)
++language plpgsql stable security definer set search_path = public as $$
++begin
++  if auth.uid() is null then raise exception 'FORBIDDEN'; end if;
++  return query
++    select i.id, i.org_id, o.name, i.role, public.core__display_name(i.invited_by), i.created_at
++      from public.core_invitations i join public.organizations o on o.id = i.org_id
++     where i.user_id = auth.uid() and i.status = 'pending' and o.deleted_at is null
++     order by i.created_at;
++end $$;
++
++create or replace function public.core_respond_invitation(p_invitation_id uuid, p_accept boolean) returns void
++language plpgsql security definer set search_path = public as $$
++declare
++  i    public.core_invitations;
++  v_id uuid;
++begin
++  if auth.uid() is null or p_accept is null then raise exception 'INVALID_INPUT'; end if;
++  select * into i from public.core_invitations x where x.id = p_invitation_id and x.user_id = auth.uid() for update;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if i.status <> 'pending' then raise exception 'INVALID_STATE' using detail = format('invitation is %s', i.status); end if;
++
++  update public.core_invitations x set status = case when p_accept then 'accepted' else 'declined' end, decided_at = now() where x.id = i.id;
++  if p_accept then
++    insert into public.memberships (org_id, user_id, role, invited_by) values (i.org_id, i.user_id, i.role, i.invited_by)
++    on conflict do nothing returning id into v_id;
++  end if;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary)
++  values (i.org_id, auth.uid(), case when p_accept then 'member.invitation_accepted' else 'member.invitation_declined' end, 'invitation', i.id::text,
++          format('%s %s the invitation as %s', public.core__display_name(i.user_id), case when p_accept then 'accepted' else 'declined' end, i.role));
++end $$;
++
++create or replace function public.core_revoke_invitation(p_invitation_id uuid) returns void
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org uuid := public.require_org_role(array['owner', 'admin']);
++  i     public.core_invitations;
++begin
++  select * into i from public.core_invitations x where x.org_id = v_org and x.id = p_invitation_id for update;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if i.status <> 'pending' then raise exception 'INVALID_STATE' using detail = format('invitation is %s', i.status); end if;
++  if i.role = 'owner' and public.core__my_role(v_org) <> 'owner' then raise exception 'OWNER_ONLY'; end if;
++  update public.core_invitations x set status = 'revoked', decided_at = now() where x.id = i.id;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary)
++  values (v_org, auth.uid(), 'member.invitation_revoked', 'invitation', i.id::text, format('Invitation for %s withdrawn', public.core__display_name(i.user_id)));
++end $$;
++
++-- ---------------------------------------------------------------- decisions: channel is vouched for, not claimed (L-2)
++-- Same as sql/011 and sql/012, plus: a channel other than 'app' is accepted only when msg_decide_by_token (service role only)
++-- has set erp.trusted_channel for this transaction. A user's API or direct call cannot set it.
++
++create or replace function public.inv_decide_request(p_request_id uuid, p_decision text, p_comment text default null, p_channel text default 'app') returns void
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org      uuid := public.inv__guard(array['owner', 'admin']);
++  r          public.inv_requests;
++  v_total    numeric;
++  v_required int;
++  v_have     int;
++begin
++  if p_decision not in ('approved', 'rejected') or p_channel not in ('app', 'whatsapp', 'voice', 'api') then
++    raise exception 'INVALID_INPUT';
++  end if;
++  if p_channel <> 'app' and current_setting('erp.trusted_channel', true) is distinct from p_channel then
++    raise exception 'INVALID_INPUT' using detail = 'only the messaging webhook can record another channel';
++  end if;
++  select * into r from public.inv_requests q where q.org_id = v_org and q.id = p_request_id for update;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if r.requester_id = auth.uid() then raise exception 'SELF_APPROVAL'; end if;
++  if r.status <> 'submitted' then raise exception 'INVALID_STATE' using detail = format('request is %s', r.status); end if;
++  if p_decision = 'approved' and exists (select 1 from public.inv_approvals a where a.request_id = r.id and a.approver_id = auth.uid() and a.decision = 'approved') then
++    raise exception 'INVALID_STATE' using detail = 'you already approved this request';
++  end if;
++
++  insert into public.inv_approvals (org_id, request_id, decision, approver_id, comment, channel)
++  values (v_org, r.id, p_decision, auth.uid(), nullif(trim(p_comment), ''), p_channel);
++
++  if p_decision = 'rejected' then
++    update public.inv_requests q set status = 'rejected', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), '') where q.id = r.id;
++    perform public.inv__release(r);
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (v_org, auth.uid(), 'inventory.request.rejected', 'stock_request', r.id::text, format('%s rejected; reserved stock released', r.number), p_channel);
++    return;
++  end if;
++
++  select coalesce(sum(l.qty), 0) into v_total from public.inv_request_lines l where l.org_id = v_org and l.request_id = r.id;
++  v_required := public.inv__required_approvals(v_org, r.warehouse_id, v_total);
++  select count(distinct a.approver_id) into v_have from public.inv_approvals a where a.request_id = r.id and a.decision = 'approved';
++
++  if v_have >= v_required then
++    update public.inv_requests q set status = 'approved', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), '') where q.id = r.id;
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (v_org, auth.uid(), 'inventory.request.approved', 'stock_request', r.id::text,
++            format('%s approved%s', r.number, case when v_required > 1 then format(' (%s of %s approvals)', v_have, v_required) else '' end), p_channel);
++  else
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (v_org, auth.uid(), 'inventory.request.approval_recorded', 'stock_request', r.id::text,
++            format('%s: approval %s of %s recorded, still waiting', r.number, v_have, v_required), p_channel);
++  end if;
++end $$;
++
++create or replace function public.inv_decide_adjustment(p_adjustment_id uuid, p_decision text, p_comment text default null, p_channel text default 'app') returns void
++language plpgsql security definer set search_path = public as $$
++declare
++  v_org uuid := public.inv__guard(array['owner', 'admin']);
++  a     public.inv_adjustments;
++  b     public.inv_stock_balances;
++begin
++  if p_decision not in ('approved', 'rejected') or p_channel not in ('app', 'whatsapp', 'voice', 'api') then raise exception 'INVALID_INPUT'; end if;
++  if p_channel <> 'app' and current_setting('erp.trusted_channel', true) is distinct from p_channel then
++    raise exception 'INVALID_INPUT' using detail = 'only the messaging webhook can record another channel';
++  end if;
++  select * into a from public.inv_adjustments x where x.org_id = v_org and x.id = p_adjustment_id for update;
++  if not found then raise exception 'NOT_FOUND'; end if;
++  if a.requester_id = auth.uid() then raise exception 'SELF_APPROVAL'; end if;
++  if a.status <> 'submitted' then raise exception 'INVALID_STATE' using detail = format('adjustment is %s', a.status); end if;
++
++  if p_decision = 'rejected' then
++    update public.inv_adjustments x set status = 'rejected', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), '') where x.id = a.id;
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (v_org, auth.uid(), 'inventory.adjustment.rejected', 'stock_adjustment', a.id::text, format('%s rejected; stock unchanged', a.number), p_channel);
++    return;
++  end if;
++
++  select * into b from public.inv_stock_balances s where s.org_id = v_org and s.item_id = a.item_id and s.warehouse_id = a.warehouse_id for update;
++  if coalesce(b.on_hand, 0) <> a.expected_qty then
++    raise exception 'INVALID_STATE' using detail = format('stock changed since the count (book is now %s, the count assumed %s); please count again', coalesce(b.on_hand, 0), a.expected_qty);
++  end if;
++  if a.counted_qty < coalesce(b.reserved, 0) then
++    raise exception 'INVALID_STATE' using detail = format('%s is now reserved for open requests; the count cannot be lower', b.reserved);
++  end if;
++
++  update public.inv_adjustments x set status = 'approved', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), '') where x.id = a.id;
++  insert into public.inv_stock_moves (org_id, item_id, warehouse_id, qty, kind, adjustment_id, ref, posted_by)
++  values (v_org, a.item_id, a.warehouse_id, a.delta, 'adjust', a.id, a.number, auth.uid());
++  insert into public.inv_stock_balances (org_id, item_id, warehouse_id, on_hand, reserved) values (v_org, a.item_id, a.warehouse_id, a.counted_qty, 0)
++  on conflict (org_id, item_id, warehouse_id) do update set on_hand = a.counted_qty;
++  update public.inv_adjustments x set status = 'applied' where x.id = a.id;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++  values (v_org, auth.uid(), 'inventory.adjustment.applied', 'stock_adjustment', a.id::text, format('%s applied: stock %s to %s (difference %s)', a.number, a.expected_qty, a.counted_qty, a.delta), p_channel);
++end $$;
++
++-- ---------------------------------------------------------------- inbound WhatsApp across organizations (L-2, L-3)
++-- Same as sql/009, except: the token is searched across every organization where this number is verified (a person may
++-- belong to several), and the decision is made with erp.trusted_channel set so the channel is recorded.
++
++create or replace function public.msg_decide_by_token(p_channel text, p_address text, p_text text) returns jsonb
++language plpgsql security definer set search_path = public, extensions as $$
++declare
++  v_addr     text := regexp_replace(coalesce(p_address, ''), '[\s-]', '', 'g');
++  v_m        text[] := regexp_match(upper(trim(coalesce(p_text, ''))), '^(APPROVE|YES|REJECT|NO)\s+([A-Z2-9]{6})$');
++  v_decision text;
++  idn        public.msg_identities;
++  cand       public.msg_identities;
++  tk         public.msg_tokens;
++  v_any      boolean := false;
++  v_found    boolean := false;
++  v_code     text;
++begin
++  if v_m is null then return jsonb_build_object('ok', false, 'code', 'NOT_A_DECISION'); end if;
++  v_decision := case when v_m[1] in ('APPROVE', 'YES') then 'approved' else 'rejected' end;
++
++  for cand in select i.* from public.msg_identities i where i.channel = p_channel and i.address = v_addr and i.status = 'verified' order by i.verified_at loop
++    if not v_any then idn := cand; v_any := true; end if;
++    select t.* into tk from public.msg_tokens t
++     where t.org_id = cand.org_id and t.approver_id = cand.user_id and t.channel = p_channel
++       and t.token_hash = public.msg__token_hash(v_m[2], t.request_id, t.approver_id)
++     limit 1;
++    if found then idn := cand; v_found := true; exit; end if;
++  end loop;
++  if not v_any then return jsonb_build_object('ok', false, 'code', 'UNKNOWN_IDENTITY'); end if;
++
++  if not v_found or tk.created_at < idn.verified_at then v_code := 'TOKEN_INVALID';
++  elsif tk.used_at is not null then v_code := 'TOKEN_USED';
++  elsif tk.expires_at <= now() then v_code := 'TOKEN_EXPIRED';
++  end if;
++  if v_code is not null then
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (idn.org_id, idn.user_id, 'messaging.inbound.refused', 'identity', idn.id::text,
++            format('Reply from %s refused: %s', public.msg__mask(v_addr), v_code), p_channel);
++    return jsonb_build_object('ok', false, 'code', v_code);
++  end if;
++
++  begin
++    -- Act as the approver, through the same function the app uses.
++    perform set_config('request.jwt.claims', json_build_object('sub', idn.user_id, 'role', 'authenticated')::text, true);
++    perform set_config('request.headers', json_build_object('x-org-id', idn.org_id)::text, true);
++    perform set_config('erp.trusted_channel', p_channel, true);
++    update public.msg_tokens t set used_at = now() where t.id = tk.id;
++    perform public.inv_decide_request(tk.request_id, v_decision, 'via ' || p_channel, p_channel);
++    perform set_config('erp.trusted_channel', '', true);
++    return jsonb_build_object('ok', true, 'code', 'OK', 'request_id', tk.request_id, 'decision', v_decision);
++  exception when others then
++    v_code := sqlerrm;
++  end;
++  perform set_config('erp.trusted_channel', '', true);
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++  values (idn.org_id, idn.user_id, 'messaging.inbound.refused', 'stock_request', tk.request_id::text,
++          format('Reply from %s refused by the decision rules: %s', public.msg__mask(v_addr), v_code), p_channel);
++  return jsonb_build_object('ok', false, 'code', v_code);
++end $$;
++
++-- Same as sql/010, except open tasks are gathered across every organization where this number is verified.
++create or replace function public.msg_task_reply(p_channel text, p_address text, p_text text) returns jsonb
++language plpgsql security definer set search_path = public as $$
++declare
++  v_addr   text := regexp_replace(coalesce(p_address, ''), '[\s-]', '', 'g');
++  v_m      text[] := regexp_match(upper(trim(coalesce(p_text, ''))), '^(ACK|START|DONE)(?:\s+([0-9A-F]{4}))?$');
++  v_status text;
++  idn      public.msg_identities;
++  tk       public.tsk_tasks;
++  n_open   int;
++  v_code   text;
++begin
++  if v_m is null then return jsonb_build_object('ok', false, 'code', 'NOT_A_TASK_REPLY'); end if;
++  v_status := case when v_m[1] = 'DONE' then 'done' else 'in_progress' end;
++
++  select * into idn from public.msg_identities i where i.channel = p_channel and i.address = v_addr and i.status = 'verified' order by i.verified_at limit 1;
++  if not found then return jsonb_build_object('ok', false, 'code', 'UNKNOWN_IDENTITY'); end if;
++
++  select count(*) into n_open from public.tsk_tasks t
++  join public.msg_identities i on i.org_id = t.org_id and i.user_id = t.assignee_id and i.channel = p_channel and i.address = v_addr and i.status = 'verified'
++  where t.status in ('open', 'in_progress') and (v_m[2] is null or public.tsk__ref(t.id) = v_m[2]);
++  if n_open = 0 then v_code := 'NO_OPEN_TASK';
++  elsif n_open > 1 then
++    return jsonb_build_object('ok', false, 'code', 'AMBIGUOUS', 'tasks', (
++      select jsonb_agg(jsonb_build_object('ref', public.tsk__ref(t.id), 'title', t.title) order by t.created_at)
++      from public.tsk_tasks t
++      join public.msg_identities i on i.org_id = t.org_id and i.user_id = t.assignee_id and i.channel = p_channel and i.address = v_addr and i.status = 'verified'
++      where t.status in ('open', 'in_progress')));
++  end if;
++  if v_code is not null then
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (idn.org_id, idn.user_id, 'messaging.inbound.refused', 'identity', idn.id::text, format('Task reply from %s refused: %s', public.msg__mask(v_addr), v_code), p_channel);
++    return jsonb_build_object('ok', false, 'code', v_code);
++  end if;
++
++  select t.* into tk from public.tsk_tasks t
++  join public.msg_identities i on i.org_id = t.org_id and i.user_id = t.assignee_id and i.channel = p_channel and i.address = v_addr and i.status = 'verified'
++  where t.status in ('open', 'in_progress') and (v_m[2] is null or public.tsk__ref(t.id) = v_m[2]);
++  select * into idn from public.msg_identities i where i.org_id = tk.org_id and i.user_id = tk.assignee_id and i.channel = p_channel and i.status = 'verified';
++
++  begin
++    perform set_config('request.jwt.claims', json_build_object('sub', idn.user_id, 'role', 'authenticated')::text, true);
++    perform set_config('request.headers', json_build_object('x-org-id', idn.org_id)::text, true);
++    perform public.tsk_set_status(tk.id, v_status);
++    insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++    values (idn.org_id, idn.user_id, 'messaging.inbound.task_reply', 'task', tk.id::text, format('Task "%s" set to %s by reply from %s', tk.title, v_status, public.msg__mask(v_addr)), p_channel);
++    return jsonb_build_object('ok', true, 'code', 'OK', 'task_id', tk.id, 'status', v_status);
++  exception when others then
++    v_code := sqlerrm;
++  end;
++  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
++  values (idn.org_id, idn.user_id, 'messaging.inbound.refused', 'task', tk.id::text, format('Task reply from %s refused by the task rules: %s', public.msg__mask(v_addr), v_code), p_channel);
++  return jsonb_build_object('ok', false, 'code', v_code);
++end $$;
++
++-- ---------------------------------------------------------------- per-organization delivery pass (L-4)
++-- Same as msg_claim_due (sql/008) limited to one organization, for the on-demand "process now" button. The scheduled
++-- job keeps using msg_claim_due for everyone.
++create or replace function public.msg_claim_due_for_org(p_org uuid, p_limit int default 20) returns setof public.msg_outbox
++language plpgsql security definer set search_path = public as $$
++begin
++  if p_org is null then raise exception 'INVALID_INPUT'; end if;
++  with ex as (
++    update public.msg_outbox set status = 'expired', secret_body = null where org_id = p_org and status = 'pending' and expires_at <= now()
++    returning org_id, id, kind, subject, recipient_id, channel
++  )
++  insert into public.audit_log (org_id, action, entity_type, entity_id, summary, metadata)
++  select ex.org_id, 'messaging.message.expired', 'message', ex.id::text, format('Message "%s" expired before it was delivered', ex.subject),
++         jsonb_build_object('channel', ex.channel, 'kind', ex.kind, 'recipient', ex.recipient_id)
++  from ex;
++  update public.msg_outbox set status = 'pending' where org_id = p_org and status = 'sending' and updated_at < now() - interval '5 minutes';
++  return query
++    update public.msg_outbox o set status = 'sending', attempts = o.attempts + 1
++    where o.id in (
++      select q.id from public.msg_outbox q
++      where q.org_id = p_org and q.status = 'pending' and q.next_attempt_at <= now() and q.expires_at > now()
++      order by q.next_attempt_at, q.created_at
++      limit least(greatest(coalesce(p_limit, 20), 1), 100)
++      for update skip locked
++    )
++    returning o.*;
++end $$;
++
++-- ---------------------------------------------------------------- privileges
++
++revoke all on function public.core__my_role(uuid) from public, anon, authenticated;
++revoke all on function public.core__display_name(uuid) from public, anon, authenticated;
++revoke all on function public.core_list_members() from public, anon;
++revoke all on function public.core_list_invitations() from public, anon;
++revoke all on function public.core_invite_member(text, text) from public, anon;
++revoke all on function public.core_add_invited_account(uuid, text) from public, anon;
++revoke all on function public.core_set_member_role(uuid, text) from public, anon;
++revoke all on function public.core_set_member_disabled(uuid, boolean) from public, anon;
++revoke all on function public.core_invite_link_target(uuid) from public, anon;
++revoke all on function public.core_my_invitations() from public, anon;
++revoke all on function public.core_respond_invitation(uuid, boolean) from public, anon;
++revoke all on function public.core_revoke_invitation(uuid) from public, anon;
++grant execute on function public.core_list_members(), public.core_list_invitations(), public.core_invite_member(text, text),
++  public.core_add_invited_account(uuid, text), public.core_set_member_role(uuid, text), public.core_set_member_disabled(uuid, boolean),
++  public.core_invite_link_target(uuid), public.core_my_invitations(), public.core_respond_invitation(uuid, boolean),
++  public.core_revoke_invitation(uuid) to authenticated;
++
++revoke all on function public.inv_decide_request(uuid, text, text, text) from public, anon;
++revoke all on function public.inv_decide_adjustment(uuid, text, text, text) from public, anon;
++grant execute on function public.inv_decide_request(uuid, text, text, text), public.inv_decide_adjustment(uuid, text, text, text) to authenticated;
++
++revoke all on function public.msg_decide_by_token(text, text, text) from public, anon, authenticated;
++revoke all on function public.msg_task_reply(text, text, text) from public, anon, authenticated;
++revoke all on function public.msg_claim_due_for_org(uuid, int) from public, anon, authenticated;
++grant execute on function public.msg_decide_by_token(text, text, text), public.msg_task_reply(text, text, text),
++  public.msg_claim_due_for_org(uuid, int) to service_role;
++
++commit;
++
++-- ---------------------------------------------------------------- verification (read-only)
++
++-- 1. Invitations table: RLS on, anon has nothing, authenticated may only select (expect t, 0, SELECT).
++select relrowsecurity from pg_class where oid = 'public.core_invitations'::regclass;
++select count(*) as anon_grants from information_schema.role_table_grants where grantee = 'anon' and table_name = 'core_invitations';
++select string_agg(privilege_type, ',') as authenticated_grants from information_schema.role_table_grants where grantee = 'authenticated' and table_name = 'core_invitations';
++
++-- 2. Who may call what (expect true, false, false, false, true).
++select has_function_privilege('authenticated', 'public.core_set_member_role(uuid,text)', 'execute') as user_role_fn,
++       has_function_privilege('anon', 'public.core_set_member_role(uuid,text)', 'execute') as anon_role_fn,
++       has_function_privilege('authenticated', 'public.msg_claim_due_for_org(uuid,integer)', 'execute') as user_claim,
++       has_function_privilege('authenticated', 'public.core__my_role(uuid)', 'execute') as user_helper,
++       has_function_privilege('service_role', 'public.msg_claim_due_for_org(uuid,integer)', 'execute') as service_claim;
+diff --git a/sql/README.md b/sql/README.md
+index 729b931..27ac6d9 100644
+--- a/sql/README.md
++++ b/sql/README.md
+@@ -30,8 +30,9 @@ Log every run in
+ | `022_customer_invoices.sql` | sales: customer invoices, partial invoicing, void | Run via CLI 2026-10-30; test 018 passes |
+ | `023_item_cost.sql` | slice F: average cost per item, cost log, cost hidden from members | Run via CLI 2026-10-30; test 019 passes |
+ | `024_finance_expenses_payments.sql` | slice F: finance module, expenses, payments (never above what is owed) | Run via CLI 2026-10-30; test 020 passes |
++| `025_security_audit_fixes.sql` | security audit 2026-10-30: member functions with audit (no secret key), invitations that must be accepted, decision channel vouched by the webhook, WhatsApp across organizations, per-org delivery pass | **Not run yet**; run on staging, then test 021 |
+ 
+-Run order: 001 to 024. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
++Run order: 001 to 025. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
+ 
+ Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database (run 2026-10-29: all passed).
+ 
+diff --git a/sql/tests/021_security_audit_fixes.sql b/sql/tests/021_security_audit_fixes.sql
+new file mode 100644
+index 0000000..077256e
+--- /dev/null
++++ b/sql/tests/021_security_audit_fixes.sql
+@@ -0,0 +1,168 @@
++-- sql/tests/021_security_audit_fixes.sql
++-- sql/025: member changes go through database functions with the role rules and audit; adding an existing account needs
++-- their acceptance; invitations are isolated per organization; a signed-in user cannot record a decision as 'whatsapp';
++-- the per-organization delivery pass is closed to users. Always rolls back. Needs sql/001-025.
++
++do $$
++declare
++  ua uuid := gen_random_uuid();  -- owner of A
++  uad uuid := gen_random_uuid(); -- admin of A
++  um uuid := gen_random_uuid();  -- member of A
++  ux uuid := gen_random_uuid();  -- existing account, owner of B (to be invited to A)
++  un uuid := gen_random_uuid();  -- brand-new account created by A's invite
++  oa uuid; ob uuid;
++  m_ad uuid; m_m uuid; m_owner uuid; inv uuid;
++  r jsonb; n int; ok boolean;
++begin
++  insert into auth.users (id, aud, role, email, raw_user_meta_data, raw_app_meta_data, last_sign_in_at) values
++    (ua,  'authenticated', 'authenticated', 'sec-a@tests.invalid',  '{}'::jsonb, '{}'::jsonb, now()),
++    (uad, 'authenticated', 'authenticated', 'sec-ad@tests.invalid', '{}'::jsonb, '{}'::jsonb, now()),
++    (um,  'authenticated', 'authenticated', 'sec-m@tests.invalid',  '{}'::jsonb, '{}'::jsonb, now()),
++    (ux,  'authenticated', 'authenticated', 'sec-x@tests.invalid',  '{}'::jsonb, '{}'::jsonb, now()),
++    (un,  'authenticated', 'authenticated', 'sec-n@tests.invalid',  '{}'::jsonb, '{}'::jsonb, null);
++  oa := public.bootstrap_organization('Sec Test A', 'sec-test-a', 'sec-a@tests.invalid');
++  ob := public.bootstrap_organization('Sec Test B', 'sec-test-b', 'sec-x@tests.invalid');
++  insert into public.memberships (org_id, user_id, role) values (oa, uad, 'admin') returning id into m_ad;
++  insert into public.memberships (org_id, user_id, role) values (oa, um, 'member') returning id into m_m;
++  select id into m_owner from public.memberships where org_id = oa and user_id = ua;
++  insert into public.org_modules (org_id, module_key, enabled_at, enabled_by) values (oa, 'inventory', now(), ua) on conflict do nothing;
++  update auth.users set raw_app_meta_data = jsonb_build_object('invited_org_id', oa) where id = un;
++
++  -- ---- T1: inviting an existing account creates a pending invitation, not a membership, and is audited
++  perform set_config('request.jwt.claims', json_build_object('sub', uad, 'role', 'authenticated')::text, true);
++  perform set_config('request.headers', json_build_object('x-org-id', oa)::text, true);
++  set local role authenticated;
++  r := public.core_invite_member('SEC-X@tests.invalid', 'member');
++  if r ->> 'kind' <> 'invitation' then raise exception 'FAIL T1a: expected an invitation, got %', r; end if;
++  inv := (r ->> 'id')::uuid;
++  select count(*) into n from public.core_list_members() where user_id = ux;
++  if n <> 0 then raise exception 'FAIL T1b: an existing account was added without accepting'; end if;
++  r := public.core_invite_member('nobody-here@tests.invalid', 'member');
++  if r ->> 'kind' <> 'needs_account' then raise exception 'FAIL T1c: unknown email should need an account'; end if;
++  ok := false;
++  begin perform public.core_invite_member('sec-m@tests.invalid', 'viewer'); exception when others then ok := (sqlerrm = 'ALREADY_MEMBER'); end;
++  if not ok then raise exception 'FAIL T1d: re-invited an existing member'; end if;
++  ok := false;
++  begin perform public.core_invite_member('someone@tests.invalid', 'owner'); exception when others then ok := (sqlerrm = 'OWNER_ONLY'); end;
++  if not ok then raise exception 'FAIL T1e: an admin invited an owner'; end if;
++  reset role;
++  select count(*) into n from public.audit_log where org_id = oa and action = 'member.invitation_created' and entity_id = inv::text;
++  if n <> 1 then raise exception 'FAIL T1f: invitation not audited'; end if;
++
++  -- ---- T2: a plain member cannot invite or change anyone
++  perform set_config('request.jwt.claims', json_build_object('sub', um, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  ok := false;
++  begin perform public.core_invite_member('z@tests.invalid', 'member'); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
++  if not ok then raise exception 'FAIL T2a: a member could invite'; end if;
++  ok := false;
++  begin perform public.core_set_member_role(m_ad, 'viewer'); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
++  if not ok then raise exception 'FAIL T2b: a member could change a role'; end if;
++  select count(*) into n from public.core_invitations;
++  if n <> 0 then raise exception 'FAIL T2c: a member can read the organization''s invitations'; end if;
++  reset role;
++
++  -- ---- T3: isolation: B's owner (the invitee) sees only their own invitation; nobody else in B sees A's
++  perform set_config('request.jwt.claims', json_build_object('sub', ux, 'role', 'authenticated')::text, true);
++  perform set_config('request.headers', json_build_object('x-org-id', ob)::text, true);
++  set local role authenticated;
++  select count(*) into n from public.core_list_invitations();
++  if n <> 0 then raise exception 'FAIL T3a: B lists A''s invitations'; end if;
++  select count(*) into n from public.core_my_invitations() where org_id = oa;
++  if n <> 1 then raise exception 'FAIL T3b: the invitee does not see their invitation'; end if;
++  reset role;
++  perform set_config('request.jwt.claims', json_build_object('sub', um, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  ok := false;
++  begin perform public.core_respond_invitation(inv, true); exception when others then ok := (sqlerrm = 'NOT_FOUND'); end;
++  if not ok then raise exception 'FAIL T3c: someone else accepted the invitation'; end if;
++  reset role;
++
++  -- ---- T4: the invitee accepts; membership appears, audited, and cannot be accepted twice
++  perform set_config('request.jwt.claims', json_build_object('sub', ux, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  perform public.core_respond_invitation(inv, true);
++  ok := false;
++  begin perform public.core_respond_invitation(inv, true); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
++  if not ok then raise exception 'FAIL T4a: accepted twice'; end if;
++  reset role;
++  select count(*) into n from public.memberships where org_id = oa and user_id = ux and role = 'member';
++  if n <> 1 then raise exception 'FAIL T4b: accepting did not create the membership'; end if;
++  select count(*) into n from public.audit_log where org_id = oa and action = 'member.invitation_accepted';
++  if n <> 1 then raise exception 'FAIL T4c: acceptance not audited'; end if;
++
++  -- ---- T5: direct add only for an account A just created; never for an existing one
++  perform set_config('request.jwt.claims', json_build_object('sub', uad, 'role', 'authenticated')::text, true);
++  perform set_config('request.headers', json_build_object('x-org-id', oa)::text, true);
++  set local role authenticated;
++  ok := false;
++  begin perform public.core_add_invited_account(ua, 'member'); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
++  if not ok then raise exception 'FAIL T5a: added an existing account directly'; end if;
++  perform public.core_add_invited_account(un, 'member');
++  -- L-5: a link is allowed for the new account, but not for one that also belongs to another organization
++  r := public.core_invite_link_target((select id from public.core_list_members() where user_id = un));
++  if (r ->> 'user_id')::uuid <> un then raise exception 'FAIL T5b: link target refused for a fresh account'; end if;
++  reset role;
++  insert into public.memberships (org_id, user_id, role) values (ob, un, 'viewer');
++  perform set_config('request.jwt.claims', json_build_object('sub', uad, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  ok := false;
++  begin perform public.core_invite_link_target((select id from public.core_list_members() where user_id = un)); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
++  if not ok then raise exception 'FAIL T5c: made a sign-in link for someone in another organization'; end if;
++
++  -- ---- T6: role and disable rules
++  ok := false;
++  begin perform public.core_set_member_role(m_ad, 'member'); exception when others then ok := (sqlerrm = 'SELF_CHANGE'); end;
++  if not ok then raise exception 'FAIL T6a: changed own role'; end if;
++  ok := false;
++  begin perform public.core_set_member_role(m_owner, 'admin'); exception when others then ok := (sqlerrm = 'OWNER_ONLY'); end;
++  if not ok then raise exception 'FAIL T6b: an admin demoted an owner'; end if;
++  ok := false;
++  begin perform public.core_set_member_disabled(m_owner, true); exception when others then ok := (sqlerrm = 'OWNER_ONLY'); end;
++  if not ok then raise exception 'FAIL T6c: an admin disabled an owner'; end if;
++  perform public.core_set_member_role(m_m, 'viewer');
++  perform public.core_set_member_disabled(m_m, true);
++  reset role;
++  select count(*) into n from public.audit_log where org_id = oa and entity_id = m_m::text and action in ('member.role_changed', 'member.disabled');
++  if n <> 2 then raise exception 'FAIL T6d: role change and disable not both audited'; end if;
++  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  ok := false;
++  begin perform public.core_set_member_role(m_owner, 'admin'); exception when others then ok := (sqlerrm = 'SELF_CHANGE'); end;
++  if not ok then raise exception 'FAIL T6e: an owner changed their own role'; end if;
++  reset role;
++
++  -- ---- T7: a signed-in user cannot record a decision as coming from WhatsApp (L-2)
++  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  ok := false;
++  begin perform public.inv_decide_request(gen_random_uuid(), 'approved', null, 'whatsapp'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
++  if not ok then raise exception 'FAIL T7a: a user recorded a decision as whatsapp'; end if;
++  ok := false;
++  begin perform public.inv_decide_request(gen_random_uuid(), 'approved', null, 'app'); exception when others then ok := (sqlerrm = 'NOT_FOUND'); end;
++  if not ok then raise exception 'FAIL T7b: the app channel stopped working'; end if;
++
++  -- ---- T8: per-organization delivery pass and helpers are closed to users; nothing for anonymous
++  ok := false;
++  begin perform * from public.msg_claim_due_for_org(oa, 10); exception when insufficient_privilege then ok := true; end;
++  if not ok then raise exception 'FAIL T8a: a user could claim messages'; end if;
++  reset role;
++  set local role anon;
++  ok := false;
++  begin perform * from public.core_my_invitations(); exception when insufficient_privilege then ok := true; end;
++  if not ok then raise exception 'FAIL T8b: anonymous could call core_my_invitations'; end if;
++  ok := false;
++  begin perform count(*) from public.core_invitations; exception when insufficient_privilege then ok := true; end;
++  if not ok then raise exception 'FAIL T8c: anonymous could read invitations'; end if;
++  reset role;
++
++  -- ---- T9: no direct writes to invitations
++  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
++  set local role authenticated;
++  ok := false;
++  begin insert into public.core_invitations (org_id, user_id, role, invited_by) values (oa, uad, 'owner', ua); exception when insufficient_privilege then ok := true; end;
++  if not ok then raise exception 'FAIL T9a: direct insert into invitations allowed'; end if;
++  reset role;
++
++  raise exception 'ALL TESTS PASSED (everything rolled back)';
++end $$;
+diff --git a/sql/tests/README.md b/sql/tests/README.md
+index 34554bc..f1a7dd7 100644
+--- a/sql/tests/README.md
++++ b/sql/tests/README.md
+@@ -31,6 +31,7 @@ Run the whole file at once with nothing else in the editor.
+ | `018_customer_invoices.sql` | delivered-only, no over-invoicing, price from order line, void, isolation, audit |
+ | `019_item_cost.sql` | average cost, issue cost snapshot, cost hidden from members, owner/admin only |
+ | `020_finance_expenses_payments.sql` | expenses, payments, no overpayment, void rules, owner/admin only, isolation |
++| `021_security_audit_fixes.sql` | existing accounts must accept an invitation, invitations isolated, member role rules and audit in the database, sign-in link refused across organizations, no user-claimed 'whatsapp' channel, per-org delivery closed to users |
+ 
+ Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
+ 
+diff --git a/documentation/reviews/2026-10-30-security-audit.md b/documentation/reviews/2026-10-30-security-audit.md
+new file mode 100644
+index 0000000..19b5286
+--- /dev/null
++++ b/documentation/reviews/2026-10-30-security-audit.md
+@@ -0,0 +1,65 @@
++# Security audit — 2026-10-30
++
++**Scope.** Whole repository at main `68c6c31` / `b8aabec`, including the finance module (`sql/023`, `sql/024`,
++`apps/api/src/modules/finance/routes.ts`, `apps/web/src/modules/finance/Finance.tsx`): the Worker API (auth, tenancy,
++routes, WhatsApp webhook, outbox job), every migration (RLS, grants, SECURITY DEFINER functions), the web app
++(XSS sinks, token storage, headers), CI/deploy config, committed secrets and dependencies.
++
++**Method.** Code reading plus automated sweeps: per-table RLS / revoke / policy check across all migrations, every
++SECURITY DEFINER function checked for `search_path` and an org/role guard, every function checked for an explicit
++revoke from `public`/`anon`, cross-tenant foreign-ID checks in the create functions, secret patterns over tracked files
++and history, `npm audit` (0 vulnerabilities). No live testing against the API or database.
++
++**Fixes.** Branch `worktree-security-audit-fixes`, migration `sql/025_security_audit_fixes.sql`, test
++`sql/tests/021_security_audit_fixes.sql`. See the worklog entry of 2026-10-30, "Security audit fixes".
++
++## Result
++
++No critical or high findings. Tenant isolation in the database holds: the `X-Org-Id` header is re-checked against
++membership on every call, every business table has RLS with select-only grants, every user-callable function starts with
++a role/org/module guard, and the create functions verify that every referenced row belongs to the caller's organization.
++
++| Severity | Count |
++|---|---|
++| Critical | 0 |
++| High | 0 |
++| Medium | 3 |
++| Low | 5 |
++| Info | 3 |
++
++## Verified as sound
++
++- JWT verified against Supabase JWKS with issuer and audience; WhatsApp `X-Hub-Signature-256` checked in constant time before parsing.
++- `current_org_id()` validates the header as a UUID and checks active membership every call.
++- All tables: RLS on, `revoke all` from `anon`/`authenticated`, select only; no grants to `anon`; no definer function without `search_path`.
++- Read policies match API permissions (members and viewers get every `*.read`; finance is owner/admin in both).
++- `inv_decide_request`: org, role, self-approval and state checked under `for update`; multi-approver counting correct.
++- WhatsApp number binding: random codes stored hashed, 5 tries per code, 5 requests per hour, bound to the caller's own row.
++- No XSS sinks in the web app; no committed secrets; `npm audit` clean.
++
++## Findings and what was done
++
++| ID | Severity | Location | Finding | Status |
++|---|---|---|---|---|
++| M-1 | Medium | `apps/api/src/modules/core/memberRoutes.ts` | Member list/invite/role/disable ran with the secret key (bypassing RLS), protected only by the Worker's permission check; the audit row was written in a separate call after the change, so a change could exist without its audit row. Broke the "secret key not in request routes" and "audit in the same transaction" rules. | **Fixed.** Database functions `core_list_members`, `core_set_member_role`, `core_set_member_disabled`, `core_add_invited_account` called with the user's own login; rules (own role, owners only by owners, at least one owner, with owner rows locked) and audit in one transaction. The secret key is now only in `lib/authAdmin.ts` for Supabase Auth account calls, after the database has allowed the action. `lib/audit.ts` and `modules/core/members.ts` removed; boundary tests updated. |
++| M-2 | Medium | `memberRoutes.ts` (invite) | An admin of any organization could add any existing account on the platform by email, without consent; the response showed whether the email had an account; the other organization then saw that person's email and last sign-in time. | **Fixed (consent).** Existing accounts get a `core_invitations` row and join only after accepting in the organization picker (`core_my_invitations`, `core_respond_invitation`); admins can withdraw pending invitations. **Remaining:** the inviting admin can still tell whether an email has an account (new accounts return a link to send; existing ones get "invited"). Closing that needs invites sent by email instead of links handed to the admin: a product decision. |
++| M-3 | Medium | `apps/web/public/_headers` | No CSP, HSTS or frame protection while the Supabase session sits in localStorage. | **Fixed.** CSP (`script-src 'self'`, `connect-src` limited to the API and `*.supabase.co`, `frame-ancestors 'none'`, `object-src 'none'`), HSTS, `X-Frame-Options: DENY`, `Permissions-Policy`. Built page checked: no inline script. |
++| L-1 | Low | `apps/api/wrangler.toml`, CI deploy | Production ran with `APP_ENV=development` and `http://localhost:5173` as an allowed origin (also usable as the invite-link redirect). | **Fixed.** `wrangler.toml` holds production values; local values come from the root `.env` (documented in `.dev.vars.example`). |
++| L-2 | Low | `inv_decide_request`, `inv_decide_adjustment` | The caller chose `p_channel`, so a user calling directly could record a decision as `whatsapp` in the audit log. | **Fixed.** A channel other than `app` is accepted only when `msg_decide_by_token` (service role only) vouches for it for that transaction. |
++| L-3 | Low | `msg_decide_by_token`, `msg_task_reply` | Verified numbers are unique per organization, but the lookup ignored the organization; one person verified in two organizations resolved to an arbitrary one. | **Fixed.** Tokens and open tasks are searched across every organization where the number is verified. |
++| L-4 | Low | `/v1/messaging/process`, `jobs/outbox.ts` | Any organization's admin could run delivery and the audit-chain check for all organizations, and saw counts from the others. | **Fixed.** `msg_claim_due_for_org`; the on-demand pass skips the all-org audit check. Rate limiting left to I-3. |
++| L-5 | Low | `memberRoutes.ts` (invite link) | A sign-in link (credential) could be issued for an invited, never-signed-in account even after it joined another organization. | **Fixed.** `core_invite_link_target` refuses if the account belongs to or is invited by another organization, and audits the request. |
++| I-1 | Info | `apps/api/src/index.ts` | WhatsApp verify token compared with `===`. | **Fixed.** `safeEqual` (constant time), with a unit test. |
++| I-2 | Info | `sql/001_tenancy_core.sql` | Stale comment: "The API uses the service-role key". | **Open.** The file is write-protected for agents; comment-only, no effect on the database. |
++| I-3 | Info | API | No request rate limiting (apart from the database limit on code requests). | **Open.** Add a Cloudflare WAF rate-limiting rule on `/v1/*` and `/webhooks/*` (dashboard setting, not code). |
++
++## Also found
++
++- Commits `68c6c31` and `b8aabec` on main added this audit's worktree folder as a gitlink (`.claude/worktrees/security-audit-fixes`).
++  `.gitignore` now ignores `.claude/worktrees/`; untrack it on main with `git rm --cached .claude/worktrees/security-audit-fixes`.
++
++## Before this is live
++
++1. Run `sql/025_security_audit_fixes.sql` on staging, then `sql/tests/021_security_audit_fixes.sql` (expect `ALL TESTS PASSED`), then production. Run it **before** deploying the Worker.
++2. Add `APP_ENV=development` and `ALLOWED_ORIGINS=http://localhost:5173` to the root `.env` for local development.
++3. Test by hand: invite an existing account and accept it from the organization picker; invite a new email and use the link; change a role; disable/enable; withdraw an invitation; check the browser console for CSP errors.

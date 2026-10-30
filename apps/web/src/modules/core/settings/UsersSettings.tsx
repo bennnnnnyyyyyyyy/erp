@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ROLES, hasPermission, type InviteResult, type Member, type Role } from '@erp/shared';
+import { ROLES, hasPermission, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
 import { formatDate } from '../../../lib/format';
@@ -94,6 +94,7 @@ export function UsersSettings() {
   const canManage = hasPermission(session.permissions, 'core.users.manage');
   const isOwner = session.role === 'owner';
   const members = useLoad(() => api<Member[]>('/v1/core/members'));
+  const invitations = useLoad(() => (canManage ? api<Invitation[]>('/v1/core/members/invitations') : Promise.resolve([] as Invitation[])));
   const [inviting, setInviting] = useState(false);
   const [link, setLink] = useState<{ email: string; link: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -132,6 +133,20 @@ export function UsersSettings() {
       const r = await api<{ inviteLink: string }>(`/v1/core/members/${m.id}/invite-link`, { method: 'POST' });
       setLink({ email: m.email, link: r.inviteLink });
     });
+
+  async function withdraw(inv: Invitation) {
+    setBusyId(inv.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await api(`/v1/core/members/invitations/${inv.id}`, { method: 'DELETE' });
+      invitations.setData((invitations.data ?? []).filter((i) => i.id !== inv.id));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const columns: Column<Member>[] = [
     {
@@ -194,16 +209,39 @@ export function UsersSettings() {
         <InviteForm
           canInviteOwner={isOwner}
           onInvited={(r) => {
-            members.setData([...(members.data ?? []), r.member]);
             setInviting(false);
-            if (r.inviteLink) setLink({ email: r.member.email, link: r.inviteLink });
-            else setNotice(`${r.member.email} already had an account and has been added. They can sign in now.`);
+            if (r.kind === 'added') {
+              members.setData([...(members.data ?? []), r.member]);
+              setLink({ email: r.member.email, link: r.inviteLink });
+            } else {
+              const others = (invitations.data ?? []).filter((i) => i.id !== r.invitation.id);
+              invitations.setData([...others, r.invitation]);
+              setNotice(`${r.invitation.email} has been invited. They will see the invitation when they sign in and join once they accept it.`);
+            }
           }}
         />
       )}
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error">{error}</p>}
       {members.error && <p className="error">{members.error}</p>}
+
+      {canManage && (invitations.data?.length ?? 0) > 0 && (
+        <div className="form-card stack">
+          <strong>Waiting to accept</strong>
+          {invitations.data?.map((i) => (
+            <div key={i.id} className="copy-row">
+              <span>
+                {i.email} <span className="muted small capitalize">({i.role})</span>
+              </span>
+              {(isOwner || i.role !== 'owner') && (
+                <button className="link-btn" disabled={busyId === i.id} onClick={() => withdraw(i)}>
+                  Withdraw
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {members.data ? (
         <ListView
