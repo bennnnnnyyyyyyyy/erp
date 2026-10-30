@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { Button } from '../../components/ui/button';
 import { Pill } from '../trade/common';
 
 // Customer invoices: bill a delivered sales order, line by line, and see ordered / delivered / invoiced with a flag for
@@ -93,7 +94,7 @@ export function CustomerInvoices() {
                     <td><input type="number" min="0" max={b.delivered - b.invoiced} step="0.001" aria-label={`Quantity to invoice for ${item(b.itemId)}`} value={qty[b.orderLineId] ?? ''} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
                 ))}
               </tbody></table></div>
-              <button disabled={busy || !Object.values(qty).some((v) => Number(v) > 0)} onClick={create}>{busy ? 'Creating…' : 'Create invoice'}</button>
+              <Button disabled={busy || !Object.values(qty).some((v) => Number(v) > 0)} onClick={create}>{busy ? 'Creating…' : 'Create invoice'}</Button>
             </>
           )}
         </div>
@@ -115,7 +116,7 @@ export function CustomerInvoices() {
         {invoices.data.map((i) => (
           <tr key={i.id}><td><code>{i.number}</code></td><td>{customer(i.customerId)}</td><td><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></td><td>{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
             <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? 'Void' : 'Issued'} /></td>
-            <td>{canManage && i.status === 'issued' && <button className="secondary" disabled={busy} onClick={() => voidInvoice(i.id)}>Void</button>}</td></tr>
+            <td>{canManage && i.status === 'issued' && <Button variant="outline" size="sm" disabled={busy} onClick={() => voidInvoice(i.id)}>Void</Button>}</td></tr>
         ))}
         {!invoices.data.length && <tr><td colSpan={7} className="muted empty">No invoices yet.</td></tr>}
       </tbody></table></div>

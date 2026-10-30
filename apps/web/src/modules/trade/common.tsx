@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from '../../components/Modal';
+import { Badge } from '../../components/ui/badge';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
@@ -19,8 +20,15 @@ export function useCatalog() {
   return { items, warehouses, itemName, warehouseName, ready: Boolean(items.data && warehouses.data) };
 }
 
+const PILL_VARIANT: Record<string, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
+  issued: 'success', received: 'success', delivered: 'success', active: 'success',
+  submitted: 'warning', ordered: 'warning', stock_requested: 'warning', open: 'warning', invited: 'warning',
+  approved: 'info', rejected: 'danger',
+};
+
+/** Status chip. Unknown or finished-and-quiet statuses (cancelled, void, disabled) are neutral. */
 export function Pill({ status, label }: { status: string; label?: string }) {
-  return <span className={`pill st-${status}`}>{label ?? status.replace('_', ' ')}</span>;
+  return <Badge variant={PILL_VARIANT[status] ?? 'neutral'} className="capitalize">{label ?? status.replace('_', ' ')}</Badge>;
 }
 
 /** "18.50" typed by a person becomes 1850 minor units. */

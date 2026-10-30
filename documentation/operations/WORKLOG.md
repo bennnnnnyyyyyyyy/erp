@@ -11,6 +11,17 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — UI components started; coss licence finding; theme tokens replaced
+
+**Objective.** Start porting screens to a component layer in the coss style.
+
+**Finding (licence).** The coss repo (`cosscom/coss`, cloned to `Desktop\coss`, outside this repo) is AGPL-3.0-only; only `sdk`, `mcp`, `cli`, `kloq`, the generated SDKs and the framework drivers are MIT. The component source in `packages/ui` is therefore AGPL. This product is to be sold, so NO coss component code is copied. My earlier `apps/web/src/theme.css` had taken token values from coss's `packages/ui/src/styles/theme.css`; I replaced them with the public shadcn/ui neutral theme (MIT) values. Do not copy from `Desktop\coss` into this repo; if exact coss components are wanted, get written permission or a commercial licence from its authors first.
+
+**Actions Completed.** Added MIT dependencies `@base-ui/react`, `class-variance-authority`, `clsx`, `tailwind-merge` (Base UI is installed but not used yet). New own-written `apps/web/src/lib/cn.ts`, `components/ui/button.tsx`, `components/ui/badge.tsx`. `Pill` (status chips in Purchasing, Sales and Supplier/Customer invoices) now renders the new Badge; Customer invoices uses the new Button. All other screens still use the old class-based CSS.
+
+**Database / System Result.** None. Typecheck clean, `npm test` 4 + 30 passed, web build passed, Tailwind utilities (rounded-lg, bg-primary, bg-success/10, dark) confirmed in the built CSS. Not looked at in a browser.
+
+**Safety Status.** Not deployed. Remaining port (tables, forms, dialogs, tabs, Base UI parts) is not done.
 ## 2026-10-30 — Customer invoices (Sales): migration 022, test 018, API, screen
 
 **Objective.** Bill delivered sales orders and show ordered / delivered / invoiced per line with a mismatch flag (`CUSTOMER_INVOICES_PLAN.md`).
