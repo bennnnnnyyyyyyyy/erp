@@ -94,6 +94,11 @@ export const MODULES: readonly ModuleManifest[] = [
     key: 'finance', name: 'Finance', description: 'Expenses and payments: money in, money out, and what is still owed.', core: false,
     dependsOn: ['inventory'], permissions: ['finance.reports.view', 'finance.entries.manage'], suite: 'Finance',
   },
+  {
+    // Owner/admin only (no ".read" key): the rules decide who hears what.
+    key: 'alerts', name: 'Alerts', description: 'Rules that tell the right people when stock is low, a batch is about to expire, an invoice is late or the month is losing money.', core: false,
+    dependsOn: ['messaging'], permissions: ['alerts.rules.view', 'alerts.rules.manage'], suite: 'Warehouse',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {

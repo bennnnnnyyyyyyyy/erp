@@ -7,7 +7,7 @@ import { adapterFor, type OutboxMessage } from '../lib/channels';
 // calls the service-role database functions from sql/007: queue reminders and escalations, hand out due messages,
 // send each through its channel adapter, record the result. The database does the retry, backoff and expiry.
 
-export type OutboxPassResult = { reminders: number; escalations: number; lowStock: number; claimed: number; sent: number; failed: number; auditCheck: 'skipped' | 'clean' | 'BROKEN' | 'error' };
+export type OutboxPassResult = { reminders: number; escalations: number; lowStock: number; alerts: number; claimed: number; sent: number; failed: number; auditCheck: 'skipped' | 'clean' | 'BROKEN' | 'error' };
 
 export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit?: number } = {}): Promise<OutboxPassResult> {
   const client = adminDb(env);
@@ -31,6 +31,12 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
     }
   }
 
+  // Alert rules (sql/028): evaluate every enabled rule and queue messages. A failure here must not stop delivery.
+  let alerts = 0;
+  const rules = await client.rpc('alr_run', { p_org: opts.orgId ?? null });
+  if (rules.error) console.error('alert rules failed', rules.error.message);
+  else alerts = ((rules.data ?? {}) as { alerts?: number }).alerts ?? 0;
+
   const claim = opts.orgId
     ? await client.rpc('msg_claim_due_for_org', { p_org: opts.orgId, p_limit: opts.limit ?? 50 })
     : await client.rpc('msg_claim_due', { p_limit: opts.limit ?? 50 });
@@ -52,5 +58,5 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
     else failed++;
   }
 
-  return { reminders: chased.reminders ?? 0, escalations: chased.escalations ?? 0, lowStock: chased.low_stock ?? 0, claimed: messages.length, sent, failed, auditCheck };
+  return { reminders: chased.reminders ?? 0, escalations: chased.escalations ?? 0, lowStock: chased.low_stock ?? 0, alerts, claimed: messages.length, sent, failed, auditCheck };
 }

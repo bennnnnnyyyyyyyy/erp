@@ -50,7 +50,7 @@ type OutboxRow = {
   id: string; recipientId: string; channel: string; kind: string; subject: string; status: 'pending' | 'sending' | 'sent' | 'failed' | 'expired' | 'cancelled';
   attempts: number; maxAttempts: number; nextAttemptAt: string; expiresAt: string; lastError: string | null; sentAt: string | null; createdAt: string;
 };
-type PassResult = { reminders: number; escalations: number; lowStock: number; claimed: number; sent: number; failed: number; auditCheck: string };
+type PassResult = { reminders: number; escalations: number; lowStock: number; alerts: number; claimed: number; sent: number; failed: number; auditCheck: string };
 
 export function OutboxPage() {
   const session = useSession();
@@ -64,7 +64,7 @@ export function OutboxPage() {
     setResult(null);
     try {
       const r = await api<PassResult>('/v1/messaging/process', { method: 'POST' });
-      setResult({ ok: true, text: `Reminders queued: ${r.reminders}. Escalations queued: ${r.escalations}. Low-stock messages: ${r.lowStock}. Audit check: ${r.auditCheck}. Messages delivered: ${r.sent}${r.failed ? `, failed: ${r.failed}` : ''}.` });
+      setResult({ ok: true, text: `Reminders queued: ${r.reminders}. Escalations queued: ${r.escalations}. Low-stock messages: ${r.lowStock}. Alert rules fired: ${r.alerts}. Audit check: ${r.auditCheck}. Messages delivered: ${r.sent}${r.failed ? `, failed: ${r.failed}` : ''}.` });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {

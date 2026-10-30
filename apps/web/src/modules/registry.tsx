@@ -15,6 +15,7 @@ import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 import { CustomerInvoices } from './sales/CustomerInvoices';
 import { ExpensesPage, PaymentsPage } from './finance/Finance';
+import { AlertsPage } from './alerts/Alerts';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -148,6 +149,13 @@ export const APPS: AppDef[] = [
     suite: 'Finance', basePath: '/finance', pages: [
       { path: '', label: 'Expenses', permission: 'finance.reports.view', component: ExpensesPage },
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
+    ],
+  } satisfies AppDef]),
+  // Alert rules and teams (sql/028). Real API only. Owner and admin only.
+  ...(demoMode ? [] : [{
+    key: 'alerts', module: 'alerts', name: 'Alerts', description: 'Tell the right people when stock runs low, a batch expires or money is late',
+    suite: 'Warehouse', basePath: '/alerts', pages: [
+      { path: '', label: 'Rules and teams', permission: 'alerts.rules.view', component: AlertsPage },
     ],
   } satisfies AppDef]),
   {
