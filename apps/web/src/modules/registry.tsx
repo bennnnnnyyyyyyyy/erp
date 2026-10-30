@@ -17,6 +17,7 @@ import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/S
 import { CustomerInvoices } from './sales/CustomerInvoices';
 import { ExpensesPage, PaymentsPage } from './finance/Finance';
 import { AlertsPage } from './alerts/Alerts';
+import { GettingStartedPage } from './help/GettingStarted';
 import { ProfitOverviewPage } from './finance/ProfitOverview';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
@@ -43,6 +44,8 @@ export type AppDef = {
   suite: 'Core' | 'Warehouse' | 'Sales & Purchasing' | 'Finance';
   basePath: string;
   pages: AppPage[];
+  /** Extra rule for showing the app (for example only for companies that still show the tutorial). */
+  visible?: (session: SessionInfo) => boolean;
 };
 
 // Inventory slice 1 (documentation/plans/INVENTORY_PLAN.md). Runs on the real API; in demo mode the same
@@ -155,6 +158,13 @@ export const APPS: AppDef[] = [
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
     ],
   } satisfies AppDef]),
+  // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.
+  ...(demoMode ? [] : [{
+    key: 'start', module: 'core', name: 'Getting started', description: 'A short guide to setting up and running your company',
+    suite: 'Core', basePath: '/start', visible: (s: SessionInfo) => s.org?.showTutorial === true, pages: [
+      { path: '', label: 'Tutorial', component: GettingStartedPage },
+    ],
+  } satisfies AppDef]),
   // Alert rules and teams (sql/028). Real API only. Owner and admin only.
   ...(demoMode ? [] : [{
     key: 'alerts', module: 'alerts', name: 'Alerts', description: 'Tell the right people when stock runs low, a batch expires or money is late',
@@ -182,7 +192,7 @@ export const SUITE_ORDER: AppDef['suite'][] = ['Warehouse', 'Sales & Purchasing'
 
 /** Apps this user can open, each with only the pages they are allowed to see. */
 export function visibleApps(session: SessionInfo): AppDef[] {
-  return APPS.filter((a) => session.modules.includes(a.module))
+  return APPS.filter((a) => session.modules.includes(a.module) && (a.visible?.(session) ?? true))
     .map((a) => ({ ...a, pages: a.pages.filter((p) => !p.permission || hasPermission(session.permissions, p.permission)) }))
     .filter((a) => a.pages.length > 0);
 }

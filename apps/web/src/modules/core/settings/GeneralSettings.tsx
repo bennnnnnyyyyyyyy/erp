@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
+import { demoMode } from '../../../lib/demo';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 
@@ -136,6 +137,18 @@ export function GeneralSettings() {
           <p className="muted small">Only owners and admins can change these settings.</p>
         )}
       </form>
+      {canEdit && !demoMode && (
+        <div className="form-card stack">
+          <h2>Getting-started guide</h2>
+          <p className="muted small">A short tutorial for new companies, shown as the "Getting started" app. It is {session.org?.showTutorial ? 'on' : 'off'} for this company.</p>
+          <div>
+            <button type="button" className="secondary" onClick={async () => {
+              await api('/v1/core/org/tutorial', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTutorial }) });
+              reloadSession();
+            }}>{session.org?.showTutorial ? 'Hide the guide' : 'Show the guide'}</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
