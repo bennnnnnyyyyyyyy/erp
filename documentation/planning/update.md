@@ -1,5 +1,11 @@
 # Update (paste this into the chat)
 
+## Latest (2026-10-30, night): security audit branch synced
+- **Last done:** branch `worktree-security-audit-fixes` (`.claude/worktrees/security-audit-fixes`) brought up to main (`68c6c31`), audit fixes reapplied, two README conflicts resolved. Typecheck clean, 30/30 unit tests pass.
+- **Fixes on the branch (not merged, not run, not deployed):** member changes and their audit now done in the database with the user's own login (M-1); existing accounts get an invitation they must accept (M-2); WhatsApp channel can't be faked in the audit log (L-2); one WhatsApp number in several orgs (L-3); "process now" only touches your own org (L-4); sign-in links only for accounts in no other org (L-5); timing-safe webhook token, production-only CORS, browser security headers.
+- **Not done:** `sql/025` and test 021 not run; the audit report file the migration cites was never written.
+- **Needs your input:** review and commit the branch; say "run 025" (staging first) and whether to write the audit report.
+
 ## Latest (2026-10-30, evening)
 - Sales gap closed in the database (`sql/020`, test 016 passes). API display tweak not deployed. Customer Invoices plan written (`documentation/plans/CUSTOMER_INVOICES_PLAN.md`), two questions inside; no code yet.
 - Supplier Invoices already exist (sql/018, test 014, API and screen, deployed); not rebuilt.
