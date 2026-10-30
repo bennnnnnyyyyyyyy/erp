@@ -197,6 +197,85 @@ export function StockPage() {
   );
 }
 
+// ------------------------------------------------------------------ reorder levels
+
+type ReorderLine = DemoItem & { available: number; onHand: number; reserved: number; low: boolean };
+
+export function ReorderLevelsPage() {
+  const cat = useCatalog();
+  const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
+  const session = useSession();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const canManage = session.role === 'owner' || session.role === 'admin';
+
+  const rows: ReorderLine[] = (cat.items.data ?? []).map((item) => {
+    const balances = (stock.data ?? []).filter((s) => s.itemId === item.id);
+    const onHand = balances.reduce((sum, s) => sum + s.onHand, 0);
+    const reserved = balances.reduce((sum, s) => sum + s.reserved, 0);
+    const available = onHand - reserved;
+    return { ...item, onHand, reserved, available, low: item.reorderLevel !== null && available <= item.reorderLevel };
+  });
+
+  async function save(row: ReorderLine) {
+    const raw = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
+    const level = raw.trim() === '' ? null : Number(raw);
+    if (level !== null && (!Number.isFinite(level) || level < 0)) {
+      setError('Reorder level must be zero or more, or empty.');
+      return;
+    }
+    setSaving(row.id);
+    setNotice(null);
+    setError(null);
+    try {
+      await api(`/v1/inventory/items/${row.id}/reorder-level`, { method: 'POST', body: JSON.stringify({ level }) });
+      setDrafts((current) => { const next = { ...current }; delete next[row.id]; return next; });
+      cat.items.reload();
+      setNotice(`${row.sku} reorder level saved.`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">Loading…</p></section>;
+
+  return (
+    <section className="page">
+      <h1>Reorder levels</h1>
+      <p className="muted">Set the minimum available stock for each item. Managers receive one low-stock notification per item per day when available stock reaches the level.</p>
+      {notice && <p className="notice">{notice}</p>}
+      {error && <p className="error notice">{error}</p>}
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>SKU</th><th>Item</th><th className="right">Available</th><th className="right">Reorder level</th><th>Status</th><th /></tr></thead>
+          <tbody>
+            {rows.map((row) => {
+              const value = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
+              return (
+                <tr key={row.id}>
+                  <td><code>{row.sku}</code></td>
+                  <td><strong>{row.name}</strong><div className="muted small">{row.uom} · {row.reserved} reserved</div></td>
+                  <td className="right"><strong>{row.available}</strong></td>
+                  <td className="right">
+                    {canManage ? <input className="narrow-input" type="number" min="0" step="0.001" aria-label={`Reorder level for ${row.sku}`} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder="Off" /> : (row.reorderLevel ?? 'Off')}
+                  </td>
+                  <td>{row.reorderLevel === null ? <span className="muted">Not monitored</span> : row.low ? <span className="pill st-rejected">Low stock</span> : <span className="pill st-approved">Healthy</span>}</td>
+                  <td>{canManage && <button disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? 'Saving…' : 'Save'}</button>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!canManage && <p className="hint muted small">Only owners and admins can change reorder levels.</p>}
+    </section>
+  );
+}
+
 // ------------------------------------------------------------------ requests
 
 export function RequestsList() {

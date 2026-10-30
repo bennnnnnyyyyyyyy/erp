@@ -27,8 +27,8 @@ const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
 // ------------------------------------------------------------------ shapes
 
-type ItemRow = { id: string; sku: string; name: string; name_ar: string | null; uom: string };
-const toItem = (r: ItemRow) => ({ id: r.id, sku: r.sku, name: r.name, nameAr: r.name_ar ?? '', uom: r.uom });
+type ItemRow = { id: string; sku: string; name: string; name_ar: string | null; uom: string; reorder_level: number | null };
+const toItem = (r: ItemRow) => ({ id: r.id, sku: r.sku, name: r.name, nameAr: r.name_ar ?? '', uom: r.uom, reorderLevel: r.reorder_level === null ? null : Number(r.reorder_level) });
 
 type RequestRow = {
   id: string; number: string; requester_id: string; warehouse_id: string; reason: string; status: string;
@@ -89,7 +89,7 @@ inventoryRoutes.get('/warehouses', requirePermission('inventory.items.read'), as
 });
 
 inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
-  const { data, error } = await userDb(c).from('inv_items').select('id, sku, name, name_ar, uom').eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
+  const { data, error } = await userDb(c).from('inv_items').select('id, sku, name, name_ar, uom, reorder_level').eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
   if (error) throw error;
   return ok(c, ((data ?? []) as ItemRow[]).map(toItem));
 });
@@ -154,7 +154,20 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
     p_opening_qty: opening,
     p_warehouse_id: text(body.warehouseId) || null,
   });
-  return ok(c, toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece' }), 201);
+  return ok(c, toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }), 201);
+});
+
+inventoryRoutes.post('/items/:id/reorder-level', requirePermission('inventory.reorder.manage'), async (c) => {
+  const id = idParam(c);
+  const body = await jsonBody(c);
+  const raw = body.level;
+  const level = raw === null ? null : Number(raw);
+  if (raw === undefined || (level !== null && (!Number.isFinite(level) || level < 0))) invalid('Reorder level must be zero or more, or empty');
+  await callRpc<void>(userDb(c), 'inv_set_reorder_level', { p_item_id: id, p_level: level });
+  const { data, error } = await userDb(c).from('inv_items').select('id, sku, name, name_ar, uom, reorder_level').eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new HttpError(404, 'Item not found', 'not_found');
+  return ok(c, toItem(data as ItemRow));
 });
 
 inventoryRoutes.post('/requests', requirePermission('inventory.request.create'), async (c) => {

@@ -16,7 +16,7 @@ export class DemoRuleError extends Error {
 }
 
 export type DemoWarehouse = { id: string; name: string };
-export type DemoItem = { id: string; sku: string; name: string; nameAr: string; uom: string };
+export type DemoItem = { id: string; sku: string; name: string; nameAr: string; uom: string; reorderLevel: number | null };
 export type StockRow = { itemId: string; warehouseId: string; onHand: number; reserved: number; available: number };
 export type RequestStatus = 'submitted' | 'approved' | 'rejected' | 'issued' | 'cancelled';
 export type DemoRequest = {
@@ -62,11 +62,11 @@ const warehouses: DemoWarehouse[] = [
 ];
 
 const items: DemoItem[] = [
-  { id: 'i1', sku: 'GLV-001', name: 'Safety gloves', nameAr: 'قفازات أمان', uom: 'pair' },
-  { id: 'i2', sku: 'TAP-002', name: 'Packing tape', nameAr: 'شريط تغليف', uom: 'roll' },
-  { id: 'i3', sku: 'CRT-003', name: 'Carton 40x30', nameAr: 'كرتونة 40×30', uom: 'piece' },
-  { id: 'i4', sku: 'WRP-004', name: 'Pallet wrap', nameAr: 'فيلم تغليف بالتات', uom: 'roll' },
-  { id: 'i5', sku: 'LBL-005', name: 'Barcode labels', nameAr: 'ملصقات باركود', uom: 'box' },
+  { id: 'i1', sku: 'GLV-001', name: 'Safety gloves', nameAr: 'قفازات أمان', uom: 'pair', reorderLevel: 100 },
+  { id: 'i2', sku: 'TAP-002', name: 'Packing tape', nameAr: 'شريط تغليف', uom: 'roll', reorderLevel: 20 },
+  { id: 'i3', sku: 'CRT-003', name: 'Carton 40x30', nameAr: 'كرتونة 40×30', uom: 'piece', reorderLevel: null },
+  { id: 'i4', sku: 'WRP-004', name: 'Pallet wrap', nameAr: 'فيلم تغليف بالتات', uom: 'roll', reorderLevel: 40 },
+  { id: 'i5', sku: 'LBL-005', name: 'Barcode labels', nameAr: 'ملصقات باركود', uom: 'box', reorderLevel: null },
 ];
 
 const balances = new Map<string, { onHand: number; reserved: number }>();
@@ -177,12 +177,22 @@ export function handleInventory(method: string, parts: string[], body: Record<st
 
   if (area === 'items') {
     if (method === 'GET') return items;
+    if (id && action === 'reorder-level') {
+      if (!isManager(actor.role)) throw forbid();
+      const item = items.find((x) => x.id === id);
+      if (!item) throw new DemoRuleError(404, 'Item not found', 'not_found');
+      const level = body.level === null ? null : Number(body.level);
+      if (body.level === undefined || (level !== null && (!Number.isFinite(level) || level < 0))) throw new DemoRuleError(400, 'Reorder level must be zero or more, or empty', 'invalid_input');
+      item.reorderLevel = level;
+      actor.log('inventory.reorder_level.set', 'item', item.id, level === null ? `Reorder level of ${item.sku} removed` : `Reorder level of ${item.sku} set to ${level}`);
+      return item;
+    }
     if (!canWrite(actor.role)) throw forbid();
     const sku = String(body.sku ?? '').trim().toUpperCase();
     const name = String(body.name ?? '').trim();
     if (!sku || !name) throw new DemoRuleError(400, 'SKU and name are required', 'invalid_input');
     if (items.some((i) => i.sku === sku)) throw new DemoRuleError(409, `SKU ${sku} already exists`, 'conflict');
-    const item: DemoItem = { id: `i${items.length + 1}`, sku, name, nameAr: String(body.nameAr ?? '').trim(), uom: String(body.uom ?? 'piece').trim() || 'piece' };
+    const item: DemoItem = { id: `i${items.length + 1}`, sku, name, nameAr: String(body.nameAr ?? '').trim(), uom: String(body.uom ?? 'piece').trim() || 'piece', reorderLevel: null };
     items.push(item);
     const opening = Number(body.openingQty ?? 0);
     if (opening > 0) post(item.id, String(body.warehouseId ?? 'w1'), opening, 'receipt', null, actor.id);

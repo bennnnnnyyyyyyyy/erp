@@ -5,7 +5,7 @@ import { AuditLog } from './core/settings/AuditLog';
 import { GeneralSettings } from './core/settings/GeneralSettings';
 import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
-import { LedgerPage, NewRequest, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
+import { LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { NotificationsPage, OutboxPage } from './messaging/Messaging';
 import { TaskPage, TasksPage } from './tasks/Tasks';
@@ -49,6 +49,7 @@ const INVENTORY_APP: AppDef = {
   basePath: '/inventory',
   pages: [
     { path: '', label: 'Stock on hand', permission: READ, component: StockPage },
+    { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
     { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
     { path: '/requests/new', label: 'New request', permission: READ, component: NewRequest, nav: false, parent: '/requests' },
     { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },

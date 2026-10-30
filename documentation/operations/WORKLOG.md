@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Inventory reorder levels app
+
+**Objective.** Build a smaller useful Inventory feature while deferring real WhatsApp integration.
+
+**Actions Completed.** Added the Reorder levels page to the real Inventory app. It shows available stock across warehouses, configured reorder levels, and low-stock status. Owners and admins can save or clear a non-negative reorder level. Added the API route `POST /v1/inventory/items/:id/reorder-level`, exposed the existing `reorder_level` field on item reads, added the `inventory.reorder.manage` permission, and added equivalent demo-mode behavior. The database function `inv_set_reorder_level` remains the mutation and audit boundary; no new migration was needed because `sql/013_reorder_levels.sql` is already live and tested.
+
+**Database / System Result.** None; no database migration or production data change was run in this turn.
+
+**Safety Status.** Typecheck passed; API tests passed (26); shared tests passed (4); web production build passed when run as separate TypeScript and Vite steps. The normal Windows `npm run build -w apps/web` wrapper still fails on PowerShell's unsupported `&&`, while the GitHub Ubuntu workflow is unaffected. Browser testing and deployment remain pending Ben's commit/push.
+
 ## 2026-10-30 — GitHub Actions deployment automation prepared
 
 **Objective.** Make the API Worker and real web app deploy automatically after a successful push to `main`.
