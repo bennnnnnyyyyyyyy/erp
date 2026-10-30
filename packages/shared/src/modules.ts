@@ -40,6 +40,7 @@ export const MODULES: readonly ModuleManifest[] = [
       'inventory.items.manage',
       'inventory.warehouses.manage',
       'inventory.reorder.manage',
+      'inventory.approval_policies.manage',
       'inventory.request.create',
       'inventory.request.approve',
       'inventory.stock.issue',

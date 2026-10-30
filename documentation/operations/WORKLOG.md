@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Inventory approval policies app
+
+**Objective.** Add the next small Inventory app after reorder levels, while keeping the existing database-enforced approval path.
+
+**Actions Completed.** Added `Inventory → Approval policies`. Owners and admins can add or update quantity thresholds, choose all warehouses or one warehouse, choose 1–3 required approvals, and remove policies. Inventory users can view the rules. Added API routes backed by `inv_set_approval_policy` and `inv_remove_approval_policy`, the `inventory.approval_policies.manage` permission, and equivalent demo-mode behavior. The highest matching policy continues to be enforced by `inv_decide_request`.
+
+**Database / System Result.** None; `sql/011_approval_policies.sql` was already applied and tested, so no migration or production data change was run.
+
+**Safety Status.** Root typecheck passed; shared tests (4) and API tests (26) passed; web typecheck and production Vite build passed; diff check passed. Browser testing and deployment remain pending Ben's commit/push.
+
 ## 2026-10-30 — Inventory reorder levels app
 
 **Objective.** Build a smaller useful Inventory feature while deferring real WhatsApp integration.

@@ -3,7 +3,7 @@ import type { AuditEntry } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
-import type { DemoItem, DemoRequest, DemoWarehouse, LedgerMove, RequestStatus, StockRow } from '../../lib/demoInventory';
+import type { ApprovalPolicy, DemoItem, DemoRequest, DemoWarehouse, LedgerMove, RequestStatus, StockRow } from '../../lib/demoInventory';
 import { usePeople } from '../../lib/people';
 import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
@@ -272,6 +272,76 @@ export function ReorderLevelsPage() {
         </table>
       </div>
       {!canManage && <p className="hint muted small">Only owners and admins can change reorder levels.</p>}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------ approval policies
+
+export function ApprovalPoliciesPage() {
+  const cat = useCatalog();
+  const policies = useLoad(() => api<ApprovalPolicy[]>('/v1/inventory/approval-policies'));
+  const session = useSession();
+  const [form, setForm] = useState({ warehouseId: '', minTotalQty: '', requiredApprovals: '2' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canManage = session.role === 'owner' || session.role === 'admin';
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api('/v1/inventory/approval-policies', { method: 'POST', body: JSON.stringify({ warehouseId: form.warehouseId || null, minTotalQty: Number(form.minTotalQty), requiredApprovals: Number(form.requiredApprovals) }) });
+      setForm({ warehouseId: '', minTotalQty: '', requiredApprovals: '2' });
+      policies.reload();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    setError(null);
+    try {
+      await api(`/v1/inventory/approval-policies/${id}`, { method: 'DELETE' });
+      policies.reload();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  const warehouseName = (id: string | null) => id ? cat.warehouseName(id) : 'All warehouses';
+
+  if (!cat.warehouses.data || !policies.data) return <section className="page"><p className="muted">Loading…</p></section>;
+
+  return (
+    <section className="page">
+      <h1>Approval policies</h1>
+      <p className="muted">Set when a stock request needs more than one manager. The highest matching rule applies; requests below all thresholds need one approval.</p>
+      {error && <p className="error notice">{error}</p>}
+      {canManage && (
+        <form className="form-card stack" onSubmit={save}>
+          <strong>Add or update a policy</strong>
+          <div className="form-row">
+            <label>From total quantity<input required type="number" min="0" step="0.001" value={form.minTotalQty} onChange={(e) => setForm((f) => ({ ...f, minTotalQty: e.target.value }))} /></label>
+            <label>Required approvals<select value={form.requiredApprovals} onChange={(e) => setForm((f) => ({ ...f, requiredApprovals: e.target.value }))}><option value="1">1 approval</option><option value="2">2 approvals</option><option value="3">3 approvals</option></select></label>
+            <label>Warehouse<select value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">All warehouses</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          </div>
+          <div className="form-actions"><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save policy'}</button></div>
+        </form>
+      )}
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Threshold</th><th>Warehouse</th><th>Required</th>{canManage && <th />}</tr></thead>
+          <tbody>
+            {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> units or more</td><td>{warehouseName(p.warehouseId)}</td><td>{p.requiredApprovals} approval{p.requiredApprovals === 1 ? '' : 's'}</td>{canManage && <td><button className="secondary" onClick={() => remove(p.id)}>Remove</button></td>}</tr>)}
+            {policies.data.length === 0 && <tr><td colSpan={canManage ? 4 : 3} className="muted empty">No extra approval policies. One approval is enough for every request.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {!canManage && <p className="hint muted small">Only owners and admins can change approval policies.</p>}
     </section>
   );
 }

@@ -128,6 +128,21 @@ inventoryRoutes.get('/ledger', requirePermission('inventory.items.read'), async 
 inventoryRoutes.get('/requests', requirePermission('inventory.items.read'), async (c) => ok(c, await loadRequests(c)));
 inventoryRoutes.get('/requests/:id', requirePermission('inventory.items.read'), async (c) => ok(c, await oneRequest(c, idParam(c))));
 
+inventoryRoutes.get('/approval-policies', requirePermission('inventory.items.read'), async (c) => {
+  const { data, error } = await userDb(c)
+    .from('inv_approval_policies')
+    .select('id, warehouse_id, min_total_qty, required_approvals')
+    .eq('org_id', orgOf(c))
+    .order('min_total_qty', { ascending: true });
+  if (error) throw error;
+  return ok(c, ((data ?? []) as { id: string; warehouse_id: string | null; min_total_qty: number; required_approvals: number }[]).map((p) => ({
+    id: p.id,
+    warehouseId: p.warehouse_id,
+    minTotalQty: Number(p.min_total_qty),
+    requiredApprovals: Number(p.required_approvals),
+  })));
+});
+
 // ------------------------------------------------------------------ changes (one database function each)
 
 inventoryRoutes.post('/warehouses', requirePermission('inventory.warehouses.manage'), async (c) => {
@@ -168,6 +183,29 @@ inventoryRoutes.post('/items/:id/reorder-level', requirePermission('inventory.re
   if (error) throw error;
   if (!data) throw new HttpError(404, 'Item not found', 'not_found');
   return ok(c, toItem(data as ItemRow));
+});
+
+inventoryRoutes.post('/approval-policies', requirePermission('inventory.approval_policies.manage'), async (c) => {
+  const body = await jsonBody(c);
+  const minTotalQty = Number(body.minTotalQty);
+  const requiredApprovals = Number(body.requiredApprovals);
+  const warehouseId = body.warehouseId ? text(body.warehouseId) : null;
+  if (!Number.isFinite(minTotalQty) || minTotalQty < 0 || !Number.isInteger(requiredApprovals) || requiredApprovals < 1 || requiredApprovals > 3) {
+    invalid('Enter a quantity threshold and between 1 and 3 approvals');
+  }
+  await callRpc<string>(userDb(c), 'inv_set_approval_policy', {
+    p_warehouse_id: warehouseId,
+    p_min_total_qty: minTotalQty,
+    p_required: requiredApprovals,
+  });
+  const { data, error } = await userDb(c).from('inv_approval_policies').select('id, warehouse_id, min_total_qty, required_approvals').eq('org_id', orgOf(c)).order('min_total_qty');
+  if (error) throw error;
+  return ok(c, ((data ?? []) as { id: string; warehouse_id: string | null; min_total_qty: number; required_approvals: number }[]).map((p) => ({ id: p.id, warehouseId: p.warehouse_id, minTotalQty: Number(p.min_total_qty), requiredApprovals: Number(p.required_approvals) })));
+});
+
+inventoryRoutes.delete('/approval-policies/:id', requirePermission('inventory.approval_policies.manage'), async (c) => {
+  await callRpc<void>(userDb(c), 'inv_remove_approval_policy', { p_policy_id: idParam(c) });
+  return ok(c, { removed: true });
 });
 
 inventoryRoutes.post('/requests', requirePermission('inventory.request.create'), async (c) => {

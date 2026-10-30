@@ -48,6 +48,7 @@ export type LedgerMove = {
   postedBy: string;
   postedAt: string;
 };
+export type ApprovalPolicy = { id: string; warehouseId: string | null; minTotalQty: number; requiredApprovals: number };
 
 /** Who is acting, and what log function to call. Supplied by lib/demo.ts. */
 export type Actor = { id: string; name: string; role: Role; log: (action: string, entityType: string, entityId: string, summary: string) => void };
@@ -68,6 +69,8 @@ const items: DemoItem[] = [
   { id: 'i4', sku: 'WRP-004', name: 'Pallet wrap', nameAr: 'فيلم تغليف بالتات', uom: 'roll', reorderLevel: 40 },
   { id: 'i5', sku: 'LBL-005', name: 'Barcode labels', nameAr: 'ملصقات باركود', uom: 'box', reorderLevel: null },
 ];
+
+const approvalPolicies: ApprovalPolicy[] = [{ id: 'p1', warehouseId: null, minTotalQty: 50, requiredApprovals: 2 }];
 
 const balances = new Map<string, { onHand: number; reserved: number }>();
 const key = (itemId: string, warehouseId: string) => `${itemId}|${warehouseId}`;
@@ -198,6 +201,29 @@ export function handleInventory(method: string, parts: string[], body: Record<st
     if (opening > 0) post(item.id, String(body.warehouseId ?? 'w1'), opening, 'receipt', null, actor.id);
     actor.log('inventory.item.created', 'item', item.id, `Item ${sku} ${name} created${opening > 0 ? ` with opening stock ${opening}` : ''}`);
     return item;
+  }
+
+  if (area === 'approval-policies') {
+    if (method === 'GET') return approvalPolicies;
+    if (!isManager(actor.role)) throw forbid();
+    if (method === 'DELETE' && id) {
+      const index = approvalPolicies.findIndex((p) => p.id === id);
+      if (index < 0) throw new DemoRuleError(404, 'Policy not found', 'not_found');
+      approvalPolicies.splice(index, 1);
+      actor.log('inventory.policy.removed', 'approval_policy', id, 'Approval policy removed');
+      return { removed: true };
+    }
+    if (method === 'POST') {
+      const minTotalQty = Number(body.minTotalQty);
+      const requiredApprovals = Number(body.requiredApprovals);
+      if (!Number.isFinite(minTotalQty) || minTotalQty < 0 || !Number.isInteger(requiredApprovals) || requiredApprovals < 1 || requiredApprovals > 3) throw new DemoRuleError(400, 'Enter a quantity threshold and between 1 and 3 approvals', 'invalid_input');
+      const policy: ApprovalPolicy = { id: `p${Date.now()}`, warehouseId: body.warehouseId ? String(body.warehouseId) : null, minTotalQty, requiredApprovals };
+      const existing = approvalPolicies.find((p) => p.warehouseId === policy.warehouseId && p.minTotalQty === policy.minTotalQty);
+      if (existing) existing.requiredApprovals = policy.requiredApprovals;
+      else approvalPolicies.push(policy);
+      actor.log('inventory.policy.set', 'approval_policy', existing?.id ?? policy.id, `From ${minTotalQty} units, ${requiredApprovals} approval(s) required`);
+      return approvalPolicies;
+    }
   }
 
   if (area !== 'requests') throw new DemoRuleError(404, 'Not available in demo mode', 'not_found');
