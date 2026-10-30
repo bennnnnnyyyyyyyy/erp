@@ -1,5 +1,14 @@
 # Update (paste this into the chat)
 
+Last updated: 2026-10-30, end of day. Full report: `documentation/operations/DAY_REPORT_2026-10-30.md`. Standing brief: `neworder.md`.
+
+## DONE TODAY (short)
+Owner home page and Profit overview, batches and expiry, forecast, finance (cost, expenses, payments), customer and supplier invoices, alerts (low stock, expiry, overdue, losing month, forecast), company-wide language, sign-up, getting-started tutorial (new companies only), security audit merged, cosmetics sample company. 28 of 28 SQL tests, unit tests, live login and concurrency checks pass. Deployed via CI (last run `db4d4bf` green).
+
+## NEEDS YOU
+UI audit with the `.agents` skills (not started), your five worst UI problems, Meta account for real WhatsApp, a real sign-up try in a private window, decisions listed in the day report. Nothing was deployed or deleted while you were away.
+
+## Older notes
 ## Latest (2026-10-30, night): security audit branch synced
 - **Last done:** branch `worktree-security-audit-fixes` (`.claude/worktrees/security-audit-fixes`) brought up to main (`68c6c31`), audit fixes reapplied, two README conflicts resolved. Typecheck clean, 30/30 unit tests pass.
 - **Fixes on the branch (not merged, not run, not deployed):** member changes and their audit now done in the database with the user's own login (M-1); existing accounts get an invitation they must accept (M-2); WhatsApp channel can't be faked in the audit log (L-2); one WhatsApp number in several orgs (L-3); "process now" only touches your own org (L-4); sign-in links only for accounts in no other org (L-5); timing-safe webhook token, production-only CORS, browser security headers.

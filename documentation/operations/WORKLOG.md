@@ -11,6 +11,18 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Sign-up flow, getting-started tutorial, Add warehouse: migration 032, test 028; end-of-day checks
+
+**Objective.** Ben: "build the sign-up flow next, tutorial page as well"; the tutorial only in new empty companies, never the sample company; then (leaving for the weekend) check, clean up and write the day report.
+
+**Actions Completed.**
+- `sql/032_signup.sql`: `core_create_organization(name, language, currency, time zone)` callable by a signed-in user whose email is CONFIRMED; at most 3 companies owned per person; validated inputs; unique slug from the name; the caller becomes owner (through `bootstrap_organization`), every shipped app is switched on, language is stored, the company gets `settings.show_tutorial = true`, audited ("organization.created" and "organization.setup"). `core_set_tutorial(bool)` (owner/admin, audited, no-op silent). Test `028_signup` PASSES (rolled back): company, owner, 7 apps on, language/currency/time zone, flag, 2 audit entries, slug `nile-cosmetics`; same name gets a different slug; a 4th company refused; unconfirmed email, anonymous, 1-letter name, language `fr`, 2-letter currency and unknown time zone refused; symbol-only name gets a usable slug; no other company touched; owner can turn the flag off, a member cannot, another company keeps its flag.
+- Web: sign-in card has "Create an account" (email + password twice, confirmation link, same message whether or not the address exists); a signed-in person with no company and no invitations lands on "Set up your company" (name, language, currency, time zone); the picker also has "Create a new company". New app "Getting started" (`modules/help/GettingStarted.tsx`) with a live checklist and 9 steps matching screens that exist, and an honest "what is not ready yet" list; it is visible only when the session carries `showTutorial` (never in the sample companies or the demo build); owners can hide it and bring it back in Settings > General. `GET /v1/core/session` now carries `showTutorial`; `POST /v1/core/org/tutorial`.
+- Gap fixed: there was no way to create a warehouse in the UI. Inventory > Stock on hand has "Add warehouse" (permission `inventory.warehouses.manage`) and a first-warehouse prompt; "Add item" shows only once a warehouse exists.
+
+**Database / System Result.** 032 applied via CLI. Final checks: typecheck clean; `npm test` 4 + 27; web build passed; SQL tests 28 of 28; live login checks owner 15 / manager 15 / requester 17; concurrency 12 of 12; live spot checks listed in `DAY_REPORT_2026-10-30.md`. CI for commit `db4d4bf` succeeded; live Worker `5bc38345-127c-4d3e-a8ef-edd9296a6e4f` (previous `3ad4c027-99c1-4b79-ba7d-e26b6f936e70`).
+
+**Safety Status.** The sign-up screens and the tutorial are deployed but were NOT exercised in a browser or end to end; whether the Supabase project requires email confirmation and delivers the email is not verified; no real accounts or companies were created in the live project. UI audit with the `.agents` skills not started. Nothing deleted; leftover clutter listed in the day report for Ben to decide.
 ## 2026-10-30 — Company-wide language setting (sql/031, test 027) and an overflow fix on the money cards
 
 **Objective.** Ben: "build the language setting next and do a UI check for overflow" (screenshot of the Profit overview: the Sales and Costs figures ran past their boxes).
