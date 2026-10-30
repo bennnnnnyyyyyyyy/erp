@@ -1,0 +1,62 @@
+# Files and folders Claude does NOT edit (or read) during a normal chat.
+# To change one of these, the request has to name it. Same syntax as .gitignore.
+# Note: Claude Code's hard guarantee comes from permission deny rules in .claude/settings.json; this file is the
+# project's written convention and is read by tools that honour .claudeignore. See agents.md.
+
+# ---- installed / built / generated
+node_modules/
+dist/
+build/
+.wrangler/
+*.tsbuildinfo
+package-lock.json
+coverage/
+
+# ---- secrets and local state (never touched without being asked)
+.env
+.env.*
+.dev.vars
+.temp/
+temp/
+supabase/.temp/
+*-credentials.txt
+
+# ---- applied migrations are history: add a new numbered file instead of editing 001-022
+sql/001_*.sql
+sql/002_*.sql
+sql/003_*.sql
+sql/004_*.sql
+sql/005_*.sql
+sql/006_*.sql
+sql/007_*.sql
+sql/008_*.sql
+sql/009_*.sql
+sql/010_*.sql
+sql/011_*.sql
+sql/012_*.sql
+sql/013_*.sql
+sql/014_*.sql
+sql/015_*.sql
+sql/016_*.sql
+sql/017_*.sql
+sql/018_*.sql
+sql/019_*.sql
+sql/020_*.sql
+sql/021_*.sql
+sql/022_*.sql
+sql/023_*.sql
+sql/024_*.sql
+
+# ---- decided or reference material
+documentation/architecture/decisions/
+documentation/research/
+documentation/reviews/
+.agents/
+skills-lock.json
+
+# ---- other agents' scratch and dumps
+gpreport.html
+test dump.md
+test.ps1
+reply.md
+Trial_capture_workbook_v8 (1).xlsx

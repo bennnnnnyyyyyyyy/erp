@@ -29,6 +29,8 @@ Run the whole file at once with nothing else in the editor.
 | `016_sales_retry.sql` | Sales: retry after rejection, no second live request, delivered order not cancellable |
 | `017_enable_all_modules.sql` | all apps on, audited, repeat no-op, closed to users |
 | `018_customer_invoices.sql` | delivered-only, no over-invoicing, price from order line, void, isolation, audit |
+| `019_item_cost.sql` | average cost, issue cost snapshot, cost hidden from members, owner/admin only |
+| `020_finance_expenses_payments.sql` | expenses, payments, no overpayment, void rules, owner/admin only, isolation |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 

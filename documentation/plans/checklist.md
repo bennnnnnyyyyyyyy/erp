@@ -149,3 +149,4 @@ Template for further blocks; update them in the same change as the work:
 ## Migrations
 
 See [`sql/README.md`](../../sql/README.md) for per-file status.
+- [ ] **[OWNER_INSIGHTS_PLAN.md](OWNER_INSIGHTS_PLAN.md): Owner home, finance, triggers, forecast, batches and expiry, cosmetics demo data** (draft, waiting for Ben's approval and answers to section 16)

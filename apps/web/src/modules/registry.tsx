@@ -12,6 +12,7 @@ import { NotificationsPage, OutboxPage } from './messaging/Messaging';
 import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 import { CustomerInvoices } from './sales/CustomerInvoices';
+import { ExpensesPage, PaymentsPage } from './finance/Finance';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -137,6 +138,14 @@ export const APPS: AppDef[] = [
   ...(demoMode ? [] : [TASKS_APP, MESSAGING_APP]),
   PURCHASING_APP,
   ...(demoMode ? [DEMO_SALES_APP] : [SALES_APP]),
+  // Real API only (no sample-data version). Owner and admin only.
+  ...(demoMode ? [] : [{
+    key: 'finance', module: 'finance', name: 'Finance', description: 'Expenses and payments: money in, money out',
+    suite: 'Finance', basePath: '/finance', pages: [
+      { path: '', label: 'Expenses', permission: 'finance.reports.view', component: ExpensesPage },
+      { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
+    ],
+  } satisfies AppDef]),
   {
     key: 'settings',
     module: 'core',

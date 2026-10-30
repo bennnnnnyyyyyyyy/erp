@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Finance foundation: item cost (023), expenses and payments (024), Finance screens; Ben's answers recorded
+
+**Objective.** Slice F of `OWNER_INSIGHTS_PLAN.md`: cost per item, expenses, payments, so profit and "who owes whom" can be computed. Ben answered `QUESTIONS_FOR_BEN.md` (average cost; manufacturing later; language is an organization-wide setting chosen at sign-up; teams are named groups; EGP changeable; profit without VAT; deny rules yes; no password rotation). Decisions are written into that file and the plan.
+
+**Actions Completed.**
+- `sql/023_item_cost.sql`: weighted average cost per item (`inv_items.avg_cost_minor`), append-only `inv_cost_log`, issue/adjust ledger moves remember the average at that moment (`inv_stock_moves.unit_cost_minor`), `pur_receive_order` now updates the average on every purchase receipt, `inv_set_item_cost` (owner/admin, audited) for opening stock and corrections, `inv_item_costs()` (owner/admin) with stock value. Cost columns are hidden from members and viewers with COLUMN grants on `inv_items` and `inv_stock_moves` (future columns on those tables must be granted explicitly).
+- `sql/024_finance_expenses_payments.sql`: module `finance`; `fin_categories`, `fin_expenses`, `fin_payments` (RLS: owner/admin read only; no direct writes); functions `fin_create_category`, `fin_record_expense`, `fin_void_expense`, `fin_record_payment` (in = customer invoice; out = supplier invoice or expense; never above what is owed; void documents cannot be paid), `fin_void_payment`; all audited; `core_enable_all_modules` now includes finance.
+- Shared: module `finance` with permissions `finance.reports.view` and `finance.entries.manage` (named so members do not get them by default). API: `apps/api/src/modules/finance/routes.ts`. Web: Finance app with Expenses and Payments pages (`apps/web/src/modules/finance/Finance.tsx`), real app only.
+- `.claude/settings.json` deny rules (edits to applied migrations 001-024, node_modules, dist, env files, ADRs, research, reviews, .agents, lockfile; reads of .env files). `.claudeignore` extended to 024. Finance switched on for Test Organization (one module, audited).
+
+**Database / System Result.** 023 and 024 applied with the CLI. Tests: `019_item_cost` (average 100 then 150 after a receipt of 10 at 200; issue remembers 150 and a later change does not rewrite it; stock value 2400; members cannot read cost columns or call cost functions; cost log append-only; isolation) and `020_finance_expenses_payments` (expense numbering, member refused and sees nothing, payments 1000 + 1500 fit an invoice of 2500 and 1 more is refused, void frees the amount, supplier invoice and expense payments, expense with a payment cannot be voided, bad combinations refused, isolation, audit chain) both ALL TESTS PASSED. SQL tests 001-020 all pass. Typecheck clean, `npm test` 4 + 30 passed, web build passed.
+
+**Safety Status.** NOT deployed; the Finance API and screens are not live (database is). Not tried in a browser or against the live API. Customer-facing totals use lines rounded per line. Not built yet: balances (owed to me / I owe) as database functions, profit, the owner home page, batches and expiry, triggers, forecast, demo data, organization-wide language setting, manufacturing.
+## 2026-10-30 — Owner insights plan written; .claudeignore added
+
+**Objective.** Ben relayed the boss's notes: the owner must see at a glance whether the company is making or losing money; triggers and notification settings; forecast from the org's own history; expiry and storage conditions; demo data for an Egyptian cosmetics factory. "Do not take it lightly."
+
+**Actions Completed.** Wrote `documentation/plans/OWNER_INSIGHTS_PLAN.md` (goal, boss notes mapped, gaps found in the current system, finance formula, owner home page rules, trigger rules and notification settings, forecast method, batches/expiry/storage, manufacturing question, demo data design, data model, permissions, build order, tests, risks, 7 open questions). Added it to `checklist.md`. Added `.claudeignore` at the repo root (build output, secrets/local state, applied migrations 001-022, decided ADRs, research, reviews, other agents' scratch).
+
+**Database / System Result.** None. No code or migration written for this plan; waiting for approval per `agents.md`.
+
+**Safety Status.** Nothing deployed. Key gaps recorded: no item cost (so no profit), no payments, no expenses, no batches/expiry, no rules engine, no manufacturing. `.claudeignore` is a convention file; Claude Code's hard guarantee is permission deny rules in `.claude/settings.json`, not yet set.
 ## 2026-10-30 — UI components started; coss licence finding; theme tokens replaced
 
 **Objective.** Start porting screens to a component layer in the coss style.

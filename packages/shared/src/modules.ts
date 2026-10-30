@@ -86,6 +86,11 @@ export const MODULES: readonly ModuleManifest[] = [
     dependsOn: ['inventory'], permissions: ['sales.customers.read','sales.customers.manage','sales.orders.read','sales.orders.create','sales.orders.fulfill','sales.orders.manage','sales.invoices.read','sales.invoices.manage'],
     memberGrants: ['sales.orders.create','sales.orders.fulfill'], suite: 'Sales & Purchasing',
   },
+  {
+    // Owner/admin only on purpose: neither key ends in ".read", so members and viewers never get them by default.
+    key: 'finance', name: 'Finance', description: 'Expenses and payments: money in, money out, and what is still owed.', core: false,
+    dependsOn: ['inventory'], permissions: ['finance.reports.view', 'finance.entries.manage'], suite: 'Finance',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {
