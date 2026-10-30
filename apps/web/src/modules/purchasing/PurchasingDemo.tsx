@@ -9,8 +9,7 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
-// DEMO ONLY: sample purchasing screens (wave 2 in TECHNICAL_PLAN.md section 3.5). Receiving a purchase
-// order adds stock to the ledger. The real module is built from its own approved plan.
+// The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
 
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
 const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Waiting for goods', received: 'Received', cancelled: 'Cancelled' };

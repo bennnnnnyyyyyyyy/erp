@@ -71,6 +71,16 @@ export const MODULES: readonly ModuleManifest[] = [
     permissions: ['messaging.notifications.read', 'messaging.outbox.manage'],
     suite: 'Warehouse',
   },
+  {
+    key: 'purchasing',
+    name: 'Purchasing',
+    description: 'Suppliers, purchase orders and receiving goods into stock.',
+    core: false,
+    dependsOn: ['inventory'],
+    permissions: ['purchasing.suppliers.read', 'purchasing.suppliers.manage', 'purchasing.orders.read', 'purchasing.orders.create', 'purchasing.orders.receive', 'purchasing.orders.manage'],
+    memberGrants: ['purchasing.orders.receive'],
+    suite: 'Sales & Purchasing',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {

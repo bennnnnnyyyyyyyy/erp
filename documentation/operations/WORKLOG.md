@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Purchasing & Receiving module: migration 017
+
+**Objective.** Turn the sample purchasing screen into the first real purchasing workflow: suppliers, purchase orders and controlled receipt of goods into warehouse stock.
+
+**Actions Completed.** Added the approved [Purchasing plan](../plans/PURCHASING_PLAN.md), shared module permissions, user-scoped API routes, and registered Purchasing in the real web application. `sql/017_purchasing_core.sql` adds organization-isolated suppliers, orders and lines; all signed-in writes remain closed except audited database functions. `pur_receive_order` locks an ordered purchase order, posts each line with the inventory receipt helper, marks the order received, and appends the purchasing audit event in the same transaction. Added `sql/tests/013_purchasing_receiving.sql` and enabled Purchasing for Test Organization with the audited `core_set_module` function.
+
+**Database / System Result.** Migration 017 was applied to the linked Supabase project. Its verification returned all three purchasing tables with RLS; the direct-write privilege query returned no rows. Test 013 reached its deliberate `ALL TESTS PASSED (everything rolled back)` result, so its setup rows were not retained. Test Organization now has the `purchasing` module enabled; enabling it adds the normal audited module-change event only.
+
+**Safety Status.** The schema change is additive: no existing table or business record was deleted or modified. The proof checks direct writes are refused, receipts happen once, stock changes once, the audit chain verifies, and another organization cannot read or cancel the order. Root typecheck and tests passed; the web production build also passed. No commit, push, Worker deployment or Pages deployment was made.
+
 ## 2026-10-30 — Added all Auth users to Test Organization
 
 **Objective.** During testing, make every existing Supabase Auth account available in the single Test Organization.

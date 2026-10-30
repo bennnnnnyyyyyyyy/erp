@@ -59,12 +59,11 @@ const INVENTORY_APP: AppDef = {
   ],
 };
 
-// DEMO ONLY: sample purchasing and sales (wave 2 in the plan), registered only in demo mode.
-const DEMO_PURCHASING_APP: AppDef = {
+const PURCHASING_APP: AppDef = {
   key: 'purchasing',
   module: 'purchasing',
   name: 'Purchasing',
-  description: 'Suppliers and purchase orders; receiving adds stock (demo data)',
+  description: demoMode ? 'Suppliers and purchase orders; receiving adds stock (demo data)' : 'Suppliers, purchase orders and receiving goods into stock',
   suite: 'Sales & Purchasing',
   basePath: '/purchasing',
   pages: [
@@ -122,7 +121,8 @@ const MESSAGING_APP: AppDef = {
 export const APPS: AppDef[] = [
   INVENTORY_APP,
   ...(demoMode ? [] : [TASKS_APP, MESSAGING_APP]),
-  ...(demoMode ? [DEMO_SALES_APP, DEMO_PURCHASING_APP] : []),
+  PURCHASING_APP,
+  ...(demoMode ? [DEMO_SALES_APP] : []),
   {
     key: 'settings',
     module: 'core',
