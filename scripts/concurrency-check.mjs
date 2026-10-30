@@ -28,7 +28,7 @@ async function login(email, password) {
   const s = await j(await fetch(`${E.SUPABASE_URL}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: E.SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }));
   if (!s.access_token) throw new Error(`sign-in failed for ${email}: ${s.error_description ?? s.msg ?? s.message ?? 'unknown'}`);
   // The test users may also belong to other organizations (e.g. Test Organization): always use the throwaway one.
-  const m = await j(await fetch(${E.SUPABASE_URL}/rest/v1/organizations?select=id&slug=eq.concurrency-check, { headers: { apikey: E.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${s.access_token}` } }));
+  const m = await j(await fetch(`${E.SUPABASE_URL}/rest/v1/organizations?select=id&slug=eq.concurrency-check`, { headers: { apikey: E.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${s.access_token}` } }));
   const org = m[0]?.id;
   if (!org) throw new Error(`no access to the concurrency-check organization for ${email}`);
   const headers = { apikey: E.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${s.access_token}`, 'X-Org-Id': org, 'Content-Type': 'application/json' };

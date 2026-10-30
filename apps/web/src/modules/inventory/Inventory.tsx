@@ -3,6 +3,7 @@ import type { AuditEntry } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
+import { demoMode } from '../../lib/demo';
 import type { ApprovalPolicy, DemoItem, DemoRequest, DemoWarehouse, LedgerMove, RequestStatus, StockAdjustment, StockRow } from '../../lib/demoInventory';
 import { usePeople } from '../../lib/people';
 import { formatDateTime } from '../../lib/format';
@@ -610,16 +611,16 @@ export function RequestPage() {
             <button disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>Approve</button>
             <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>Reject</button>
           </div>
-          <p className="hint muted small">Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.</p>
+          {demoMode && <p className="hint muted small">Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.</p>}
         </div>
       )}
-      {r.status === 'submitted' && !isManager && <p className="notice">Waiting for a manager to approve. Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.</p>}
+      {r.status === 'submitted' && !isManager && <p className="notice">Waiting for a manager to approve.{demoMode && ' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.'}</p>}
 
       {open && session.role !== 'viewer' && (
         <div className="form-actions">
-          <button disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>
-            {r.status === 'approved' ? 'Issue stock' : 'Try to issue without approval'}
-          </button>
+          {r.status === 'approved' && (
+            <button disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>Issue stock</button>
+          )}
           <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Request cancelled. The reserved stock was released.')}>Cancel request</button>
         </div>
       )}

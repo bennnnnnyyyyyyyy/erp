@@ -11,6 +11,15 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Login checks re-run after the merge; "Try to issue without approval" button removed
+
+**Objective.** Ben: re-run the login checks and keep `email to grant.md` current; "the try to issue without approval is a stupid button for demo purposes".
+
+**Actions Completed.** `scripts/real-login-check.mjs` against the live deployment: owner 15, manager 15, requester 17 checks passed. `scripts/concurrency-check.mjs` first failed only because the throwaway users now also belong to Test Organization and the script took their first membership (FORBIDDEN); it now looks up the `concurrency-check` organization by slug and passes 12 of 12. `email to grant.md` (Ben's own text) updated with the check results, light/dark, and honest not-verified lines; its "23 test files pass" claim verified: 23 of 23. Removed the "Try to issue without approval" button on the stock request screen: "Issue stock" now shows only when the request is approved (the database still refuses an issue without approval, test 002 and the live-login checks cover that). The two demo-only hints on that screen (yellow bar) now show only in the demo build.
+
+**Database / System Result.** No database change. Typecheck clean; web build passed.
+
+**Safety Status.** The button removal is NOT deployed and not seen in a browser. `scripts/concurrency-check.mjs` edit is uncommitted.
 ## 2026-10-30 — Memberships moved to the cosmetics demo organization (Ben's instruction)
 
 **Objective.** Ben could not see the dummy data: his accounts were only in the (empty) Test Organization. Instruction: `ben.arthur.wiz` at the same level as grant, `ben@prime-ad.com` stays owner of the empty org, the four gmail accounts move to the filled demo organization.
