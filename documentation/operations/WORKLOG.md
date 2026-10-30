@@ -11,6 +11,15 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Audit branch merged into main, deployed with wrangler
+
+**Objective.** Ben: "merge branches and deploy, I need to sync up branches".
+
+**Actions Completed.** Staged `git merge --no-commit` of `worktree-security-audit-fixes` into main (3 documentation conflicts resolved by keeping both sides); Ben committed it (`914f3a4`). Typecheck clean, `npm test` 4 + 27, SQL tests 001-023 pass. Deployed from the merged tree: Worker `erp-api` f541974e-848e-4083-b549-5ca29e48a845 (previous 1bea1ab5-d707-40b3-86ad-cdb6ff2e435c, before that 4df4569e-37b3-4d06-a137-9ae80eaeeb64); Pages `erp-live` deployment db57c526.
+
+**Database / System Result.** No database change. Live API as owner in the cosmetics demo organization: insights, expiry, identities, people, sales invoices all 200; the same insights route as a member: 403. Live site sends the CSP header.
+
+**Safety Status.** Screens not opened in a browser (not verified); real-login, concurrency and invite-path checks not re-run after the merge; WhatsApp not tested end to end. Report for the chat: `REPLY_TO_CLAUDE_CHAT.md`.
 ## 2026-10-30 — Security audit 025 applied; cosmetics demo data; owner home page (027); phone binding page; seed flooded the outbox (fixed)
 
 **Objective.** Ben: "run 025, then do the order you proposed, add demo data for the factory, add home page, apply sql".
