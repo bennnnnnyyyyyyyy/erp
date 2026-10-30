@@ -49,6 +49,11 @@ export type LedgerMove = {
   postedAt: string;
 };
 export type ApprovalPolicy = { id: string; warehouseId: string | null; minTotalQty: number; requiredApprovals: number };
+export type StockAdjustment = {
+  id: string; number: string; itemId: string; warehouseId: string; countedQty: number; expectedQty: number;
+  delta: number; reason: string; status: 'submitted' | 'applied' | 'rejected' | 'cancelled'; requesterId: string;
+  decidedBy: string | null; decisionComment: string | null; createdAt: string;
+};
 
 /** Who is acting, and what log function to call. Supplied by lib/demo.ts. */
 export type Actor = { id: string; name: string; role: Role; log: (action: string, entityType: string, entityId: string, summary: string) => void };
@@ -71,6 +76,7 @@ const items: DemoItem[] = [
 ];
 
 const approvalPolicies: ApprovalPolicy[] = [{ id: 'p1', warehouseId: null, minTotalQty: 50, requiredApprovals: 2 }];
+const adjustments: StockAdjustment[] = [];
 
 const balances = new Map<string, { onHand: number; reserved: number }>();
 const key = (itemId: string, warehouseId: string) => `${itemId}|${warehouseId}`;
@@ -223,6 +229,53 @@ export function handleInventory(method: string, parts: string[], body: Record<st
       else approvalPolicies.push(policy);
       actor.log('inventory.policy.set', 'approval_policy', existing?.id ?? policy.id, `From ${minTotalQty} units, ${requiredApprovals} approval(s) required`);
       return approvalPolicies;
+    }
+  }
+
+  if (area === 'adjustments') {
+    if (!id) {
+      if (method === 'GET') return adjustments;
+      if (method !== 'POST' || !canWrite(actor.role)) throw forbid();
+      const itemId = String(body.itemId ?? ''), warehouseId = String(body.warehouseId ?? ''), reason = String(body.reason ?? '').trim();
+      const countedQty = Number(body.countedQty);
+      const item = items.find((x) => x.id === itemId);
+      if (!item || !warehouses.some((x) => x.id === warehouseId) || !Number.isFinite(countedQty) || countedQty < 0 || !reason) throw new DemoRuleError(400, 'Item, warehouse, counted quantity and reason are required', 'invalid_input');
+      const balance = bal(itemId, warehouseId);
+      const expectedQty = balance.onHand;
+      if (countedQty === expectedQty) throw new DemoRuleError(400, 'The count matches the book quantity, nothing to adjust', 'invalid_input');
+      if (countedQty < balance.reserved) throw new DemoRuleError(400, `${balance.reserved} is reserved; the count cannot be lower`, 'invalid_input');
+      const adjustment: StockAdjustment = { id: `a${Date.now()}`, number: `ADJ-${String(adjustments.length + 1).padStart(4, '0')}`, itemId, warehouseId, countedQty, expectedQty, delta: countedQty - expectedQty, reason, status: 'submitted', requesterId: actor.id, decidedBy: null, decisionComment: null, createdAt: new Date().toISOString() };
+      adjustments.unshift(adjustment);
+      actor.log('inventory.adjustment.submitted', 'stock_adjustment', adjustment.id, `${adjustment.number}: counted ${countedQty}, book ${expectedQty}: ${reason}`);
+      return adjustment;
+    }
+    const adjustment = adjustments.find((x) => x.id === id);
+    if (!adjustment) throw new DemoRuleError(404, 'Adjustment not found', 'not_found');
+    if (method === 'GET') return adjustment;
+    if (action === 'cancel') {
+      if (adjustment.requesterId !== actor.id && !isManager(actor.role)) throw forbid();
+      if (adjustment.status !== 'submitted') throw new DemoRuleError(409, `This adjustment is already ${adjustment.status}`, 'invalid_state');
+      adjustment.status = 'cancelled';
+      actor.log('inventory.adjustment.cancelled', 'stock_adjustment', adjustment.id, `${adjustment.number} cancelled`);
+      return adjustment;
+    }
+    if (action === 'approve' || action === 'reject') {
+      if (!isManager(actor.role)) throw forbid();
+      if (adjustment.requesterId === actor.id) throw new DemoRuleError(403, 'You cannot approve your own count', 'self_approval');
+      if (adjustment.status !== 'submitted') throw new DemoRuleError(409, `This adjustment is already ${adjustment.status}`, 'invalid_state');
+      adjustment.decidedBy = actor.id;
+      adjustment.decisionComment = String(body.comment ?? '').trim() || null;
+      if (action === 'reject') {
+        adjustment.status = 'rejected';
+        actor.log('inventory.adjustment.rejected', 'stock_adjustment', adjustment.id, `${adjustment.number} rejected; stock unchanged`);
+        return adjustment;
+      }
+      const balance = bal(adjustment.itemId, adjustment.warehouseId);
+      if (balance.onHand !== adjustment.expectedQty) throw new DemoRuleError(409, 'Stock changed since the count; please count again', 'invalid_state');
+      balance.onHand = adjustment.countedQty;
+      adjustment.status = 'applied';
+      actor.log('inventory.adjustment.applied', 'stock_adjustment', adjustment.id, `${adjustment.number} applied: stock ${adjustment.expectedQty} to ${adjustment.countedQty}`);
+      return adjustment;
     }
   }
 

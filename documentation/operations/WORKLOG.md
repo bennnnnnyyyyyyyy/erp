@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Inventory stock adjustments and cycle counts app
+
+**Objective.** Add the next warehouse workflow after approval policies: physical counts that become ledger adjustments only after manager approval.
+
+**Actions Completed.** Added `Inventory → Stock adjustments`. Staff can select an item and warehouse, enter a counted quantity and reason, submit a count, and cancel their pending count. Owners/admins can approve or reject it. The API uses `inv_submit_adjustment`, `inv_decide_adjustment` and `inv_cancel_adjustment`; the database remains responsible for reserved-stock checks, stale-count refusal, approval enforcement, ledger posting and audit. Added adjustment permissions and demo-mode behavior.
+
+**Database / System Result.** None; `sql/012_stock_adjustments.sql` was already applied and tested, so no migration or production data change was run.
+
+**Safety Status.** Root typecheck passed; shared tests (4) and API tests (26) passed; web Vite production build passed; diff check passed. Browser testing and deployment remain pending Ben's commit/push.
+
 ## 2026-10-30 — Inventory approval policies app
 
 **Objective.** Add the next small Inventory app after reorder levels, while keeping the existing database-enforced approval path.
