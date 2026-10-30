@@ -11,6 +11,15 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Customer invoices (Sales): migration 022, test 018, API, screen
+
+**Objective.** Bill delivered sales orders and show ordered / delivered / invoiced per line with a mismatch flag (`CUSTOMER_INVOICES_PLAN.md`).
+
+**Actions Completed.** `sql/022_customer_invoices.sql`: `sal_invoices`, `sal_invoice_lines` (RLS select-only), `sal_create_invoice` (owner/admin; order must be delivered; invoiced qty never above ordered qty; price copied from the order line; numbers INV-0001...), `sal_void_invoice` (never edit or delete; void frees the quantity); audited. Shared: permissions `sales.invoices.read` and `.manage`, `billingFor` in `packages/shared/src/billing.ts`. API (`apps/api/src/modules/sales/routes.ts`): `GET /v1/sales/invoices`, `GET /v1/sales/orders/:id/billing`, `POST /v1/sales/orders/:id/invoices`, `POST /v1/sales/invoices/:id/void`; order lines now carry their id. Web: Sales > Customer invoices (`CustomerInvoices.tsx`). The plan's two questions were assumed (price from the order line, no PDF); Ben said he answered but the plan file shows no answers.
+
+**Database / System Result.** 022 applied via CLI. Test 018 ALL TESTS PASSED (rolled back): undelivered refused, member refused, price from order line, partial then final invoicing, over-invoicing refused with no stray invoice, void frees quantity, no direct writes, isolation, audit chain. Unit test `apps/api/test/billing.test.ts` (4 cases). Typecheck clean; `npm test` 4 + 30 passed; web build passed; SQL tests 001-018 all pass.
+
+**Safety Status.** Not deployed, so the new routes and screen are not live (the database part is). The screen and API routes were not exercised against the live API or in a browser. The sample-data demo build has no invoices page. Not done: porting screens to real coss components (only the coss tokens and light/dark are in); credit notes, tax, payments, PDF.
 ## 2026-10-30 — Apps on by default for new organizations: sql/021, test 017
 
 **Objective.** Make "all apps on" repeatable for any organization, not just Test Organization.

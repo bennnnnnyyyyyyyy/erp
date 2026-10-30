@@ -1,6 +1,6 @@
 # Customer Invoices Plan
 
-**Module key:** `sales` (second app inside Sales) · **Status:** Proposed, not built · **Depends on:** sales, inventory
+**Module key:** `sales` (second app inside Sales) · **Status:** Built (database, API, screen); not deployed · **Depends on:** sales, inventory
 
 ## Purpose
 Record the bill to a customer for a delivered sales order and show ordered versus delivered versus invoiced per order line, flagging mismatches. Mirrors Supplier Invoices (`SUPPLIER_INVOICES_PLAN.md`).

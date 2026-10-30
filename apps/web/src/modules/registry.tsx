@@ -11,6 +11,7 @@ import { SupplierInvoices } from './purchasing/SupplierInvoices';
 import { NotificationsPage, OutboxPage } from './messaging/Messaging';
 import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
+import { CustomerInvoices } from './sales/CustomerInvoices';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -100,6 +101,7 @@ const SALES_APP: AppDef = {
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
+    { path: '/invoices', label: 'Customer invoices', permission: 'sales.invoices.read', component: CustomerInvoices },
   ],
 };
 

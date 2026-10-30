@@ -3,3 +3,4 @@ export * from './modules';
 export * from './permissions';
 export * from './money';
 export * from './core';
+export * from './billing';

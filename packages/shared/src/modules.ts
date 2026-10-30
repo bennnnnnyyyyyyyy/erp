@@ -83,7 +83,7 @@ export const MODULES: readonly ModuleManifest[] = [
   },
   {
     key: 'sales', name: 'Sales', description: 'Customer orders fulfilled through approved warehouse stock requests.', core: false,
-    dependsOn: ['inventory'], permissions: ['sales.customers.read','sales.customers.manage','sales.orders.read','sales.orders.create','sales.orders.fulfill','sales.orders.manage'],
+    dependsOn: ['inventory'], permissions: ['sales.customers.read','sales.customers.manage','sales.orders.read','sales.orders.create','sales.orders.fulfill','sales.orders.manage','sales.invoices.read','sales.invoices.manage'],
     memberGrants: ['sales.orders.create','sales.orders.fulfill'], suite: 'Sales & Purchasing',
   },
 ];
