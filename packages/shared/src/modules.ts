@@ -48,6 +48,7 @@ export const MODULES: readonly ModuleManifest[] = [
       'inventory.request.approve',
       'inventory.stock.issue',
       'inventory.batches.read',
+      'inventory.forecast.read',
       'inventory.batches.receive',
       'inventory.batches.manage',
     ],

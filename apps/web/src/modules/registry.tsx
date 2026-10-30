@@ -6,6 +6,7 @@ import { GeneralSettings } from './core/settings/GeneralSettings';
 import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
 import { BatchesPage } from './inventory/Batches';
+import { ForecastPage } from './inventory/Forecast';
 import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { SupplierInvoices } from './purchasing/SupplierInvoices';
@@ -16,6 +17,7 @@ import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/S
 import { CustomerInvoices } from './sales/CustomerInvoices';
 import { ExpensesPage, PaymentsPage } from './finance/Finance';
 import { AlertsPage } from './alerts/Alerts';
+import { ProfitOverviewPage } from './finance/ProfitOverview';
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -56,6 +58,7 @@ const INVENTORY_APP: AppDef = {
   pages: [
     { path: '', label: 'Stock on hand', permission: READ, component: StockPage },
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
+    ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/approval-policies', label: 'Approval policies', permission: READ, component: ApprovalPoliciesPage },
     { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
@@ -148,6 +151,7 @@ export const APPS: AppDef[] = [
     key: 'finance', module: 'finance', name: 'Finance', description: 'Expenses and payments: money in, money out',
     suite: 'Finance', basePath: '/finance', pages: [
       { path: '', label: 'Expenses', permission: 'finance.reports.view', component: ExpensesPage },
+      { path: '/overview', label: 'Profit overview', permission: 'finance.reports.view', component: ProfitOverviewPage },
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
     ],
   } satisfies AppDef]),

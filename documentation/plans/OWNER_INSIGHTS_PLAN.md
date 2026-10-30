@@ -179,7 +179,7 @@ A **seed script** (not a migration), loaded only into a clearly named demo organ
 | 3 | **D** demo data generator (cosmetics factory) | everything after is built against real-looking data |
 | 4 | **H** owner home page + insights functions | the heart; first complete version needs 1-3 |
 | 5 | **T** rules, teams, notification settings | built 2026-10-30 (sql/028, test 024); WhatsApp delivery and forecast rule kinds still to do |
-| 6 | **P** forecast and reorder suggestions | needs history from 3 |
+| 6 | **P** forecast and reorder suggestions | built 2026-10-30 (sql/029, test 025); seasonality and a forecast-based alert rule still to do |
 | 7 | **M** manufacturing (BOM, production) if approved | |
 
 ## 14. Testing

@@ -73,7 +73,7 @@ export function OwnerSummary() {
 
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Business summary">
-      <Card to="/finance/payments" title="Am I making or losing money?" tone={profitTone}>
+      <Card to="/finance/overview" title="Am I making or losing money?" tone={profitTone}>
         {last ? (
           <>
             <span className={cn('text-3xl font-semibold tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')}>

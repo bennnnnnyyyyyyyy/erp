@@ -11,6 +11,24 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Stock forecast (slice P): migration 029, test 025, API, page
+
+**Objective.** "Keep working": next unblocked item of the plan order (the WhatsApp slice needs Ben's Meta account first).
+
+**Actions Completed.** `sql/029_stock_forecast.sql`: `inv_forecast()` (any member may read; no costs): usage per day = recency-weighted average of issues in the last 90 days (latest 30 days 50%, previous 30 days 30%, the 30 before 20%); days of cover = (on hand - reserved) / usage; run-out date; lead time = average order-to-receipt days of the item's purchases in the last 12 months (7 if never bought); on order = open purchase orders; suggested order = usage x (lead + 7 safety days) - available - on order, never below zero; confidence `good` (8+ issues over 60+ days), `thin` (a guess) or `none` (no use in 90 days, no forecast shown). API `GET /v1/inventory/forecast` (permission `inventory.forecast.read`, granted to members like other read keys). Web: Inventory > Stock forecast with three headline counts, a table sorted by days left, a "Solid history / Thin: a guess" label per item, and the method written under the table. Not built: seasonality, a forecast-based alert rule kind, per-warehouse forecast.
+
+**Database / System Result.** 029 applied via CLI. Test `025_stock_forecast` is a known-answer test and PASSES (rolled back): 200 received, 60 issued in the latest 30 days and 30 in the 30 before = 1.3 per day, 110 available, 84 days of cover, run-out date today + 84, thin confidence with 3 issues, lead 7; a nearly-out item gets a reorder suggestion; an unused item gets no forecast; a long-history item is good; purchases set lead time 10 and subtract 4 already on order; ordering soonest first with unused items last; isolation; anonymous refused. Run on the cosmetics demo: sunscreen soonest (35 days, 96/day), most finished goods 60-140 days, packaging items thin. Because the demo history ends last month, the latest 30 days are empty and daily rates are underestimated (the demo overstates cover). Typecheck clean; web build passed.
+
+**Safety Status.** NOT deployed, not seen in a browser. Full test run after this entry: see the summary given to Ben.
+## 2026-10-30 — Profit overview page (the big version of the "making or losing money" card)
+
+**Objective.** Ben: clicking the card on the owner home page should open a bigger dashboard.
+
+**Actions Completed.** New page Finance > Profit overview (`apps/web/src/modules/finance/ProfitOverview.tsx`, route `/finance/overview`, permission `finance.reports.view`): four headline boxes (result for 12 months with margin, sales, costs split into cost of goods and running costs, months in the red with best and weakest month), a large 12-month chart of sales against total costs with money axis and a green/red result dot per month, and a month-by-month table with margin and a 12-month total row. The home card now links there (it linked to Payments). Uses the existing `GET /v1/finance/insights` numbers: no new database or API change.
+
+**Database / System Result.** None. Typecheck clean; web build passed.
+
+**Safety Status.** NOT deployed and NOT seen in a browser (layout, chart scaling and dark-mode colours are unverified). The current month shows "nothing recorded" until it has activity.
 ## 2026-10-30 — Alerts and triggers app (slice T): migration 028, test 024, API, screen, starter rules for the demo
 
 **Objective.** Ben: "start working on the alert and triggers app" (`OWNER_INSIGHTS_PLAN.md` section 6).

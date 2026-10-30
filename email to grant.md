@@ -18,7 +18,7 @@ NEXT APPS (planned order, no dates)
 
 1. Alerts and triggers (built, goes live with the next deploy): rules such as "item below this quantity", "batch expires within N days", "key supplier late". A settings screen decides who is told what (teams such as Purchasing, Warehouse, Management).
 2. WhatsApp approvals and tasks: approve or reject by reply, assign tasks to warehouse staff, chase slow approvers. Needs the Meta developer account and a real-phone test first.
-3. Stock-out forecast: when each item will run out, from the company's own sales history, with a "thin data, treat as a guess" label.
+3. Stock-out forecast (built, goes live with the next deploy): when each item will run out, from the company's own sales history, with a "thin data, treat as a guess" label.
 4. Company-wide language (Arabic or English), chosen when the company signs up. Arabic text needs a native-speaker review.
 5. Manufacturing (recipes and production orders), later; until then sample profit is approximate.
 
