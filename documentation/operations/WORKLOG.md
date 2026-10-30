@@ -11,6 +11,15 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Forecast alert rule (alerts app): migration 030, test 026
+
+**Objective.** Ben: "build the forecast alert rule next".
+
+**Actions Completed.** `sql/030_forecast_alert_rule.sql`: new rule kind `forecast_stockout` ("tell these people when an item has N days of stock left or fewer", for every item or one item). The forecast (sql/029) is split into an internal `inv__forecast_for(org)` (no caller check, not callable by users) so the evaluator, which runs without a signed-in user, can use it; `inv_forecast()` is now a wrapper with the same guard and ordering. The rule table constraints were replaced to accept the new kind; `alr_run` was replaced (same digest, repeat and recipient logic). The message states days left, run-out date, available stock, daily use, whether the history is solid or THIN (a guess), and the suggested order. Items with no use in 90 days are ignored. API `KINDS` and the Alerts page know the new kind. Demo: seed 005 gained a starter rule "Will run out within 45 days (forecast)" for Purchasing.
+
+**Database / System Result.** 030 applied via CLI. Test `026_forecast_alert_rule` PASSES (rolled back): nearly-out F-2 (about 4 days) fires once to the Purchasing team member, F-1 (84 days) and F-3 (no use) do not; text carries "day(s) left", "using 1.5", "suggested order" and "THIN history"; no repeat inside the interval; an item-specific rule (100 days) fires for F-1 only and does not report F-2; a rule without a number of days is refused; a member cannot create it; the public forecast still returns the soonest item first; the older low-stock rule kind still works after the evaluator was replaced; audit chain intact. Tests 024 and 025 re-run PASS. Live demo: the first run queued 1 alert (Joseph: "Running out soon: F-SUN", 35 days).
+
+**Safety Status.** NOT deployed (the job and screen change are not live), not seen in a browser. Not built: a rule that reacts to confidence only, quiet hours, WhatsApp delivery of alerts.
 ## 2026-10-30 — Stock forecast (slice P): migration 029, test 025, API, page
 
 **Objective.** "Keep working": next unblocked item of the plan order (the WhatsApp slice needs Ben's Meta account first).

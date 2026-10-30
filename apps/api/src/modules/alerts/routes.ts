@@ -11,7 +11,7 @@ import { requirePermission } from '../../middleware/tenant';
 export const alertsRoutes = new Hono<AppEnv>();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const KINDS = ['stock_below', 'expiry_within', 'receivable_overdue', 'profit_negative'];
+const KINDS = ['stock_below', 'expiry_within', 'receivable_overdue', 'profit_negative', 'forecast_stockout'];
 const ROLES = ['owner', 'admin', 'member', 'viewer'];
 const orgOf = (c: Context<AppEnv>) => c.var.tenant.orgId;
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
@@ -97,7 +97,7 @@ alertsRoutes.post('/rules', requirePermission('alerts.rules.manage'), async (c) 
   if (!name || !KINDS.includes(kind) || (itemId && !UUID_RE.test(itemId)) || (threshold !== null && (!Number.isFinite(threshold) || threshold < 0)) || !Number.isInteger(repeatHours) || repeatHours < 1 || repeatHours > 720) {
     invalid('A name, a rule type, and valid numbers are required');
   }
-  if ((kind === 'expiry_within' || kind === 'receivable_overdue') && threshold === null) invalid('This rule needs a number of days');
+  if ((kind === 'expiry_within' || kind === 'receivable_overdue' || kind === 'forecast_stockout') && threshold === null) invalid('This rule needs a number of days');
   const id = await callRpc<string>(userDb(c), 'alr_create_rule', { p_name: name, p_kind: kind, p_item_id: itemId || null, p_threshold: threshold, p_repeat_hours: repeatHours, p_recipients: parseRecipients(b.recipients) });
   return ok(c, { id }, 201);
 });

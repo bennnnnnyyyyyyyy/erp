@@ -40,3 +40,16 @@ end $$;
 
 select (select count(*) from public.alr_rules r join public.organizations o on o.id = r.org_id where o.slug = 'demo-cosmetics') as rules,
        (select count(*) from public.alr_teams t join public.organizations o on o.id = t.org_id where o.slug = 'demo-cosmetics') as teams;
+
+-- Added with sql/030: a forecast-based rule (needs sql/030). Rerunnable.
+do $$
+declare oid uuid; t_pur uuid; uo uuid; r uuid;
+begin
+  select id into oid from public.organizations where slug = 'demo-cosmetics' and deleted_at is null;
+  if oid is null or exists (select 1 from public.alr_rules where org_id = oid and kind = 'forecast_stockout') then return; end if;
+  select id into t_pur from public.alr_teams where org_id = oid and name = 'Purchasing';
+  select id into uo from auth.users where lower(email) = 'chris.johnson.wiz@gmail.com';
+  insert into public.alr_rules (org_id, name, kind, threshold, repeat_hours, created_by) values (oid, 'Will run out within 45 days (forecast)', 'forecast_stockout', 45, 72, uo) returning id into r;
+  insert into public.alr_rule_recipients (org_id, rule_id, team_id) values (oid, r, t_pur);
+  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary) values (oid, uo, 'demo.alert_rules_seeded', 'organization', oid::text, 'Starter forecast alert rule loaded');
+end $$;

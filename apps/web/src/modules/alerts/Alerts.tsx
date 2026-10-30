@@ -14,13 +14,14 @@ type Rule = { id: string; name: string; kind: Kind; itemId: string | null; thres
 type Team = { id: string; name: string; userIds: string[] };
 type Person = { userId: string; name: string };
 type Item = { id: string; sku: string; name: string };
-type Kind = 'stock_below' | 'expiry_within' | 'receivable_overdue' | 'profit_negative';
+type Kind = 'stock_below' | 'expiry_within' | 'receivable_overdue' | 'profit_negative' | 'forecast_stockout';
 
 const KIND: Record<Kind, { label: string; hint: string; unit?: string }> = {
   stock_below: { label: 'Stock is running low', hint: 'Leave the number empty to use each item\'s own reorder level.', unit: 'units or fewer available' },
   expiry_within: { label: 'A batch is about to expire', hint: 'Also tells you about batches that already expired.', unit: 'days before expiry' },
   receivable_overdue: { label: 'A customer invoice is late', hint: 'Counted from the invoice date.', unit: 'days after the invoice date' },
   profit_negative: { label: 'The month is losing money', hint: 'Sales minus cost of goods minus expenses, this month so far.' },
+  forecast_stockout: { label: 'An item will run out soon (forecast)', hint: 'Uses the Stock forecast: the message says how many days are left and how reliable the guess is. Items nobody used in 90 days are ignored.', unit: 'days of stock left, or fewer' },
 };
 const ROLE_LABEL: Record<string, string> = { owner: 'All owners', admin: 'All admins', member: 'All staff', viewer: 'All viewers' };
 
@@ -51,7 +52,7 @@ export function AlertsPage() {
     ...people.data.map((p) => ({ value: `user:${p.userId}`, label: p.name })),
   ];
   const itemLabel = (id: string | null) => (id ? (() => { const i = items.data?.find((x) => x.id === id); return i ? `${i.sku} · ${i.name}` : 'one item'; })() : 'every item');
-  const needsNumber = f.kind === 'expiry_within' || f.kind === 'receivable_overdue';
+  const needsNumber = f.kind === 'expiry_within' || f.kind === 'receivable_overdue' || f.kind === 'forecast_stockout';
   const parse = (to: string): Recipient => { const [type, id] = to.split(':'); return type === 'role' ? { type: 'role', role: id } : { type: type as 'team' | 'user', id }; };
 
   return (
@@ -64,7 +65,7 @@ export function AlertsPage() {
       <div className="table-wrap"><table><thead><tr><th>Rule</th><th>When</th><th>Who is told</th><th>Repeat after</th><th>Fired</th><th>State</th><th></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
-            <td>{KIND[r.kind].label}{r.kind === 'stock_below' ? ` (${itemLabel(r.itemId)}${r.threshold !== null ? `, ${r.threshold} or fewer` : ', at its reorder level'})` : r.threshold !== null ? `: ${r.threshold} ${KIND[r.kind].unit}` : ''}</td>
+            <td>{KIND[r.kind].label}{r.kind === 'stock_below' ? ` (${itemLabel(r.itemId)}${r.threshold !== null ? `, ${r.threshold} or fewer` : ', at its reorder level'})` : r.kind === 'forecast_stockout' ? ` (${itemLabel(r.itemId)}): ${r.threshold} ${KIND[r.kind].unit}` : r.threshold !== null ? `: ${r.threshold} ${KIND[r.kind].unit}` : ''}</td>
             <td>{r.recipients.map(recipientLabel).join(', ')}</td><td>{r.repeatHours} h</td>
             <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> · last {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
             <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? 'On' : 'Off'} /></td>
@@ -87,7 +88,7 @@ export function AlertsPage() {
                 {(Object.keys(KIND) as Kind[]).map((k) => <option key={k} value={k}>{KIND[k].label}</option>)}
               </select>
             </label>
-            {f.kind === 'stock_below' && (
+            {(f.kind === 'stock_below' || f.kind === 'forecast_stockout') && (
               <label>For
                 <select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">Every item</option>{items.data.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select>
               </label>
