@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { MyInvitation } from '@erp/shared';
 import { supabase } from '../lib/supabase';
+import { CreateCompany } from './CreateCompany';
 
 type OrgOption = { id: string; name: string };
 type InvitationRow = { id: string; org_id: string; org_name: string; role: MyInvitation['role']; invited_by_name: string | null; created_at: string };
@@ -13,6 +14,7 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
   const [invitations, setInvitations] = useState<MyInvitation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(async (autoOpen: boolean) => {
     const [orgRes, invRes] = await Promise.all([
@@ -52,6 +54,11 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
   if (!orgs && error) return <main className="center"><p className="error">{error}</p></main>;
   if (!orgs) return <main className="center"><p className="muted">Loading organizations…</p></main>;
 
+  // Brand-new account with nothing waiting for them: this is sign-up step two, so ask for the company right away.
+  if (creating || (orgs.length === 0 && invitations.length === 0)) {
+    return <CreateCompany first={orgs.length === 0} onCreated={onPick} onCancel={orgs.length > 0 ? () => setCreating(false) : undefined} />;
+  }
+
   return (
     <main className="center">
       <div className="card stack">
@@ -77,12 +84,15 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
         )}
         <h1>Choose an organization</h1>
         {error && <p className="error">{error}</p>}
-        {orgs.length === 0 && <p className="muted">You aren't a member of any organization yet. Ask an admin to invite you.</p>}
+        {orgs.length === 0 && <p className="muted">Accept an invitation above, or set up your own company.</p>}
         {orgs.map((o) => (
           <button key={o.id} onClick={() => onPick(o.id)}>
             {o.name}
           </button>
         ))}
+        <button className="secondary" onClick={() => setCreating(true)}>
+          Create a new company
+        </button>
         <button className="secondary" onClick={() => supabase.auth.signOut()}>
           Sign out
         </button>
