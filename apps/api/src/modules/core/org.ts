@@ -101,3 +101,11 @@ orgRoutes.post('/language', requirePermission('core.org.manage'), async (c) => {
   await callRpc<string>(userDb(c), 'core_set_language', { p_language: language });
   return ok(c, { language });
 });
+
+// Hide or show the getting-started tutorial (sql/032). Owners and admins only.
+orgRoutes.post('/tutorial', requirePermission('core.org.manage'), async (c) => {
+  const show = (await jsonBody(c)).show;
+  if (typeof show !== 'boolean') invalid('show must be true or false');
+  await callRpc<boolean>(userDb(c), 'core_set_tutorial', { p_show: show });
+  return ok(c, { show });
+});

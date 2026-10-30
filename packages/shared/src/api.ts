@@ -15,7 +15,7 @@ export type Role = 'owner' | 'admin' | 'member' | 'viewer';
 export type SessionInfo = {
   userId: string;
   email: string;
-  org: { id: string; name: string; slug: string; defaultCurrency: string; timezone: string; dateFormat: string; language: 'en' | 'ar' } | null;
+  org: { id: string; name: string; slug: string; defaultCurrency: string; timezone: string; dateFormat: string; language: 'en' | 'ar'; showTutorial: boolean } | null;
   role: Role | null;
   permissions: string[];
   modules: string[];

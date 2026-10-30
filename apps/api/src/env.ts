@@ -27,6 +27,7 @@ export type Tenant = {
   timezone: string;
   dateFormat: string;
   language: 'en' | 'ar';
+  showTutorial: boolean;
   role: Role;
   permissions: string[];
   modules: string[];

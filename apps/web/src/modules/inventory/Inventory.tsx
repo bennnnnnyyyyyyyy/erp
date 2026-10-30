@@ -1,5 +1,5 @@
 import { useState, type CSSProperties, type FormEvent } from 'react';
-import type { AuditEntry } from '@erp/shared';
+import { hasPermission, type AuditEntry } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
@@ -100,14 +100,48 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
   );
 }
 
+function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [form, setForm] = useState({ code: '', name: '', nameAr: '' });
+  const [error, setError] = useState<string | null>(null);
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api('/v1/inventory/warehouses', { method: 'POST', body: JSON.stringify(form) });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  return (
+    <Modal title="Add warehouse" onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <p className="muted small">A warehouse is any place you keep stock: a store room, a cold room, a shelf area. Items are received into one.</p>
+        <div className="form-row">
+          <label>Short code<input required maxLength={32} placeholder="MAIN" value={form.code} onChange={set('code')} /></label>
+          <label>Name<input required placeholder="Main warehouse" value={form.name} onChange={set('name')} /></label>
+        </div>
+        <label>Name in Arabic (optional)<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        {error && <p className="error">{error}</p>}
+        <div className="form-actions"><button type="submit">Add warehouse</button></div>
+      </form>
+    </Modal>
+  );
+}
+
 export function StockPage() {
   const cat = useCatalog();
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
   const requests = useLoad(() => api<DemoRequest[]>('/v1/inventory/requests'));
   const [warehouseId, setWarehouseId] = useState('all');
   const [adding, setAdding] = useState(false);
+  const [addingWarehouse, setAddingWarehouse] = useState(false);
   const session = useSession();
   const canAdd = session.role !== 'viewer';
+  const canAddWarehouse = hasPermission(session.permissions, 'inventory.warehouses.manage');
 
   const rows: StockLine[] = (cat.items.data ?? []).map((i) => {
     const mine = (stock.data ?? []).filter((s) => s.itemId === i.id && (warehouseId === 'all' || s.warehouseId === warehouseId));
@@ -184,13 +218,18 @@ export function StockPage() {
                 <option value="all">All warehouses</option>
                 {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
-              {canAdd && <button onClick={() => setAdding(true)}>Add item</button>}
+              {canAddWarehouse && <button className="secondary" onClick={() => setAddingWarehouse(true)}>Add warehouse</button>}
+              {canAdd && (cat.warehouses.data?.length ?? 0) > 0 && <button onClick={() => setAdding(true)}>Add item</button>}
             </>
           }
         />
       ) : (
         <p className="muted">Loading…</p>
       )}
+      {cat.ready && (cat.warehouses.data?.length ?? 0) === 0 && (
+        <p className="notice">{canAddWarehouse ? 'Start by adding your first warehouse (any place you keep stock), then add items to it.' : 'No warehouse exists yet. Ask an owner or admin to add one.'}</p>
+      )}
+      {addingWarehouse && <AddWarehouseModal onClose={() => setAddingWarehouse(false)} onDone={() => { setAddingWarehouse(false); cat.warehouses.reload(); stock.reload(); }} />}
       {adding && cat.warehouses.data && (
         <AddItemModal warehouses={cat.warehouses.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); cat.items.reload(); stock.reload(); }} />
       )}
