@@ -11,6 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Added all Auth users to Test Organization
+
+**Objective.** During testing, make every existing Supabase Auth account available in the single Test Organization.
+
+**Actions Completed.** Read the live Auth users and memberships, preserved the existing `ben@prime-ad.com` owner and `ben.arthur.wiz@gmail.com` member, and added the other six Auth accounts to Test Organization as regular members. Added matching `member.added` audit entries in the same transaction. No roles in the other organizations were changed.
+
+**Database / System Result.** Test Organization now has 8 active memberships: 1 owner and 7 members. The added accounts are the three demo users and three concurrency-test users.
+
+**Safety Status.** This was an explicitly authorized additive data operation against the named Test Organization. No users were deleted, disabled or moved from another organization. The app should be refreshed before checking Settings → Users.
+
+## 2026-10-30 — Deploy stock adjustments app via GitHub Actions
+
+**Objective.** Publish the Inventory stock-adjustment app after the automatic deployment workflow was enabled.
+
+**Actions Completed.** GitHub Actions run `41084167662` passed the typecheck, shared/API tests and web build, then deployed both the `erp-api` Worker and `erp-live` Pages site from `main`.
+
+**Database / System Result.** None; the existing stock-adjustment migration was reused and no database mutation was run by the deployment.
+
+**Safety Status.** CI and both Cloudflare deployment jobs completed successfully. The Node.js 20 messages are third-party action deprecation warnings, not deployment errors. Manual browser refresh and click-through remain needed.
+
 ## 2026-10-30 — Inventory stock adjustments and cycle counts app
 
 **Objective.** Add the next warehouse workflow after approval policies: physical counts that become ledger adjustments only after manager approval.
