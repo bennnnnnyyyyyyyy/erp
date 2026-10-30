@@ -93,6 +93,16 @@ const DEMO_SALES_APP: AppDef = {
   ],
 };
 
+const SALES_APP: AppDef = {
+  key: 'sales', module: 'sales', name: 'Sales', description: 'Customer orders fulfilled through approved warehouse stock requests',
+  suite: 'Sales & Purchasing', basePath: '/sales', pages: [
+    { path: '', label: 'Sales orders', permission: 'sales.orders.read', component: SalesOrders },
+    { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
+    { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
+    { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
+  ],
+};
+
 // Slice 2 (documentation/plans/TASKS_AND_OUTBOX_PLAN.md). Real API only: the sample-data demo has no backend for these.
 const TASKS_APP: AppDef = {
   key: 'tasks',
@@ -124,7 +134,7 @@ export const APPS: AppDef[] = [
   INVENTORY_APP,
   ...(demoMode ? [] : [TASKS_APP, MESSAGING_APP]),
   PURCHASING_APP,
-  ...(demoMode ? [DEMO_SALES_APP] : []),
+  ...(demoMode ? [DEMO_SALES_APP] : [SALES_APP]),
   {
     key: 'settings',
     module: 'core',

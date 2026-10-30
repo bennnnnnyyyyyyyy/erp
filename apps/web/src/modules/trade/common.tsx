@@ -7,6 +7,7 @@ import type { Party } from '../../lib/demoTrade';
 import { Link, navigate } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { hasPermission } from '@erp/shared';
 
 // DEMO ONLY: shared pieces for the sample purchasing and sales screens (lib/demoTrade.ts).
 
@@ -27,7 +28,7 @@ export const toMinor = (text: string) => Math.round((Number(text) || 0) * 100);
 
 // ------------------------------------------------------------------ suppliers and customers
 
-export function PartyList({ title, endpoint, noun }: { title: string; endpoint: string; noun: string }) {
+export function PartyList({ title, endpoint, noun, addPermission }: { title: string; endpoint: string; noun: string; addPermission?: string }) {
   const parties = useLoad(() => api<Party[]>(endpoint));
   const session = useSession();
   const [adding, setAdding] = useState(false);
@@ -65,7 +66,7 @@ export function PartyList({ title, endpoint, noun }: { title: string; endpoint: 
           rows={parties.data}
           columns={columns}
           rowKey={(p) => p.id}
-          toolbar={session.role !== 'viewer' ? <button onClick={() => setAdding(true)}>Add {noun}</button> : undefined}
+          toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <button onClick={() => setAdding(true)}>Add {noun}</button> : undefined}
         />
       ) : (
         <p className="muted">Loading…</p>

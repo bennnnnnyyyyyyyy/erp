@@ -81,6 +81,11 @@ export const MODULES: readonly ModuleManifest[] = [
     memberGrants: ['purchasing.orders.receive'],
     suite: 'Sales & Purchasing',
   },
+  {
+    key: 'sales', name: 'Sales', description: 'Customer orders fulfilled through approved warehouse stock requests.', core: false,
+    dependsOn: ['inventory'], permissions: ['sales.customers.read','sales.customers.manage','sales.orders.read','sales.orders.create','sales.orders.fulfill','sales.orders.manage'],
+    memberGrants: ['sales.orders.create','sales.orders.fulfill'], suite: 'Sales & Purchasing',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {
