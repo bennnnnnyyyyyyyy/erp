@@ -12,6 +12,8 @@ const AR: Record<string, string> = {
   'Switch organization': 'تبديل المؤسسة',
   'Sign out': 'تسجيل الخروج',
   Language: 'اللغة',
+  'Switch to light mode': 'التبديل إلى الوضع الفاتح',
+  'Switch to dark mode': 'التبديل إلى الوضع الداكن',
   'Page not found': 'الصفحة غير موجودة',
   "This page doesn't exist or you don't have access to it.": 'هذه الصفحة غير موجودة أو ليس لديك صلاحية الوصول إليها.',
   'Back to apps': 'العودة إلى التطبيقات',

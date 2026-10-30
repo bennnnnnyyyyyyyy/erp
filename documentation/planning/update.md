@@ -1,5 +1,10 @@
 # Update (paste this into the chat)
 
+## Latest (2026-10-30, evening)
+- Sales gap closed in the database (`sql/020`, test 016 passes). API display tweak not deployed. Customer Invoices plan written (`documentation/plans/CUSTOMER_INVOICES_PLAN.md`), two questions inside; no code yet.
+- Supplier Invoices already exist (sql/018, test 014, API and screen, deployed); not rebuilt.
+- Click: enable Sales in Settings > Apps for Test Organization, create a customer and order, request stock, reject it as a manager, then "Request stock" again.
+
 Last updated: 2026-10-30 (morning). Standing brief: `neworder.md`.
 
 ## MORNING SUMMARY (overnight queue)

@@ -11,6 +11,55 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Apps on by default for new organizations: sql/021, test 017
+
+**Objective.** Make "all apps on" repeatable for any organization, not just Test Organization.
+
+**Actions Completed.** `sql/021_enable_all_modules.sql`: `core_enable_all_modules(org)` (service role only) switches on inventory, tasks, messaging, purchasing and sales, audited, repeat is a no-op. Not a trigger (the SQL tests add their own module rows after `bootstrap_organization`). Whatever creates an organization (onboarding, seed script) must call it; no API route creates organizations today. `sql/tests/017_enable_all_modules.sql` added; README rows added.
+
+**Database / System Result.** Applied with the CLI (signed-in users cannot call it). Test 017 ALL TESTS PASSED (rolled back); tests 001-017 all pass.
+
+**Safety Status.** Additive function, no data changed. Not deployed. The module list in the function must be extended when a new app ships.
+## 2026-10-30 — All apps on for Test Organization; coss look on Tailwind v4; light/dark toggle
+
+**Objective.** Ben asked to turn apps on by default, make the UI look less improvised using coss ui, and add a light/dark toggle.
+
+**Actions Completed.**
+- Cloned `cosscom/coss` to `C:\Users\ben.arthur\Desktop\coss` (outside this repo, reference only; its `packages/ui/src/styles/theme.css` supplied the tokens).
+- Added `tailwindcss` and `@tailwindcss/vite` to `apps/web`. `apps/web/src/theme.css` holds the coss colour tokens (light and `.dark`), 0.625rem radius, and loads Tailwind's theme and utilities WITHOUT its reset, so existing screens are not broken. `apps/web/src/styles.css` old colour names now map onto these tokens (the warm paper/green/amber look, dark bar and hazard stripe are gone; light topbar with a hairline border; neutral primary).
+- `apps/web/src/lib/theme.tsx`: light, dark or follow the system, remembered in the browser, `dark` class on `<html>`; sun/moon button in the top bar (Shell, so the sample-data build has it too). Two Arabic strings added (machine draft).
+- Data: switched on inventory, tasks, messaging, purchasing and sales for Test Organization (CLI, additive, one audit entry per module that was off). Demo and concurrency organizations untouched.
+
+**Database / System Result.** Test Organization modules now: inventory, messaging, purchasing, sales, tasks; audit chain verifies (0 broken). Typecheck clean, `npm test` 4 + 26 passed, web build passed.
+
+**Safety Status.** NOT deployed. Not looked at in a browser by me, so how it looks is not verified. A default-on rule for NEW organizations is not built: SQL tests insert their own module rows after `bootstrap_organization`, so a trigger would break them; needs a decision. Existing screens still use the old class-based CSS, not coss components; porting screens to coss components (Base UI) is the next step.
+## 2026-10-30 — Sales gap closed: migration 020 (retry after rejection, no cancel after delivery); Customer Invoices plan
+
+**Objective.** SALES_PLAN said a rejected or cancelled request lets the order retry and an issued one means delivered. `sql/019` allowed neither retry nor protected delivered orders.
+
+**Actions Completed.** `sql/020_sales_retry.sql` replaces `sal_request_stock` (allowed again when the linked request is rejected or cancelled; blocked while live or issued; audit says "retry after ...") and `sal_cancel_order` (refuses a delivered order; only cancels a still-live request). `apps/api/src/modules/sales/routes.ts` shows such an order as `open` again. `sql/tests/016_sales_retry.sql` added. `documentation/plans/CUSTOMER_INVOICES_PLAN.md` proposed (not built). Deleted `codex last turn.md` at Ben's request.
+
+**Database / System Result.** 020 applied to the linked project with the CLI. Test 016 ALL TESTS PASSED (rolled back). Typecheck clean; `npm test` 4 + 26 passed; SQL tests 001-016 all passed.
+
+**Safety Status.** Additive function replacement, no data changed. The API tweak in `routes.ts` is NOT deployed (the Worker `6ed077a4-c091-4ae4-b243-b287cdb0c54d` was deployed before it). Sales stays switched off for Test Organization.
+## 2026-10-30 — Manual deploy of Worker and Pages (sales, names, language switch)
+
+**Objective.** Get the latest code live while CI run `41099967978` sat queued.
+
+**Actions Completed.** Typecheck clean, `npm test` (4 shared + 26 API) passed, web build passed. Deployed with wrangler from this machine (same commands and variables as `.github/workflows/ci-deploy.yml`): Worker `erp-api` and Pages `erp-live`.
+
+**Database / System Result.** Worker version `6ed077a4-c091-4ae4-b243-b287cdb0c54d` (previous version: see Cloudflare dashboard, versions list of `erp-api`; the one before the sales code was deployed by CI run `41096417103`). Pages deployment `c06cc1d4` (https://c06cc1d4.erp-live.pages.dev, promoted to https://erp-live.pages.dev). Live check as grant (member): `/v1/core/people` 200, `/v1/purchasing/orders` 200, `/v1/sales/orders` 403 because the Sales module is not switched on for Test Organization (enabled modules there: inventory, messaging, purchasing, tasks). Not opened in a browser.
+
+**Safety Status.** No database change. The queued CI run may later deploy the same code over this; harmless. Sales gap found: SALES_PLAN says an order becomes delivered once its request is issued and can retry after rejection, but `sql/019` only has statuses open, stock_requested, cancelled. Not built yet.
+## 2026-10-30 — Sales orders: migration 019 applied (after a syntax fix)
+
+**Objective.** Apply the staged `sql/019_sales_orders.sql` and prove it with test 015.
+
+**Actions Completed.** The first run failed: `sal_create_order` closed an `if` with `end;` instead of `end if;` (Postgres syntax error, nothing was created). Fixed that one token in `sql/019_sales_orders.sql` and re-ran it through the Supabase CLI.
+
+**Database / System Result.** Applied to the linked project: `sal_customers`, `sal_orders`, `sal_order_lines` exist with RLS. `sql/tests/015_sales_orders.sql` reached ALL TESTS PASSED (everything rolled back). Tests 001-014 re-run at the same time, all passed. Note: the Sales code was already pushed (commit b512fdf) and its CI deploy started before this migration existed, so Sales screens would have errored until now.
+
+**Safety Status.** Additive only; no data changed or deleted. The one-token fix to 019 is an uncommitted working-tree change that Ben must commit; the migration file in git still has the bug until then.
 ## 2026-10-30 — Purchasing & Receiving module: migration 017
 
 **Objective.** Turn the sample purchasing screen into the first real purchasing workflow: suppliers, purchase orders and controlled receipt of goods into warehouse stock.

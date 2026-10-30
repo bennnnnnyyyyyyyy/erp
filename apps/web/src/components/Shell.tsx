@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { arabicStringCount, useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
+import { useTheme } from '../lib/theme';
 import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
 import { useSession } from '../session';
@@ -61,6 +62,7 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
   const { t } = useI18n();
+  const { dark, toggle } = useTheme();
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);
@@ -91,6 +93,9 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         <span className="topbar-org">{session.org?.name}</span>
         {route && <span className="topbar-app">/ {route.app.name}</span>}
         <span className="spacer" />
+        <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
+          {dark ? '☀' : '☾'}
+        </button>
         <NotificationBell />
         <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
       </header>

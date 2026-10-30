@@ -26,6 +26,8 @@ Run the whole file at once with nothing else in the editor.
 | `010_audit_check.sql` | O3: chain check runs, hourly skip, alert on a broken chain |
 | `011_outbox_retention.sql` | O9: dry run default, only old finished rows, audit kept, minimum 7 days, closed to users |
 | `012_org_people.sql` | X7: names of own organization's active members only |
+| `016_sales_retry.sql` | Sales: retry after rejection, no second live request, delivered order not cancellable |
+| `017_enable_all_modules.sql` | all apps on, audited, repeat no-op, closed to users |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 

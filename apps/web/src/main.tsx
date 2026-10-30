@@ -11,20 +11,24 @@ import { DemoApp } from './DemoApp';
 import { EnvBanner, demoEnvironment } from './components/EnvBanner';
 import { demoMode } from './lib/demo';
 import { I18nProvider } from './lib/i18n';
+import { ThemeProvider } from './lib/theme';
+import './theme.css';
 import './styles.css';
 
 // The sample-data build has its own bar (with the role switcher). A real build made for a demo gets the plain one.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <I18nProvider>
-      {demoMode ? (
-        <DemoApp />
-      ) : (
-        <>
-          {demoEnvironment && <EnvBanner />}
-          <App />
-        </>
-      )}
-    </I18nProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        {demoMode ? (
+          <DemoApp />
+        ) : (
+          <>
+            {demoEnvironment && <EnvBanner />}
+            <App />
+          </>
+        )}
+      </I18nProvider>
+    </ThemeProvider>
   </StrictMode>,
 );
