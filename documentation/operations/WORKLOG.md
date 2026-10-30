@@ -11,6 +11,17 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Company-wide language setting (sql/031, test 027) and an overflow fix on the money cards
+
+**Objective.** Ben: "build the language setting next and do a UI check for overflow" (screenshot of the Profit overview: the Sales and Costs figures ran past their boxes).
+
+**Actions Completed.**
+- Language: ONE setting for the whole organization (`organizations.settings.language`, `en` or `ar`, missing = English), replacing the per-browser switch. `sql/031_org_language.sql`: `core_set_language(text)` (owner/admin, audited with before and after, a no-op change writes nothing, other settings kept). Session (`/v1/core/session`) and `/v1/core/org` now carry `language`; `POST /v1/core/org/language`; Settings > General has the selector; the app shell applies the organization's language and text direction (`lang`, `dir=rtl`) whenever the session loads; the user-menu language toggle was removed. The sample-data demo build stays English with its own RTL preview button. Not built: the choice at SIGN-UP (no sign-up flow exists; organizations are created by `bootstrap_organization`, which defaults to English), a translation of the screens beyond the 11 menu strings in `lib/i18n.tsx` (machine draft, needs a native speaker), and right-to-left visual checks.
+- Overflow: the four boxes on the Profit overview sat in a fixed 4-column grid and showed money with decimals at a fixed 30px. Now: the grid is `auto-fit` (as many columns as fit, each at least 17rem), cards have `min-w-0` and `break-words`, headline figures use a size that scales with the window (`clamp`) and show whole currency units (new `lib/money.ts` `formatWhole`, e.g. "EGP 14,974,593"); exact amounts stay in the tables. The same treatment was applied to the owner home cards (21rem minimum, scaled figures, whole units) and the button group in the Alerts table now wraps.
+
+**Database / System Result.** 031 applied via CLI. Test `027_org_language` PASSES (rolled back): default English, owner sets Arabic and the date format setting survives, audit entry with before `en` and after `ar`, same-language change writes no second entry, `fr` and null refused, a member refused and the language unchanged, another organization unaffected and its owner cannot reach ours, anonymous refused, audit chain intact. Typecheck clean; `npm test` 4 + 27.
+
+**Safety Status.** NOT deployed and NOT seen in a browser: I cannot measure layout without one, so the overflow fixes are defensive and unverified at Ben's window width. Other screens were swept by search only (no fixed pixel widths found; tables already scroll inside `.table-wrap`).
 ## 2026-10-30 — Forecast alert rule (alerts app): migration 030, test 026
 
 **Objective.** Ben: "build the forecast alert rule next".

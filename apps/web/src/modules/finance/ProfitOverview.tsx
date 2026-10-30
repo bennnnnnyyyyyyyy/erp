@@ -1,4 +1,5 @@
 import { formatMoney } from '@erp/shared';
+import { formatWhole } from '../../lib/money';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/cn';
 import { useLoad } from '../../lib/useLoad';
@@ -27,6 +28,7 @@ export function ProfitOverviewPage() {
   if (!s) return <section className="page"><p className="muted">Loading…</p></section>;
 
   const money = (n: number) => formatMoney({ amountMinor: n, currency: s.currency });
+  const whole = (n: number) => formatWhole(n, s.currency);
   const months = s.months;
   const sum = (k: 'revenue' | 'cogs' | 'expenses' | 'net') => months.reduce((n, m) => n + m[k], 0);
   const revenue = sum('revenue'), costs = sum('cogs') + sum('expenses'), net = sum('net');
@@ -49,17 +51,17 @@ export function ProfitOverviewPage() {
       <h1>Profit overview</h1>
       <p className="muted">Sales against what it cost to make and run the business, month by month. Cost of goods is the average cost of the stock that was sold; running costs are the expenses you recorded. No VAT. Not an accounts report.</p>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 17rem), 1fr))' }}>
         {[
-          { label: 'Result, last 12 months', value: `${net < 0 ? 'Lost ' : 'Made '}${money(Math.abs(net))}`, tone: net < 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: `${margin.toFixed(1)}% of sales` },
-          { label: 'Sales', value: money(revenue), tone: '', note: 'invoiced to customers' },
-          { label: 'Costs', value: money(costs), tone: '', note: `${money(sum('cogs'))} of goods sold + ${money(sum('expenses'))} running costs` },
+          { label: 'Result, last 12 months', value: `${net < 0 ? 'Lost ' : 'Made '}${whole(Math.abs(net))}`, tone: net < 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: `${margin.toFixed(1)}% of sales` },
+          { label: 'Sales', value: whole(revenue), tone: '', note: 'invoiced to customers' },
+          { label: 'Costs', value: whole(costs), tone: '', note: `${whole(sum('cogs'))} of goods sold + ${whole(sum('expenses'))} running costs` },
           { label: 'Months in the red', value: `${lossMonths} of ${months.length}`, tone: lossMonths > 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: `Best ${monthLong(best.month)}, weakest ${monthLong(worst.month)}` },
         ].map((k) => (
-          <div key={k.label} className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
+          <div key={k.label} className="min-w-0 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
             <div className="text-sm font-medium text-muted-foreground">{k.label}</div>
-            <div className={cn('mt-2 text-3xl font-semibold tracking-tight', k.tone)}>{k.value}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{k.note}</div>
+            <div className={cn('mt-2 break-words font-semibold leading-tight tracking-tight', k.tone)} style={{ fontSize: 'clamp(1.35rem, 2.1vw, 1.875rem)' }}>{k.value}</div>
+            <div className="mt-1 break-words text-xs text-muted-foreground">{k.note}</div>
           </div>
         ))}
       </div>

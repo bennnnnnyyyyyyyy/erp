@@ -34,7 +34,8 @@ export function GeneralSettings() {
   if (form.defaultCurrency !== original.defaultCurrency) changes.defaultCurrency = form.defaultCurrency;
   if (form.timezone !== original.timezone) changes.timezone = form.timezone;
   if (form.dateFormat !== original.dateFormat) changes.dateFormat = form.dateFormat;
-  const dirty = Object.keys(changes).length > 0;
+  const languageChanged = form.language !== original.language;
+  const dirty = Object.keys(changes).length > 0 || languageChanged;
 
   function set<K extends keyof OrgSettings>(key: K, value: OrgSettings[K]) {
     setForm((f) => (f ? { ...f, [key]: value } : f));
@@ -46,7 +47,12 @@ export function GeneralSettings() {
     setSaving(true);
     setError(null);
     try {
-      const updated = await api<OrgSettings>('/v1/core/org', { method: 'PATCH', body: JSON.stringify(changes) });
+      let updated = org.data!;
+      if (Object.keys(changes).length > 0) updated = await api<OrgSettings>('/v1/core/org', { method: 'PATCH', body: JSON.stringify(changes) });
+      if (languageChanged) {
+        await api('/v1/core/org/language', { method: 'POST', body: JSON.stringify({ language: form!.language }) });
+        updated = { ...updated, language: form!.language };
+      }
       org.setData(updated);
       setSaved(true);
       reloadSession();
@@ -94,6 +100,14 @@ export function GeneralSettings() {
               </select>
             </label>
           </div>
+          <label>
+            Language for the whole company
+            <select value={form.language} onChange={(e) => set('language', e.target.value as OrgSettings['language'])}>
+              <option value="en">English (left to right)</option>
+              <option value="ar">العربية: Arabic (right to left)</option>
+            </select>
+            <span className="hint muted">Everyone in the company sees this language. It is chosen when the company signs up and can be changed here. Arabic is a machine draft covering the menus only so far; a native speaker must review it before customers see it.</span>
+          </label>
           <label>
             Time zone
             <input required list="timezones" value={form.timezone} onChange={(e) => set('timezone', e.target.value)} />

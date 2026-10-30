@@ -27,6 +27,7 @@ const org: OrgSettings = {
   defaultCurrency: 'EGP',
   timezone: 'Africa/Cairo',
   dateFormat: 'DD/MM/YYYY',
+  language: 'en' as const,
 };
 
 const members: Member[] = [

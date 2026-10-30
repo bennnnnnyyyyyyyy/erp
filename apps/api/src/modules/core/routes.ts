@@ -27,6 +27,7 @@ coreRoutes.get('/session', (c) => {
       defaultCurrency: tenant.defaultCurrency,
       timezone: tenant.timezone,
       dateFormat: tenant.dateFormat,
+      language: tenant.language,
     },
     role: tenant.role,
     permissions: tenant.permissions,

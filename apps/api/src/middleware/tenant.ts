@@ -56,6 +56,7 @@ export const requireTenant = createMiddleware<AppEnv>(async (c, next) => {
     defaultCurrency: org.default_currency,
     timezone: org.timezone,
     dateFormat: typeof org.settings?.date_format === 'string' ? org.settings.date_format : 'DD/MM/YYYY',
+    language: org.settings?.language === 'ar' ? 'ar' : 'en',
     role: membership.role,
     permissions: defaultPermissionsFor(membership.role),
     modules: [...modules],

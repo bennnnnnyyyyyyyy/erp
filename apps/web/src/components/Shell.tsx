@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { arabicStringCount, useI18n } from '../lib/i18n';
+import { demoMode } from '../lib/demo';
+import { useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
 import { resolveRoute, visibleApps } from '../modules/registry';
@@ -15,7 +16,7 @@ function initials(email: string): string {
 
 function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
-  const { lang, setLang, t } = useI18n();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -44,9 +45,6 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
               {session.org?.name} · {session.role}
             </div>
           </div>
-          <button role="menuitem" className="menu-item" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} title={`${arabicStringCount} Arabic texts, machine draft (shell only)`}>
-            {t('Language')}: {lang === 'ar' ? 'English' : 'العربية'}
-          </button>
           <button role="menuitem" className="menu-item" onClick={onSwitchOrg}>
             {t('Switch organization')}
           </button>
@@ -61,8 +59,13 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
-  const { t } = useI18n();
+  const { t, setLang } = useI18n();
   const { dark, toggle } = useTheme();
+  // The language and text direction belong to the whole organization (Settings > General), not to the person or browser.
+  const orgLanguage = session.org?.language;
+  useEffect(() => {
+    if (!demoMode && orgLanguage) setLang(orgLanguage);
+  }, [orgLanguage, setLang]);
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);

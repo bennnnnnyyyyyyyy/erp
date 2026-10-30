@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { formatMoney, hasPermission } from '@erp/shared';
+import { hasPermission } from '@erp/shared';
+import { formatWhole } from '../../lib/money';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import { Link } from '../../lib/router';
@@ -31,7 +32,7 @@ const TONE: Record<Tone, { dot: string; word: string }> = {
 
 function Card({ to, title, tone, children }: { to: string; title: string; tone?: Tone; children: ReactNode }) {
   return (
-    <Link to={to} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors hover:bg-accent">
+    <Link to={to} className="flex min-w-0 flex-col gap-3 break-words rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors hover:bg-accent">
       <span className="flex items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
         {title}
         {tone && (
@@ -57,7 +58,7 @@ export function OwnerSummary() {
   const s = data.data;
   if (!s) return <p className="muted">Loading the summary…</p>;
 
-  const money = (n: number) => formatMoney({ amountMinor: n, currency: s.currency });
+  const money = (n: number) => formatWhole(n, s.currency);   // a summary: whole currency units fit the cards; exact amounts are in the lists
   const last = s.months[s.months.length - 2];   // last full month
   const now = s.months[s.months.length - 1];    // this month so far
   const prev = s.months[s.months.length - 3];
@@ -72,11 +73,11 @@ export function OwnerSummary() {
   const supplierTone: Tone = (s.topSuppliers[0]?.sharePercent ?? 0) > 40 ? 'bad' : s.singleSourceItems > 0 ? 'watch' : 'good';
 
   return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Business summary">
+    <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label="Business summary">
       <Card to="/finance/overview" title="Am I making or losing money?" tone={profitTone}>
         {last ? (
           <>
-            <span className={cn('text-3xl font-semibold tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')}>
+            <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
               {last.net < 0 ? 'Lost ' : 'Made '}{money(Math.abs(last.net))}
             </span>
             <span className="text-sm text-muted-foreground">in {monthName(last.month)}: sales {money(last.revenue)}, cost of what you sold {money(last.cogs)}, running costs {money(last.expenses)}.</span>
@@ -91,13 +92,13 @@ export function OwnerSummary() {
       </Card>
 
       <Card to="/sales/invoices" title="Money coming in and going out" tone={moneyTone}>
-        <span className="text-3xl font-semibold tracking-tight">{money(s.owedToMeMinor)}</span>
+        <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
         <span className="text-sm text-muted-foreground">customers still owe you{s.overdueMinor > 0 ? <>, of which <b className="text-destructive-foreground">{money(s.overdueMinor)}</b> is more than 30 days late</> : ''}.</span>
         <span className="text-sm">You owe suppliers and for expenses: <b>{money(s.iOweMinor)}</b>.</span>
       </Card>
 
       <Card to="/inventory/requests" title="Waiting for your decision" tone={decisionTone}>
-        <span className="text-3xl font-semibold tracking-tight">{s.decisions.submitted} request{s.decisions.submitted === 1 ? '' : 's'}</span>
+        <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{s.decisions.submitted} request{s.decisions.submitted === 1 ? '' : 's'}</span>
         <span className="text-sm text-muted-foreground">
           {s.decisions.submitted === 0 ? 'Nothing is waiting for approval.' : `The oldest has been waiting ${oldWait < 1 ? 'less than an hour' : `${oldWait} hour${oldWait === 1 ? '' : 's'}`}.`}
           {s.decisions.approvedNotIssued > 0 && ` ${s.decisions.approvedNotIssued} approved and waiting to be handed out.`}
@@ -105,7 +106,7 @@ export function OwnerSummary() {
       </Card>
 
       <Card to="/inventory/batches" title="Stock and expiry" tone={stockTone}>
-        <span className="text-3xl font-semibold tracking-tight">{money(s.stockValueMinor)}</span>
+        <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
         <span className="text-sm text-muted-foreground">of stock on the shelves, at cost.</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
           <li><b className={s.expiry.expired.batches ? 'text-destructive-foreground' : ''}>{s.expiry.expired.batches}</b> batch(es) already expired ({money(s.expiry.expired.valueMinor)})</li>

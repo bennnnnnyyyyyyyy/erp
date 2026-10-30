@@ -38,6 +38,7 @@
       "Edit(./sql/028_*.sql)",
       "Edit(./sql/029_*.sql)",
       "Edit(./sql/030_*.sql)",
+      "Edit(./sql/031_*.sql)",
       "Edit(./documentation/architecture/decisions/**)",
       "Edit(./documentation/research/**)",
       "Edit(./documentation/reviews/**)",

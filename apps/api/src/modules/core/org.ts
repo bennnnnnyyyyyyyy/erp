@@ -27,6 +27,7 @@ function toSettings(row: OrgRow): OrgSettings {
     defaultCurrency: row.default_currency,
     timezone: row.timezone,
     dateFormat: DATE_FORMATS.includes(dateFormat as DateFormat) ? (dateFormat as DateFormat) : 'DD/MM/YYYY',
+    language: row.settings?.language === 'ar' ? 'ar' : 'en',
   };
 }
 
@@ -91,4 +92,12 @@ orgRoutes.patch('/', requirePermission('core.org.manage'), async (c) => {
     p_date_format: update.dateFormat ?? null,
   });
   return ok(c, after);
+});
+
+// One language for the whole organization (sql/031). Owners and admins only; the database function checks, changes and audits.
+orgRoutes.post('/language', requirePermission('core.org.manage'), async (c) => {
+  const language = (await jsonBody(c)).language;
+  if (language !== 'en' && language !== 'ar') invalid('Language must be en or ar');
+  await callRpc<string>(userDb(c), 'core_set_language', { p_language: language });
+  return ok(c, { language });
 });

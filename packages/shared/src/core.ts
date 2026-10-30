@@ -7,6 +7,10 @@ export const ROLES: readonly Role[] = ['owner', 'admin', 'member', 'viewer'];
 export const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
 export type DateFormat = (typeof DATE_FORMATS)[number];
 
+/** One language for the whole organization (sql/031). English reads left to right, Arabic right to left. */
+export const LANGUAGES = ['en', 'ar'] as const;
+export type Language = (typeof LANGUAGES)[number];
+
 export type OrgSettings = {
   id: string;
   name: string;
@@ -14,6 +18,7 @@ export type OrgSettings = {
   defaultCurrency: string;
   timezone: string;
   dateFormat: DateFormat;
+  language: Language;
 };
 
 export type OrgSettingsUpdate = Partial<Pick<OrgSettings, 'name' | 'defaultCurrency' | 'timezone' | 'dateFormat'>>;

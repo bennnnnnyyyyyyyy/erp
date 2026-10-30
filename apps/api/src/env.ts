@@ -26,6 +26,7 @@ export type Tenant = {
   defaultCurrency: string;
   timezone: string;
   dateFormat: string;
+  language: 'en' | 'ar';
   role: Role;
   permissions: string[];
   modules: string[];

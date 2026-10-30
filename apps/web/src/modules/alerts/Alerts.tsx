@@ -69,7 +69,7 @@ export function AlertsPage() {
             <td>{r.recipients.map(recipientLabel).join(', ')}</td><td>{r.repeatHours} h</td>
             <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> · last {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
             <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? 'On' : 'Off'} /></td>
-            <td>{canManage && <span className="form-row">
+            <td>{canManage && <span className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/enabled`, { method: 'POST', body: JSON.stringify({ enabled: !r.enabled }) }); return `${r.name}: ${r.enabled ? 'off' : 'on'}.`; }, reloadAll)}>{r.enabled ? 'Turn off' : 'Turn on'}</Button>
               <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>Send me a test</Button>
               <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/retire`, { method: 'POST' }); return `${r.name} removed (kept in the history).`; }, reloadAll)}>Remove</Button>
