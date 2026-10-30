@@ -7,6 +7,14 @@ export type Bindings = {
   SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_SECRET_KEY?: string;
   SUPABASE_JWKS_URL?: string;
+  // WhatsApp (see lib/whatsapp.ts). Secrets: ACCESS_TOKEN, APP_SECRET, VERIFY_TOKEN.
+  WHATSAPP_ACCESS_TOKEN?: string;
+  WHATSAPP_APP_SECRET?: string;
+  WHATSAPP_VERIFY_TOKEN?: string;
+  WHATSAPP_PHONE_NUMBER_ID?: string;
+  WHATSAPP_GRAPH_VERSION?: string;
+  WHATSAPP_TEMPLATE_NAME?: string;
+  WHATSAPP_TEMPLATE_LANG?: string;
 };
 
 export type AuthUser = { id: string; email: string };

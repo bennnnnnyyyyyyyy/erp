@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { arabicStringCount, useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
 import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
@@ -13,6 +14,7 @@ function initials(email: string): string {
 
 function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
+  const { lang, setLang, t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -41,11 +43,14 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
               {session.org?.name} · {session.role}
             </div>
           </div>
+          <button role="menuitem" className="menu-item" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} title={`${arabicStringCount} Arabic texts, machine draft (shell only)`}>
+            {t('Language')}: {lang === 'ar' ? 'English' : 'العربية'}
+          </button>
           <button role="menuitem" className="menu-item" onClick={onSwitchOrg}>
-            Switch organization
+            {t('Switch organization')}
           </button>
           <button role="menuitem" className="menu-item" onClick={onSignOut}>
-            Sign out
+            {t('Sign out')}
           </button>
         </div>
       )}
@@ -55,6 +60,7 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
+  const { t } = useI18n();
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);
@@ -73,14 +79,14 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
     <div className={route ? 'shell with-sidebar' : 'shell'}>
       <header className="topbar">
         {route && (
-          <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label="Menu">
+          <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')}>
             ☰
           </button>
         )}
         <span className="brand-mark" aria-hidden="true" />
-        <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label="All apps">
+        <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label={t('All apps')}>
           <span className="grid-icon" aria-hidden="true" />
-          Apps
+          {t('Apps')}
         </Link>
         <span className="topbar-org">{session.org?.name}</span>
         {route && <span className="topbar-app">/ {route.app.name}</span>}
@@ -113,9 +119,9 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           </ParamsContext.Provider>
         ) : (
           <section>
-            <h1>Page not found</h1>
+            <h1>{t('Page not found')}</h1>
             <p className="muted">
-              This page doesn't exist or you don't have access to it. <Link to="/">Back to apps</Link>
+              {t("This page doesn't exist or you don't have access to it.")} <Link to="/">{t('Back to apps')}</Link>
             </p>
           </section>
         )}

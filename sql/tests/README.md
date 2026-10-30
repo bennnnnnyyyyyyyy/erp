@@ -17,7 +17,16 @@ Run the whole file at once with nothing else in the editor.
 | `001_core_isolation_and_audit.sql` | Organization isolation (RLS), the `X-Org-Id` header check, role checks, no direct writes, admin-only functions, append-only and chained audit log, TRUNCATE refused |
 | `002_inventory_approval.sql` | Inventory slice: approval blocks stock (even for direct inserts), no self-approval, reservation, ledger append-only, audit per step, isolation, module switch |
 | `003_tasks_and_outbox.sql` | Slice 2: outbox in the same transaction, idempotency, retry with backoff, expiry, reminders and escalation once, task rules, who sees what, no direct writes, a channel cannot change stock, isolation |
+| `004_identity_binding.sql` | S2: codes hashed and unreadable, 10 minutes, 5 tries, secret text wiped, isolation |
+| `005_decision_tokens.sql` | S3: single-use hashed tokens, expiry, wrong sender refused, refusals audited, no direct stock change |
+| `006_task_replies.sql` | S4: reply acknowledges/completes only the sender's own task, refusals audited |
+| `007_approval_policies.sql` | I5: N approvals, no double approval by one person, policy changes audited |
+| `008_stock_adjustments.sql` | I3: adjustments need approval, stale count refused, ledger append-only |
+| `009_reorder_levels.sql` | I6: low-stock messages once, reorder level rules |
+| `010_audit_check.sql` | O3: chain check runs, hourly skip, alert on a broken chain |
+| `011_outbox_retention.sql` | O9: dry run default, only old finished rows, audit kept, minimum 7 days, closed to users |
+| `012_org_people.sql` | X7: names of own organization's active members only |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 
-Status: both files pass (001 run by Ben and via CLI, 002 via CLI, 2026-10-29). Run with `supabase db query --linked -f sql/tests/<file>`. Re-run after every change to `sql/`. Record each run in `documentation/operations/WORKLOG.md`.
+Status: all files 001-012 pass via CLI (re-run 2026-10-30 after the last migration). Also `scripts/concurrency-check.mjs` (parallel actions through real logins, 12 checks, passed 2026-10-30). Run with `supabase db query --linked -f sql/tests/<file>`. Re-run after every change to `sql/`. Record each run in `documentation/operations/WORKLOG.md`.

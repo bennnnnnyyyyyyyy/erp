@@ -3,6 +3,8 @@ import { cors } from 'hono/cors';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runOutboxPass } from './jobs/outbox';
+import { parseWebhook, verifySignature } from './lib/whatsapp';
+import { processInbound } from './lib/whatsappInbound';
 import { HttpError } from './lib/errors';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
@@ -26,6 +28,36 @@ for (const [key, routes] of Object.entries(MODULE_ROUTES)) {
   v1.route(`/${key}`, routes);
 }
 app.route('/v1', v1);
+
+// WhatsApp webhook (Meta calls this; there is no user session). GET answers Meta's one-time verification handshake.
+// POST is accepted only with a valid `X-Hub-Signature-256`; the text is handed to the database functions, which find the
+// person by their verified number and apply the same rules as the app. Always answers 200 quickly once the signature is
+// valid, because Meta retries otherwise.
+app.get('/webhooks/whatsapp', (c) => {
+  const token = c.env.WHATSAPP_VERIFY_TOKEN;
+  if (!token) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');
+  const ok =
+    c.req.query('hub.mode') === 'subscribe' && c.req.query('hub.verify_token') === token && Boolean(c.req.query('hub.challenge'));
+  return ok ? c.text(c.req.query('hub.challenge') ?? '') : fail(c, 403, 'Verification failed', 'forbidden');
+});
+
+app.post('/webhooks/whatsapp', async (c) => {
+  const secret = c.env.WHATSAPP_APP_SECRET;
+  if (!secret) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');
+  const raw = await c.req.text();
+  if (raw.length > 100_000) return fail(c, 413, 'Too large', 'too_large');
+  if (!(await verifySignature(raw, c.req.header('X-Hub-Signature-256'), secret))) return fail(c, 401, 'Bad signature', 'bad_signature');
+  let payload: unknown = null;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return c.json({ success: true, data: { handled: 0 } });
+  }
+  const messages = parseWebhook(payload);
+  if (messages.length === 0) return c.json({ success: true, data: { handled: 0 } });
+  const result = await processInbound(c.env, messages);
+  return c.json({ success: true, data: result });
+});
 
 app.notFound((c) => fail(c, 404, 'Not found'));
 

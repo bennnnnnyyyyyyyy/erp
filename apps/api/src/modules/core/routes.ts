@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { SessionInfo } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { userDb } from '../../lib/db.user';
+import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 import { memberRoutes } from './memberRoutes';
@@ -34,7 +35,13 @@ coreRoutes.get('/session', (c) => {
   return ok(c, session);
 });
 
-coreRoutes.get('/audit', requirePermission('core.audit.read'), async (c) => {
+// Names only (no email, role or sign-in data), for any member, so every screen can show who did what.
+coreRoutes.get('/people', async (c) => {
+  const people = await callRpc<{ user_id: string; name: string }[]>(userDb(c), 'core_org_people', {});
+  return ok(c, people.map((p) => ({ userId: p.user_id, name: p.name })));
+});
+
+coreRoutes.get('/audit',requirePermission('core.audit.read'), async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 50) || 50, 200);
   const { data, error } = await userDb(c)
     .from('audit_log')

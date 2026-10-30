@@ -1,6 +1,19 @@
 # Update (paste this into the chat)
 
-Kept current by Claude at the end of every turn. Last updated: 2026-10-29. Standing brief: `neworder.md` (its Status block mirrors this).
+Last updated: 2026-10-30 (morning). Standing brief: `neworder.md`.
+
+## MORNING SUMMARY (overnight queue)
+- Built and tested on the live database: S2 identity binding (test 004), S3 decision tokens (005), S4 task replies (006), I5 approval policies (007), I3 stock adjustments (008), I6 reorder levels (009), O3 audit check job (010), O9 retention, dry run only and not scheduled (011), X7 names for every member (012), O10 concurrency (`scripts/concurrency-check.mjs`, 12 checks).
+- S1 adapter: built and unit tested (`apps/api/test/whatsapp.test.ts`, 26 API tests); NOT tested against real WhatsApp (needs the Meta app and three secrets).
+- X1 language: framework built, typechecks and builds; 9 Arabic strings, machine draft, right-to-left not looked at in a browser.
+- Nothing deployed overnight. The API, web and Messaging screen changes (X7 route, X1, low-stock text) are not live until you ask for a deploy. DB-only functions for policies, adjustments, reorder and identity have no API or screen yet.
+- Right now: typecheck clean, npm test passes, SQL tests 001-012 pass, real-login checks pass (owner 15, manager 15, requester 17).
+
+## Needs your input
+- Say "deploy" to publish the API and web changes (I will record version ids; rollback versions are in the worklog).
+- Answer the "Activating Stock Requests" question: (a) switch the module on, (b) a draft step, (c) re-open a cancelled/rejected request.
+- Browser click-through, Supabase Site URL, rotate demo passwords, Meta developer app for real WhatsApp, approval before `msg_cleanup` is ever scheduled.
+## Earlier notes
 
 ## Newest (this turn)
 - **Feature set and tech stack written, no fake channels:** `documentation/plans/FEATURE_SET_AND_TECH_STACK.md`. Real today vs not built, every feature with status/phase/how, the stack we have, the stack we need per capability (WhatsApp, voice, speech, language model, email, e-invoicing, storage, CI, payments), outside facts labelled **Unverified** where I could not confirm them, and decisions with owners. Costs and dates deliberately left out.

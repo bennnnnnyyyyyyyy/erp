@@ -14,8 +14,17 @@ Log every run in
 | `005_advisor_fixes.sql` | pin search_path on three trigger functions; wrap auth.uid() in the memberships policy (Supabase advisors) | Run via CLI 2026-10-29; verified (search_path set, test passes) |
 | `006_inventory_core.sql` | inventory slice 1: warehouses, items, ledger, balances, requests, approvals; seven functions; approval enforced in the data | Run via CLI 2026-10-29; verified; tests pass |
 | `007_tasks_and_outbox.sql` | slice 2: tasks, transactional outbox, in-app notifications, retry/expiry, reminders and escalation; delivery outcomes audited | Run via CLI 2026-10-29; verified; tests 001-003 pass |
+| `008_identity_binding.sql` | S2: phone/address binding with hashed one-time codes; secret message text hidden and wiped after sending | Run via CLI 2026-10-30; test 004 passes |
+| `009_decision_tokens.sql` | S3: single-use hashed decision tokens; `msg_decide_by_token` (approve/reject by reply, audited) | Run via CLI 2026-10-30; test 005 passes |
+| `010_task_replies.sql` | S4: reply to a task message to acknowledge or complete it (refusals audited, never raised) | Run via CLI 2026-10-30; test 006 passes |
+| `011_approval_policies.sql` | I5: N approvals above a quantity, one per approver | Run via CLI 2026-10-30; test 007 passes |
+| `012_stock_adjustments.sql` | I3: counted-vs-system adjustments, approval required, stale count refused | Run via CLI 2026-10-30; test 008 passes |
+| `013_reorder_levels.sql` | I6: reorder levels and low-stock messages in the chasing pass | Run via CLI 2026-10-30; test 009 passes |
+| `014_audit_check.sql` | O3: hash-chain verification job, hourly, alerts owners | Run via CLI 2026-10-30; test 010 passes |
+| `015_outbox_retention.sql` | O9: `msg_cleanup`, dry run by default, NOT scheduled (needs owner approval) | Run via CLI 2026-10-30; test 011 passes |
+| `016_org_people.sql` | X7: `core_org_people()` names for any member | Run via CLI 2026-10-30; test 012 passes |
 
-Run order: 001 to 007. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
+Run order: 001 to 016. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
 
 Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database (run 2026-10-29: all passed).
 

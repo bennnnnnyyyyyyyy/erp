@@ -1,5 +1,6 @@
 import type { Bindings } from '../../env';
 import { adminDb } from '../db.admin';
+import { makeWhatsAppAdapter } from './whatsapp';
 
 // Channel adapters (neworder.md section 3). A channel only DELIVERS a message. It never approves, never changes
 // stock and never decides anything: those go through the database functions with a person's identity. A failed
@@ -15,6 +16,7 @@ export type OutboxMessage = {
   body: string;
   entity_type: string | null;
   entity_id: string | null;
+  secret_body: string | null;
   attempts: number;
 };
 
@@ -43,6 +45,7 @@ const fake: ChannelAdapter = {
 const ADAPTERS = new Map<string, ChannelAdapter>([
   [inApp.kind, inApp],
   [fake.kind, fake],
+  ['whatsapp', makeWhatsAppAdapter()],
 ]);
 
 /** WhatsApp, voice and email are not connected yet: sending on them fails visibly instead of pretending. */

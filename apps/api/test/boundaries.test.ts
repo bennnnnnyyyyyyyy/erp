@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // ADR-0003: the secret-key client bypasses row level security. Only these files may import it.
-const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/audit.ts', 'modules/core/memberRoutes.ts', 'jobs/outbox.ts', 'lib/channels/index.ts']);
+const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/audit.ts', 'modules/core/memberRoutes.ts', 'jobs/outbox.ts', 'lib/channels/index.ts', 'lib/channels/whatsapp.ts', 'lib/whatsappInbound.ts']);
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

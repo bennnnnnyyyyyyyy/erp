@@ -13,6 +13,52 @@ run or deployed.
 
 ---
 
+## 2026-10-30 (overnight 1/n) — S2 identity binding, S3 decision tokens, S4 task replies: sql/008, 009, 010 and tests 004, 005, 006
+
+**Objective.** Overnight queue from Ben, in order. S2, S3 and S4 are the database side of the real WhatsApp approvals and task replies in `documentation/plans/FEATURE_SET_AND_TECH_STACK.md`. No message provider is involved yet: the webhook functions take a number and a text, so they are testable on a real database and will be called by the WhatsApp webhook (S1 adapter, next).
+
+**Actions Completed.**
+- `sql/008_identity_binding.sql`: `msg_identities`; `msg_identity_start/confirm/revoke`; codes are a 6-digit random value stored only as a hash, expire in 10 minutes, 5 tries, 5 starts per hour; outbox gets `secret_body` (no SELECT for signed-in users, wiped on sent, failed or expired) so a code or token is never readable in the outbox; audit rows mask numbers (last 3 digits). New message kinds `verification` and `alert`.
+- `sql/009_decision_tokens.sql`: `msg_tokens` (hash only, one per request, approver and channel, expiring, single use, no access for signed-in users); a manager with a verified WhatsApp number gets a WhatsApp message with a token; `msg_decide_by_token` (service role) turns "APPROVE/YES/REJECT/NO <token>" into a call to `inv_decide_request` as the approver with channel `whatsapp`, so role check, self-approval refusal, state check and audit are the app's own. Tokens issued before a number was (re-)verified stop working. Refusals return a code and are audited (a refusal never raises, so its audit row is kept).
+- `sql/010_task_replies.sql`: `msg_task_reply` (service role): "ACK/START/DONE [ref]" from the assignee's verified number calls `tsk_set_status` as that person; ambiguity (several open tasks) returns the list instead of guessing; assignees with a verified number get a WhatsApp message with their task reference.
+- Tests (each rolls back): `004_identity_binding.sql` (code only through the outbox and hashed, unreadable to signed-in users and owners, wrong and expired codes, 5-try lockout, duplicate number refused, rebind replaces old, viewer and module-off refused, rate limit, direct writes refused, secret wiped after sending, masked audit); `005_decision_tokens.sql` (tokens only for verified managers, hashed, unreadable; wrong number, unknown number, free text, replay, expired, already decided in the app, rebound number, forged token for own request all refused and audited; valid reply approves through the same function and leaves the same records as the app except the channel; reject by reply releases the reservation); `006_task_replies.sql` (ack and complete by reply, same audit as the app, unknown number, wrong person, no open task, ambiguity, reference, closed to signed-in users).
+
+**Database / System Result.** Project now holds `sql/001`-`010`. Test runs through the CLI: 004, 005 and 006 each failed once on a mistake in the test itself (a column my own privilege rules hide; a wrong expected reservation; a regex that matched hex digits) and then **ALL TESTS PASSED**; regression run of tests 001 to 006 after the migrations: all pass (see the line printed by that run in the final summary).
+
+**Safety Status.** Nothing here sends a real message: a channel adapter is still needed (next item). Webhook functions are callable only by the service role. Rollback: re-running the earlier version of a function's file (`sql/007_tasks_and_outbox.sql` for `inv_requests_notify`-era behaviour is superseded by `009`; the 007 definitions of `msg_complete`, `msg_claim_due` and `tsk_tasks_notify` are restored by re-running `sql/007` then `sql/008` without the new parts); no table was dropped, so data is not at risk.
+
+## 2026-10-30 (overnight 2/n): O10 concurrency check
+
+**Objective:** prove the rules hold when several people act at the same time, through the real login path (SQL tests run in one transaction and cannot do this).
+
+**Actions Completed:**
+- `sql/seed/003_concurrency_org.sql`: throwaway organization "Concurrency Check (test)" (owner, admin, member; inventory, messaging, tasks). Three test users created with the CLI; passwords only in `.temp/concurrency-credentials.txt` (git-ignored). Not the demo organization.
+- `scripts/concurrency-check.mjs`: signs in as the three users and races: six reservations of 4 against 10 units; owner and manager approving the same request; three people issuing the same approved request; two delivery job runs. Creates its own `CONC-` warehouse and item each run.
+
+**Database / System Result:** run against the live project, ALL 12 CHECKS PASSED: exactly 2 of 6 reservations succeeded and 4 were refused INSUFFICIENT_AVAILABLE (reserved 8 of 10); exactly one of two approvals accepted and one approval record; exactly one of three issues accepted, one -4 ledger movement, on hand 6 and reserved 4; both job runs answered 200 and 6 claimed = 6 sent, no message tried twice. The check leaves `CONC-` test rows in the throwaway organization only; nothing was deleted.
+
+**Safety Status:** no existing data changed, no destructive SQL, no secrets in the repo, nothing deployed, nothing committed.
+## 2026-10-30 (overnight 3/n): X7 names for every member: sql/016, test 012
+
+**Objective:** a requester saw "Someone" instead of names because the members list is admin-only.
+
+**Actions Completed:** `sql/016_org_people.sql` adds `core_org_people()` (id and display name only, active members of the caller's own organization; no email, role or sign-in data). `GET /v1/core/people` in `apps/api/src/modules/core/routes.ts`; `usePeople` in `apps/web/src/lib/people.ts` now uses it (demo mode unchanged). `sql/tests/012_org_people.sql` added.
+
+**Database / System Result:** applied to the live project with the CLI (authenticated can run it, anonymous cannot). Test 012 ALL TESTS PASSED (everything rolled back): member sees 2 active people by name, full name and email-prefix fallback, disabled member and other organization not listed, wrong organization refused (NOT_A_MEMBER), missing header refused (ORG_REQUIRED), anonymous refused. `npm run typecheck` clean; `npm test` 26 API tests + 4 shared tests passed. The new API route is NOT deployed yet, so the live app still shows the old behaviour until the Worker and Pages are deployed.
+
+**Safety Status:** read-only function, no table changed, nothing deleted, nothing deployed, nothing committed.
+## 2026-10-30 (overnight 4/n): X1 language framework; I5, I3, I6, O3, O9 records; full regression
+
+**Objective:** finish the overnight queue and record what was done after "overnight 1/n".
+
+**Actions Completed:**
+- I5 `sql/011_approval_policies.sql` (N approvals above a quantity), I3 `sql/012_stock_adjustments.sql` (counted vs system, approval, stale count refused), I6 `sql/013_reorder_levels.sql` (reorder level, low-stock message in `msg_run_chasing`), O3 `sql/014_audit_check.sql` (`audit_check_all`, hourly, alerts owners; also called by the 5-minute job in `apps/api/src/jobs/outbox.ts`), O9 `sql/015_outbox_retention.sql` (`msg_cleanup`, dry run by default, NOT scheduled). Each applied with the CLI and tested with `sql/tests/007` to `011` (all passed when run). Test 004 and 005 had flawed hash assertions (a 6-digit run can occur inside a 64-hex hash); fixed to exact checks and repeated 5 times.
+- X1: `apps/web/src/lib/i18n.tsx` (English/Arabic, English text is the key so a missing translation shows English, sets `lang` and `dir=rtl`, choice kept in the browser), language switch in the user menu, applied to the top bar, user menu and page-not-found. Coverage is 9 strings only. The Arabic is a machine draft and needs review by a native speaker. The rest of the app is English only. Right-to-left layout is not checked in a browser (styles.css has no hard-coded left/right rules, which is all I verified).
+- `Messaging.tsx` shows low-stock and audit-check results of a delivery pass.
+
+**Database / System Result (regression, 2026-10-30, live project via CLI):** SQL tests 001 to 012 all ALL TESTS PASSED. `scripts/real-login-check.mjs`: owner 15, manager 15, requester 17 checks passed. `scripts/concurrency-check.mjs`: 12 of 12 passed. `npm run typecheck` clean, `npm test` 26 API + 4 shared passed, `vite build` succeeded.
+
+**Safety Status:** nothing deployed overnight (Worker and Pages are unchanged: Worker `9d7095fc-f77d-4c6e-b2cb-32b3a9f854b2`, previous `3d6ff8ce-fb30-412e-8970-0e1dd74b837b`; Pages erp-live `232a6013-eeed-4dac-bef9-9f7efc47d399`, previous `91bdab5d-54c9-4b61-a48e-579d829e5ccd`). Database changes are additive; no table, row or audit entry was dropped or deleted; `msg_cleanup` is not scheduled. No secrets in files; nothing committed.
 ## 2026-10-29 — Feature set and tech stack written; task detail screen with acknowledge and complete
 
 **Objective.** Ben asked for "no fake shit": a real feature set and the tech stack needed, written down. Two pasted notes arrived at the same time: "Activating Stock Requests" and "the employee receives an in-app notification; clicking it takes them to the Task Details screen where they can acknowledge or complete the task."
@@ -275,3 +321,4 @@ run or deployed.
 **Database / System Result.** None. `sql/001` and `sql/002` have not been run against any Supabase project.
 
 **Safety Status.** `npm install` ok (0 vulnerabilities); `npm run typecheck` clean in shared, api and web; `npm test` passing (shared 4, api 11). Not browser-tested. No `.env` files, secrets, node_modules or git history copied. Open: product name and deciders placeholders, README, PRODUCT_BRIEF, ADR-0003, the db/audit rework.
+
