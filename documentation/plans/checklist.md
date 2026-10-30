@@ -33,6 +33,11 @@ Template for further blocks; update them in the same change as the work:
   - **Waiting on:** who or what.
   - **Remaining:** what is left.
 
+- [x] **[SUPPLIER_INVOICES_PLAN.md](SUPPLIER_INVOICES_PLAN.md): Supplier invoices**
+  - **Done (2026-10-30):** partial supplier bills against received POs, received/billed/remaining value summary, duplicate invoice protection, and billed quantity guard; migration 018 and SQL isolation test 014 passed.
+  - **Waiting on:** Ben's commit/push and manual UI check after deployment.
+  - **Remaining:** tax, payments, credit notes and accounting export are later scope.
+
 ## Task list by area
 
 `[x]` done and verified as stated, `[ ]` not done. Sources: [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) (phases in section 9) and [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md).

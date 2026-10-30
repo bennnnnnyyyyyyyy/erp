@@ -44,3 +44,34 @@ purchasingRoutes.post('/orders', requirePermission('purchasing.orders.create'), 
 });
 purchasingRoutes.post('/orders/:id/receive', requirePermission('purchasing.orders.receive'), async (c) => { const id = idParam(c); await callRpc<void>(userDb(c), 'pur_receive_order', { p_order_id: id }); return ok(c, await oneOrder(c, id)); });
 purchasingRoutes.post('/orders/:id/cancel', requirePermission('purchasing.orders.manage'), async (c) => { const id = idParam(c); await callRpc<void>(userDb(c), 'pur_cancel_order', { p_order_id: id }); return ok(c, await oneOrder(c, id)); });
+
+purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoices.read'), async (c) => {
+  const { data, error } = await userDb(c).from('pur_supplier_invoices').select('id,number,supplier_id,order_id,invoice_date,currency,created_at').eq('org_id',orgOf(c)).order('created_at',{ascending:false}).limit(250);
+  if (error) throw error;
+  const invoices=(data??[]) as {id:string;number:string;supplier_id:string;order_id:string;invoice_date:string;currency:string;created_at:string}[];
+  const ids=invoices.map((i)=>i.id); const lineMap=new Map<string,{orderLineId:string;qty:number;unitCostMinor:number}[]>();
+  if(ids.length){const {data: lines,error: lineError}=await userDb(c).from('pur_supplier_invoice_lines').select('invoice_id,order_line_id,qty,unit_cost_minor').eq('org_id',orgOf(c)).in('invoice_id',ids);if(lineError)throw lineError;for(const l of (lines??[]) as {invoice_id:string;order_line_id:string;qty:number;unit_cost_minor:number}[])lineMap.set(l.invoice_id,[...(lineMap.get(l.invoice_id)??[]),{orderLineId:l.order_line_id,qty:Number(l.qty),unitCostMinor:Number(l.unit_cost_minor)}]);}
+  return ok(c,invoices.map(i=>{const lines=lineMap.get(i.id)??[];return{id:i.id,number:i.number,supplierId:i.supplier_id,orderId:i.order_id,invoiceDate:i.invoice_date,currency:i.currency,createdAt:i.created_at,lines,totalMinor:lines.reduce((n,l)=>n+l.qty*l.unitCostMinor,0)}}));
+});
+
+purchasingRoutes.get('/billing-summary',requirePermission('purchasing.orders.read'),async(c)=>{
+  const orders=await loadOrders(c);
+  const received=orders.filter(o=>o.status==='received');
+  const orderIds=received.map(o=>o.id);
+  if(!orderIds.length)return ok(c,[]);
+  const {data: orderLines,error}=await userDb(c).from('pur_order_lines').select('id,order_id,item_id,qty,unit_cost_minor').eq('org_id',orgOf(c)).in('order_id',orderIds);
+  if(error)throw error;
+  const ls=(orderLines??[]) as {id:string;order_id:string;item_id:string;qty:number;unit_cost_minor:number}[];
+  const lineIds=ls.map(l=>l.id);const billed=new Map<string,number>();
+  if(lineIds.length){const {data:billLines,error:billError}=await userDb(c).from('pur_supplier_invoice_lines').select('order_line_id,qty').eq('org_id',orgOf(c)).in('order_line_id',lineIds);if(billError)throw billError;for(const l of (billLines??[]) as {order_line_id:string;qty:number}[])billed.set(l.order_line_id,(billed.get(l.order_line_id)??0)+Number(l.qty));}
+  return ok(c,received.map(o=>({orderId:o.id,number:o.number,supplierId:o.supplierId,currency:o.currency,lines:ls.filter(l=>l.order_id===o.id).map(l=>({orderLineId:l.id,itemId:l.item_id,receivedQty:Number(l.qty),billedQty:billed.get(l.id)??0,unitCostMinor:Number(l.unit_cost_minor)}))})));
+});
+
+purchasingRoutes.post('/supplier-invoices',requirePermission('purchasing.invoices.record'),async(c)=>{
+  const body=await jsonBody(c);const supplierId=text(body.supplierId);const orderId=text(body.orderId);const number=text(body.number);const invoiceDate=text(body.invoiceDate);
+  const lines=(Array.isArray(body.lines)?body.lines:[]).map(v=>{const l=v as Record<string,unknown>;return{orderLineId:text(l.orderLineId),qty:Number(l.qty)}}).filter(l=>UUID_RE.test(l.orderLineId)&&Number.isFinite(l.qty)&&l.qty>0);
+  if(!UUID_RE.test(supplierId)||!UUID_RE.test(orderId)||!number||!/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate)||lines.length===0)invalid('Supplier, received order, invoice number, date and billed quantities are required');
+  const id=await callRpc<string>(userDb(c),'pur_record_supplier_invoice',{p_supplier_id:supplierId,p_order_id:orderId,p_number:number,p_invoice_date:invoiceDate,p_lines:lines});
+  const {data,error}=await userDb(c).from('pur_supplier_invoices').select('id,number,supplier_id,order_id,invoice_date,currency,created_at').eq('org_id',orgOf(c)).eq('id',id).single();if(error)throw error;
+  return ok(c,{id:data.id,number:data.number,supplierId:data.supplier_id,orderId:data.order_id,invoiceDate:data.invoice_date,currency:data.currency,createdAt:data.created_at},201);
+});

@@ -13,6 +13,8 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   INVALID_STATE: { status: 409, message: 'That is not possible in the current state', code: 'invalid_state' },
   NOT_FOUND: { status: 404, message: 'Not found', code: 'not_found' },
   MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },
+  BILL_QTY_EXCEEDS_RECEIVED: { status: 409, message: 'Billed quantity cannot exceed received quantity', code: 'bill_qty_exceeds_received' },
+  DUPLICATE_INVOICE: { status: 409, message: 'That supplier invoice number is already recorded', code: 'duplicate_invoice' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */

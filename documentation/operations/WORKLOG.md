@@ -21,6 +21,16 @@ run or deployed.
 
 **Safety Status.** The schema change is additive: no existing table or business record was deleted or modified. The proof checks direct writes are refused, receipts happen once, stock changes once, the audit chain verifies, and another organization cannot read or cancel the order. Root typecheck and tests passed; the web production build also passed. No commit, push, Worker deployment or Pages deployment was made.
 
+## 2026-10-30 — Supplier invoices against received purchase orders
+
+**Objective.** Add the next purchasing app so the test organization can record supplier bills and compare billed quantities and value with what was received.
+
+**Actions Completed.** Added `SUPPLIER_INVOICES_PLAN.md`, migration `sql/018_supplier_invoices.sql`, API routes for invoice recording and billing summaries, and `Purchasing → Supplier invoices`. The first slice supports partial bills, stores invoice number/date, derives prices/currency from the received order, prevents duplicate supplier invoice numbers, and refuses cumulative billed quantities above received quantities. Added rollback-safe `sql/tests/014_supplier_invoices.sql`.
+
+**Database / System Result.** Migration 018 applied to the linked Supabase test project; two invoice tables have RLS. Test 014 reached the intentional `ALL TESTS PASSED (everything rolled back)` marker, verifying partial then final bill, over-billing and duplicate refusal, audit-chain integrity, and cross-organization isolation. No test data remains.
+
+**Safety Status.** Root typecheck passed, shared/API tests passed (4 + 26), web production build passed, and `git diff --check` passed. No commit, push or Cloudflare deployment occurred. Tax, payments, credit notes and accounting export are outside this slice.
+
 ## 2026-10-30 — Added all Auth users to Test Organization
 
 **Objective.** During testing, make every existing Supabase Auth account available in the single Test Organization.

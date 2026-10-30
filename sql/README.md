@@ -24,8 +24,9 @@ Log every run in
 | `015_outbox_retention.sql` | O9: `msg_cleanup`, dry run by default, NOT scheduled (needs owner approval) | Run via CLI 2026-10-30; test 011 passes |
 | `016_org_people.sql` | X7: `core_org_people()` names for any member | Run via CLI 2026-10-30; test 012 passes |
 | `017_purchasing_core.sql` | Purchasing slice 1: suppliers, purchase orders and inventory receipts | Run via CLI 2026-10-30; test 013 passes |
+| `018_supplier_invoices.sql` | Supplier bills against received purchase orders; cumulative billed quantity capped at received quantity | Run via CLI 2026-10-30; test 014 passes |
 
-Run order: 001 to 017. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
+Run order: 001 to 018. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
 
 Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database (run 2026-10-29: all passed).
 

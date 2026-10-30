@@ -7,6 +7,7 @@ import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
 import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
+import { SupplierInvoices } from './purchasing/SupplierInvoices';
 import { NotificationsPage, OutboxPage } from './messaging/Messaging';
 import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
@@ -72,6 +73,7 @@ const PURCHASING_APP: AppDef = {
     { path: '/orders/new', label: 'New purchase order', component: NewPurchaseOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Purchase order', component: PurchaseOrderPage, nav: false, parent: '' },
     { path: '/suppliers', label: 'Suppliers', component: Suppliers },
+    { path: '/invoices', label: 'Supplier invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
   ],
 };
 
