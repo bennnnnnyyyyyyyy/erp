@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Security audit 025 applied; cosmetics demo data; owner home page (027); phone binding page; seed flooded the outbox (fixed)
+
+**Objective.** Ben: "run 025, then do the order you proposed, add demo data for the factory, add home page, apply sql".
+
+**Actions Completed.**
+- `sql/025_security_audit_fixes.sql` (from the audit worktree) applied with the CLI; `sql/tests/021_security_audit_fixes.sql` PASS; tests 001-021 re-run PASS right after. The API/web side of the audit (member functions, `_headers`, CSP) is still on that branch and NOT deployed; the old API keeps working against the new database. Not done: real-login and invite-path checks.
+- `sql/seed/004_cosmetics_factory_demo.sql`: invented cosmetics factory "Demo Cosmetics Factory (sample data)" (45 items: 21 raw materials, 12 packaging, 12 finished goods; 12 suppliers and 10 customers all marked "(sample)"; storage conditions Ambient / Cold room; ~300 sales orders over 12 months with approvals, issues, invoices and payments; monthly purchase orders with batches, supplier invoices and payments; monthly expenses; today: near-expiry, expired and quarantined lots, 4 open requests, 3 items under reorder level). Written by direct inserts with back-dated times, so history rows have NO individual audit entries (one summary row). No WhatsApp delivery is faked (all approvals channel `app`). Manufacturing does not exist, so raw/packaging are issued to production in monthly lump sums: profit is approximate. First load was too small (revenue 2.7M vs expenses 7.3M EGP a year), so volumes were scaled 6x; the first org was renamed `demo-cosmetics-v1-superseded`, soft-deleted with memberships disabled (cannot be deleted: append-only audit).
+- `sql/027_owner_insights.sql`: `insights_home()` (owner/admin only): 12-month revenue, cost of goods, expenses, net; owed to me and overdue; I owe; stock value; items low; expiry buckets; decisions waiting; best sellers; supplier dependence. Test `023_owner_insights` is a known-answer test (net 1200 from revenue 2500, cost 1000, expenses 300) and PASSES. API `GET /v1/finance/insights`; web `OwnerHome.tsx` shown above the app tiles for people with `finance.reports.view`.
+- Phone binding: `/v1/messaging/identities` routes and the Messaging > Connect WhatsApp page over `sql/008`. Not testable end to end until WhatsApp is set up.
+
+**Incident (my bug).** The seed's direct inserts fired the `inv_requests_notify` trigger for ~600 historical requests: 1,337 "needs your approval" messages queued in the outbox, 46 sent / 27 in flight into the hidden v1 organization (invisible: org hidden, memberships disabled), and SQL tests 003 and 004 failed because their message was no longer within the claim batch. Fix: all pending messages in the two demo organizations were set to `cancelled` (status change only; 6 legitimate ones for still-open requests kept); the seed now disables that trigger while loading and re-enables it before the 4 open requests. Nothing was deleted.
+
+**Database / System Result.** After the fix all 22 SQL tests in the main tree pass (001-023 incl. 023 owner insights); audit test 021 passed earlier the same day. Seed re-run on the existing organization does nothing (verified).
+
+**Safety Status.** Nothing deployed. Not exercised in a browser or against the live API: Owner home, Finance, Batches, Customer invoices, Connect WhatsApp. The demo numbers (11 of 12 months profitable, November a loss, about 6% net) come from the seed's own rules, not real data.
 ## 2026-10-30 — Batches, expiry and storage conditions: migration 026, test 022, API, page; .env from the linked project
 
 **Objective.** Slice B of `OWNER_INSIGHTS_PLAN.md` (expiry triggers need batches with expiry dates; boss asked for storage options). Also: Ben asked to pull `.env` values from the cloud.

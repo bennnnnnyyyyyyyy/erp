@@ -10,6 +10,7 @@ import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderL
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { SupplierInvoices } from './purchasing/SupplierInvoices';
 import { NotificationsPage, OutboxPage } from './messaging/Messaging';
+import { ConnectPhonePage } from './messaging/ConnectPhone';
 import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
 import { CustomerInvoices } from './sales/CustomerInvoices';
@@ -131,6 +132,7 @@ const MESSAGING_APP: AppDef = {
   basePath: '/messaging',
   pages: [
     { path: '', label: 'Notifications', permission: 'messaging.notifications.read', component: NotificationsPage },
+    { path: '/whatsapp', label: 'Connect WhatsApp', permission: 'messaging.notifications.read', component: ConnectPhonePage },
     { path: '/outbox', label: 'Message outbox', permission: 'messaging.outbox.manage', component: OutboxPage },
   ],
 };

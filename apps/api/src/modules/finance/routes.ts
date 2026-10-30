@@ -101,3 +101,8 @@ financeRoutes.post('/payments/:id/void', requirePermission('finance.entries.mana
   await callRpc(userDb(c), 'fin_void_payment', { p_payment_id: id });
   return ok(c, { id, status: 'void' });
 });
+
+// The owner home numbers (sql/027): read-only, computed in the database, owner/admin only.
+financeRoutes.get('/insights', requirePermission('finance.reports.view'), async (c) => {
+  return ok(c, await callRpc<Record<string, unknown>>(userDb(c), 'insights_home', {}));
+});

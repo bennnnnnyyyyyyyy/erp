@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { userDb } from '../../lib/db.user';
+import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { runOutboxPass } from '../../jobs/outbox';
@@ -52,3 +53,44 @@ messagingRoutes.get('/outbox', requirePermission('messaging.outbox.manage'), asy
 
 // Runs one delivery and chasing pass now (the scheduled job does the same every five minutes). Owners and admins only.
 messagingRoutes.post('/process', requirePermission('messaging.outbox.manage'), async (c) => ok(c, await runOutboxPass(c.env, { orgId: c.var.tenant.orgId })));
+
+// ---- connect a phone (sql/008): the person starts binding, a one-time code is sent to that number through the outbox,
+// they type it back. Only the person's own bindings are visible. The code itself is never readable by anyone.
+const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
+
+messagingRoutes.get('/identities', requirePermission('messaging.notifications.read'), async (c) => {
+  const { data, error } = await userDb(c)
+    .from('msg_identities')
+    .select('id, channel, address, status, verified_at, created_at')
+    .eq('org_id', c.var.tenant.orgId)
+    .eq('user_id', c.var.user.id)
+    .neq('status', 'revoked')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return ok(c, (data ?? []).map((i) => ({ id: i.id, channel: i.channel, address: i.address, status: i.status, verifiedAt: i.verified_at, createdAt: i.created_at })));
+});
+
+messagingRoutes.post('/identities', requirePermission('messaging.notifications.read'), async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { channel?: unknown; address?: unknown };
+  const channel = typeof body.channel === 'string' ? body.channel : 'whatsapp';
+  const address = typeof body.address === 'string' ? body.address.replace(/[\s()-]/g, '') : '';
+  if (channel !== 'whatsapp' || !PHONE_RE.test(address)) throw new HttpError(400, 'Enter the number with its country code, for example +201001234567', 'invalid_input');
+  const id = await callRpc<string>(userDb(c), 'msg_identity_start', { p_channel: channel, p_address: address });
+  return ok(c, { id }, 201);
+});
+
+messagingRoutes.post('/identities/:id/confirm', requirePermission('messaging.notifications.read'), async (c) => {
+  const id = c.req.param('id') ?? '';
+  const body = (await c.req.json().catch(() => ({}))) as { code?: unknown };
+  const code = typeof body.code === 'string' ? body.code.trim() : '';
+  if (!UUID_RE.test(id) || !/^\d{6}$/.test(code)) throw new HttpError(400, 'Enter the 6-digit code', 'invalid_input');
+  const confirmed = await callRpc<boolean>(userDb(c), 'msg_identity_confirm', { p_identity_id: id, p_code: code });
+  return ok(c, { confirmed });
+});
+
+messagingRoutes.post('/identities/:id/revoke', requirePermission('messaging.notifications.read'), async (c) => {
+  const id = c.req.param('id') ?? '';
+  if (!UUID_RE.test(id)) throw new HttpError(404, 'Not found', 'not_found');
+  await callRpc(userDb(c), 'msg_identity_revoke', { p_identity_id: id });
+  return ok(c, { id });
+});

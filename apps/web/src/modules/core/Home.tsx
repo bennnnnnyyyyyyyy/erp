@@ -3,6 +3,7 @@ import { hasPermission } from '@erp/shared';
 import { Link } from '../../lib/router';
 import { useSession } from '../../session';
 import { SUITE_ORDER, type AppDef } from '../registry';
+import { OwnerSummary } from './OwnerHome';
 
 function greeting(timeZone: string): string {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
@@ -60,6 +61,8 @@ export function Home({ apps }: { apps: AppDef[] }) {
       <p className="muted">
         {session.org?.name} · {today(timeZone)}
       </p>
+
+      <OwnerSummary />
 
       {!hasBusinessApps && canManageApps && (
         <p className="notice">
