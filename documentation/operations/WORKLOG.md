@@ -11,6 +11,15 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Security audit hand-off picked up: report written, local env added
+
+**Objective.** Opus handed over the security-audit branch (`worktree-security-audit-fixes`). Ben said yes to writing the missing report and to adding the local env settings.
+
+**Actions Completed.** Wrote `documentation/reviews/2026-10-30-security-audit.md` (reconstructed from the hand-off note and the `sql/025` header; says so; severities not independently verified). There was NO `.env` anywhere in the repo, so I created a git-ignored root `.env` containing only `APP_ENV=development` and `ALLOWED_ORIGINS=http://localhost:5173` (no secrets) and documented both keys in `.env.example`. Compared `sql/025` with my 023/024: no function or table clash (025 rewrites decision/adjustment/member functions; the cost snapshot in 023 is a trigger so it still applies).
+
+**Database / System Result.** None. `sql/025` and `sql/tests/021` are NOT run; waiting for Ben to commit the branch and say "run 025".
+
+**Safety Status.** The local `.env` has no Supabase values, so local sign-in still needs `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` added by Ben. Nothing deployed.
 ## 2026-10-30 — Finance foundation: item cost (023), expenses and payments (024), Finance screens; Ben's answers recorded
 
 **Objective.** Slice F of `OWNER_INSIGHTS_PLAN.md`: cost per item, expenses, payments, so profit and "who owes whom" can be computed. Ben answered `QUESTIONS_FOR_BEN.md` (average cost; manufacturing later; language is an organization-wide setting chosen at sign-up; teams are named groups; EGP changeable; profit without VAT; deny rules yes; no password rotation). Decisions are written into that file and the plan.
