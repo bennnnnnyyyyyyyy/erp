@@ -51,10 +51,14 @@ begin
   -- S3: worse (stock fell further) re-fires after an hour, not before
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  perform public.inv_create_item('A-3', 'Third', null, 'kg', 2, w);   -- a new subject fires on its own
+  perform public.inv_create_item('A-3', 'Third', null, 'kg', 2, w);   -- two new low items at once ...
+  perform public.inv_create_item('A-4', 'Fourth', null, 'kg', 3, w);
   reset role;
   j := public.alr_run(o);
-  if (j ->> 'alerts')::int <> 1 then raise exception 'FAIL S3a: new low item did not fire %', j; end if;
+  if (j ->> 'alerts')::int <> 2 then raise exception 'FAIL S3a: new low items did not fire %', j; end if;
+  if (j ->> 'messages')::int <> 1 then raise exception 'FAIL S3a2: two items made % messages for one person (expected one digest)', j ->> 'messages'; end if;
+  select count(*) into n from public.msg_outbox where org_id = o and recipient_id = a and subject = 'Low stock: 2 items' and body like '%A-3%' and body like '%A-4%';
+  if n <> 1 then raise exception 'FAIL S3a3: digest message missing or incomplete (%)', n; end if;
   update public.inv_stock_balances set on_hand = 1 where item_id = i;
   j := public.alr_run(o);
   if (j ->> 'alerts')::int <> 0 then raise exception 'FAIL S3b: worse within the hour fired %', j; end if;

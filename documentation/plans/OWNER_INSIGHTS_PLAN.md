@@ -178,7 +178,7 @@ A **seed script** (not a migration), loaded only into a clearly named demo organ
 | 2 | **F** cost per item, expenses, payments | profit needs cost and expenses |
 | 3 | **D** demo data generator (cosmetics factory) | everything after is built against real-looking data |
 | 4 | **H** owner home page + insights functions | the heart; first complete version needs 1-3 |
-| 5 | **T** rules, teams, notification settings | |
+| 5 | **T** rules, teams, notification settings | built 2026-10-30 (sql/028, test 024); WhatsApp delivery and forecast rule kinds still to do |
 | 6 | **P** forecast and reorder suggestions | needs history from 3 |
 | 7 | **M** manufacturing (BOM, production) if approved | |
 

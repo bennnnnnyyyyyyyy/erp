@@ -297,7 +297,7 @@ begin
         v_body := array_to_string(v_lines, E'\n') || case when v_n > 10 then E'\n...and ' || (v_n - 10) || ' more' else '' end;
         v_sent := 0;
         for rcp in select * from public.alr__recipients(r.org_id, r.id) loop
-          if public.msg__enqueue(r.org_id, rcp.user_id, 'alert', v_title, v_body, null, null, 'alr:' || r.id || ':' || floor(extract(epoch from clock_timestamp()))::bigint || ':' || rcp.user_id) is not null then v_sent := v_sent + 1; end if;
+          if public.msg__enqueue(r.org_id, rcp.user_id, 'alert', v_title, v_body, null, null, 'alr:' || r.id || ':' || floor(extract(epoch from clock_timestamp()) * 1000000)::bigint || ':' || rcp.user_id) is not null then v_sent := v_sent + 1; end if;
         end loop;
         n_alerts := n_alerts + v_n; org_alerts := org_alerts + v_n; n_msgs := n_msgs + v_sent;
       end if;
