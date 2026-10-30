@@ -47,8 +47,11 @@ export const MODULES: readonly ModuleManifest[] = [
       'inventory.request.create',
       'inventory.request.approve',
       'inventory.stock.issue',
+      'inventory.batches.read',
+      'inventory.batches.receive',
+      'inventory.batches.manage',
     ],
-    memberGrants: ['inventory.items.manage', 'inventory.request.create', 'inventory.stock.issue', 'inventory.adjustments.create'],
+    memberGrants: ['inventory.items.manage', 'inventory.request.create', 'inventory.stock.issue', 'inventory.adjustments.create', 'inventory.batches.receive'],
     suite: 'Warehouse',
   },
   // Slice 2 (documentation/plans/TASKS_AND_OUTBOX_PLAN.md).

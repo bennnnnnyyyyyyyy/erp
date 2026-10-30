@@ -121,8 +121,12 @@ end $$;
 create or replace function public.inv__batch_add(p_org uuid, p_batch uuid, p_wh uuid, p_qty numeric, p_move bigint) returns void
 language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.inv_batch_balances (org_id, batch_id, warehouse_id, qty) values (p_org, p_batch, p_wh, p_qty)
-  on conflict (org_id, batch_id, warehouse_id) do update set qty = public.inv_batch_balances.qty + excluded.qty;
+  if p_qty >= 0 then
+    insert into public.inv_batch_balances (org_id, batch_id, warehouse_id, qty) values (p_org, p_batch, p_wh, p_qty)
+    on conflict (org_id, batch_id, warehouse_id) do update set qty = public.inv_batch_balances.qty + excluded.qty;
+  else   -- a negative value cannot be inserted first (the check constraint would fire before the conflict clause)
+    update public.inv_batch_balances set qty = qty + p_qty where org_id = p_org and batch_id = p_batch and warehouse_id = p_wh;
+  end if;
   insert into public.inv_batch_moves (org_id, batch_id, warehouse_id, qty, stock_move_id) values (p_org, p_batch, p_wh, p_qty, p_move);
 end $$;
 

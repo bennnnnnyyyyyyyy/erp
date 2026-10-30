@@ -46,6 +46,7 @@ sql/021_*.sql
 sql/022_*.sql
 sql/023_*.sql
 sql/024_*.sql
+sql/026_*.sql
 
 # ---- decided or reference material
 documentation/architecture/decisions/

@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Batches, expiry and storage conditions: migration 026, test 022, API, page; .env from the linked project
+
+**Objective.** Slice B of `OWNER_INSIGHTS_PLAN.md` (expiry triggers need batches with expiry dates; boss asked for storage options). Also: Ben asked to pull `.env` values from the cloud.
+
+**Actions Completed.**
+- `.env` (git-ignored): added the PUBLIC `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from the linked project plus `APP_ENV` and `ALLOWED_ORIGINS` (local). The secret key was NOT pulled; Ben adds `SUPABASE_SECRET_KEY` himself if needed locally.
+- `sql/026_batches_expiry_storage.sql` (26, because 025 belongs to the security-audit branch): `inv_storage_conditions` (organization data: name and temperature range), warehouse and item storage condition, `inv_items.tracks_batches`, `inv_batches`, `inv_batch_balances`, append-only `inv_batch_moves`. A trigger on the stock ledger mirrors every move of a tracked item into batches: receipts go to the named batch (else UNBATCHED), issues and negative adjustments are taken first-expiry-first-out from available, non-expired batches (UNBATCHED last) and the whole issue is refused with `BATCH_STOCK_SHORT` if they do not cover it. Functions: `inv_create_storage_condition`, `inv_set_warehouse_storage`, `inv_set_item_batching` (backfills existing stock into UNBATCHED; off refused while batch stock exists), `inv_receive_batch` (storage mismatch, expired and same-batch-different-expiry refused), `inv_set_batch_status` (quarantine / release), `inv_expiry_report(days)`. Untracked items behave exactly as before.
+- Bug found by the test and fixed before it counted: a negative balance update was written as an insert-then-conflict, which trips the check constraint first.
+- API (`inventory/routes.ts`): storage conditions, warehouse storage, item batching, batches list/receive/status, expiry report; items now return `tracksBatches` and `storageConditionId`. Permissions `inventory.batches.read/receive/manage` (members get receive). Web: Inventory > Batches and expiry (real app only): 90-day expiry list with 30/60/90 colouring, receive a batch, quarantine / release, storage conditions, per-item tracking switch.
+
+**Database / System Result.** 026 applied via CLI. Test `022_batches_expiry_storage` ALL TESTS PASSED (rolled back): backfill, storage mismatch / expired / untracked / changed-expiry refused, FEFO order (SOON before LATE, UNBATCHED last), quarantine blocks and leaves no ledger row behind, expired stock not issued, expiry report windows, untracked item unaffected, ledger total equals batch total, tracking-off refused with stock, no direct writes, append-only moves, isolation, audit chain. All SQL tests 001-022 pass; typecheck clean; `npm test` 4 + 30; web build passed.
+
+**Safety Status.** NOT deployed; screens and routes not exercised live or in a browser. Known limits: approver cannot pick the batch (FEFO is automatic); no transfers between warehouses exist yet; request availability checks still use the item total, so an issue can be refused at the last step if the remaining stock is quarantined or expired; no temperature sensor logs. Expiry NOTIFICATIONS need the trigger slice (T). Audit-branch note: its `sql/025` rewrites decision/adjustment functions; the batch mirror is a ledger trigger so it should still apply (re-run test 022 after 025).
 ## 2026-10-30 — Security audit hand-off picked up: report written, local env added
 
 **Objective.** Opus handed over the security-audit branch (`worktree-security-audit-fixes`). Ben said yes to writing the missing report and to adding the local env settings.

@@ -30,8 +30,9 @@ Log every run in
 | `022_customer_invoices.sql` | sales: customer invoices, partial invoicing, void | Run via CLI 2026-10-30; test 018 passes |
 | `023_item_cost.sql` | slice F: average cost per item, cost log, cost hidden from members | Run via CLI 2026-10-30; test 019 passes |
 | `024_finance_expenses_payments.sql` | slice F: finance module, expenses, payments (never above what is owed) | Run via CLI 2026-10-30; test 020 passes |
+| `026_batches_expiry_storage.sql` | slice B: batches, expiry, FEFO issuing, quarantine, storage conditions (025 is the audit branch) | Run via CLI 2026-10-30; test 022 passes |
 
-Run order: 001 to 024. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
+Run order: 001 to 024, 026 (025 pending, audit branch). Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
 
 Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database (run 2026-10-29: all passed).
 

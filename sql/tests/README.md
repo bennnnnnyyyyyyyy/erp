@@ -31,6 +31,7 @@ Run the whole file at once with nothing else in the editor.
 | `018_customer_invoices.sql` | delivered-only, no over-invoicing, price from order line, void, isolation, audit |
 | `019_item_cost.sql` | average cost, issue cost snapshot, cost hidden from members, owner/admin only |
 | `020_finance_expenses_payments.sql` | expenses, payments, no overpayment, void rules, owner/admin only, isolation |
+| `022_batches_expiry_storage.sql` | FEFO, quarantine, expiry, storage mismatch, batch total equals ledger, roles, isolation |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 

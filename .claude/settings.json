@@ -33,6 +33,7 @@
       "Edit(./sql/022_*.sql)",
       "Edit(./sql/023_*.sql)",
       "Edit(./sql/024_*.sql)",
+      "Edit(./sql/026_*.sql)",
       "Edit(./documentation/architecture/decisions/**)",
       "Edit(./documentation/research/**)",
       "Edit(./documentation/reviews/**)",

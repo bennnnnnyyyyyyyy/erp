@@ -5,6 +5,7 @@ import { AuditLog } from './core/settings/AuditLog';
 import { GeneralSettings } from './core/settings/GeneralSettings';
 import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
+import { BatchesPage } from './inventory/Batches';
 import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { SupplierInvoices } from './purchasing/SupplierInvoices';
@@ -53,6 +54,7 @@ const INVENTORY_APP: AppDef = {
   pages: [
     { path: '', label: 'Stock on hand', permission: READ, component: StockPage },
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
+    ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/approval-policies', label: 'Approval policies', permission: READ, component: ApprovalPoliciesPage },
     { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
     { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
