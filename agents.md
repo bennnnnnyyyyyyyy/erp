@@ -68,7 +68,7 @@ Module conventions: `apps/api/src/modules/<key>`, `apps/web/src/modules/<key>`, 
 
 ## Environment and tooling
 
-- Windows 10. Use PowerShell. Do not use `cmd` or `cmd /c`.
+- Windows 10. Use PowerShell by default; `cmd.exe` and `cmd /c` are also permitted when a tool or executable requires them. Do not request administrator privileges.
 - The system PATH may not be configured. Node lives at `C:\Users\ben.arthur\node-v24.14.1-win-x64\` and Git at `C:\Users\ben.arthur\PortableGit\bin\`; use absolute executable paths if a command is not found.
 - No administrator privileges are available; never request elevation.
 - npm workspaces: run `npm install` at the repo root. Use `npm run <script> -w apps/api` (or `apps/web`, `packages/shared`) for one package.
