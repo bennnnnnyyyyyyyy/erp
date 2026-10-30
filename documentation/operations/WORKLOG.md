@@ -11,6 +11,15 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — Memberships moved to the cosmetics demo organization (Ben's instruction)
+
+**Objective.** Ben could not see the dummy data: his accounts were only in the (empty) Test Organization. Instruction: `ben.arthur.wiz` at the same level as grant, `ben@prime-ad.com` stays owner of the empty org, the four gmail accounts move to the filled demo organization.
+
+**Actions Completed.** Added `ben.arthur.wiz@gmail.com` to "Demo Cosmetics Factory (sample data)" as member. Disabled (not deleted, reversible by clearing `disabled_at`) the Test Organization memberships of chris, joseph, grant and ben.arthur.wiz. `ben@prime-ad.com` unchanged: owner of Test Organization only. chris, joseph and grant also still belong to "Demo Trading Co." (the older demo), which I left alone because it was not mentioned.
+
+**Database / System Result.** Verified by query, one line per membership: ben.arthur.wiz: cosmetics member ENABLED, Test disabled; ben@prime-ad.com: Test owner ENABLED; chris: cosmetics owner + Demo Trading owner ENABLED, Test disabled; grant: cosmetics member + Demo Trading member ENABLED, Test disabled; joseph: cosmetics admin + Demo Trading admin ENABLED, Test disabled. Audit chain of the cosmetics organization: 0 broken.
+
+**Safety Status.** No rows deleted. Nothing deployed (data only). Not checked in a browser.
 ## 2026-10-30 — Audit branch merged into main, deployed with wrangler
 
 **Objective.** Ben: "merge branches and deploy, I need to sync up branches".
