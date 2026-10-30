@@ -11,6 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-10-30 — GitHub Actions deployment automation prepared
+
+**Objective.** Make the API Worker and real web app deploy automatically after a successful push to `main`.
+
+**Actions Completed.** Added `.github/workflows/ci-deploy.yml`. Pull requests and pushes run dependency installation, typecheck, tests and the production web build. A successful push to `main` deploys `erp-api` with Wrangler and publishes `apps/web/dist` to the `erp-live` Cloudflare Pages project. Database migrations remain manual and are not part of the push deployment.
+
+**Database / System Result.** None. No Supabase or Cloudflare production state was changed.
+
+**Safety Status.** The workflow is not active yet because the GitHub repository currently has no secrets. Before the first push deployment, configure the `production` environment with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`. The existing Worker secret `SUPABASE_SECRET_KEY` remains stored remotely in Cloudflare and is not copied to GitHub. The workflow file needs to be committed and pushed by Ben; no commit was created by Codex.
+
+## 2026-10-30 — Live database verification resumed
+
+**Objective.** Complete the three read-only Supabase checks left open after the SQL test suite.
+
+**Actions Completed.** Using the linked Supabase project, ran `audit_verify` for every active organization, ran `msg_cleanup(90, true)` as a dry run, and ran `supabase db advisors --linked`.
+
+**Database / System Result.** There are 3 active organizations; all 3 audit chains returned `first_bad_seq = null` and `reason = null`. The 90-day cleanup dry run reported 0 outbox, 0 notifications, and 0 tokens. Advisors returned the existing intentional warnings for authenticated callers of SECURITY DEFINER application functions, plus the existing Auth warning that leaked-password protection is disabled; no new database mutation was made.
+
+**Safety Status.** All checks were read-only. No cleanup was executed, no rows changed, no deployment occurred, and no secrets were printed. The advisor warnings should remain until the application-function exposure policy and Auth setting are deliberately reviewed.
+
 ---
 
 ## 2026-10-30 (overnight 1/n) — S2 identity binding, S3 decision tokens, S4 task replies: sql/008, 009, 010 and tests 004, 005, 006
