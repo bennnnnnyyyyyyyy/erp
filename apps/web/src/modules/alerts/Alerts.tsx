@@ -62,6 +62,7 @@ export function AlertsPage() {
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
       <h2 className="related">Rules</h2>
+      <p className="muted small">What you are told about, and who is told. Each rule is checked every five minutes against the current stock, batches and invoices.</p>
       <div className="table-wrap"><table><thead><tr><th>Rule</th><th>When</th><th>Who is told</th><th>Repeat after</th><th>Fired</th><th>State</th><th></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>

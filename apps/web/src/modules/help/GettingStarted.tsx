@@ -23,7 +23,7 @@ function useCount(path: string, enabled: boolean): number | null | undefined {
   return n;
 }
 
-function Step({ n, title, to, toLabel, children }: { n: number; title: string; to?: string; toLabel?: string; children: ReactNode }) {
+export function Step({ n, title, to, toLabel, children }: { n: number; title: string; to?: string; toLabel?: string; children: ReactNode }) {
   return (
     <li className="flex gap-4 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden="true">{n}</span>

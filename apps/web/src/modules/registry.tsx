@@ -7,6 +7,7 @@ import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
 import { BatchesPage } from './inventory/Batches';
 import { ForecastPage } from './inventory/Forecast';
+import { GuidePage } from './help/Guide';
 import { NewTransfer, TransferPage, TransfersList } from './inventory/Transfers';
 import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
@@ -176,6 +177,16 @@ export const APPS: AppDef[] = [
       { path: '', label: 'Rules and teams', permission: 'alerts.rules.view', component: AlertsPage },
     ],
   } satisfies AppDef]),
+  // The guide: shown in every organization, including the sample companies (unlike the getting-started tutorial).
+  {
+    key: 'guide',
+    module: 'core',
+    name: 'Guide',
+    description: 'How to find your way around, a five-step tour, and what is not ready yet',
+    suite: 'Core',
+    basePath: '/guide',
+    pages: [{ path: '', label: 'Guide', component: GuidePage }],
+  },
   {
     key: 'settings',
     module: 'core',

@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-02 — Tile subtitles and the Guide page (from the 2 Nov management meeting notes)
+
+**Objective.** Ben relayed the meeting notes: every tile needs a title, and people need a guide to navigate. No new features, no commits.
+
+**Actions Completed.**
+- Audit of tiles. Owner home cards: all 6 had titles; 5 lacked a one-line subtitle and/or the period their figure covers (money, decisions, stock and expiry, best sellers, suppliers). Profit overview: 3 of 4 figure tiles and the chart lacked the period. Alerts: the Rules section had no subtitle. The apps grid on the home page already has a name and description on every tile.
+- `apps/web/src/modules/core/OwnerHome.tsx`: the Card now takes a subtitle and a period; all 6 cards show a bold title, a plain-words subtitle and the period (for example "last 12 months", "last 90 days", "as of <date>, looking 90 days ahead"). Periods match what `sql/027` computes. `finance/ProfitOverview.tsx`: periods added to the Sales, Costs and Months in the red tiles and the chart heading. `alerts/Alerts.tsx`: subtitle under Rules.
+- New "Guide" app (`apps/web/src/modules/help/Guide.tsx`, registered in `registry.tsx`, module `core`, shown in every organization including the sample company and demo mode): where each app is (live list of the apps the person can open), the five-step path (home, request, approve, audit log, forecast), and what is not ready yet. Reuses the tutorial's `Step` component (now exported). Added the missing `.plain-list` style to `styles.css` (also used by the transfers in-transit panel).
+
+**Database / System Result.** None. No API or database change.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 5 shared + 39 API passed; web production build succeeds (checked in a worktree, then copied into main; worktree removed). Not browser-checked and not deployed. Ben to check in a browser: owner home (cosmetics org, as the owner) for card text wrapping on narrow screens, Profit overview tile labels, Alerts, and the new Guide page (home grid tile and /guide) in the sample company and as a non-owner. Nothing committed.
+
 ## 2026-11-02 — Inventory transfers built (not yet run): migration 033, test 029, API, screens
 
 **Objective.** Ben approved [`INVENTORY_TRANSFERS_PLAN.md`](../plans/INVENTORY_TRANSFERS_PLAN.md) with the recommended answers and asked for it to be built: stock transfers between warehouses with approval, in-transit state, batches and expiry carried across.

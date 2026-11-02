@@ -54,9 +54,9 @@ export function ProfitOverviewPage() {
       <div className="mt-5 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 17rem), 1fr))' }}>
         {[
           { label: 'Result, last 12 months', value: `${net < 0 ? 'Lost ' : 'Made '}${whole(Math.abs(net))}`, tone: net < 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: `${margin.toFixed(1)}% of sales` },
-          { label: 'Sales', value: whole(revenue), tone: '', note: 'invoiced to customers' },
-          { label: 'Costs', value: whole(costs), tone: '', note: `${whole(sum('cogs'))} of goods sold + ${whole(sum('expenses'))} running costs` },
-          { label: 'Months in the red', value: `${lossMonths} of ${months.length}`, tone: lossMonths > 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: `Best ${monthLong(best.month)}, weakest ${monthLong(worst.month)}` },
+          { label: 'Sales, last 12 months', value: whole(revenue), tone: '', note: 'invoiced to customers' },
+          { label: 'Costs, last 12 months', value: whole(costs), tone: '', note: `${whole(sum('cogs'))} of goods sold + ${whole(sum('expenses'))} running costs` },
+          { label: 'Months in the red, last 12 months', value: `${lossMonths} of ${months.length}`, tone: lossMonths > 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: `Best ${monthLong(best.month)}, weakest ${monthLong(worst.month)}` },
         ].map((k) => (
           <div key={k.label} className="min-w-0 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
             <div className="text-sm font-medium text-muted-foreground">{k.label}</div>
@@ -68,7 +68,7 @@ export function ProfitOverviewPage() {
 
       <div className="mt-6 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="m-0 text-base font-semibold">Sales vs costs, every month</h2>
+          <h2 className="m-0 text-base font-semibold">Sales vs costs, every month <span className="text-sm font-normal text-muted-foreground">(last 12 months)</span></h2>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm" style={{ background: 'var(--success)' }} />Sales</span>
             <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm" style={{ background: 'var(--muted-foreground)', opacity: 0.55 }} />Costs</span>

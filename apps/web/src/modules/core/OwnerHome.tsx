@@ -30,17 +30,21 @@ const TONE: Record<Tone, { dot: string; word: string }> = {
   bad: { dot: 'bg-destructive', word: 'Needs action' },
 };
 
-function Card({ to, title, tone, children }: { to: string; title: string; tone?: Tone; children: ReactNode }) {
+// Every card has a visible title, a one-line plain-words subtitle, and the period its figures cover.
+function Card({ to, title, subtitle, period, tone, children }: { to: string; title: string; subtitle: string; period: string; tone?: Tone; children: ReactNode }) {
   return (
     <Link to={to} className="flex min-w-0 flex-col gap-3 break-words rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors hover:bg-accent">
-      <span className="flex items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
-        {title}
-        {tone && (
-          <span className="flex items-center gap-1.5 text-xs">
-            <span className={cn('size-2.5 rounded-full', TONE[tone].dot)} aria-hidden="true" />
-            {TONE[tone].word}
-          </span>
-        )}
+      <span className="flex flex-col gap-0.5">
+        <span className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
+          {title}
+          {tone && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className={cn('size-2.5 rounded-full', TONE[tone].dot)} aria-hidden="true" />
+              {TONE[tone].word}
+            </span>
+          )}
+        </span>
+        <span className="text-xs text-muted-foreground">{subtitle} · {period}</span>
       </span>
       {children}
     </Link>
@@ -59,6 +63,7 @@ export function OwnerSummary() {
   if (!s) return <p className="muted">Loading the summary…</p>;
 
   const money = (n: number) => formatWhole(n, s.currency);   // a summary: whole currency units fit the cards; exact amounts are in the lists
+  const asOfDay = new Date(s.asOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: session.org?.timezone ?? 'UTC' });
   const last = s.months[s.months.length - 2];   // last full month
   const now = s.months[s.months.length - 1];    // this month so far
   const prev = s.months[s.months.length - 3];
@@ -74,7 +79,7 @@ export function OwnerSummary() {
 
   return (
     <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label="Business summary">
-      <Card to="/finance/overview" title="Am I making or losing money?" tone={profitTone}>
+      <Card to="/finance/overview" title="Am I making or losing money?" subtitle="What the business earned after its costs" period={last ? `${monthName(last.month)}, and the last 12 months` : 'last 12 months'} tone={profitTone}>
         {last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
@@ -91,13 +96,13 @@ export function OwnerSummary() {
         <span className="text-xs text-muted-foreground">Last 12 months: {yearNet < 0 ? 'lost' : 'made'} {money(Math.abs(yearNet))} in total. This month so far: {now && now.revenue + now.expenses > 0 ? `${now.net < 0 ? 'down' : 'up'} ${money(Math.abs(now.net))}` : 'nothing recorded yet'}.</span>
       </Card>
 
-      <Card to="/sales/invoices" title="Money coming in and going out" tone={moneyTone}>
+      <Card to="/sales/invoices" title="Money coming in and going out" subtitle="Who owes you and who you owe" period={`all unpaid bills, as of ${asOfDay}`} tone={moneyTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
         <span className="text-sm text-muted-foreground">customers still owe you{s.overdueMinor > 0 ? <>, of which <b className="text-destructive-foreground">{money(s.overdueMinor)}</b> is more than 30 days late</> : ''}.</span>
         <span className="text-sm">You owe suppliers and for expenses: <b>{money(s.iOweMinor)}</b>.</span>
       </Card>
 
-      <Card to="/inventory/requests" title="Waiting for your decision" tone={decisionTone}>
+      <Card to="/inventory/requests" title="Waiting for your decision" subtitle="Stock requests a manager still has to approve" period={`right now, ${asOfDay}`} tone={decisionTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{s.decisions.submitted} request{s.decisions.submitted === 1 ? '' : 's'}</span>
         <span className="text-sm text-muted-foreground">
           {s.decisions.submitted === 0 ? 'Nothing is waiting for approval.' : `The oldest has been waiting ${oldWait < 1 ? 'less than an hour' : `${oldWait} hour${oldWait === 1 ? '' : 's'}`}.`}
@@ -105,7 +110,7 @@ export function OwnerSummary() {
         </span>
       </Card>
 
-      <Card to="/inventory/batches" title="Stock and expiry" tone={stockTone}>
+      <Card to="/inventory/batches" title="Stock and expiry" subtitle="What is on the shelves and what is about to expire" period={`as of ${asOfDay}, looking 90 days ahead`} tone={stockTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
         <span className="text-sm text-muted-foreground">of stock on the shelves, at cost.</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
@@ -115,7 +120,7 @@ export function OwnerSummary() {
         </ul>
       </Card>
 
-      <Card to="/sales/invoices" title="Best sellers, last 90 days">
+      <Card to="/sales/invoices" title="Best sellers" subtitle="The products that brought in the most sales" period="last 90 days">
         {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">No sales yet.</span> : (
           <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
             {s.topProducts.map((p, i) => (
@@ -125,7 +130,7 @@ export function OwnerSummary() {
         )}
       </Card>
 
-      <Card to="/purchasing/suppliers" title="Who you depend on" tone={supplierTone}>
+      <Card to="/purchasing/suppliers" title="Who you depend on" subtitle="The suppliers most of your purchases come from" period="last 12 months" tone={supplierTone}>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
           {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{p.sharePercent}% of purchases</b></li>)}
           {s.topSuppliers.length === 0 && <li className="text-muted-foreground">No purchases yet.</li>}
