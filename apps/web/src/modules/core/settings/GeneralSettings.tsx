@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { demoMode } from '../../../lib/demo';
+import { arabicStringCount, useI18n, type Lang } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 
@@ -15,6 +16,7 @@ function timeZones(): string[] {
 export function GeneralSettings() {
   const session = useSession();
   const reloadSession = useReloadSession();
+  const { t, personalLang, orgLang, setPersonalLang } = useI18n();
   const canEdit = hasPermission(session.permissions, 'core.org.manage');
   const org = useLoad(() => api<OrgSettings>('/v1/core/org'));
   const [form, setForm] = useState<OrgSettings | null>(null);
@@ -68,6 +70,24 @@ export function GeneralSettings() {
     <section className="page">
       <h1>General</h1>
       <p className="muted">How your organization appears and the defaults every app uses.</p>
+      <div className="form-card stack">
+        <label>
+          {t('My language')}
+          <select
+            value={personalLang ?? ''}
+            onChange={(e) => setPersonalLang(e.target.value === '' ? null : (e.target.value as Lang))}
+          >
+            <option value="">
+              {t('Company default')} ({orgLang === 'ar' ? 'العربية' : 'English'})
+            </option>
+            <option value="en">{t('English (left to right)')}</option>
+            <option value="ar">{t('Arabic (right to left)')}</option>
+          </select>
+          <span className="hint muted">
+            Only for you, on this browser. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {arabicStringCount} menu strings so far; the rest of the app stays in English until it is translated and reviewed by a native speaker.
+          </span>
+        </label>
+      </div>
       <form className="form-card stack" onSubmit={save}>
         <fieldset disabled={!canEdit || saving} className="stack">
           <label>
@@ -102,12 +122,12 @@ export function GeneralSettings() {
             </label>
           </div>
           <label>
-            Language for the whole company
+            Default language for the company
             <select value={form.language} onChange={(e) => set('language', e.target.value as OrgSettings['language'])}>
               <option value="en">English (left to right)</option>
               <option value="ar">العربية: Arabic (right to left)</option>
             </select>
-            <span className="hint muted">Everyone in the company sees this language. It is chosen when the company signs up and can be changed here. Arabic is a machine draft covering the menus only so far; a native speaker must review it before customers see it.</span>
+            <span className="hint muted">The language people see until they choose their own under "My language" above. It is chosen when the company signs up and can be changed here. Arabic is a machine draft covering the menus only so far; a native speaker must review it before customers see it.</span>
           </label>
           <label>
             Time zone

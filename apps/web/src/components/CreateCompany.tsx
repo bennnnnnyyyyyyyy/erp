@@ -55,7 +55,7 @@ export function CreateCompany({ onCreated, onCancel, first }: { onCreated: (orgI
             <option value="en">English (left to right)</option>
             <option value="ar">العربية: Arabic (right to left)</option>
           </select>
-          <span className="hint muted">Everyone in your company will see this language. Arabic is a first draft and covers the menus only so far.</span>
+          <span className="hint muted">This is the default language for your company; each person can pick their own under Settings. Arabic is a first draft and covers the menus only so far.</span>
         </label>
         <div className="form-row">
           <label>

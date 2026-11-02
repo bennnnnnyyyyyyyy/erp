@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-02 — Language choice in Settings; inventory transfers plan (draft)
+
+**Objective.** Ben: add a language change in Settings without forcing a language, and start working on the plan from the Odoo review.
+
+**Actions Completed.**
+- `apps/web/src/lib/i18n.tsx`, `components/Shell.tsx`, `modules/core/settings/GeneralSettings.tsx`, `components/CreateCompany.tsx`: new "My language" setting in Settings > General (Company default / English / Arabic), stored in the browser. The company language is now only a default: the Shell no longer overrides a person's own choice. The company setting is relabelled "Default language for the company". Four Arabic strings added for the new labels; the Arabic remains a machine draft covering the menus only. No API or database change.
+- `documentation/plans/INVENTORY_TRANSFERS_PLAN.md` (draft, needs Ben's approval): approval-gated transfers between warehouses with an in-transit state, batch and expiry carried across, storage-condition check, proposed `sql/033`, SQL test 029, routes and permission keys. Entry added to `documentation/plans/checklist.md`. No code or migration written for it.
+- Edits were made in a temporary worktree (Ben approved it for this task) and copied into the main checkout; the worktree was then removed.
+- `documentation/research/odoo/ODOO_REVIEW.md` rewritten as a short plain-language summary for management (bottom line, tests we ran, gaps, build order, decisions needed); the previous detailed version is kept as `ODOO_REVIEW_DETAIL.md`. Workbook renamed by Ben to `Trial_capture_workbook_v13.xlsx`; references in the review files and `P1_GAP.md` updated.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 4 shared + 27 API passed. Browser-tested by Claude with Ben's approval on the local demo build (`vite --mode demo`, port 5199, sample data, no sign-in; server stopped afterwards): Settings > General showed the new "My language" card; choosing Arabic flipped the layout to right-to-left with Arabic menu labels and the rest in English; the choice survived a reload; choosing Company default restored English left-to-right and cleared the stored value. Not covered: the real company-language-from-API path (demo mode skips it), so check once against the real app that a company set to Arabic still lets a person pick English. Nothing committed or deployed.
+
 ## 2026-11-02 — UI audit (code-level), Odoo P1 gap, cleanup
 
 **Objective.** Ben: start the UI audit without his list; make Odoo the main benchmark and report which Odoo features are missing from our P1 set; tidy the repo without deleting anything.
@@ -24,6 +38,7 @@ run or deployed.
 - Tests run in the trial (fake data only): delivery `WH/OUT/00001` (10 x Shampoo) validated in one click by the same user who created it, no approval step; RFQ confirmed to purchase order `P00001` (100 x Glycerin, 6,270.00 LE incl. 14% VAT); receipt `WH/IN/00001` validated on the phone by Ben. Ben's barcode count cut Aloe vera extract from 435 to 1 (a -434 adjustment) with no approval shown. Approvals app works once approvers are set (request admin to Benny accepted) but is a standalone request form, not linked to stock.
 - Import files built from `sql/seed/004_cosmetics_factory_demo.sql`, column headings taken from the exported samples in `documentation/research/odoo/templates/`: `documentation/research/odoo/import/` (products, product categories, vendors, customers, opening stock + README). Imported by Ben; categories had to be imported first (no "All" parent in this Odoo).
 - Lagged chat's final message recovered from the session transcript to `documentation/reviews/2026-11-02-odoo-chat-output.md`. Worktrees removed at Ben's request (`.claude/worktrees/` deleted; git shows it as a tracked deletion).
+- `documentation/research/odoo/ODOO_REVIEW.md`: Odoo strengths seen in the trial, where we are ahead, what we already have, recommended build order.
 - Workbook backup (before edits) was kept only in the temporary job folder, not in the repo.
 
 **Database / System Result.** None.

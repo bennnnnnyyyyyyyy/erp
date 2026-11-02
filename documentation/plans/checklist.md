@@ -38,6 +38,15 @@ Template for further blocks; update them in the same change as the work:
   - **Waiting on:** Ben's commit/push and manual UI check after deployment.
   - **Remaining:** tax, payments, credit notes and accounting export are later scope.
 
+- [ ] **[INVENTORY_TRANSFERS_PLAN.md](INVENTORY_TRANSFERS_PLAN.md): Inventory transfers between warehouses, with approval**
+  - **Done (2026-11-02):** draft plan written from the Odoo review (the top missing P1 feature); no code or migration yet.
+  - **Waiting on:** Ben's approval of the plan and answers to its open questions (partial receipt, approval wording, quarantine, numbering).
+  - **Remaining:** `sql/033`, SQL tests 029, API routes, shared schemas and permission keys, screens, worklog entry.
+
+- [ ] **Language choice in Settings** (small change, no plan needed)
+  - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.
+  - **Remaining:** translate the rest of the screens (UI audit finding 1) once the Arabic review owner is decided.
+
 ## Task list by area
 
 `[x]` done and verified as stated, `[ ]` not done. Sources: [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) (phases in section 9) and [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md).

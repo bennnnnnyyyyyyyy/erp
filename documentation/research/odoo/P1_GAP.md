@@ -1,6 +1,6 @@
 # Odoo benchmark: gap against our P1 set
 
-**Source.** The 64-row list in `Trial_capture_workbook_v12.xlsx`, tab "9 Odoo feature inventory" (Claude's general-knowledge descriptions; not yet confirmed in Ben's Odoo trial). Our status is what the code does as of 2026-11-02, checked against `sql/` and `apps/web/src`. Evidence level: **claimed** for Odoo behaviour until tab 9 column F is filled from the trial; **seen** for our own status.
+**Source.** The 64-row list in `Trial_capture_workbook_v13.xlsx`, tab "9 Odoo feature inventory" (Claude's general-knowledge descriptions; not yet confirmed in Ben's Odoo trial). Our status is what the code does as of 2026-11-02, checked against `sql/` and `apps/web/src`. Evidence level: **claimed** for Odoo behaviour until tab 9 column F is filled from the trial; **seen** for our own status.
 
 **Counts (64 rows).** P1 23, P2 21, P3 14, Cut 5, Decision 1 (ETA e-invoicing).
 
@@ -57,3 +57,4 @@ Approval that blocks the stock movement in the database, self-approval refused, 
 
 ## 6. Open
 Tab 8 (16 checks) and tab 9 column F are still empty. Nothing above changes the plan until the trial results are in.
+

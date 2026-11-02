@@ -59,13 +59,13 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
-  const { t, setLang } = useI18n();
+  const { t, setOrgLang } = useI18n();
   const { dark, toggle } = useTheme();
-  // The language and text direction belong to the whole organization (Settings > General), not to the person or browser.
+  // The company language (Settings > General) is only the default. A person's own choice (Settings > General > My language) wins.
   const orgLanguage = session.org?.language;
   useEffect(() => {
-    if (!demoMode && orgLanguage) setLang(orgLanguage);
-  }, [orgLanguage, setLang]);
+    if (!demoMode && orgLanguage) setOrgLang(orgLanguage);
+  }, [orgLanguage, setOrgLang]);
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);
