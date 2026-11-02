@@ -7,6 +7,7 @@ import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
 import { BatchesPage } from './inventory/Batches';
 import { ForecastPage } from './inventory/Forecast';
+import { NewTransfer, TransferPage, TransfersList } from './inventory/Transfers';
 import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
 import { SupplierInvoices } from './purchasing/SupplierInvoices';
@@ -65,6 +66,9 @@ const INVENTORY_APP: AppDef = {
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/approval-policies', label: 'Approval policies', permission: READ, component: ApprovalPoliciesPage },
     { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
+    { path: '/transfers', label: 'Stock transfers', permission: 'inventory.transfers.read', component: TransfersList },
+    { path: '/transfers/new', label: 'New transfer', permission: 'inventory.transfers.create', component: NewTransfer, nav: false, parent: '/transfers' },
+    { path: '/transfers/:id', label: 'Transfer', permission: 'inventory.transfers.read', component: TransferPage, nav: false, parent: '/transfers' },
     { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
     { path: '/requests/new', label: 'New request', permission: READ, component: NewRequest, nav: false, parent: '/requests' },
     { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },

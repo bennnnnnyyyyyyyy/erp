@@ -10,6 +10,8 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   APPROVAL_REQUIRED: { status: 409, message: 'This needs an approved request first', code: 'approval_required' },
   SELF_APPROVAL: { status: 403, message: 'You cannot approve your own request', code: 'self_approval' },
   INSUFFICIENT_AVAILABLE: { status: 409, message: 'Not enough stock available', code: 'insufficient_available' },
+  STORAGE_MISMATCH: { status: 409, message: "This item's storage condition does not match the destination warehouse", code: 'storage_mismatch' },
+  BATCH_STOCK_SHORT: { status: 409, message: 'Not enough usable batch stock (quarantined and expired batches cannot move)', code: 'batch_stock_short' },
   INVALID_STATE: { status: 409, message: 'That is not possible in the current state', code: 'invalid_state' },
   NOT_FOUND: { status: 404, message: 'Not found', code: 'not_found' },
   MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },

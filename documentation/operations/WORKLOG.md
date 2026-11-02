@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-02 — Inventory transfers built (not yet run): migration 033, test 029, API, screens
+
+**Objective.** Ben approved [`INVENTORY_TRANSFERS_PLAN.md`](../plans/INVENTORY_TRANSFERS_PLAN.md) with the recommended answers and asked for it to be built: stock transfers between warehouses with approval, in-transit state, batches and expiry carried across.
+
+**Actions Completed.**
+- `sql/033_inventory_transfers.sql`: tables `inv_transfers`, `inv_transfer_lines`, `inv_transfer_approvals`, `inv_transfer_batches` (RLS, select-only grants, append-only approvals and batch records, status-order guard); new ledger kinds `transfer_out` and `transfer_in` with `inv_stock_moves.transfer_id`; the ledger guard now refuses a `transfer_out` unless the transfer is approved and a `transfer_in` unless it is dispatched; functions `inv_submit_transfer`, `inv_decide_transfer` (approval policy, no self-approval, trusted-channel rule as in sql/025), `inv_dispatch_transfer`, `inv_receive_transfer`, `inv_cancel_transfer`, `inv_in_transit`; audit rows written in the same transaction; manager and requester notifications through the outbox. Numbering `TR-000001`.
+- `sql/tests/029_inventory_transfers.sql` (always rolls back): approval gate on the ledger, self-approval, member/viewer rights, in-transit, reserve and release, batches and expiry across, quarantined batch not moved, storage-condition refusal, another organization sees nothing, append-only records, two-approval policy, audit chain.
+- API: `/v1/inventory/transfers` (list, detail, create, approve, reject, dispatch, receive, cancel) and `/in-transit`, each behind its own permission and calling one database function; error codes for `STORAGE_MISMATCH` and `BATCH_STOCK_SHORT`. Shared: permission keys `inventory.transfers.read|create|approve|dispatch|receive` (members get create, dispatch and receive, never approve). Tests added: shared permissions (1) and API (12).
+- Web: Stock transfers list with an "in transit now" panel, New transfer, Transfer detail (progress steps, batches moved, approvals, history, buttons by permission); demo data and rules for the demo build.
+- Differences from the plan are listed in section 12 of the plan (org settings not built yet; separate approve/reject routes; hand-written validation).
+
+**Database / System Result.** **None. The migration and the SQL test have NOT been run** against any database (no local Postgres here; running them on the Supabase project needs Ben's go-ahead). The SQL was checked by reading it against sql/006, 011, 012, 023, 025 and 026 only.
+
+**Safety Status.** Root `npm run typecheck` clean; `npm test` 5 shared + 39 API passed (was 4 + 27); web production build succeeds. Not browser-tested yet (demo build available: `npm run dev:demo -w apps/web`). Nothing committed or deployed. Next: Ben runs `sql/033_inventory_transfers.sql`, then `sql/tests/029_inventory_transfers.sql` (expect "ALL TESTS PASSED (everything rolled back)"), and logs the result here before deploying the API and web.
+
 ## 2026-11-02 — Language choice in Settings; inventory transfers plan (draft)
 
 **Objective.** Ben: add a language change in Settings without forcing a language, and start working on the plan from the Odoo review.

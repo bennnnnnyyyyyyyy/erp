@@ -39,9 +39,9 @@ Template for further blocks; update them in the same change as the work:
   - **Remaining:** tax, payments, credit notes and accounting export are later scope.
 
 - [ ] **[INVENTORY_TRANSFERS_PLAN.md](INVENTORY_TRANSFERS_PLAN.md): Inventory transfers between warehouses, with approval**
-  - **Done (2026-11-02):** draft plan written from the Odoo review (the top missing P1 feature); no code or migration yet.
-  - **Waiting on:** Ben's approval of the plan and answers to its open questions (partial receipt, approval wording, quarantine, numbering).
-  - **Remaining:** `sql/033`, SQL tests 029, API routes, shared schemas and permission keys, screens, worklog entry.
+  - **Done (2026-11-02):** plan approved by Ben with the recommended answers. Built: `sql/033_inventory_transfers.sql`, `sql/tests/029_inventory_transfers.sql`, API routes (`/v1/inventory/transfers`, `/in-transit`), permission keys, web screens (list, new, detail, in transit) and demo data. Root typecheck clean; tests 5 shared + 39 API pass.
+  - **Waiting on:** Ben to run `sql/033` then `sql/tests/029` in Supabase and log the result; manual browser check (the screens run in demo mode: `npm run dev:demo -w apps/web`).
+  - **Remaining:** deploy API and web; org settings for storage mismatch and receive confirmation (later); partial receipt (later).
 
 - [ ] **Language choice in Settings** (small change, no plan needed)
   - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.

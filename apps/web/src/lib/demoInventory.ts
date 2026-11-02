@@ -41,7 +41,7 @@ export type LedgerMove = {
   itemId: string;
   warehouseId: string;
   qty: number;
-  kind: 'receipt' | 'issue';
+  kind: 'receipt' | 'issue' | 'transfer_out' | 'transfer_in';
   requestId: string | null;
   /** Free-text origin for movements that are not a request, e.g. a purchase order number. */
   ref: string | null;
@@ -54,6 +54,17 @@ export type StockAdjustment = {
   delta: number; reason: string; status: 'submitted' | 'applied' | 'rejected' | 'cancelled'; requesterId: string;
   decidedBy: string | null; decisionComment: string | null; createdAt: string;
 };
+
+export type TransferStatus = 'submitted' | 'approved' | 'dispatched' | 'received' | 'rejected' | 'cancelled';
+export type DemoTransfer = {
+  id: string; number: string; requesterId: string; fromWarehouseId: string; toWarehouseId: string; reason: string; status: TransferStatus;
+  decidedBy: string | null; decidedAt: string | null; decisionComment: string | null;
+  dispatchedBy: string | null; dispatchedAt: string | null; receivedBy: string | null; receivedAt: string | null; createdAt: string;
+  lines: { itemId: string; qty: number }[];
+  batches: { itemId: string; batchId: string; batchNo: string; expiryDate: string | null; qty: number }[];
+  approvals: { approverId: string; decision: string; comment: string | null; channel: string; decidedAt: string }[];
+};
+export type InTransitRow = { itemId: string; sku: string; name: string; uom: string; qty: number; transfers: number };
 
 /** Who is acting, and what log function to call. Supplied by lib/demo.ts. */
 export type Actor = { id: string; name: string; role: Role; log: (action: string, entityType: string, entityId: string, summary: string) => void };
@@ -120,6 +131,22 @@ function makeRequest(requesterId: string, warehouseId: string, reason: string, l
   Object.assign(done, { status: 'issued', decidedBy: 'u1', decisionComment: 'OK', decidedAt: hoursAgo(48), issuedAt: hoursAgo(46) });
   makeRequest('u3', 'w1', 'Gloves for the night shift', [{ itemId: 'i1', qty: 30 }], hoursAgo(3));
 }
+
+// Transfers between warehouses (documentation/plans/INVENTORY_TRANSFERS_PLAN.md): request, approve, dispatch (in transit), receive.
+const transfers: DemoTransfer[] = [];
+let transferSeq = 0;
+function makeTransfer(requesterId: string, fromWarehouseId: string, toWarehouseId: string, reason: string, lines: DemoTransfer['lines'], createdAt = new Date().toISOString()): DemoTransfer {
+  const n = ++transferSeq;
+  const t: DemoTransfer = {
+    id: `t${n}`, number: `TR-${String(n).padStart(6, '0')}`, requesterId, fromWarehouseId, toWarehouseId, reason, status: 'submitted',
+    decidedBy: null, decidedAt: null, decisionComment: null, dispatchedBy: null, dispatchedAt: null, receivedBy: null, receivedAt: null, createdAt,
+    lines, batches: [], approvals: [],
+  };
+  transfers.unshift(t);
+  for (const l of lines) bal(l.itemId, fromWarehouseId).reserved += l.qty;
+  return t;
+}
+makeTransfer('u3', 'w1', 'w2', 'Restock the Alexandria depot', [{ itemId: 'i1', qty: 20 }, { itemId: 'i5', qty: 4 }], hoursAgo(5));
 
 const isManager = (role: Role) => role === 'owner' || role === 'admin';
 const canWrite = (role: Role) => role !== 'viewer';
@@ -277,6 +304,100 @@ export function handleInventory(method: string, parts: string[], body: Record<st
       actor.log('inventory.adjustment.applied', 'stock_adjustment', adjustment.id, `${adjustment.number} applied: stock ${adjustment.expectedQty} to ${adjustment.countedQty}`);
       return adjustment;
     }
+  }
+
+  if (area === 'in-transit') {
+    const rows = new Map<string, InTransitRow>();
+    for (const t of transfers.filter((x) => x.status === 'dispatched')) {
+      for (const l of t.lines) {
+        const item = items.find((i) => i.id === l.itemId);
+        const row = rows.get(l.itemId) ?? { itemId: l.itemId, sku: item?.sku ?? '', name: item?.name ?? l.itemId, uom: item?.uom ?? '', qty: 0, transfers: 0 };
+        row.qty += l.qty;
+        row.transfers += 1;
+        rows.set(l.itemId, row);
+      }
+    }
+    return [...rows.values()];
+  }
+
+  if (area === 'transfers') {
+    if (!id) {
+      if (method === 'GET') return transfers;
+      if (!canWrite(actor.role)) throw forbid();
+      const from = String(body.fromWarehouseId ?? ''), to = String(body.toWarehouseId ?? '');
+      if (!warehouses.some((w) => w.id === from) || !warehouses.some((w) => w.id === to)) throw new DemoRuleError(400, 'Choose a source and a destination warehouse', 'invalid_input');
+      if (from === to) throw new DemoRuleError(400, 'The source and destination warehouses must be different', 'invalid_input');
+      const lines = ((body.lines as { itemId: string; qty: number }[] | undefined) ?? []).filter((l) => l.itemId && Number(l.qty) > 0).map((l) => ({ itemId: l.itemId, qty: Number(l.qty) }));
+      if (lines.length === 0) throw new DemoRuleError(400, 'Add at least one item, each with a quantity above zero', 'invalid_input');
+      const wanted = new Map<string, number>();
+      for (const l of lines) wanted.set(l.itemId, (wanted.get(l.itemId) ?? 0) + l.qty);
+      for (const [itemId, qty] of wanted) {
+        const b = bal(itemId, from);
+        if (b.onHand - b.reserved < qty) throw new DemoRuleError(409, `Not enough stock available for ${itemName(itemId)}: ${b.onHand - b.reserved} available, ${qty} requested`, 'insufficient_available');
+      }
+      const merged = [...wanted].map(([itemId, qty]) => ({ itemId, qty }));
+      const t = makeTransfer(actor.id, from, to, String(body.reason ?? '').trim(), merged);
+      actor.log('inventory.transfer.submitted', 'stock_transfer', t.id, `${t.number} submitted: ${merged.map((l) => `${l.qty} x ${itemName(l.itemId)}`).join(', ')}, ${warehouses.find((w) => w.id === from)?.name} to ${warehouses.find((w) => w.id === to)?.name}`);
+      return t;
+    }
+    const t = transfers.find((x) => x.id === id);
+    if (!t) throw new DemoRuleError(404, 'Transfer not found', 'not_found');
+    if (method === 'GET') return t;
+    const releaseTransfer = () => { for (const l of t.lines) bal(l.itemId, t.fromWarehouseId).reserved -= l.qty; };
+    if (action === 'approve' || action === 'reject') {
+      if (!isManager(actor.role)) throw forbid();
+      if (t.requesterId === actor.id) throw new DemoRuleError(403, 'You cannot approve your own transfer', 'self_approval');
+      if (t.status !== 'submitted') throw new DemoRuleError(409, `This transfer is already ${t.status}`, 'invalid_state');
+      if (action === 'approve' && t.approvals.some((a) => a.approverId === actor.id && a.decision === 'approved')) throw new DemoRuleError(409, 'You already approved this transfer', 'invalid_state');
+      const comment = String(body.comment ?? '').trim() || null;
+      t.approvals.push({ approverId: actor.id, decision: action === 'approve' ? 'approved' : 'rejected', comment, channel: 'app', decidedAt: new Date().toISOString() });
+      if (action === 'reject') {
+        Object.assign(t, { status: 'rejected', decidedBy: actor.id, decidedAt: new Date().toISOString(), decisionComment: comment });
+        releaseTransfer();
+        actor.log('inventory.transfer.rejected', 'stock_transfer', t.id, `${t.number} rejected by ${actor.name}; reserved stock released`);
+        return t;
+      }
+      const total = t.lines.reduce((s, l) => s + l.qty, 0);
+      const required = Math.max(1, ...approvalPolicies.filter((p) => (p.warehouseId === null || p.warehouseId === t.fromWarehouseId) && total >= p.minTotalQty).map((p) => p.requiredApprovals));
+      const have = new Set(t.approvals.filter((a) => a.decision === 'approved').map((a) => a.approverId)).size;
+      if (have >= required) {
+        Object.assign(t, { status: 'approved', decidedBy: actor.id, decidedAt: new Date().toISOString(), decisionComment: comment });
+        actor.log('inventory.transfer.approved', 'stock_transfer', t.id, `${t.number} approved${required > 1 ? ` (${have} of ${required} approvals)` : ''} by ${actor.name}`);
+      } else {
+        actor.log('inventory.transfer.approval_recorded', 'stock_transfer', t.id, `${t.number}: approval ${have} of ${required} recorded, still waiting`);
+      }
+      return t;
+    }
+    if (action === 'dispatch') {
+      // The gate: in the real product this check is in the database, not the screen.
+      if (t.status !== 'approved') {
+        actor.log('inventory.transfer.refused', 'stock_transfer', t.id, `Dispatch of ${t.number} refused: transfer is ${t.status}, not approved`);
+        throw new DemoRuleError(409, `Blocked: ${t.number} is ${t.status}. Stock can only leave once a manager has approved the transfer.`, 'approval_required');
+      }
+      if (!canWrite(actor.role)) throw forbid();
+      releaseTransfer();
+      for (const l of t.lines) post(l.itemId, t.fromWarehouseId, -l.qty, 'transfer_out', null, actor.id, undefined, t.number);
+      Object.assign(t, { status: 'dispatched', dispatchedBy: actor.id, dispatchedAt: new Date().toISOString() });
+      actor.log('inventory.transfer.dispatched', 'stock_transfer', t.id, `${t.number} dispatched by ${actor.name}, in transit: ${t.lines.map((l) => `${l.qty} x ${itemName(l.itemId)}`).join(', ')}`);
+      return t;
+    }
+    if (action === 'receive') {
+      if (!canWrite(actor.role)) throw forbid();
+      if (t.status !== 'dispatched') throw new DemoRuleError(409, `This transfer is ${t.status}; only a dispatched transfer can be received`, 'invalid_state');
+      for (const l of t.lines) post(l.itemId, t.toWarehouseId, l.qty, 'transfer_in', null, actor.id, undefined, t.number);
+      Object.assign(t, { status: 'received', receivedBy: actor.id, receivedAt: new Date().toISOString() });
+      actor.log('inventory.transfer.received', 'stock_transfer', t.id, `${t.number} received by ${actor.name}: ${t.lines.map((l) => `${l.qty} x ${itemName(l.itemId)}`).join(', ')}`);
+      return t;
+    }
+    if (action === 'cancel') {
+      if (t.requesterId !== actor.id && !isManager(actor.role)) throw forbid();
+      if (t.status !== 'submitted' && t.status !== 'approved') throw new DemoRuleError(409, `This transfer is already ${t.status}`, 'invalid_state');
+      releaseTransfer();
+      t.status = 'cancelled';
+      actor.log('inventory.transfer.cancelled', 'stock_transfer', t.id, `${t.number} cancelled by ${actor.name}; reserved stock released`);
+      return t;
+    }
+    throw new DemoRuleError(404, 'Not available in demo mode', 'not_found');
   }
 
   if (area !== 'requests') throw new DemoRuleError(404, 'Not available in demo mode', 'not_found');

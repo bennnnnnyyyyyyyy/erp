@@ -46,7 +46,7 @@ function Steps({ status }: { status: RequestStatus }) {
   );
 }
 
-function useCatalog() {
+export function useCatalog() {
   const items = useLoad(() => api<DemoItem[]>('/v1/inventory/items'));
   const warehouses = useLoad(() => api<DemoWarehouse[]>('/v1/inventory/warehouses'));
   const itemName = (id: string) => items.data?.find((i) => i.id === id)?.name ?? id;

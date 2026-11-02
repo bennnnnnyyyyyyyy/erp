@@ -1,7 +1,7 @@
 # Inventory Transfers Plan (stock moves between warehouses, with approval)
 
 **Module key:** `inventory` (a feature of the existing module; no new module key)
-**Status:** `[📝 Draft / RFC]`. Needs Ben's approval before any code or migration is written.
+**Status:** `[📋 Approved / ready]` by Ben on 2026-11-02, with the recommended answers to section 11. **Built, not yet run or deployed:** `sql/033_inventory_transfers.sql`, `sql/tests/029_inventory_transfers.sql`, API routes, shared permission keys, web screens, demo data (see "Differences from the draft" at the end). The migration and test have not been run against a database.
 **Owner:** Ben Arthur · **Reviewers:** management (Grant)
 **Research:** [Odoo review](../research/odoo/ODOO_REVIEW.md), seen in the Odoo 20 trial on 2026-11-02: internal transfers exist only after the Storage Locations setting is switched on, and a transfer or a barcode count completes with no approval. [Odoo P1 gap](../research/odoo/P1_GAP.md) lists transfers as the top missing P1 item. Teardown not yet written.
 **Depends on modules:** core, inventory (slice 1 approval engine, adjustments, batches)
@@ -124,3 +124,16 @@ Nothing customer-specific is hardcoded; all in org settings with defaults:
 3. **Quarantine warehouse.** Should transfers *into* the quarantine warehouse need no approval (urgent isolation) or always need one? Recommended: always, same as everything else; revisit if it slows down real recalls.
 4. **Numbering.** One counter (`TR-`) per organization, like requests and adjustments. Agreed?
 5. **Odoo behaviour to confirm.** Odoo's transfer between warehouses was seen only as "needs Storage Locations on"; a full Odoo transfer with two steps was not run. Marked claimed until it is.
+
+
+## 12. Decisions taken (2026-11-02) and differences from the draft
+
+Ben approved the plan and the recommended answers: a transfer is received in full (a difference is fixed with an adjustment at the destination), dispatch and receive are separate steps with separate permissions, numbering is `TR-000001` per organization, and a transfer into quarantine needs approval like any other.
+
+What was built differs from the draft in these places (all simplifications, none weakens the approval rule):
+- **Org settings (section 8) are not built yet.** Version 1 always refuses a storage-condition mismatch (same rule as batch receipts in `sql/026`) and always requires the receive confirmation. The two settings can be added later without changing the tables.
+- **Routes:** approve and reject are two routes (`/transfers/:id/approve`, `/reject`), like requests and adjustments, instead of one `/decision` route.
+- **Validation** is written by hand in the route (same as the other inventory routes); there are no zod schemas in `packages/shared` for inventory today. The database re-checks everything.
+- **Cancel by managers:** a requester, or an owner or admin, can cancel before dispatch (the screen shows the button to them only).
+- **Screens** use plain English strings like the other inventory screens; moving all inventory screens to translated strings stays with the Arabic work.
+- **Not run:** `sql/033` and `sql/tests/029` need to be run in Supabase (migration first, then the test, which always rolls back); log both in the worklog.
