@@ -135,7 +135,8 @@ begin
   if q <> 30 or n <> 1 then raise exception 'FAIL S3a: in transit shows % in % transfers, expected 30 in 1', q, n; end if;
   reset role;
   select b.on_hand, b.reserved into oh, rs from public.inv_stock_balances b where b.org_id = oa and b.item_id = i1 and b.warehouse_id = w1;
-  if oh <> 70 or rs <> 0 then raise exception 'FAIL S3b: source on hand % reserved %, expected 70 and 0', oh, rs; end if;
+  -- reserved is 1, not 0: transfer T2 (the admin's own request for 1 unit, made in S2) is still open and holds 1
+  if oh <> 70 or rs <> 1 then raise exception 'FAIL S3b: source on hand % reserved %, expected 70 and 1 (T2 still open)', oh, rs; end if;
   select count(*) into n from public.inv_stock_balances b where b.org_id = oa and b.item_id = i1 and b.warehouse_id = w2;
   if n <> 0 then raise exception 'FAIL S3c: destination had stock before receipt'; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', ud, 'role', 'authenticated')::text, true);

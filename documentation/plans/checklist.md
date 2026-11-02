@@ -40,7 +40,7 @@ Template for further blocks; update them in the same change as the work:
 
 - [ ] **[INVENTORY_TRANSFERS_PLAN.md](INVENTORY_TRANSFERS_PLAN.md): Inventory transfers between warehouses, with approval**
   - **Done (2026-11-02):** plan approved by Ben with the recommended answers. Built: `sql/033_inventory_transfers.sql`, `sql/tests/029_inventory_transfers.sql`, API routes (`/v1/inventory/transfers`, `/in-transit`), permission keys, web screens (list, new, detail, in transit) and demo data. Root typecheck clean; tests 5 shared + 39 API pass.
-  - **Waiting on:** Ben to run `sql/033` then `sql/tests/029` in Supabase and log the result; manual browser check (the screens run in demo mode: `npm run dev:demo -w apps/web`).
+  - **Done (2026-11-02):** `sql/033` applied and `sql/tests/029` passed in Supabase (project ggoerp). **Waiting on:** deploying the API and web; manual browser check (the screens run in demo mode: `npm run dev:demo -w apps/web`).
   - **Remaining:** deploy API and web; org settings for storage mismatch and receive confirmation (later); partial receipt (later).
 
 - [ ] **Language choice in Settings** (small change, no plan needed)

@@ -1,7 +1,7 @@
 # Inventory Transfers Plan (stock moves between warehouses, with approval)
 
 **Module key:** `inventory` (a feature of the existing module; no new module key)
-**Status:** `[📋 Approved / ready]` by Ben on 2026-11-02, with the recommended answers to section 11. **Built, not yet run or deployed:** `sql/033_inventory_transfers.sql`, `sql/tests/029_inventory_transfers.sql`, API routes, shared permission keys, web screens, demo data (see "Differences from the draft" at the end). The migration and test have not been run against a database.
+**Status:** `[📋 Approved / ready]` by Ben on 2026-11-02, with the recommended answers to section 11. **Built:** `sql/033_inventory_transfers.sql` (applied in Supabase 2026-11-02) and `sql/tests/029_inventory_transfers.sql` (passed, rolled back), API routes, shared permission keys, web screens, demo data (see section 12). API and web not deployed yet.
 **Owner:** Ben Arthur · **Reviewers:** management (Grant)
 **Research:** [Odoo review](../research/odoo/ODOO_REVIEW.md), seen in the Odoo 20 trial on 2026-11-02: internal transfers exist only after the Storage Locations setting is switched on, and a transfer or a barcode count completes with no approval. [Odoo P1 gap](../research/odoo/P1_GAP.md) lists transfers as the top missing P1 item. Teardown not yet written.
 **Depends on modules:** core, inventory (slice 1 approval engine, adjustments, batches)
@@ -136,4 +136,4 @@ What was built differs from the draft in these places (all simplifications, none
 - **Validation** is written by hand in the route (same as the other inventory routes); there are no zod schemas in `packages/shared` for inventory today. The database re-checks everything.
 - **Cancel by managers:** a requester, or an owner or admin, can cancel before dispatch (the screen shows the button to them only).
 - **Screens** use plain English strings like the other inventory screens; moving all inventory screens to translated strings stays with the Arabic work.
-- **Not run:** `sql/033` and `sql/tests/029` need to be run in Supabase (migration first, then the test, which always rolls back); log both in the worklog.
+- **Run:** `sql/033` was applied and `sql/tests/029` passed on the Supabase project on 2026-11-02 (logged in the worklog).

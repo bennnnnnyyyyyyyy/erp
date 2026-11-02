@@ -22,9 +22,9 @@ run or deployed.
 - Web: Stock transfers list with an "in transit now" panel, New transfer, Transfer detail (progress steps, batches moved, approvals, history, buttons by permission); demo data and rules for the demo build.
 - Differences from the plan are listed in section 12 of the plan (org settings not built yet; separate approve/reject routes; hand-written validation).
 
-**Database / System Result.** **None. The migration and the SQL test have NOT been run** against any database (no local Postgres here; running them on the Supabase project needs Ben's go-ahead). The SQL was checked by reading it against sql/006, 011, 012, 023, 025 and 026 only.
+**Database / System Result.** Ben ran `sql/033_inventory_transfers.sql` in Supabase (project `ggoerp`): the verification query returned true for submit, decide, dispatch, receive, cancel and in_transit, and false for both helpers, as expected. The first run of `sql/tests/029_inventory_transfers.sql` failed at S3b because the test was wrong (it expected 0 reserved, but the admin's own open transfer T2 correctly holds 1); the test was corrected and Claude re-ran it with `supabase db query --linked -f` (Ben asked for this; the test always rolls back): **ALL TESTS PASSED (everything rolled back)**. A read-only check afterwards found no leftover test organizations, users or transfers.
 
-**Safety Status.** Root `npm run typecheck` clean; `npm test` 5 shared + 39 API passed (was 4 + 27); web production build succeeds. Not browser-tested yet (demo build available: `npm run dev:demo -w apps/web`). Nothing committed or deployed. Next: Ben runs `sql/033_inventory_transfers.sql`, then `sql/tests/029_inventory_transfers.sql` (expect "ALL TESTS PASSED (everything rolled back)"), and logs the result here before deploying the API and web.
+**Safety Status.** Root `npm run typecheck` clean; `npm test` 5 shared + 39 API passed (was 4 + 27); web production build succeeds. Not browser-tested yet (demo build available: `npm run dev:demo -w apps/web`). Nothing committed or deployed. The database part is live in Supabase (migration 033 applied); the API and web are not deployed, so the new screens are not available to users yet. Next: deploy the API and web, then a manual browser check.
 
 ## 2026-11-02 — Language choice in Settings; inventory transfers plan (draft)
 
