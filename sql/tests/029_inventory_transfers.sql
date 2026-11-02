@@ -14,7 +14,7 @@ declare
   ue uuid := gen_random_uuid();  -- owner, other organization
   uf uuid := gen_random_uuid();  -- second member (not the requester)
   oa uuid; ob uuid;
-  w1 uuid; w2 uuid; w3 uuid; wb uuid;
+  w1 uuid; w2 uuid; w3 uuid; w4 uuid; wb uuid;
   i1 uuid; i2 uuid; i3 uuid;
   c_cold uuid; c_amb uuid;
   b1 uuid; b2 uuid;
@@ -256,6 +256,30 @@ begin
   reset role;
   select b.reserved into rs from public.inv_stock_balances b where b.org_id = oa and b.item_id = i3 and b.warehouse_id = w1;
   if rs <> 0 then raise exception 'FAIL S6b: a refused transfer left % reserved', rs; end if;
+
+  -- a cold item to a warehouse with NO storage condition is refused too (it cannot be shown to be cold)
+  perform set_config('request.jwt.claims', json_build_object('sub', uc, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  ok := false; begin perform public.inv_submit_transfer(w1, w2, 'cold to no condition', jsonb_build_array(jsonb_build_object('itemId', i3, 'qty', 5))); exception when others then ok := (sqlerrm = 'STORAGE_MISMATCH'); end;
+  if not ok then raise exception 'FAIL S6c: a cold item was transferred to a warehouse with no storage condition'; end if;
+  reset role;
+  -- a cold item to a cold warehouse is allowed
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  w4 := public.inv_create_warehouse('COLD2', 'Cold room 2');
+  perform public.inv_set_warehouse_storage(w4, c_cold);
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', uc, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  j := public.inv_submit_transfer(w1, w4, 'cold to cold', jsonb_build_array(jsonb_build_object('itemId', i3, 'qty', 5)));
+  reset role;
+  select b.reserved into rs from public.inv_stock_balances b where b.org_id = oa and b.item_id = i3 and b.warehouse_id = w1;
+  if rs <> 5 then raise exception 'FAIL S6d: a cold item to a cold warehouse reserved %, expected 5', rs; end if;
+  -- an item with no storage condition may go to a warehouse with a condition
+  perform set_config('request.jwt.claims', json_build_object('sub', uc, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  j := public.inv_submit_transfer(w1, w3, 'plain item to ambient room', jsonb_build_array(jsonb_build_object('itemId', i1, 'qty', 1)));
+  reset role;
 
   -- ---- S7: another organization sees and touches nothing
   wb := null;

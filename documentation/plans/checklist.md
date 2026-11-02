@@ -1,17 +1,17 @@
 # Plans Execution Status & Checklist
 
-**Last updated:** 2026-10-28
+**Last updated:** 2026-11-02 (status overview reconciled with the worklog; the older "Detail" blocks and the "Task list by area" below were written on 28 to 30 Oct and parts are stale. **Where they disagree, the worklog wins.**)
 **Source of truth for what actually happened:** [`../operations/WORKLOG.md`](../operations/WORKLOG.md)
 
 ## Status overview
 
 | Status | Plans |
 |---|---|
-| ✅ Live | none |
-| 🟡 In progress | Phase 0 foundation ([TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) section 9) |
+| ✅ Built and deployed (https://erp-live.pages.dev, sample data; see the worklog for what each run verified) | Inventory ([INVENTORY_PLAN.md](INVENTORY_PLAN.md): requests with approval, adjustments, batches and expiry, forecast, reorder levels, **transfers between warehouses**), purchasing ([PURCHASING_PLAN.md](PURCHASING_PLAN.md), [SUPPLIER_INVOICES_PLAN.md](SUPPLIER_INVOICES_PLAN.md)), sales ([SALES_PLAN.md](SALES_PLAN.md), [CUSTOMER_INVOICES_PLAN.md](CUSTOMER_INVOICES_PLAN.md)), finance, owner home and alerts ([OWNER_INSIGHTS_PLAN.md](OWNER_INSIGHTS_PLAN.md)), messaging and tasks ([TASKS_AND_OUTBOX_PLAN.md](TASKS_AND_OUTBOX_PLAN.md)), sign-up and getting-started, per-person language choice, the Guide |
+| 🟡 In progress or built but not proven | WhatsApp and voice approvals (built in part; **never tested on a real phone**); Arabic on every screen (the switch exists, the translations do not); migration 034 (written, dry-run tested, not applied) |
 | 📋 Approved / ready | none |
-| 📝 Draft / RFC | [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md), [ADR-0001](../architecture/decisions/ADR-0001-stack.md), [ADR-0002](../architecture/decisions/ADR-0002-multi-tenancy.md), [ADR-0003](../architecture/decisions/ADR-0003-mutations-via-rpc.md) |
-| 💡 Backlog | none |
+| 📝 Draft / RFC | [ETA_EINVOICING_PLAN.md](ETA_EINVOICING_PLAN.md) (slice A awaits Ben's approval); [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md), ADR-0001 to 0003 (check their status headers; still marked Proposed in the 28 Oct text below) |
+| 💡 Backlog | CSV import with a preview, returns and credit notes, categories and units, barcode scanning, PDF printing, SQL tests in CI (written 2 Nov as `.github/workflows/sql-tests.yml`, untested until it runs on GitHub) |
 
 ## Detail
 
@@ -22,9 +22,9 @@
 - [ ] **Step 0: demand proof** (see [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md) section 5)
   - **Done:** nothing yet.
   - **Remaining:** hands-on trials of the six competitors; 8-10 customer interviews.
-- [ ] **Inventory module plan** (`documentation/plans/INVENTORY_PLAN.md`)
-  - **Done:** nothing; empty placeholder module only.
-  - **Remaining:** write from [`MODULE_PLAN_TEMPLATE.md`](MODULE_PLAN_TEMPLATE.md) after step 0.
+- [x] **Inventory module plan** (`documentation/plans/INVENTORY_PLAN.md`)
+  - **Done (reconciled 2026-11-02):** plan approved for slice 1; slice 1 and the later slices (adjustments, approval policies, batches and expiry, forecast, reorder levels, transfers) are built, applied to Supabase and deployed; see the worklog. (This block said "nothing" on 28 Oct.)
+  - **Remaining:** partial transfer receipts, filters and pagination on lists, CSV import, returns.
 
 Template for further blocks; update them in the same change as the work:
 
@@ -38,10 +38,10 @@ Template for further blocks; update them in the same change as the work:
   - **Waiting on:** Ben's commit/push and manual UI check after deployment.
   - **Remaining:** tax, payments, credit notes and accounting export are later scope.
 
-- [ ] **[INVENTORY_TRANSFERS_PLAN.md](INVENTORY_TRANSFERS_PLAN.md): Inventory transfers between warehouses, with approval**
+- [x] **[INVENTORY_TRANSFERS_PLAN.md](INVENTORY_TRANSFERS_PLAN.md): Inventory transfers between warehouses, with approval**
   - **Done (2026-11-02):** plan approved by Ben with the recommended answers. Built: `sql/033_inventory_transfers.sql`, `sql/tests/029_inventory_transfers.sql`, API routes (`/v1/inventory/transfers`, `/in-transit`), permission keys, web screens (list, new, detail, in transit) and demo data. Root typecheck clean; tests 5 shared + 39 API pass.
-  - **Done (2026-11-02):** `sql/033` applied and `sql/tests/029` passed in Supabase (project ggoerp). **Waiting on:** deploying the API and web; manual browser check (the screens run in demo mode: `npm run dev:demo -w apps/web`).
-  - **Remaining:** deploy API and web; org settings for storage mismatch and receive confirmation (later); partial receipt (later).
+  - **Done (2026-11-02):** `sql/033` applied and `sql/tests/029` passed in Supabase (project ggoerp). **Deployed and browser-checked 2026-11-02** (live app: the list and new-transfer pages load against the real API; the full request, approve, dispatch, receive flow and the self-approval refusal were checked in the demo build; the self-approval refusal was also checked on the live database for stock requests). **Not yet done on the live app: a full multi-role transfer** (needs a second person). **Hardening:** `sql/034` (cold item to a warehouse with no condition) is written and dry-run tested but **not applied**.
+  - **Remaining:** apply `sql/034`; a live multi-role transfer test; org settings for storage mismatch and receive confirmation (later); partial receipt (later).
 
 - [ ] **Language choice in Settings** (small change, no plan needed)
   - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.

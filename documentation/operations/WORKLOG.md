@@ -11,6 +11,36 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-02 — Colleague audit: findings verified, migration 034 applied, docs reconciled, CI job written
+
+**Objective.** Ben asked me to act on a colleague's repository audit (`colluege audit.md`). Every finding was checked against the repository and the live Supabase project before any change; the result is in `documentation/reviews/2026-11-02-colleague-audit-response.md`.
+
+**Actions Completed.**
+- Finding 01 (a cold-storage item could be transferred to a warehouse with no storage condition): **confirmed** by extending `sql/tests/029` (new cases S6c to S6e) and running it against the live project, where it failed at S6c. Fixed in `sql/034_inventory_hardening.sql`: an item that needs a condition may only go to a warehouse with exactly that condition; an item with no condition may go anywhere. Dry run first (migration plus full test in one rolled-back transaction): ALL TESTS PASSED. Ben approved; applied.
+- Same migration revokes the default execute grant on the trigger function `inv_stock_moves_cost()` (from `sql/023`), which the anonymous role could execute (found by a read-only grants query).
+- Finding 02 (stale documentation): confirmed and reconciled: root `README.md` status, `sql/README.md` migration register 001 to 034 plus a seed section, `sql/tests/README.md` (013 to 015, 024 to 029 added), `documentation/plans/checklist.md` status overview and the stale inventory and transfers blocks, the transfers plan status.
+- Finding 03 (no SQL tests in CI): confirmed. Ben approved a job; written as a **separate** non-blocking workflow `.github/workflows/sql-tests.yml` and `scripts/ci-sql-tests.sh` (throwaway local Supabase in the runner; the script refuses any database that is not localhost; no secrets). **Untested**: no Docker here and no YAML parser; bash syntax checked only. The deploy workflow was not touched.
+- Finding 04 (transfers not deployed): **outdated**; they were deployed and checked on the live app earlier the same day. Docs updated.
+- Read-only security check on the live project: 126 security-definer functions; no internal helper callable by signed-in users; every public table has row-level security; no write grants to the app roles; after 034 no security-definer function is callable by the anonymous role. `/v1/core/people` is organization-scoped (it shows an email's local part when a member has no name set).
+
+**Database / System Result.** `sql/034_inventory_hardening.sql` applied to project ggoerp by CLI (Ben's yes). Verified by query: users can still run `inv_submit_transfer` (true); anon cannot execute `inv_stock_moves_cost()` (false). Tests run on the live project afterwards, all ending in "ALL TESTS PASSED (everything rolled back)": 029 (transfers, with the new cases), 002 (inventory approval), 019 (item cost), 022 (batches and storage). No data changed.
+
+**Safety Status.** `npm run typecheck` and `npm test` were not re-run (no TypeScript changed). The CI workflow has not run on GitHub; expect small fixes on its first run. Batch receipts (`sql/026`) keep their older storage rule: changing it is a business decision for Ben. Nothing committed.
+
+## 2026-11-02 — Cosmetics-org browser check (Ben's account added to the sample organization)
+
+**Objective.** Ben: give his account access to the cosmetics organization, redo the browser check there, and recheck the "what I need" checklist. The Chrome session is signed in as `ben@prime-ad.com`, who was owner of Test Organization only.
+
+**Actions Completed.**
+- Added `ben@prime-ad.com` to `demo-cosmetics` as **admin**, directly in the database (insert into `memberships`, inviter Chris), with a `member.added` audit entry stating it was done by Claude Code at Ben's request. Reversible by disabling that membership.
+- Browser check (Claude, with Ben's approval, in his signed-in Chrome, cosmetics org, as admin): owner home, Profit overview, Stock forecast, Stock ledger, Stock requests, Customer invoices, Supplier invoices, Purchase orders, Expenses, Audit log, Alerts, Batches and expiry, Stock transfers and the Guide all loaded with real data, no error messages, every API call 200 in under a second. Then one action cycle: created request OUT-0372 (1 x Lip balm, Finished goods), tried to approve it as its creator (refused: "You cannot approve your own request"), cancelled it (reserved stock released; history shows submitted and cancelled). That request stays in the sample data as a cancelled record; no stock moved.
+- Worker log: the tail captured the whole session (1,264 events): 1,263 ok, 1 canceled (a `GET /v1/core/session` aborted at 193 ms by a page navigation), 0 exceptions, no server errors (the only 4xx were my own unauthenticated tests, the expected 403 self-approval refusal, and root 404s). The tail was then stopped.
+- `documentation/operations/WHAT_I_NEED_FROM_YOU.md` rechecked and updated (owner-home check done; failed-to-fetch still not reproduced with the new evidence; October loss and 70 percent overdue noted; two UI notes; membership and test request noted; tail stopped).
+
+**Database / System Result.** One membership row and one audit row added; one cancelled request (OUT-0372) and its two audit rows. The `inv_counters` request counter moved to 372. The "month is losing money" alert had fired at 21:10 from the October data (in-app message to owners).
+
+**Safety Status.** No code changed. Nothing committed or deployed. Not reproduced: "failed to fetch". Seen but not changed: on New request the warehouse dropdown defaults to "Cold room"; the ledger and request lists are capped at 500 and 200 rows and the ledger says "500 of 500".
+
 ## 2026-11-02 — Audit fixes, sample-data top-up (seed 006), ETA e-invoicing plan (draft)
 
 **Objective.** Ben: fix what the endpoint and button audit found; the sample company had no data for October or November; and, from the 2 Nov meeting notes, start the Egyptian Tax Authority (ETA) e-invoicing work stream with step 1, plan only.

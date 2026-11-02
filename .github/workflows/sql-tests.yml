@@ -1,0 +1,56 @@
+name: SQL tests (local Supabase)
+
+# Runs every migration and every SQL test on a throwaway database started inside the runner (Supabase local stack in Docker).
+# No secrets and no production data are involved; scripts/ci-sql-tests.sh refuses any database that is not localhost.
+# This is a separate workflow: the deploy job in ci-deploy.yml does not depend on it. It is marked continue-on-error until it has run
+# cleanly for a while, then it can be made a required check.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sql/**'
+      - 'scripts/ci-sql-tests.sh'
+      - '.github/workflows/sql-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sql/**'
+      - 'scripts/ci-sql-tests.sh'
+      - '.github/workflows/sql-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sql-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sql-tests:
+    name: Migrations and SQL tests on a throwaway local database
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Make sure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Start a local Supabase stack
+        run: supabase start
+
+      - name: Apply migrations and run every SQL test
+        run: bash scripts/ci-sql-tests.sh
+
+      - name: Stop the local stack
+        if: always()
+        run: supabase stop --no-backup

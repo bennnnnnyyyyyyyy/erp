@@ -26,6 +26,9 @@ Run the whole file at once with nothing else in the editor.
 | `010_audit_check.sql` | O3: chain check runs, hourly skip, alert on a broken chain |
 | `011_outbox_retention.sql` | O9: dry run default, only old finished rows, audit kept, minimum 7 days, closed to users |
 | `012_org_people.sql` | X7: names of own organization's active members only |
+| `013_purchasing_receiving.sql` | suppliers and purchase orders, receiving adds stock through the ledger, roles, isolation |
+| `014_supplier_invoices.sql` | supplier bills against received orders, billed quantity capped at received, duplicate invoice number refused, isolation |
+| `015_sales_orders.sql` | sales orders raise stock requests through the approval, cancel rules, isolation |
 | `016_sales_retry.sql` | Sales: retry after rejection, no second live request, delivered order not cancellable |
 | `017_enable_all_modules.sql` | all apps on, audited, repeat no-op, closed to users |
 | `018_customer_invoices.sql` | delivered-only, no over-invoicing, price from order line, void, isolation, audit |
@@ -33,6 +36,12 @@ Run the whole file at once with nothing else in the editor.
 | `020_finance_expenses_payments.sql` | expenses, payments, no overpayment, void rules, owner/admin only, isolation |
 | `022_batches_expiry_storage.sql` | FEFO, quarantine, expiry, storage mismatch, batch total equals ledger, roles, isolation |
 | `023_owner_insights.sql` | known-answer test for the owner numbers (revenue, cost, expenses, net, owed), roles, isolation |
+| `024_alert_rules.sql` | rules fire only for the right people (team, role, person), no repeat inside the interval, repeat after it, new items fire on their own, isolation |
+| `025_stock_forecast.sql` | known-answer forecast (usage per day, days of cover, run-out date), thin-history label, isolation |
+| `026_forecast_alert_rule.sql` | the forecast alert rule fires and repeats as configured |
+| `027_org_language.sql` | company language set only by owner or admin, validated, audited |
+| `028_signup.sql` | sign-up creates a company for a confirmed email, caller becomes owner, at most 3 owned companies, validated inputs |
+| `029_inventory_transfers.sql` | transfers: approval blocks the ledger (direct inserts refused), no self-approval, roles, in-transit, reserve and release, batches and expiry carried across, quarantined batch never moved, storage conditions (cold to ambient, **cold to a warehouse with no condition (needs 034)**, cold to cold, plain item to a conditioned warehouse), another organization sees nothing, append-only records, two-approval policy, audit chain |
 | `021_security_audit_fixes.sql` | existing accounts must accept an invitation, invitations isolated, member role rules and audit in the database, sign-in link refused across organizations, no user-claimed 'whatsapp' channel, per-org delivery closed to users |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
