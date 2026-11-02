@@ -163,8 +163,13 @@ export function GeneralSettings() {
           <p className="muted small">A short tutorial for new companies, shown as the "Getting started" app. It is {session.org?.showTutorial ? 'on' : 'off'} for this company.</p>
           <div>
             <button type="button" className="secondary" onClick={async () => {
-              await api('/v1/core/org/tutorial', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTutorial }) });
-              reloadSession();
+              setError(null);
+              try {
+                await api('/v1/core/org/tutorial', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTutorial }) });
+                reloadSession();
+              } catch (err) {
+                setError((err as Error).message);
+              }
             }}>{session.org?.showTutorial ? 'Hide the guide' : 'Show the guide'}</button>
           </div>
         </div>

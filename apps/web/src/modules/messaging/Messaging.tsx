@@ -15,9 +15,15 @@ export function NotificationsPage() {
   const session = useSession();
   const inbox = useLoad(() => api<{ items: AppNotification[]; unread: number }>('/v1/messaging/notifications'));
 
+  const [markError, setMarkError] = useState<string | null>(null);
   async function markAll() {
-    await api('/v1/messaging/notifications/read', { method: 'POST', body: JSON.stringify({}) });
-    inbox.reload();
+    setMarkError(null);
+    try {
+      await api('/v1/messaging/notifications/read', { method: 'POST', body: JSON.stringify({}) });
+      inbox.reload();
+    } catch (err) {
+      setMarkError((err as Error).message);
+    }
   }
 
   const columns: Column<AppNotification>[] = [
@@ -30,6 +36,7 @@ export function NotificationsPage() {
     <section className="page">
       <h1>Notifications</h1>
       <p className="muted">Messages sent to you. Opening one takes you to the request or task; deciding still happens there.</p>
+      {markError && <p className="error notice">{markError}</p>}
       {inbox.data ? (
         <ListView
           title="Notifications"

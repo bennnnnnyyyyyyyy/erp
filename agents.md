@@ -49,6 +49,7 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 ## Safety and implementation rules
 
 - State assumptions before coding and make surgical changes only in files relevant to the request.
+- Do not give estimates of your own accord. When asked, check how fast things were actually coded in this project and estimate based upon that.
 - Never run `DROP`, `TRUNCATE`, broad `DELETE`, bucket destruction or production mutations without explicit user consent and a verified target.
 - Preserve append-only audit behavior. Prefer reviewed SQL migrations and local verification before any production schema change. Migrations are numbered, rerun-safe, and end with read-only verification queries.
 - Do not use automated browser testing. Give the user the URL and ask them to test manually.

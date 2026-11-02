@@ -52,3 +52,19 @@ Two UI tasks, no commits, no new features:
 (2) Add a "Guide" page, visible in every organization including the sample company (not only new ones). It should show how to navigate: where each app is, the five-step demo path (home, request, approve, audit log, forecast), and what is not ready yet. Reuse the Getting started tutorial component if possible.
 Report in under 15 lines: done / not verified.
 What’s still open: I’d rather not put the competitor wording in front of management until Zoho’s gate and Odoo’s restricted-user results are hands-on. Keep the “docs-based” label on those two lines.
+--
+
+New work stream, in a worktree, NOT deployed before the Wednesday demo and not touching the demo path. No commits. No secrets in code or docs. Existing tests must keep passing.
+
+Goal: make the ERP able to issue Egyptian Tax Authority (ETA) e-invoices (B2B invoices, credit and debit notes; e-receipts are out of scope).
+
+Step 1, plan only (documentation/plans/ETA_EINVOICING_PLAN.md, use MODULE_PLAN_TEMPLATE.md):
+
+- Read the official SDK at sdk.invoicing.eta.gov.eg (API, Types, Codes, document structure, signature creation, FAQ, error codes). If you cannot reach it, say so and list the exact pages I should paste. Do not rely on third-party SDKs for the rules; label anything from them "unverified".
+- Cover: required document fields; tax types and rates (VAT, table tax, withholding); taxpayer, branch and activity data; customer tax/national ID; item codes (GS1 and EGS) and unit codes; credit and debit notes referencing the original invoice UUID; OAuth login with per-company Client ID and secrets; submission, status polling, retries, cancel/reject; the signing step (CAdES-BES over the canonical document) and the options for a cloud app (signing service, HSM, local signing agent); per-company encrypted credential storage; test (preprod) vs production environments.
+- Say what already fits our design (outbox, audit log, approvals) and what is new.
+- Give a slice order with sizes, and what I must provide (ETA preprod access, signing choice, pilot company data).
+
+Step 2, only after I approve the plan: slice A, prerequisites that do not need ETA access: tax rates and tax data on invoices, credit and debit notes (with approval policy and audit), item and unit code fields, customer tax IDs. Migrations rerun-safe with SQL tests, API and screens. Do not build the ETA submission yet.
+
+Report in under 20 lines: done, tested, not verified, what I must do.

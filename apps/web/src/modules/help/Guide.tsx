@@ -1,3 +1,4 @@
+import { hasPermission } from '@erp/shared';
 import { demoMode } from '../../lib/demo';
 import { Link } from '../../lib/router';
 import { useSession } from '../../session';
@@ -41,7 +42,7 @@ export function GuidePage() {
         <Step n={1} title="Start at the home page" to="/" toLabel="Go to the home page">
           Owners and managers see whether the business is making or losing money, what is owed, what is waiting for a decision, and what is about to expire or run out. Every card shows what it covers and for which period.
         </Step>
-        <Step n={2} title="Ask for stock" to={has('inventory') ? '/inventory/requests/new' : undefined} toLabel="New stock request">
+        <Step n={2} title="Ask for stock" to={has('inventory') && hasPermission(session.permissions, 'inventory.request.create') ? '/inventory/requests/new' : undefined} toLabel="New stock request">
           A staff member asks for stock to leave a warehouse. The stock is set aside (reserved) straight away, but nothing leaves yet.
         </Step>
         <Step n={3} title="Approve it, as a different person" to={has('inventory') ? '/inventory/requests' : undefined} toLabel="Stock requests">
