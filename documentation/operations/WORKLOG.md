@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-02 — UI audit (code-level), Odoo P1 gap, cleanup
+
+**Objective.** Ben: start the UI audit without his list; make Odoo the main benchmark and report which Odoo features are missing from our P1 set; tidy the repo without deleting anything.
+
+**Actions Completed.**
+- `documentation/reviews/2026-11-02-ui-audit.md`: 8 findings ranked by severity, what was checked clean, what could not be checked without a browser. No code changed.
+- `documentation/research/odoo/` created from the template; `P1_GAP.md` compares the 64-row Odoo list in `Trial_capture_workbook_v12.xlsx` (tab 9) with the code. 7 of 23 P1 rows are Partial, plus 2 P1 rows the workbook marks Built that are only partial (locations, credit notes) and 1 P2 row (CSV) that is partly built; research index updated.
+- Cleanup: moved `security-audit-fixes.patch`, `gpreport.html`, `test.ps1`, `test dump.md` into `_to_delete/` (nothing deleted). The old v10 workbook was already gone; v12 untouched. `reply.md`, `migration.md`, `skills-lock.json`, `temp\` left alone as asked. Branch `worktree-security-audit-fixes` was already merged into `main` (no commits ahead, working tree clean): worktree unregistered and the local branch deleted with `git branch -d`. The folder `.claude/worktrees/security-audit-fixes` still exists on disk (git: "Directory not empty", probably `node_modules`); the remote branch `origin/worktree-security-audit-fixes` is untouched.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` 4 shared + 27 API passed; web production build succeeds (one 642 kB chunk). Not browser-tested. Nothing committed. Odoo behaviour in `P1_GAP.md` is claimed (general knowledge), not yet seen in the trial. `npm run build -w apps/web` fails in this environment because npm runs scripts in Windows PowerShell 5.1, which has no `&&`; Vite was run directly instead.
+
 ## 2026-10-30 — Sign-up flow, getting-started tutorial, Add warehouse: migration 032, test 028; end-of-day checks
 
 **Objective.** Ben: "build the sign-up flow next, tutorial page as well"; the tutorial only in new empty companies, never the sample company; then (leaving for the weekend) check, clean up and write the day report.

@@ -37,7 +37,7 @@ a module plan from it without going back to the system.
 |---|---|---|---|---|
 | Edara | `edara` | Warehouse, transfer approvals, ETA e-invoicing | Not started | inventory |
 | Daftra | `daftra` | Inventory, requisitions, lots/serials/expiry | Not started | inventory |
-| Odoo | `odoo` | Inventory, internal transfers, WhatsApp, AI agents | Not started | inventory, messaging |
+| Odoo | `odoo` | Inventory, internal transfers, WhatsApp, AI agents | In progress: main benchmark; P1 gap written ([`odoo/P1_GAP.md`](odoo/P1_GAP.md)), trial results pending | inventory, messaging |
 | Wafeq | `wafeq` | Accounting, approval-gated AI agent, EGP pricing | Not started | billing |
 | Zoho (Books/Inventory) | `zoho` | Approvals, audit trail, transfer orders | Not started | inventory |
 | ERPNext | `erpnext` | Workflow engine, multi-level approvals | Not started | inventory |
