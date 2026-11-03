@@ -62,7 +62,7 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
-  const { t, setOrgLang, syncAccountLang, setAccountSaver, asked, ready } = useI18n();
+  const { t, lang, setOrgLang, syncAccountLang, setAccountSaver, asked, ready } = useI18n();
   const { dark, toggle } = useTheme();
   // The company language (Settings > General) is only the default. A person's own choice (Settings > General > My language) wins.
   const orgLanguage = session.org?.language;
@@ -138,7 +138,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           <Home apps={apps} />
         ) : Page ? (
           <ParamsContext.Provider value={route.params}>
-            <Page key={path} />
+            <Page key={`${lang}:${path}`} />
           </ParamsContext.Provider>
         ) : (
           <section>

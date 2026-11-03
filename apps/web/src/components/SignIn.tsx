@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { authLinkError, googleSignInEnabled, supabase, supabaseConfigured } from '../lib/supabase';
 
+import { tr, trf } from '../lib/i18n';
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
 const TITLE: Record<Mode, string> = { 'sign-in': 'Sign in', 'sign-up': 'Create your account', forgot: 'Reset your password' };
 
@@ -43,7 +44,7 @@ export function SignIn() {
         if (error) setError(error.message);
         else if (!data.session) {
           // Same message whether or not the address already has an account, so the form can't be used to probe emails.
-          setNotice(`We sent a confirmation link to ${email}. Open it, then come back here and sign in to set up your company.`);
+          setNotice(trf('We sent a confirmation link to {email}. Open it, then come back here and sign in to set up your company.', { email }));
           setMode('sign-in');
           setPassword('');
           setAgain('');
@@ -62,29 +63,28 @@ export function SignIn() {
   return (
     <main className="center">
       <form className="card stack" onSubmit={submit}>
-        <h1>{TITLE[mode]}</h1>
-        {mode === 'sign-up' && <p className="muted small">Start with your own login. Next you will set up your company, which takes about a minute.</p>}
+        <h1>{tr(TITLE[mode])}</h1>
+        {mode === 'sign-up' && <p className="muted small">{tr('Start with your own login. Next you will set up your company, which takes about a minute.')}</p>}
         {!supabaseConfigured && (
           <p className="error">
-            Supabase isn't configured. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY to the .env at the repo root, then
-            restart the web app.
+            {tr('Supabase isn\'t configured. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY to the .env at the repo root, then restart the web app.')}
           </p>
         )}
         {mode !== 'forgot' && googleSignInEnabled && (
           <>
             <button type="button" className="secondary" onClick={signInWithGoogle}>
-              Continue with Google
+              {tr('Continue with Google')}
             </button>
             <div className="divider muted small">or</div>
           </>
         )}
         <label>
-          Email
+          {tr('Email')}
           <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         {mode !== 'forgot' && (
           <label>
-            Password
+            {tr('Password')}
             <input
               type="password"
               autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
@@ -93,28 +93,28 @@ export function SignIn() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            {mode === 'sign-up' && <span className="hint muted">At least 8 characters.</span>}
+            {mode === 'sign-up' && <span className="hint muted">{tr('At least 8 characters.')}</span>}
           </label>
         )}
         {mode === 'sign-up' && (
           <label>
-            Repeat the password
+            {tr('Repeat the password')}
             <input type="password" autoComplete="new-password" required value={again} onChange={(e) => setAgain(e.target.value)} />
           </label>
         )}
         {error && <p className="error" role="alert">{error}</p>}
         {notice && <p className="notice" role="status">{notice}</p>}
         <button type="submit" disabled={busy}>
-          {mode === 'sign-in' ? (busy ? 'Signing in…' : 'Sign in') : mode === 'sign-up' ? (busy ? 'Creating…' : 'Create account') : busy ? 'Sending…' : 'Send reset link'}
+          {mode === 'sign-in' ? (busy ? tr('Signing in…') : tr('Sign in')) : mode === 'sign-up' ? (busy ? tr('Creating…') : tr('Create account')) : busy ? tr('Sending…') : tr('Send reset link')}
         </button>
         {mode === 'sign-in' && (
           <>
-            <button type="button" className="secondary" onClick={() => switchMode('sign-up')}>New here? Create an account</button>
-            <button type="button" className="secondary" onClick={() => switchMode('forgot')}>Forgot password?</button>
+            <button type="button" className="secondary" onClick={() => switchMode('sign-up')}>{tr('New here? Create an account')}</button>
+            <button type="button" className="secondary" onClick={() => switchMode('forgot')}>{tr('Forgot password?')}</button>
           </>
         )}
         {mode !== 'sign-in' && (
-          <button type="button" className="secondary" onClick={() => switchMode('sign-in')}>Back to sign in</button>
+          <button type="button" className="secondary" onClick={() => switchMode('sign-in')}>{tr('Back to sign in')}</button>
         )}
       </form>
     </main>

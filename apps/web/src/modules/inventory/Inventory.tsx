@@ -11,6 +11,7 @@ import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
+import { tr, trf } from '../../lib/i18n';
 // Inventory slice 1 screens. They call /v1/inventory/... : the real API in the real app, and the in-browser sample
 // (lib/demoInventory.ts) in demo mode. Plan: documentation/plans/INVENTORY_PLAN.md.
 
@@ -23,7 +24,7 @@ const STATUS_LABEL: Record<RequestStatus, string> = {
 };
 
 function StatusPill({ status }: { status: RequestStatus }) {
-  return <span className={`pill st-${status}`}>{STATUS_LABEL[status]}</span>;
+  return <span className={`pill st-${status}`}>{tr(STATUS_LABEL[status])}</span>;
 }
 
 // Submitted, approved, issued: where this request is on the way out of the warehouse.
@@ -33,7 +34,7 @@ function Steps({ status }: { status: RequestStatus }) {
   const at = order.indexOf(status);
   const label = ['Submitted', ended ? (status === 'rejected' ? 'Rejected' : 'Cancelled') : 'Approved', 'Issued'];
   return (
-    <ol className="steps" aria-label="Request progress">
+    <ol className="steps" aria-label={tr('Request progress')}>
       {label.map((text, i) => {
         const cls = ended ? (i === 0 ? 'done' : i === 1 ? 'bad' : '') : i < at ? 'done' : i === at ? (status === 'issued' ? 'done' : 'current') : '';
         return (
@@ -76,25 +77,25 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
   }
 
   return (
-    <Modal title="Add item" onClose={onClose}>
+    <Modal title={tr('Add item')} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
         <div className="form-row">
           <label>SKU<input required value={form.sku} onChange={set('sku')} /></label>
-          <label>Unit<input required value={form.uom} onChange={set('uom')} /></label>
+          <label>{tr('Unit')}<input required value={form.uom} onChange={set('uom')} /></label>
         </div>
-        <label>Name<input required value={form.name} onChange={set('name')} /></label>
-        <label>Name in Arabic<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
+        <label>{tr('Name in Arabic')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
         <div className="form-row">
-          <label>Opening stock<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
+          <label>{tr('Opening stock')}<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
           <label>
-            Warehouse
+            {tr('Warehouse')}
             <select value={form.warehouseId} onChange={set('warehouseId')}>
               {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </label>
         </div>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit">Add item</button></div>
+        <div className="form-actions"><button type="submit">{tr('Add item')}</button></div>
       </form>
     </Modal>
   );
@@ -117,16 +118,16 @@ function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; onDone: (
   }
 
   return (
-    <Modal title="Add warehouse" onClose={onClose}>
+    <Modal title={tr('Add warehouse')} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
-        <p className="muted small">A warehouse is any place you keep stock: a store room, a cold room, a shelf area. Items are received into one.</p>
+        <p className="muted small">{tr('A warehouse is any place you keep stock: a store room, a cold room, a shelf area. Items are received into one.')}</p>
         <div className="form-row">
-          <label>Short code<input required maxLength={32} placeholder="MAIN" value={form.code} onChange={set('code')} /></label>
-          <label>Name<input required placeholder="Main warehouse" value={form.name} onChange={set('name')} /></label>
+          <label>{tr('Short code')}<input required maxLength={32} placeholder="MAIN" value={form.code} onChange={set('code')} /></label>
+          <label>{tr('Name')}<input required placeholder={tr('Main warehouse')} value={form.name} onChange={set('name')} /></label>
         </div>
-        <label>Name in Arabic (optional)<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit">Add warehouse</button></div>
+        <div className="form-actions"><button type="submit">{tr('Add warehouse')}</button></div>
       </form>
     </Modal>
   );
@@ -151,27 +152,27 @@ export function StockPage() {
 
   const columns: Column<StockLine>[] = [
     { key: 'sku', label: 'SKU', value: (r) => r.sku, render: (r) => <code>{r.sku}</code> },
-    { key: 'name', label: 'Item', value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
-    { key: 'ar', label: 'Arabic name', value: (r) => r.nameAr, render: (r) => <span dir="rtl">{r.nameAr}</span> },
-    { key: 'uom', label: 'Unit', value: (r) => r.uom },
+    { key: 'name', label: tr('Item'), value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
+    { key: 'ar', label: tr('Arabic name'), value: (r) => r.nameAr, render: (r) => <span dir="rtl">{r.nameAr}</span> },
+    { key: 'uom', label: tr('Unit'), value: (r) => r.uom },
     {
       key: 'level',
-      label: 'Stock level',
+      label: tr('Stock level'),
       value: (r) => r.available,
       render: (r) => {
         const total = Math.max(r.onHand, 1);
         const low = r.available / total < 0.2;
         return (
-          <span className={low ? 'bar low' : 'bar'} title={`${r.available} available, ${r.reserved} reserved, ${r.onHand} on hand`}>
+          <span className={low ? 'bar low' : 'bar'} title={trf('{available} available, {reserved} reserved, {onHand} on hand', { available: r.available, reserved: r.reserved, onHand: r.onHand })}>
             <i className="fill-avail" style={{ width: `${(r.available / total) * 100}%` }} />
             <i className="fill-resv" style={{ width: `${(r.reserved / total) * 100}%` }} />
           </span>
         );
       },
     },
-    { key: 'onHand', label: 'On hand', value: (r) => r.onHand, align: 'right' },
-    { key: 'reserved', label: 'Reserved', value: (r) => r.reserved, align: 'right' },
-    { key: 'available', label: 'Available', value: (r) => r.available, align: 'right', render: (r) => <strong>{r.available}</strong> },
+    { key: 'onHand', label: tr('On hand'), value: (r) => r.onHand, align: 'right' },
+    { key: 'reserved', label: tr('Reserved'), value: (r) => r.reserved, align: 'right' },
+    { key: 'available', label: tr('Available'), value: (r) => r.available, align: 'right', render: (r) => <strong>{r.available}</strong> },
   ];
 
   const totalOnHand = rows.reduce((a, r) => a + r.onHand, 0);
@@ -180,54 +181,54 @@ export function StockPage() {
 
   return (
     <section className="page">
-      <h1>Stock on hand</h1>
-      <p className="muted">Reserved stock is promised to a request that is waiting for approval or not yet issued. Available = on hand minus reserved.</p>
+      <h1>{tr('Stock on hand')}</h1>
+      <p className="muted">{tr('Reserved stock is promised to a request that is waiting for approval or not yet issued. Available = on hand minus reserved.')}</p>
       {cat.ready && stock.data && (
         <div className="stats">
           <div className="stat" style={{ '--i': 0 } as CSSProperties}>
-            <div className="stat-label">Items</div>
+            <div className="stat-label">{tr('Items')}</div>
             <div className="stat-value">{rows.length}</div>
-            <div className="stat-note">in {warehouseId === 'all' ? `${cat.warehouses.data?.length ?? 0} warehouses` : cat.warehouseName(warehouseId)}</div>
+            <div className="stat-note">in {warehouseId === 'all' ? trf('{n} warehouses', { n: cat.warehouses.data?.length ?? 0 }) : cat.warehouseName(warehouseId)}</div>
           </div>
           <div className="stat" style={{ '--i': 1 } as CSSProperties}>
-            <div className="stat-label">Units on hand</div>
+            <div className="stat-label">{tr('Units on hand')}</div>
             <div className="stat-value">{totalOnHand.toLocaleString('en-US')}</div>
             <div className="stat-note">{(totalOnHand - totalReserved).toLocaleString('en-US')} available</div>
           </div>
           <div className="stat" style={{ '--i': 2 } as CSSProperties}>
-            <div className="stat-label">Reserved</div>
+            <div className="stat-label">{tr('Reserved')}</div>
             <div className="stat-value">{totalReserved.toLocaleString('en-US')}</div>
-            <div className="stat-note">held for open requests</div>
+            <div className="stat-note">{tr('held for open requests')}</div>
           </div>
           <Link to="/inventory/requests" className={waiting > 0 ? 'stat warn' : 'stat'} style={{ '--i': 3, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
-            <div className="stat-label">Waiting for approval</div>
+            <div className="stat-label">{tr('Waiting for approval')}</div>
             <div className="stat-value">{waiting}</div>
-            <div className="stat-note">{waiting > 0 ? 'a manager needs to decide' : 'nothing pending'}</div>
+            <div className="stat-note">{waiting > 0 ? tr('a manager needs to decide') : tr('nothing pending')}</div>
           </Link>
         </div>
       )}
       {cat.ready && stock.data ? (
         <ListView
-          title="Stock on hand"
+          title={tr('Stock on hand')}
           rows={rows}
           columns={columns}
           rowKey={(r) => r.id}
           toolbar={
             <>
-              <select className="narrow-select" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} aria-label="Warehouse">
-                <option value="all">All warehouses</option>
+              <select className="narrow-select" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} aria-label={tr('Warehouse')}>
+                <option value="all">{tr('All warehouses')}</option>
                 {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
-              {canAddWarehouse && <button className="secondary" onClick={() => setAddingWarehouse(true)}>Add warehouse</button>}
-              {canAdd && (cat.warehouses.data?.length ?? 0) > 0 && <button onClick={() => setAdding(true)}>Add item</button>}
+              {canAddWarehouse && <button className="secondary" onClick={() => setAddingWarehouse(true)}>{tr('Add warehouse')}</button>}
+              {canAdd && (cat.warehouses.data?.length ?? 0) > 0 && <button onClick={() => setAdding(true)}>{tr('Add item')}</button>}
             </>
           }
         />
       ) : (
-        <p className="muted">Loading…</p>
+        <p className="muted">{tr('Loading…')}</p>
       )}
       {cat.ready && (cat.warehouses.data?.length ?? 0) === 0 && (
-        <p className="notice">{canAddWarehouse ? 'Start by adding your first warehouse (any place you keep stock), then add items to it.' : 'No warehouse exists yet. Ask an owner or admin to add one.'}</p>
+        <p className="notice">{canAddWarehouse ? tr('Start by adding your first warehouse (any place you keep stock), then add items to it.') : tr('No warehouse exists yet. Ask an owner or admin to add one.')}</p>
       )}
       {addingWarehouse && <AddWarehouseModal onClose={() => setAddingWarehouse(false)} onDone={() => { setAddingWarehouse(false); cat.warehouses.reload(); stock.reload(); }} />}
       {adding && cat.warehouses.data && (
@@ -273,7 +274,7 @@ export function ReorderLevelsPage() {
       await api(`/v1/inventory/items/${row.id}/reorder-level`, { method: 'POST', body: JSON.stringify({ level }) });
       setDrafts((current) => { const next = { ...current }; delete next[row.id]; return next; });
       cat.items.reload();
-      setNotice(`${row.sku} reorder level saved.`);
+      setNotice(trf('{sku} reorder level saved.', { sku: row.sku }));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -281,17 +282,17 @@ export function ReorderLevelsPage() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   return (
     <section className="page">
-      <h1>Reorder levels</h1>
-      <p className="muted">Set the minimum available stock for each item. Managers receive one low-stock notification per item per day when available stock reaches the level.</p>
+      <h1>{tr('Reorder levels')}</h1>
+      <p className="muted">{tr('Set the minimum available stock for each item. Managers receive one low-stock notification per item per day when available stock reaches the level.')}</p>
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error notice">{error}</p>}
       <div className="table-wrap">
         <table>
-          <thead><tr><th>SKU</th><th>Item</th><th className="right">Available</th><th className="right">Reorder level</th><th>Status</th><th /></tr></thead>
+          <thead><tr><th>SKU</th><th>{tr('Item')}</th><th className="right">{tr('Available')}</th><th className="right">{tr('Reorder level')}</th><th>{tr('Status')}</th><th /></tr></thead>
           <tbody>
             {rows.map((row) => {
               const value = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
@@ -301,17 +302,17 @@ export function ReorderLevelsPage() {
                   <td><strong>{row.name}</strong><div className="muted small">{row.uom} · {row.reserved} reserved</div></td>
                   <td className="right"><strong>{row.available}</strong></td>
                   <td className="right">
-                    {canManage ? <input className="narrow-input" type="number" min="0" step="0.001" aria-label={`Reorder level for ${row.sku}`} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder="Off" /> : (row.reorderLevel ?? 'Off')}
+                    {canManage ? <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Off')} /> : (row.reorderLevel ?? tr('Off'))}
                   </td>
-                  <td>{row.reorderLevel === null ? <span className="muted">Not monitored</span> : row.low ? <span className="pill st-rejected">Low stock</span> : <span className="pill st-approved">Healthy</span>}</td>
-                  <td>{canManage && <button disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? 'Saving…' : 'Save'}</button>}</td>
+                  <td>{row.reorderLevel === null ? <span className="muted">{tr('Not monitored')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
+                  <td>{canManage && <button disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? tr('Saving…') : tr('Save')}</button>}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {!canManage && <p className="hint muted small">Only owners and admins can change reorder levels.</p>}
+      {!canManage && <p className="hint muted small">{tr('Only owners and admins can change reorder levels.')}</p>}
     </section>
   );
 }
@@ -354,34 +355,34 @@ export function ApprovalPoliciesPage() {
 
   const warehouseName = (id: string | null) => id ? cat.warehouseName(id) : 'All warehouses';
 
-  if (!cat.warehouses.data || !policies.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!cat.warehouses.data || !policies.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   return (
     <section className="page">
-      <h1>Approval policies</h1>
-      <p className="muted">Set when a stock request needs more than one manager. The highest matching rule applies; requests below all thresholds need one approval.</p>
+      <h1>{tr('Approval policies')}</h1>
+      <p className="muted">{tr('Set when a stock request needs more than one manager. The highest matching rule applies; requests below all thresholds need one approval.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canManage && (
         <form className="form-card stack" onSubmit={save}>
-          <strong>Add or update a policy</strong>
+          <strong>{tr('Add or update a policy')}</strong>
           <div className="form-row">
-            <label>From total quantity<input required type="number" min="0" step="0.001" value={form.minTotalQty} onChange={(e) => setForm((f) => ({ ...f, minTotalQty: e.target.value }))} /></label>
-            <label>Required approvals<select value={form.requiredApprovals} onChange={(e) => setForm((f) => ({ ...f, requiredApprovals: e.target.value }))}><option value="1">1 approval</option><option value="2">2 approvals</option><option value="3">3 approvals</option></select></label>
-            <label>Warehouse<select value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">All warehouses</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+            <label>{tr('From total quantity')}<input required type="number" min="0" step="0.001" value={form.minTotalQty} onChange={(e) => setForm((f) => ({ ...f, minTotalQty: e.target.value }))} /></label>
+            <label>{tr('Required approvals')}<select value={form.requiredApprovals} onChange={(e) => setForm((f) => ({ ...f, requiredApprovals: e.target.value }))}><option value="1">{tr('1 approval')}</option><option value="2">{tr('2 approvals')}</option><option value="3">{tr('3 approvals')}</option></select></label>
+            <label>{tr('Warehouse')}<select value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('All warehouses')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
           </div>
-          <div className="form-actions"><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save policy'}</button></div>
+          <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Saving…') : tr('Save policy')}</button></div>
         </form>
       )}
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Threshold</th><th>Warehouse</th><th>Required</th>{canManage && <th />}</tr></thead>
+          <thead><tr><th>{tr('Threshold')}</th><th>{tr('Warehouse')}</th><th>{tr('Required')}</th>{canManage && <th />}</tr></thead>
           <tbody>
-            {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> units or more</td><td>{warehouseName(p.warehouseId)}</td><td>{p.requiredApprovals} approval{p.requiredApprovals === 1 ? '' : 's'}</td>{canManage && <td><button className="secondary" onClick={() => remove(p.id)}>Remove</button></td>}</tr>)}
-            {policies.data.length === 0 && <tr><td colSpan={canManage ? 4 : 3} className="muted empty">No extra approval policies. One approval is enough for every request.</td></tr>}
+            {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> {tr('units or more')}</td><td>{warehouseName(p.warehouseId)}</td><td>{trf(p.requiredApprovals === 1 ? '{n} approval' : '{n} approvals', { n: p.requiredApprovals })}</td>{canManage && <td><button className="secondary" onClick={() => remove(p.id)}>{tr('Remove')}</button></td>}</tr>)}
+            {policies.data.length === 0 && <tr><td colSpan={canManage ? 4 : 3} className="muted empty">{tr('No extra approval policies. One approval is enough for every request.')}</td></tr>}
           </tbody>
         </table>
       </div>
-      {!canManage && <p className="hint muted small">Only owners and admins can change approval policies.</p>}
+      {!canManage && <p className="hint muted small">{tr('Only owners and admins can change approval policies.')}</p>}
     </section>
   );
 }
@@ -430,29 +431,29 @@ export function AdjustmentsPage() {
     }
   }
 
-  if (!cat.ready || !cat.warehouses.data || !adjustments.data || !stock.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!cat.ready || !cat.warehouses.data || !adjustments.data || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   return (
     <section className="page">
-      <h1>Stock adjustments</h1>
-      <p className="muted">Count stock in a warehouse. A manager must approve the difference before it reaches the stock ledger.</p>
+      <h1>{tr('Stock adjustments')}</h1>
+      <p className="muted">{tr('Count stock in a warehouse. A manager must approve the difference before it reaches the stock ledger.')}</p>
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
-        <strong>New cycle count</strong>
+        <strong>{tr('New cycle count')}</strong>
         <div className="form-row">
-          <label>Item<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">Choose an item…</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
-          <label>Warehouse<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">Choose a warehouse…</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-          <label>Counted quantity<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">Book quantity: {expected}</span>}</label>
+          <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
+          <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('Counted quantity')}<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">{tr('Book quantity:')} {expected}</span>}</label>
         </div>
-        <label>Reason<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Physical count, damaged stock…" /></label>
-        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? 'Submitting…' : 'Submit count'}</button></div>
+        <label>{tr('Reason')}<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={tr('Physical count, damaged stock…')} /></label>
+        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit count')}</button></div>
       </form>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Count</th><th>Item</th><th>Warehouse</th><th className="right">Book</th><th className="right">Counted</th><th className="right">Difference</th><th>Status</th><th /></tr></thead>
+          <thead><tr><th>{tr('Count')}</th><th>{tr('Item')}</th><th>{tr('Warehouse')}</th><th className="right">{tr('Book')}</th><th className="right">{tr('Counted')}</th><th className="right">{tr('Difference')}</th><th>{tr('Status')}</th><th /></tr></thead>
           <tbody>
-            {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{ADJUSTMENT_STATUS[a.status]}</span></td><td>{a.status === 'submitted' && canApprove && <><button onClick={() => act(a.id, 'approve')}>Approve</button> <button className="secondary" onClick={() => act(a.id, 'reject')}>Reject</button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <button className="secondary" onClick={() => act(a.id, 'cancel')}>Cancel</button>}</td></tr>)}
-            {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">No stock counts yet.</td></tr>}
+            {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><button onClick={() => act(a.id, 'approve')}>{tr('Approve')}</button> <button className="secondary" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <button className="secondary" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</button>}</td></tr>)}
+            {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No stock counts yet.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -471,37 +472,37 @@ export function RequestsList() {
   const rows = (requests.data ?? []).filter((r) => filter === 'all' || r.status === 'submitted');
 
   const columns: Column<DemoRequest>[] = [
-    { key: 'number', label: 'Request', value: (r) => r.number, render: (r) => <Link to={`/inventory/requests/${r.id}`}><code>{r.number}</code></Link> },
-    { key: 'by', label: 'Requested by', value: (r) => who(r.requesterId) },
-    { key: 'wh', label: 'Warehouse', value: (r) => cat.warehouseName(r.warehouseId) },
-    { key: 'items', label: 'Items', value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
-    { key: 'status', label: 'Status', value: (r) => r.status, render: (r) => <StatusPill status={r.status} /> },
-    { key: 'when', label: 'Requested', value: (r) => r.createdAt, render: (r) => <span className="nowrap">{formatDateTime(r.createdAt, session.org)}</span> },
+    { key: 'number', label: tr('Request'), value: (r) => r.number, render: (r) => <Link to={`/inventory/requests/${r.id}`}><code>{r.number}</code></Link> },
+    { key: 'by', label: tr('Requested by'), value: (r) => who(r.requesterId) },
+    { key: 'wh', label: tr('Warehouse'), value: (r) => cat.warehouseName(r.warehouseId) },
+    { key: 'items', label: tr('Items'), value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
+    { key: 'status', label: tr('Status'), value: (r) => r.status, render: (r) => <StatusPill status={r.status} /> },
+    { key: 'when', label: tr('Requested'), value: (r) => r.createdAt, render: (r) => <span className="nowrap">{formatDateTime(r.createdAt, session.org)}</span> },
   ];
 
   return (
     <section className="page">
-      <h1>Stock requests</h1>
-      <p className="muted">Stock only leaves the warehouse through an approved request.</p>
+      <h1>{tr('Stock requests')}</h1>
+      <p className="muted">{tr('Stock only leaves the warehouse through an approved request.')}</p>
       {requests.data && cat.ready ? (
         <ListView
-          title="Stock requests"
+          title={tr('Stock requests')}
           rows={rows}
           columns={columns}
           rowKey={(r) => r.id}
-          empty="No requests yet."
+          empty={tr('No requests yet.')}
           toolbar={
             <>
-              <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as 'all' | 'submitted')} aria-label="Filter">
-                <option value="all">All requests</option>
-                <option value="submitted">Waiting for approval</option>
+              <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as 'all' | 'submitted')} aria-label={tr('Filter')}>
+                <option value="all">{tr('All requests')}</option>
+                <option value="submitted">{tr('Waiting for approval')}</option>
               </select>
-              {session.role !== 'viewer' && <button onClick={() => navigate('/inventory/requests/new')}>New request</button>}
+              {session.role !== 'viewer' && <button onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</button>}
             </>
           }
         />
       ) : (
-        <p className="muted">Loading…</p>
+        <p className="muted">{tr('Loading…')}</p>
       )}
     </section>
   );
@@ -537,45 +538,45 @@ export function NewRequest() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   return (
     <section className="page">
-      <Link to="/inventory/requests" className="back-link">← Stock requests</Link>
-      <h1>New stock request</h1>
-      <p className="muted">The quantity is reserved as soon as you submit, so nobody else can take it while a manager decides.</p>
+      <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
+      <h1>{tr('New stock request')}</h1>
+      <p className="muted">{tr('The quantity is reserved as soon as you submit, so nobody else can take it while a manager decides.')}</p>
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
           <label>
-            Take stock from
+            {tr('Take stock from')}
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </label>
-          <label>Reason<input required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Customer order, internal use…" /></label>
+          <label>{tr('Reason')}<input required value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tr('Customer order, internal use…')} /></label>
         </div>
-        <strong>Items</strong>
+        <strong>{tr('Items')}</strong>
         {lines.map((l, i) => (
           <div className="form-row" key={i}>
             <label>
-              Item
+              {tr('Item')}
               <select value={l.itemId} onChange={(e) => setLine(i, { itemId: e.target.value })}>
-                <option value="">Choose an item…</option>
+                <option value="">{tr('Choose an item…')}</option>
                 {cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}
               </select>
             </label>
             <label>
-              Quantity {l.itemId && <span className="muted small">({available(l.itemId)} available)</span>}
+              {tr('Quantity')} {l.itemId && <span className="muted small">{trf('({n} available)', { n: available(l.itemId) })}</span>}
               <input type="number" min="1" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
             </label>
           </div>
         ))}
         <div className="form-actions">
-          <button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>Add another item</button>
+          <button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</button>
         </div>
         {error && <p className="error">{error}</p>}
         <div className="form-actions">
-          <button type="submit" disabled={busy}>{busy ? 'Submitting…' : 'Submit for approval'}</button>
+          <button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit for approval')}</button>
         </div>
       </form>
     </section>
@@ -612,28 +613,28 @@ export function RequestPage() {
   }
 
   if (request.error) return <section className="page"><p className="error">{request.error}</p></section>;
-  if (!r || !cat.ready) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!r || !cat.ready) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   const history = (audit.data ?? []).filter((a) => a.entity_id === r.id);
   const open = r.status === 'submitted' || r.status === 'approved';
 
   return (
     <section className="page">
-      <Link to="/inventory/requests" className="back-link">← Stock requests</Link>
+      <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
       <div className="page-head">
         <h1 className="mono">{r.number}</h1>
         <StatusPill status={r.status} />
       </div>
       <Steps status={r.status} />
       <p className="muted">
-        Requested by {who(r.requesterId)} on {formatDateTime(r.createdAt, session.org)} from {cat.warehouseName(r.warehouseId)}. Reason: {r.reason || 'none given'}.
-        {r.source && <> For sales order <Link to={`/sales/orders/${r.source.id}`}><code>{r.source.number}</code></Link>.</>}
-        {r.decidedBy && <> Decision by {who(r.decidedBy)}{r.decisionComment ? `: "${r.decisionComment}"` : ''}.</>}
+        {trf('Requested by {who} on {date} from {warehouse}. Reason: {reason}.', { who: who(r.requesterId), date: formatDateTime(r.createdAt, session.org), warehouse: cat.warehouseName(r.warehouseId), reason: r.reason || tr('none given') })}
+        {r.source && <> {tr('For sales order')} <Link to={`/sales/orders/${r.source.id}`}><code>{r.source.number}</code></Link>.</>}
+        {r.decidedBy && <> {tr('Decision by')} {who(r.decidedBy)}{r.decisionComment ? `: "${r.decisionComment}"` : ''}.</>}
       </p>
 
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Item</th><th className="right">Quantity</th></tr></thead>
+          <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th></tr></thead>
           <tbody>
             {r.lines.map((l, i) => <tr key={i}><td>{cat.itemName(l.itemId)}</td><td className="right">{l.qty}</td></tr>)}
           </tbody>
@@ -644,31 +645,31 @@ export function RequestPage() {
 
       {r.status === 'submitted' && isManager && (
         <div className="form-card stack">
-          <strong>Manager decision</strong>
-          <label>Comment (optional)<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
+          <strong>{tr('Manager decision')}</strong>
+          <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
-            <button disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>Approve</button>
-            <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>Reject</button>
+            <button disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>{tr('Approve')}</button>
+            <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</button>
           </div>
-          {demoMode && <p className="hint muted small">Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.</p>}
+          {demoMode && <p className="hint muted small">{tr('Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
       )}
-      {r.status === 'submitted' && !isManager && <p className="notice">Waiting for a manager to approve.{demoMode && ' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.'}</p>}
+      {r.status === 'submitted' && !isManager && <p className="notice">{tr('Waiting for a manager to approve.')}{demoMode && tr(' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.')}</p>}
 
       {open && session.role !== 'viewer' && (
         <div className="form-actions">
           {r.status === 'approved' && (
-            <button disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>Issue stock</button>
+            <button disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>{tr('Issue stock')}</button>
           )}
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Request cancelled. The reserved stock was released.')}>Cancel request</button>
+          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Request cancelled. The reserved stock was released.')}>{tr('Cancel request')}</button>
         </div>
       )}
 
-      <h2 className="related">History</h2>
-      <p className="muted small">Written by the system in the same step as each change.</p>
+      <h2 className="related">{tr('History')}</h2>
+      <p className="muted small">{tr('Written by the system in the same step as each change.')}</p>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}>
@@ -678,7 +679,7 @@ export function RequestPage() {
                 <td>{a.summary}</td>
               </tr>
             ))}
-            {history.length === 0 && <tr><td colSpan={4} className="muted empty">No history yet.</td></tr>}
+            {history.length === 0 && <tr><td colSpan={4} className="muted empty">{tr('No history yet.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -695,20 +696,20 @@ export function LedgerPage() {
   const session = useSession();
 
   const columns: Column<LedgerMove>[] = [
-    { key: 'when', label: 'When', value: (m) => m.postedAt, render: (m) => <span className="nowrap">{formatDateTime(m.postedAt, session.org)}</span> },
-    { key: 'item', label: 'Item', value: (m) => cat.itemName(m.itemId) },
-    { key: 'wh', label: 'Warehouse', value: (m) => cat.warehouseName(m.warehouseId) },
-    { key: 'kind', label: 'Type', value: (m) => m.kind },
-    { key: 'qty', label: 'Quantity', value: (m) => m.qty, align: 'right', render: (m) => <strong className={m.qty < 0 ? 'overdue' : undefined}>{m.qty > 0 ? `+${m.qty}` : m.qty}</strong> },
-    { key: 'req', label: 'Request', value: (m) => m.requestId ?? '', render: (m) => (m.requestId ? <Link to={`/inventory/requests/${m.requestId}`}>{`OUT-${m.requestId.slice(1).padStart(4, '0')}`}</Link> : m.ref?.startsWith('PO-') ? <Link to={`/purchasing/orders/p${Number(m.ref.slice(3))}`}>{m.ref}</Link> : <span className="muted">opening stock</span>) },
-    { key: 'by', label: 'Posted by', value: (m) => who(m.postedBy) },
+    { key: 'when', label: tr('When'), value: (m) => m.postedAt, render: (m) => <span className="nowrap">{formatDateTime(m.postedAt, session.org)}</span> },
+    { key: 'item', label: tr('Item'), value: (m) => cat.itemName(m.itemId) },
+    { key: 'wh', label: tr('Warehouse'), value: (m) => cat.warehouseName(m.warehouseId) },
+    { key: 'kind', label: tr('Type'), value: (m) => m.kind },
+    { key: 'qty', label: tr('Quantity'), value: (m) => m.qty, align: 'right', render: (m) => <strong className={m.qty < 0 ? 'overdue' : undefined}>{m.qty > 0 ? `+${m.qty}` : m.qty}</strong> },
+    { key: 'req', label: tr('Request'), value: (m) => m.requestId ?? '', render: (m) => (m.requestId ? <Link to={`/inventory/requests/${m.requestId}`}>{m.requestNumber ?? (/^r\d+$/.test(m.requestId) ? `OUT-${m.requestId.slice(1).padStart(4, '0')}` : tr('Request'))}</Link> : m.ref?.startsWith('PO-') ? <Link to={`/purchasing/orders/p${Number(m.ref.slice(3))}`}>{m.ref}</Link> : <span className="muted">{tr('opening stock')}</span>) },
+    { key: 'by', label: tr('Posted by'), value: (m) => who(m.postedBy) },
   ];
 
   return (
     <section className="page">
-      <h1>Stock ledger</h1>
-      <p className="muted">Every movement, newest first. Entries are only ever added, never edited. An outgoing movement always points at an approved request.</p>
-      {moves.data && cat.ready ? <ListView title="Stock ledger" rows={moves.data} columns={columns} rowKey={(m) => String(m.id)} /> : <p className="muted">Loading…</p>}
+      <h1>{tr('Stock ledger')}</h1>
+      <p className="muted">{tr('Every movement, newest first. Entries are only ever added, never edited. An outgoing movement always points at an approved request.')}</p>
+      {moves.data && cat.ready ? <ListView title={tr('Stock ledger')} rows={moves.data} columns={columns} rowKey={(m) => String(m.id)} /> : <p className="muted">{tr('Loading…')}</p>}
     </section>
   );
 }

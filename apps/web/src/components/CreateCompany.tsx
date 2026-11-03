@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 
+import { tr } from '../lib/i18n';
 // "Set up your company": the second step of sign-up (sql/032). The person is already signed in; this creates the company, makes them
 // its owner, switches every app on and stores the company's language, currency and time zone. The language is for the whole
 // company: everyone who joins later sees it.
@@ -36,42 +37,42 @@ export function CreateCompany({ onCreated, onCancel, first }: { onCreated: (orgI
     setError(null);
     const { data, error: rpcError } = await supabase.rpc('core_create_organization', { p_name: name, p_language: language, p_currency: currency, p_timezone: timezone });
     setBusy(false);
-    if (rpcError) return setError(REASONS[rpcError.message] ?? rpcError.message);
+    if (rpcError) return setError(tr(REASONS[rpcError.message] ?? rpcError.message));
     onCreated(data as string);
   }
 
   return (
     <main className="center">
       <form className="card stack" onSubmit={submit}>
-        <h1>{first ? 'Set up your company' : 'Create another company'}</h1>
-        <p className="muted small">Takes a minute. You become the owner, and every app is switched on. You can change all of this later in Settings.</p>
+        <h1>{first ? tr('Set up your company') : tr('Create another company')}</h1>
+        <p className="muted small">{tr('Takes a minute. You become the owner, and every app is switched on. You can change all of this later in Settings.')}</p>
         <label>
-          Company name
-          <input required minLength={2} maxLength={120} autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Nile Cosmetics" />
+          {tr('Company name')}
+          <input required minLength={2} maxLength={120} autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('e.g. Nile Cosmetics')} />
         </label>
         <label>
-          Language for the whole company
+          {tr('Language for the whole company')}
           <select value={language} onChange={(e) => setLanguage(e.target.value as 'en' | 'ar')}>
-            <option value="en">English (left to right)</option>
+            <option value="en">{tr('English (left to right)')}</option>
             <option value="ar">العربية: Arabic (right to left)</option>
           </select>
-          <span className="hint muted">This is the default language for your company; each person can pick their own under Settings. Arabic is a first draft and covers the menus only so far.</span>
+          <span className="hint muted">{tr('This is the default language for your company; each person can pick their own under Settings. Arabic is a first draft that a native speaker still has to review.')}</span>
         </label>
         <div className="form-row">
           <label>
-            Currency
+            {tr('Currency')}
             <input required list="signup-currencies" maxLength={3} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} />
             <datalist id="signup-currencies">{CURRENCIES.map((c) => <option key={c} value={c} />)}</datalist>
           </label>
           <label>
-            Time zone
+            {tr('Time zone')}
             <input required value={timezone} onChange={(e) => setTimezone(e.target.value)} />
           </label>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" disabled={busy || name.trim().length < 2}>{busy ? 'Setting up…' : 'Create my company'}</button>
-        {onCancel && <button type="button" className="secondary" onClick={onCancel}>Cancel</button>}
-        <button type="button" className="secondary" onClick={() => supabase.auth.signOut()}>Sign out</button>
+        <button type="submit" disabled={busy || name.trim().length < 2}>{busy ? tr('Setting up…') : tr('Create my company')}</button>
+        {onCancel && <button type="button" className="secondary" onClick={onCancel}>{tr('Cancel')}</button>}
+        <button type="button" className="secondary" onClick={() => supabase.auth.signOut()}>{tr('Sign out')}</button>
       </form>
     </main>
   );

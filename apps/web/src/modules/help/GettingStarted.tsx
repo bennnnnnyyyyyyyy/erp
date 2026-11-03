@@ -5,7 +5,7 @@ import { Rich } from '../../components/Rich';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/cn';
-import { useI18n } from '../../lib/i18n';
+import {useI18n, tr } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
 import { tutorialContent } from './helpContent';
@@ -41,7 +41,7 @@ export function Step({ n, title, to, toLabel, children }: { n: number; title: st
       <div className="min-w-0 flex-1">
         <h3 className="m-0 text-base font-semibold">{title}</h3>
         <div className="mt-1 text-sm leading-relaxed text-muted-foreground">{children}</div>
-        {to && <p className="mt-3"><Link to={to}>{toLabel ?? (lang === 'ar' ? 'فتح' : 'Open it')} {lang === 'ar' ? '←' : '→'}</Link></p>}
+        {to && <p className="mt-3"><Link to={to}>{toLabel ?? (lang === 'ar' ? 'فتح' : tr('Open it'))} {lang === 'ar' ? '←' : '→'}</Link></p>}
       </div>
     </li>
   );

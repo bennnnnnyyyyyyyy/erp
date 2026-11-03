@@ -8,6 +8,8 @@ import { useLoad } from '../../lib/useLoad';
 import { cn } from '../../lib/cn';
 import { useSession } from '../../session';
 
+import { Rich } from '../../components/Rich';
+import { dateLocale, tr, trf } from '../../lib/i18n';
 // The owner's first screen (documentation/plans/OWNER_INSIGHTS_PLAN.md): am I making or losing money, who owes me, what
 // needs my decision, what is about to go wrong. Plain words, big numbers, every card opens the list behind it.
 // A MANAGEMENT view, not statutory accounts: no VAT, cost is average cost. Shown only to people allowed to see money.
@@ -40,7 +42,7 @@ function Card({ to, title, subtitle, period, tone, children }: { to: string; tit
           {tone && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <span className={cn('size-2.5 rounded-full', TONE[tone].dot)} aria-hidden="true" />
-              {TONE[tone].word}
+              {tr(TONE[tone].word)}
             </span>
           )}
         </span>
@@ -51,19 +53,19 @@ function Card({ to, title, subtitle, period, tone, children }: { to: string; tit
   );
 }
 
-const monthName = (key: string) => new Date(`${key}-01T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const monthName = (key: string) => new Date(`${key}-01T12:00:00Z`).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 export function OwnerSummary() {
   const session = useSession();
   const allowed = !demoMode && hasPermission(session.permissions, 'finance.reports.view');
   const data = useLoad(() => (allowed ? api<Insights>('/v1/finance/insights') : Promise.resolve(null as Insights | null)));
   if (!allowed) return null;
-  if (data.error) return <p className="error notice">Could not load the summary: {data.error}</p>;
+  if (data.error) return <p className="error notice">{tr('Could not load the summary:')} {data.error}</p>;
   const s = data.data;
-  if (!s) return <p className="muted">Loading the summary…</p>;
+  if (!s) return <p className="muted">{tr('Loading the summary…')}</p>;
 
   const money = (n: number) => formatWhole(n, s.currency);   // a summary: whole currency units fit the cards; exact amounts are in the lists
-  const asOfDay = new Date(s.asOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: session.org?.timezone ?? 'UTC' });
+  const asOfDay = new Date(s.asOf).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: session.org?.timezone ?? 'UTC' });
   const last = s.months[s.months.length - 2];   // last full month
   const now = s.months[s.months.length - 1];    // this month so far
   const prev = s.months[s.months.length - 3];
@@ -78,50 +80,50 @@ export function OwnerSummary() {
   const supplierTone: Tone = (s.topSuppliers[0]?.sharePercent ?? 0) > 40 ? 'bad' : s.singleSourceItems > 0 ? 'watch' : 'good';
 
   return (
-    <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label="Business summary">
-      <Card to="/finance/overview" title="Am I making or losing money?" subtitle="What the business earned after its costs" period={last ? `${monthName(last.month)}, and the last 12 months` : 'last 12 months'} tone={profitTone}>
+    <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label={tr('Business summary')}>
+      <Card to="/finance/overview" title={tr('Am I making or losing money?')} subtitle={tr('What the business earned after its costs')} period={last ? trf('{month}, and the last 12 months', { month: monthName(last.month) }) : tr('last 12 months')} tone={profitTone}>
         {last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
-              {last.net < 0 ? 'Lost ' : 'Made '}{money(Math.abs(last.net))}
+              {trf(last.net < 0 ? 'Lost {amount}' : 'Made {amount}', { amount: money(Math.abs(last.net)) })}
             </span>
-            <span className="text-sm text-muted-foreground">in {monthName(last.month)}: sales {money(last.revenue)}, cost of what you sold {money(last.cogs)}, running costs {money(last.expenses)}.</span>
+            <span className="text-sm text-muted-foreground">{trf('in {month}: sales {revenue}, cost of what you sold {cogs}, running costs {expenses}.', { month: monthName(last.month), revenue: money(last.revenue), cogs: money(last.cogs), expenses: money(last.expenses) })}</span>
           </>
-        ) : <span className="text-sm text-muted-foreground">No sales recorded yet.</span>}
+        ) : <span className="text-sm text-muted-foreground">{tr('No sales recorded yet.')}</span>}
         <div className="flex h-12 items-end gap-1" aria-hidden="true">
           {s.months.map((m) => (
             <span key={m.month} title={`${monthName(m.month)}: ${money(m.net)}`} className={cn('flex-1 rounded-sm', m.net < 0 ? 'bg-destructive' : 'bg-success')} style={{ height: `${Math.max(6, (Math.abs(m.net) / peak) * 100)}%` }} />
           ))}
         </div>
-        <span className="text-xs text-muted-foreground">Last 12 months: {yearNet < 0 ? 'lost' : 'made'} {money(Math.abs(yearNet))} in total. This month so far: {now && now.revenue + now.expenses > 0 ? `${now.net < 0 ? 'down' : 'up'} ${money(Math.abs(now.net))}` : 'nothing recorded yet'}.</span>
+        <span className="text-xs text-muted-foreground">{trf(yearNet < 0 ? 'Last 12 months: lost {amount} in total.' : 'Last 12 months: made {amount} in total.', { amount: money(Math.abs(yearNet)) })} {now && now.revenue + now.expenses > 0 ? trf(now.net < 0 ? 'This month so far: down {amount}.' : 'This month so far: up {amount}.', { amount: money(Math.abs(now.net)) }) : tr('This month so far: nothing recorded yet.')}</span>
       </Card>
 
-      <Card to="/sales/invoices" title="Money coming in and going out" subtitle="Who owes you and who you owe" period={`all unpaid bills, as of ${asOfDay}`} tone={moneyTone}>
+      <Card to="/sales/invoices" title={tr('Money coming in and going out')} subtitle={tr('Who owes you and who you owe')} period={trf('all unpaid bills, as of {date}', { date: asOfDay })} tone={moneyTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
-        <span className="text-sm text-muted-foreground">customers still owe you{s.overdueMinor > 0 ? <>, of which <b className="text-destructive-foreground">{money(s.overdueMinor)}</b> is more than 30 days late</> : ''}.</span>
-        <span className="text-sm">You owe suppliers and for expenses: <b>{money(s.iOweMinor)}</b>.</span>
+        <span className="text-sm text-muted-foreground"><Rich text={s.overdueMinor > 0 ? trf('customers still owe you, of which **{late}** is more than 30 days late.', { late: money(s.overdueMinor) }) : tr('customers still owe you.')} /></span>
+        <span className="text-sm"><Rich text={trf('You owe suppliers and for expenses: **{amount}**.', { amount: money(s.iOweMinor) })} /></span>
       </Card>
 
-      <Card to="/inventory/requests" title="Waiting for your decision" subtitle="Stock requests a manager still has to approve" period={`right now, ${asOfDay}`} tone={decisionTone}>
-        <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{s.decisions.submitted} request{s.decisions.submitted === 1 ? '' : 's'}</span>
+      <Card to="/inventory/requests" title={tr('Waiting for your decision')} subtitle={tr('Stock requests a manager still has to approve')} period={trf('right now, {date}', { date: asOfDay })} tone={decisionTone}>
+        <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{trf(s.decisions.submitted === 1 ? '{n} request' : '{n} requests', { n: s.decisions.submitted })}</span>
         <span className="text-sm text-muted-foreground">
-          {s.decisions.submitted === 0 ? 'Nothing is waiting for approval.' : `The oldest has been waiting ${oldWait < 1 ? 'less than an hour' : `${oldWait} hour${oldWait === 1 ? '' : 's'}`}.`}
-          {s.decisions.approvedNotIssued > 0 && ` ${s.decisions.approvedNotIssued} approved and waiting to be handed out.`}
+          {s.decisions.submitted === 0 ? tr('Nothing is waiting for approval.') : (oldWait < 1 ? tr('The oldest has been waiting less than an hour.') : trf(oldWait === 1 ? 'The oldest has been waiting 1 hour.' : 'The oldest has been waiting {n} hours.', { n: oldWait }))}
+          {s.decisions.approvedNotIssued > 0 && ` ${trf('{n} approved and waiting to be handed out.', { n: s.decisions.approvedNotIssued })}`}
         </span>
       </Card>
 
-      <Card to="/inventory/batches" title="Stock and expiry" subtitle="What is on the shelves and what is about to expire" period={`as of ${asOfDay}, looking 90 days ahead`} tone={stockTone}>
+      <Card to="/inventory/batches" title={tr('Stock and expiry')} subtitle={tr('What is on the shelves and what is about to expire')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
-        <span className="text-sm text-muted-foreground">of stock on the shelves, at cost.</span>
+        <span className="text-sm text-muted-foreground">{tr('of stock on the shelves, at cost.')}</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
-          <li><b className={s.expiry.expired.batches ? 'text-destructive-foreground' : ''}>{s.expiry.expired.batches}</b> batch(es) already expired ({money(s.expiry.expired.valueMinor)})</li>
-          <li><b>{s.expiry.in30.batches}</b> expire within 30 days ({money(s.expiry.in30.valueMinor)}), <b>{s.expiry.in60.batches}</b> within 60, <b>{s.expiry.in90.batches}</b> within 90</li>
-          <li><b>{s.itemsLow}</b> item(s) at or below their reorder level</li>
+          <li><b className={s.expiry.expired.batches ? 'text-destructive-foreground' : ''}>{s.expiry.expired.batches}</b> {trf('batch(es) already expired ({value})', { value: money(s.expiry.expired.valueMinor) })}</li>
+          <li><Rich text={trf('**{a}** expire within 30 days ({value}), **{b}** within 60, **{c}** within 90', { a: s.expiry.in30.batches, value: money(s.expiry.in30.valueMinor), b: s.expiry.in60.batches, c: s.expiry.in90.batches })} /></li>
+          <li><b>{s.itemsLow}</b> {tr('item(s) at or below their reorder level')}</li>
         </ul>
       </Card>
 
-      <Card to="/sales/invoices" title="Best sellers" subtitle="The products that brought in the most sales" period="last 90 days">
-        {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">No sales yet.</span> : (
+      <Card to="/sales/invoices" title={tr('Best sellers')} subtitle={tr('The products that brought in the most sales')} period={tr('last 90 days')}>
+        {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">{tr('No sales yet.')}</span> : (
           <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
             {s.topProducts.map((p, i) => (
               <li key={p.sku} className="flex justify-between gap-3"><span>{i + 1}. {p.name}</span><b>{money(p.revenue)}</b></li>
@@ -130,16 +132,16 @@ export function OwnerSummary() {
         )}
       </Card>
 
-      <Card to="/purchasing/suppliers" title="Who you depend on" subtitle="The suppliers most of your purchases come from" period="last 12 months" tone={supplierTone}>
+      <Card to="/purchasing/suppliers" title={tr('Who you depend on')} subtitle={tr('The suppliers most of your purchases come from')} period={tr('last 12 months')} tone={supplierTone}>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
-          {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{p.sharePercent}% of purchases</b></li>)}
-          {s.topSuppliers.length === 0 && <li className="text-muted-foreground">No purchases yet.</li>}
+          {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{trf('{pct}% of purchases', { pct: p.sharePercent })}</b></li>)}
+          {s.topSuppliers.length === 0 && <li className="text-muted-foreground">{tr('No purchases yet.')}</li>}
         </ul>
-        <span className="text-sm text-muted-foreground">{s.singleSourceItems} item(s) bought from only one supplier in the last year.</span>
+        <span className="text-sm text-muted-foreground">{s.singleSourceItems} {tr('item(s) bought from only one supplier in the last year.')}</span>
       </Card>
 
       <p className="text-xs text-muted-foreground sm:col-span-2 xl:col-span-3">
-        As of {new Date(s.asOf).toLocaleString('en-GB', { timeZone: session.org?.timezone ?? 'UTC' })}. A management view: no VAT, cost of goods is the average cost of the stock, overdue means unpaid after 30 days. Not a statutory accounts report.
+        {trf('As of {datetime}. A management view: no VAT, cost of goods is the average cost of the stock, overdue means unpaid after 30 days. Not a statutory accounts report.', { datetime: new Date(s.asOf).toLocaleString(dateLocale(), { timeZone: session.org?.timezone ?? 'UTC' }) })}
       </p>
     </div>
   );

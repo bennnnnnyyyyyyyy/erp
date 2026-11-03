@@ -8,6 +8,7 @@ import { usePeople } from '../../lib/people';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
+import { tr, trf } from '../../lib/i18n';
 // Messages: each person's notification inbox, and for owners and admins the outbox with delivery status.
 // A message is only ever delivered here; approving or changing stock happens in the inventory screens.
 
@@ -27,27 +28,27 @@ export function NotificationsPage() {
   }
 
   const columns: Column<AppNotification>[] = [
-    { key: 'when', label: 'When', value: (n) => n.createdAt, render: (n) => <span className="nowrap">{formatDateTime(n.createdAt, session.org)}</span> },
-    { key: 'title', label: 'Message', value: (n) => n.title, render: (n) => (<>{n.readAt ? n.title : <strong>{n.title}</strong>}{n.body && <div className="muted small">{n.body}</div>}</>) },
-    { key: 'open', label: '', value: () => '', render: (n) => { const to = notificationTarget(n); return to ? <Link to={to}>Open</Link> : null; } },
+    { key: 'when', label: tr('When'), value: (n) => n.createdAt, render: (n) => <span className="nowrap">{formatDateTime(n.createdAt, session.org)}</span> },
+    { key: 'title', label: tr('Message'), value: (n) => n.title, render: (n) => (<>{n.readAt ? n.title : <strong>{n.title}</strong>}{n.body && <div className="muted small">{n.body}</div>}</>) },
+    { key: 'open', label: '', value: () => '', render: (n) => { const to = notificationTarget(n); return to ? <Link to={to}>{tr('Open')}</Link> : null; } },
   ];
 
   return (
     <section className="page">
-      <h1>Notifications</h1>
-      <p className="muted">Messages sent to you. Opening one takes you to the request or task; deciding still happens there.</p>
+      <h1>{tr('Notifications')}</h1>
+      <p className="muted">{tr('Messages sent to you. Opening one takes you to the request or task; deciding still happens there.')}</p>
       {markError && <p className="error notice">{markError}</p>}
       {inbox.data ? (
         <ListView
-          title="Notifications"
+          title={tr('Notifications')}
           rows={inbox.data.items}
           columns={columns}
           rowKey={(n) => n.id}
-          empty="Nothing yet."
-          toolbar={inbox.data.unread > 0 ? <button className="secondary" onClick={markAll}>Mark all read ({inbox.data.unread})</button> : undefined}
+          empty={tr('Nothing yet.')}
+          toolbar={inbox.data.unread > 0 ? <button className="secondary" onClick={markAll}>{tr('Mark all read (')}{inbox.data.unread})</button> : undefined}
         />
       ) : (
-        <p className="muted">{inbox.error ?? 'Loading…'}</p>
+        <p className="muted">{inbox.error ?? tr('Loading…')}</p>
       )}
     </section>
   );
@@ -71,7 +72,7 @@ export function OutboxPage() {
     setResult(null);
     try {
       const r = await api<PassResult>('/v1/messaging/process', { method: 'POST' });
-      setResult({ ok: true, text: `Reminders queued: ${r.reminders}. Escalations queued: ${r.escalations}. Low-stock messages: ${r.lowStock}. Alert rules fired: ${r.alerts}. Audit check: ${r.auditCheck}. Messages delivered: ${r.sent}${r.failed ? `, failed: ${r.failed}` : ''}.` });
+      setResult({ ok: true, text: trf('Reminders queued: {reminders}. Escalations queued: {escalations}. Low-stock messages: {lowStock}. Alert rules fired: {alerts}. Audit check: {auditCheck}. Messages delivered: {sent}.', { reminders: r.reminders, escalations: r.escalations, lowStock: r.lowStock, alerts: r.alerts, auditCheck: r.auditCheck, sent: r.sent }) + (r.failed ? ` ${trf('Failed: {n}.', { n: r.failed })}` : '') });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -81,31 +82,31 @@ export function OutboxPage() {
   }
 
   const columns: Column<OutboxRow>[] = [
-    { key: 'when', label: 'Queued', value: (m) => m.createdAt, render: (m) => <span className="nowrap">{formatDateTime(m.createdAt, session.org)}</span> },
+    { key: 'when', label: tr('Queued'), value: (m) => m.createdAt, render: (m) => <span className="nowrap">{formatDateTime(m.createdAt, session.org)}</span> },
     { key: 'to', label: 'To', value: (m) => who(m.recipientId) },
-    { key: 'kind', label: 'Kind', value: (m) => m.kind, render: (m) => <code>{m.kind}</code> },
-    { key: 'subject', label: 'Message', value: (m) => m.subject, render: (m) => (<>{m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>) },
-    { key: 'channel', label: 'Channel', value: (m) => m.channel },
-    { key: 'status', label: 'Status', value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{m.status}</span> },
-    { key: 'attempts', label: 'Tries', value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
+    { key: 'kind', label: tr('Kind'), value: (m) => m.kind, render: (m) => <code>{m.kind}</code> },
+    { key: 'subject', label: tr('Message'), value: (m) => m.subject, render: (m) => (<>{m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>) },
+    { key: 'channel', label: tr('Channel'), value: (m) => m.channel },
+    { key: 'status', label: tr('Status'), value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{m.status}</span> },
+    { key: 'attempts', label: tr('Tries'), value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
   ];
 
   return (
     <section className="page wide">
-      <h1>Message outbox</h1>
-      <p className="muted">Every message the system queued, and whether it was delivered. Failed sends are retried with a growing delay, and messages that wait too long expire. A background job runs every five minutes; you can run it now.</p>
+      <h1>{tr('Message outbox')}</h1>
+      <p className="muted">{tr('Every message the system queued, and whether it was delivered. Failed sends are retried with a growing delay, and messages that wait too long expire. A background job runs every five minutes; you can run it now.')}</p>
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
       {outbox.data ? (
         <ListView
-          title="Message outbox"
+          title={tr('Message outbox')}
           rows={outbox.data}
           columns={columns}
           rowKey={(m) => m.id}
-          empty="No messages yet."
-          toolbar={<button onClick={run} disabled={busy}>{busy ? 'Running…' : 'Run delivery and reminders now'}</button>}
+          empty={tr('No messages yet.')}
+          toolbar={<button onClick={run} disabled={busy}>{busy ? tr('Running…') : tr('Run delivery and reminders now')}</button>}
         />
       ) : (
-        <p className="muted">{outbox.error ?? 'Loading…'}</p>
+        <p className="muted">{outbox.error ?? tr('Loading…')}</p>
       )}
     </section>
   );

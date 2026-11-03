@@ -6,6 +6,7 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
 
+import { tr, trf } from '../../lib/i18n';
 // Alert rules (sql/028). A rule says "when this happens, tell these people". Rules only send messages; they never change stock
 // or approve anything. The rules are checked every five minutes. Owners and admins only.
 
@@ -43,12 +44,20 @@ export function AlertsPage() {
   }
   const reloadAll = () => { rules.reload(); teams.reload(); };
 
-  if (!rules.data || !teams.data || !people.data || !items.data) return <section className="page"><p className="muted">{rules.error ?? teams.error ?? 'Loading…'}</p></section>;
+  if (!rules.data || !teams.data || !people.data || !items.data) return <section className="page"><p className="muted">{rules.error ?? teams.error ?? tr('Loading…')}</p></section>;
   const person = (id?: string) => people.data?.find((p) => p.userId === id)?.name ?? 'Someone';
-  const recipientLabel = (r: Recipient) => (r.type === 'team' ? `Team: ${teams.data?.find((t) => t.id === r.id)?.name ?? '?'}` : r.type === 'role' ? ROLE_LABEL[r.role ?? ''] ?? r.role : person(r.id));
+  // The rule description, built in the language in use: the sentence pieces are translated and the numbers and names are filled in.
+  const ruleText = (r: Rule) => {
+    const k = KIND[r.kind];
+    const base = tr(k.label);
+    if (r.kind === 'stock_below') return `${base} (${itemLabel(r.itemId)}${r.threshold !== null ? trf(', {n} or fewer', { n: r.threshold }) : tr(', at its reorder level')})`;
+    if (r.kind === 'forecast_stockout') return `${base} (${itemLabel(r.itemId)}): ${r.threshold} ${tr(k.unit ?? '')}`;
+    return r.threshold !== null ? `${base}: ${r.threshold} ${tr(k.unit ?? '')}` : base;
+  };
+  const recipientLabel = (r: Recipient) => (r.type === 'team' ? trf('Team: {name}', { name: teams.data?.find((t) => t.id === r.id)?.name ?? '?' }) : r.type === 'role' ? tr(ROLE_LABEL[r.role ?? ''] ?? r.role ?? '') : person(r.id));
   const recipientOptions = [
-    ...teams.data.map((t) => ({ value: `team:${t.id}`, label: `Team: ${t.name}` })),
-    ...Object.entries(ROLE_LABEL).map(([role, label]) => ({ value: `role:${role}`, label })),
+    ...teams.data.map((t) => ({ value: `team:${t.id}`, label: trf('Team: {name}', { name: t.name }) })),
+    ...Object.entries(ROLE_LABEL).map(([role, label]) => ({ value: `role:${role}`, label: tr(label) })),
     ...people.data.map((p) => ({ value: `user:${p.userId}`, label: p.name })),
   ];
   const itemLabel = (id: string | null) => (id ? (() => { const i = items.data?.find((x) => x.id === id); return i ? `${i.sku} · ${i.name}` : 'one item'; })() : 'every item');
@@ -57,62 +66,62 @@ export function AlertsPage() {
 
   return (
     <section className="page wide">
-      <h1>Alerts</h1>
-      <p className="muted">Rules tell the right people when something needs attention. They are checked every five minutes, and the same thing is not repeated until the "repeat after" time has passed (unless it gets clearly worse). Alerts arrive as notifications; WhatsApp comes later.</p>
+      <h1>{tr('Alerts')}</h1>
+      <p className="muted">{tr('Rules tell the right people when something needs attention. They are checked every five minutes, and the same thing is not repeated until the "repeat after" time has passed (unless it gets clearly worse). Alerts arrive as notifications; WhatsApp comes later.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
-      <h2 className="related">Rules</h2>
-      <p className="muted small">What you are told about, and who is told. Each rule is checked every five minutes against the current stock, batches and invoices.</p>
-      <div className="table-wrap"><table><thead><tr><th>Rule</th><th>When</th><th>Who is told</th><th>Repeat after</th><th>Fired</th><th>State</th><th></th></tr></thead><tbody>
+      <h2 className="related">{tr('Rules')}</h2>
+      <p className="muted small">{tr('What you are told about, and who is told. Each rule is checked every five minutes against the current stock, batches and invoices.')}</p>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Rule')}</th><th>{tr('When')}</th><th>{tr('Who is told')}</th><th>{tr('Repeat after')}</th><th>{tr('Fired')}</th><th>{tr('State')}</th><th></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
-            <td>{KIND[r.kind].label}{r.kind === 'stock_below' ? ` (${itemLabel(r.itemId)}${r.threshold !== null ? `, ${r.threshold} or fewer` : ', at its reorder level'})` : r.kind === 'forecast_stockout' ? ` (${itemLabel(r.itemId)}): ${r.threshold} ${KIND[r.kind].unit}` : r.threshold !== null ? `: ${r.threshold} ${KIND[r.kind].unit}` : ''}</td>
+            <td>{ruleText(r)}</td>
             <td>{r.recipients.map(recipientLabel).join(', ')}</td><td>{r.repeatHours} h</td>
-            <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> · last {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
-            <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? 'On' : 'Off'} /></td>
+            <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> {tr('· last')} {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
+            <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? tr('On') : tr('Off')} /></td>
             <td>{canManage && <span className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/enabled`, { method: 'POST', body: JSON.stringify({ enabled: !r.enabled }) }); return `${r.name}: ${r.enabled ? 'off' : 'on'}.`; }, reloadAll)}>{r.enabled ? 'Turn off' : 'Turn on'}</Button>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>Send me a test</Button>
-              <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/retire`, { method: 'POST' }); return `${r.name} removed (kept in the history).`; }, reloadAll)}>Remove</Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/enabled`, { method: 'POST', body: JSON.stringify({ enabled: !r.enabled }) }); return `${r.name}: ${r.enabled ? 'off' : 'on'}.`; }, reloadAll)}>{r.enabled ? tr('Turn off') : tr('Turn on')}</Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>{tr('Send me a test')}</Button>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/retire`, { method: 'POST' }); return trf('{name} removed (kept in the history).', { name: r.name }); }, reloadAll)}>{tr('Remove')}</Button>
             </span>}</td></tr>
         ))}
-        {!rules.data.length && <tr><td colSpan={7} className="muted empty">No rules yet. Add one below.</td></tr>}
+        {!rules.data.length && <tr><td colSpan={7} className="muted empty">{tr('No rules yet. Add one below.')}</td></tr>}
       </tbody></table></div>
 
       {canManage && (
         <div className="form-card stack">
-          <h2>Add a rule</h2>
+          <h2>{tr('Add a rule')}</h2>
           <div className="form-row">
-            <label>Name<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Glycerin running low" /></label>
-            <label>Tell me when
+            <label>{tr('Name')}<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={tr('e.g. Glycerin running low')} /></label>
+            <label>{tr('Tell me when')}
               <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Kind, threshold: '' })}>
-                {(Object.keys(KIND) as Kind[]).map((k) => <option key={k} value={k}>{KIND[k].label}</option>)}
+                {(Object.keys(KIND) as Kind[]).map((k) => <option key={k} value={k}>{tr(KIND[k].label)}</option>)}
               </select>
             </label>
             {(f.kind === 'stock_below' || f.kind === 'forecast_stockout') && (
-              <label>For
-                <select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">Every item</option>{items.data.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select>
+              <label>{tr('For')}
+                <select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Every item')}</option>{items.data.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select>
               </label>
             )}
-            {KIND[f.kind].unit && <label>{needsNumber ? 'Number' : 'Number (optional)'} ({KIND[f.kind].unit})<input inputMode="decimal" value={f.threshold} onChange={(e) => setF({ ...f, threshold: e.target.value })} /></label>}
+            {KIND[f.kind].unit && <label>{needsNumber ? tr('Number') : tr('Number (optional)')} ({tr(KIND[f.kind].unit ?? '')})<input inputMode="decimal" value={f.threshold} onChange={(e) => setF({ ...f, threshold: e.target.value })} /></label>}
           </div>
-          <p className="muted small">{KIND[f.kind].hint}</p>
+          <p className="muted small">{tr(KIND[f.kind].hint)}</p>
           <div className="form-row">
-            <label>Who is told
-              <select value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })}><option value="">Choose…</option>{recipientOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            <label>{tr('Who is told')}
+              <select value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })}><option value="">{tr('Choose…')}</option>{recipientOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
             </label>
-            <label>Repeat after (hours)<input inputMode="numeric" value={f.repeatHours} onChange={(e) => setF({ ...f, repeatHours: e.target.value })} /></label>
+            <label>{tr('Repeat after (hours)')}<input inputMode="numeric" value={f.repeatHours} onChange={(e) => setF({ ...f, repeatHours: e.target.value })} /></label>
           </div>
           <div><Button disabled={busy || !f.name.trim() || !f.to || (needsNumber && f.threshold === '')} onClick={() => run(async () => {
             await api('/v1/alerts/rules', { method: 'POST', body: JSON.stringify({ name: f.name, kind: f.kind, itemId: f.itemId, threshold: f.threshold === '' ? null : Number(f.threshold), repeatHours: Number(f.repeatHours) || 24, recipients: [parse(f.to)] }) });
-            return `Rule "${f.name.trim()}" added.`;
-          }, () => { setF({ ...f, name: '', threshold: '', to: '' }); reloadAll(); })}>{busy ? 'Saving…' : 'Add rule'}</Button></div>
+            return trf('Rule "{name}" added.', { name: f.name.trim() });
+          }, () => { setF({ ...f, name: '', threshold: '', to: '' }); reloadAll(); })}>{busy ? tr('Saving…') : tr('Add rule')}</Button></div>
         </div>
       )}
 
-      <h2 className="related">Teams</h2>
-      <p className="muted small">A team is a named group (Purchasing, Warehouse, Management) so a rule can say "tell Purchasing". Whoever buys stock belongs in Purchasing.</p>
-      {teams.data.length === 0 && canManage && <Button variant="outline" disabled={busy} onClick={() => run(async () => { await api('/v1/alerts/defaults', { method: 'POST' }); return 'Purchasing, Warehouse and Management teams created.'; }, reloadAll)}>Create the standard teams</Button>}
+      <h2 className="related">{tr('Teams')}</h2>
+      <p className="muted small">{tr('A team is a named group (Purchasing, Warehouse, Management) so a rule can say "tell Purchasing". Whoever buys stock belongs in Purchasing.')}</p>
+      {teams.data.length === 0 && canManage && <Button variant="outline" disabled={busy} onClick={() => run(async () => { await api('/v1/alerts/defaults', { method: 'POST' }); return 'Purchasing, Warehouse and Management teams created.'; }, reloadAll)}>{tr('Create the standard teams')}</Button>}
       {teams.data.map((t) => (
         <div key={t.id} className="form-card stack">
           <strong>{t.name}</strong>
@@ -121,7 +130,7 @@ export function AlertsPage() {
               const on = t.userIds.includes(p.userId);
               return <label key={p.userId} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                 <input type="checkbox" style={{ width: 'auto', margin: 0 }} checked={on} disabled={busy || !canManage}
-                  onChange={() => run(async () => { await api(`/v1/alerts/teams/${t.id}/members`, { method: 'PUT', body: JSON.stringify({ userIds: on ? t.userIds.filter((x) => x !== p.userId) : [...t.userIds, p.userId] }) }); return `${t.name} updated.`; }, reloadAll)} />
+                  onChange={() => run(async () => { await api(`/v1/alerts/teams/${t.id}/members`, { method: 'PUT', body: JSON.stringify({ userIds: on ? t.userIds.filter((x) => x !== p.userId) : [...t.userIds, p.userId] }) }); return trf('{name} updated.', { name: t.name }); }, reloadAll)} />
                 {p.name}</label>;
             })}
           </div>
@@ -129,8 +138,8 @@ export function AlertsPage() {
       ))}
       {canManage && (
         <div className="form-row">
-          <label>New team<input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="e.g. Quality" /></label>
-          <Button variant="outline" disabled={busy || !teamName.trim()} onClick={() => run(async () => { await api('/v1/alerts/teams', { method: 'POST', body: JSON.stringify({ name: teamName }) }); return `Team "${teamName.trim()}" added.`; }, () => { setTeamName(''); reloadAll(); })}>Add team</Button>
+          <label>{tr('New team')}<input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder={tr('e.g. Quality')} /></label>
+          <Button variant="outline" disabled={busy || !teamName.trim()} onClick={() => run(async () => { await api('/v1/alerts/teams', { method: 'POST', body: JSON.stringify({ name: teamName }) }); return trf('Team "{name}" added.', { name: teamName.trim() }); }, () => { setTeamName(''); reloadAll(); })}>{tr('Add team')}</Button>
         </div>
       )}
     </section>

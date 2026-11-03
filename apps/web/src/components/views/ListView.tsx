@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 
+import { tr, trf } from '../../lib/i18n';
 // The shared List view every module uses for a table of records: quick search, column sort and
 // CSV export of the rows shown. Sorting and search run in the browser for now; large tables
 // will move both to the API with the same props.
@@ -71,10 +72,10 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
         <input
           className="list-search"
           type="search"
-          placeholder="Search…"
+          placeholder={tr('Search…')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label={`Search ${title}`}
+          aria-label={trf('Search {title}', { title })}
         />
         <span className="muted list-count">
           {shown.length} of {rows.length}
@@ -82,7 +83,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
         <span className="spacer" />
         {toolbar}
         <button className="secondary" onClick={exportCsv} disabled={shown.length === 0}>
-          Export CSV
+          {tr('Export CSV')}
         </button>
       </div>
       <div className="table-wrap">
@@ -97,7 +98,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
                   </button>
                 </th>
               ))}
-              {actions && <th aria-label="Actions" />}
+              {actions && <th aria-label={tr('Actions')} />}
             </tr>
           </thead>
           <tbody>
@@ -114,7 +115,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
             {shown.length === 0 && (
               <tr>
                 <td colSpan={columns.length + (actions ? 1 : 0)} className="muted empty">
-                  {rows.length === 0 ? (empty ?? 'Nothing here yet.') : 'No matches.'}
+                  {rows.length === 0 ? (empty ?? tr('Nothing here yet.')) : tr('No matches.')}
                 </td>
               </tr>
             )}

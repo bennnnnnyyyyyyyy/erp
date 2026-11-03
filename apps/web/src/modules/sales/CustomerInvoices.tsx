@@ -7,6 +7,7 @@ import { useSession } from '../../session';
 import { Button } from '../../components/ui/button';
 import { Pill } from '../trade/common';
 
+import { tr, trf } from '../../lib/i18n';
 // Customer invoices: bill a delivered sales order, line by line, and see ordered / delivered / invoiced with a flag for
 // whatever does not match. The price always comes from the order line; the database refuses over-invoicing.
 
@@ -42,7 +43,7 @@ export function CustomerInvoices() {
     return m;
   }, [invoices.data]);
 
-  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><p className="muted">{orders.error ?? invoices.error ?? 'Loading…'}</p></section>;
+  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><p className="muted">{orders.error ?? invoices.error ?? tr('Loading…')}</p></section>;
 
   const customer = (id: string) => customers.data?.find((c) => c.id === id)?.name ?? 'Unknown customer';
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
@@ -57,68 +58,68 @@ export function CustomerInvoices() {
     try {
       const lines = chosen.billing.filter((b) => Number(qty[b.orderLineId]) > 0).map((b) => ({ orderLineId: b.orderLineId, qty: Number(qty[b.orderLineId]) }));
       const made = await api<{ number: string }>(`/v1/sales/orders/${chosen.o.id}/invoices`, { method: 'POST', body: JSON.stringify({ invoiceDate: date, lines }) });
-      setMessage({ ok: true, text: `Invoice ${made.number} created.` }); setOrderId(''); setQty({});
+      setMessage({ ok: true, text: trf('Invoice {number} created.', { number: made.number }) }); setOrderId(''); setQty({});
       invoices.reload();
     } catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
 
   async function voidInvoice(id: string) {
     setBusy(true); setMessage(null);
-    try { await api(`/v1/sales/invoices/${id}/void`, { method: 'POST' }); setMessage({ ok: true, text: 'Invoice voided. Its quantity can be invoiced again.' }); invoices.reload(); }
+    try { await api(`/v1/sales/invoices/${id}/void`, { method: 'POST' }); setMessage({ ok: true, text: tr('Invoice voided. Its quantity can be invoiced again.') }); invoices.reload(); }
     catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
 
   return (
     <section className="page wide">
-      <h1>Customer invoices</h1>
-      <p className="muted">Bill delivered sales orders. An order can only be invoiced once its stock has been issued, and never for more than was delivered. A wrong invoice is voided, not edited.</p>
+      <h1>{tr('Customer invoices')}</h1>
+      <p className="muted">{tr('Bill delivered sales orders. An order can only be invoiced once its stock has been issued, and never for more than was delivered. A wrong invoice is voided, not edited.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       {canManage && (
         <div className="form-card stack">
-          <h2>Create an invoice</h2>
+          <h2>{tr('Create an invoice')}</h2>
           <div className="form-row">
-            <label>Delivered sales order
+            <label>{tr('Delivered sales order')}
               <select value={orderId} onChange={(e) => { setOrderId(e.target.value); setQty({}); }}>
-                <option value="">Choose an order…</option>
+                <option value="">{tr('Choose an order…')}</option>
                 {open.map((r) => <option key={r.o.id} value={r.o.id}>{r.o.number} · {customer(r.o.customerId)}</option>)}
               </select>
             </label>
-            <label>Invoice date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></label>
+            <label>{tr('Invoice date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></label>
           </div>
           {chosen && (
             <>
-              <div className="table-wrap"><table><thead><tr><th>Item</th><th className="right">Delivered</th><th className="right">Already invoiced</th><th>Invoice now</th></tr></thead><tbody>
+              <div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Delivered')}</th><th className="right">{tr('Already invoiced')}</th><th>{tr('Invoice now')}</th></tr></thead><tbody>
                 {chosen.billing.map((b) => (
                   <tr key={b.orderLineId}><td>{item(b.itemId)}</td><td className="right">{b.delivered}</td><td className="right">{b.invoiced}</td>
-                    <td><input type="number" min="0" max={b.delivered - b.invoiced} step="0.001" aria-label={`Quantity to invoice for ${item(b.itemId)}`} value={qty[b.orderLineId] ?? ''} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
+                    <td><input type="number" min="0" max={b.delivered - b.invoiced} step="0.001" aria-label={trf('Quantity to invoice for {item}', { item: item(b.itemId) })} value={qty[b.orderLineId] ?? ''} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
                 ))}
               </tbody></table></div>
-              <Button disabled={busy || !Object.values(qty).some((v) => Number(v) > 0)} onClick={create}>{busy ? 'Creating…' : 'Create invoice'}</Button>
+              <Button disabled={busy || !Object.values(qty).some((v) => Number(v) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
             </>
           )}
         </div>
       )}
 
-      <h2 className="related">Ordered, delivered and invoiced</h2>
-      <div className="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th className="right">Ordered</th><th className="right">Delivered</th><th className="right">Invoiced</th><th>Status</th></tr></thead><tbody>
+      <h2 className="related">{tr('Ordered, delivered and invoiced')}</h2>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Order')}</th><th>{tr('Customer')}</th><th className="right">{tr('Ordered')}</th><th className="right">{tr('Delivered')}</th><th className="right">{tr('Invoiced')}</th><th>{tr('Status')}</th></tr></thead><tbody>
         {rows.map(({ o, billing }) => {
           const sum = (k: 'ordered' | 'delivered' | 'invoiced') => billing.reduce((n, b) => n + b[k], 0);
           const worst = billing.find((b) => b.flag === 'over_invoiced') ?? billing.find((b) => b.flag === 'under_invoiced') ?? billing.find((b) => b.flag === 'not_delivered') ?? billing[0];
           const f = worst ? FLAG[worst.flag] : FLAG.not_delivered;
-          return <tr key={o.id}><td><code>{o.number}</code></td><td>{customer(o.customerId)}</td><td className="right">{sum('ordered')}</td><td className="right">{sum('delivered')}</td><td className="right">{sum('invoiced')}</td><td><Pill status={f.pill} label={f.label} /></td></tr>;
+          return <tr key={o.id}><td><code>{o.number}</code></td><td>{customer(o.customerId)}</td><td className="right">{sum('ordered')}</td><td className="right">{sum('delivered')}</td><td className="right">{sum('invoiced')}</td><td><Pill status={f.pill} label={tr(f.label)} /></td></tr>;
         })}
-        {!rows.length && <tr><td colSpan={6} className="muted empty">No sales orders yet.</td></tr>}
+        {!rows.length && <tr><td colSpan={6} className="muted empty">{tr('No sales orders yet.')}</td></tr>}
       </tbody></table></div>
 
-      <h2 className="related">Invoices</h2>
-      <div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Customer</th><th>Order</th><th>Created</th><th className="right">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+      <h2 className="related">{tr('Invoices')}</h2>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Customer')}</th><th>{tr('Order')}</th><th>{tr('Created')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
         {invoices.data.map((i) => (
           <tr key={i.id}><td><code>{i.number}</code></td><td>{customer(i.customerId)}</td><td><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></td><td>{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
-            <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? 'Void' : 'Issued'} /></td>
-            <td>{canManage && i.status === 'issued' && <Button variant="outline" size="sm" disabled={busy} onClick={() => voidInvoice(i.id)}>Void</Button>}</td></tr>
+            <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? tr('Void') : tr('Issued')} /></td>
+            <td>{canManage && i.status === 'issued' && <Button variant="outline" size="sm" disabled={busy} onClick={() => voidInvoice(i.id)}>{tr('Void')}</Button>}</td></tr>
         ))}
-        {!invoices.data.length && <tr><td colSpan={7} className="muted empty">No invoices yet.</td></tr>}
+        {!invoices.data.length && <tr><td colSpan={7} className="muted empty">{tr('No invoices yet.')}</td></tr>}
       </tbody></table></div>
     </section>
   );

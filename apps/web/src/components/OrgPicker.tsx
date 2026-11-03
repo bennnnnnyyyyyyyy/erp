@@ -3,6 +3,8 @@ import type { MyInvitation } from '@erp/shared';
 import { supabase } from '../lib/supabase';
 import { CreateCompany } from './CreateCompany';
 
+import { tr, trf } from '../lib/i18n';
+import { Rich } from './Rich';
 type OrgOption = { id: string; name: string };
 type InvitationRow = { id: string; org_id: string; org_name: string; role: MyInvitation['role']; invited_by_name: string | null; created_at: string };
 
@@ -52,7 +54,7 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
   }
 
   if (!orgs && error) return <main className="center"><p className="error">{error}</p></main>;
-  if (!orgs) return <main className="center"><p className="muted">Loading organizations…</p></main>;
+  if (!orgs) return <main className="center"><p className="muted">{tr('Loading organizations…')}</p></main>;
 
   // Brand-new account with nothing waiting for them: this is sign-up step two, so ask for the company right away.
   if (creating || (orgs.length === 0 && invitations.length === 0)) {
@@ -64,37 +66,37 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
       <div className="card stack">
         {invitations.length > 0 && (
           <>
-            <h1>Invitations</h1>
+            <h1>{tr('Invitations')}</h1>
             {invitations.map((inv) => (
               <div key={inv.id} className="stack">
                 <p>
-                  {inv.invitedByName ?? 'Someone'} invited you to join <strong>{inv.orgName}</strong> as {inv.role}.
+                  <Rich text={trf('{who} invited you to join **{org}** as {role}.', { who: inv.invitedByName ?? tr('Someone'), org: inv.orgName, role: tr(inv.role) })} />
                 </p>
                 <div className="form-actions">
                   <button disabled={busyId === inv.id} onClick={() => respond(inv, true)}>
-                    Accept
+                    {tr('Accept')}
                   </button>
                   <button className="secondary" disabled={busyId === inv.id} onClick={() => respond(inv, false)}>
-                    Decline
+                    {tr('Decline')}
                   </button>
                 </div>
               </div>
             ))}
           </>
         )}
-        <h1>Choose an organization</h1>
+        <h1>{tr('Choose an organization')}</h1>
         {error && <p className="error">{error}</p>}
-        {orgs.length === 0 && <p className="muted">Accept an invitation above, or set up your own company.</p>}
+        {orgs.length === 0 && <p className="muted">{tr('Accept an invitation above, or set up your own company.')}</p>}
         {orgs.map((o) => (
           <button key={o.id} onClick={() => onPick(o.id)}>
             {o.name}
           </button>
         ))}
         <button className="secondary" onClick={() => setCreating(true)}>
-          Create a new company
+          {tr('Create a new company')}
         </button>
         <button className="secondary" onClick={() => supabase.auth.signOut()}>
-          Sign out
+          {tr('Sign out')}
         </button>
       </div>
     </main>

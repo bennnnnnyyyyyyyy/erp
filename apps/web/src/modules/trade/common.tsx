@@ -10,6 +10,7 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { hasPermission } from '@erp/shared';
 
+import { tr, trf } from '../../lib/i18n';
 // DEMO ONLY: shared pieces for the sample purchasing and sales screens (lib/demoTrade.ts).
 
 export function useCatalog() {
@@ -28,7 +29,7 @@ const PILL_VARIANT: Record<string, 'neutral' | 'info' | 'success' | 'warning' | 
 
 /** Status chip. Unknown or finished-and-quiet statuses (cancelled, void, disabled) are neutral. */
 export function Pill({ status, label }: { status: string; label?: string }) {
-  return <Badge variant={PILL_VARIANT[status] ?? 'neutral'} className="capitalize">{label ?? status.replace('_', ' ')}</Badge>;
+  return <Badge variant={PILL_VARIANT[status] ?? 'neutral'} className={label ? undefined : 'capitalize'}>{label ?? status.replace('_', ' ')}</Badge>;
 }
 
 /** "18.50" typed by a person becomes 1850 minor units. */
@@ -58,38 +59,38 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
   }
 
   const columns: Column<Party>[] = [
-    { key: 'name', label: 'Name', value: (p) => p.name, render: (p) => <strong>{p.name}</strong> },
-    { key: 'contact', label: 'Contact', value: (p) => p.contact },
-    { key: 'city', label: 'City', value: (p) => p.city },
-    { key: 'phone', label: 'Phone', value: (p) => p.phone, render: (p) => <code>{p.phone}</code> },
+    { key: 'name', label: tr('Name'), value: (p) => p.name, render: (p) => <strong>{p.name}</strong> },
+    { key: 'contact', label: tr('Contact'), value: (p) => p.contact },
+    { key: 'city', label: tr('City'), value: (p) => p.city },
+    { key: 'phone', label: tr('Phone'), value: (p) => p.phone, render: (p) => <code>{p.phone}</code> },
   ];
 
   return (
     <section className="page">
       <h1>{title}</h1>
-      <p className="muted">One record per {noun}, shared by every order.</p>
+      <p className="muted">{trf('One record per {noun}, shared by every order.', { noun: tr(noun) })}</p>
       {parties.data ? (
         <ListView
           title={title}
           rows={parties.data}
           columns={columns}
           rowKey={(p) => p.id}
-          toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <button onClick={() => setAdding(true)}>Add {noun}</button> : undefined}
+          toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <button onClick={() => setAdding(true)}>{tr('Add')} {noun}</button> : undefined}
         />
       ) : (
-        <p className="muted">Loading…</p>
+        <p className="muted">{tr('Loading…')}</p>
       )}
       {adding && (
-        <Modal title={`Add ${noun}`} onClose={() => setAdding(false)}>
+        <Modal title={trf('Add {noun}', { noun: tr(noun) })} onClose={() => setAdding(false)}>
           <form className="stack" onSubmit={submit}>
-            <label>Name<input required value={form.name} onChange={set('name')} /></label>
+            <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
             <div className="form-row">
-              <label>Contact person<input value={form.contact} onChange={set('contact')} /></label>
-              <label>City<input value={form.city} onChange={set('city')} /></label>
+              <label>{tr('Contact person')}<input value={form.contact} onChange={set('contact')} /></label>
+              <label>{tr('City')}<input value={form.city} onChange={set('city')} /></label>
             </div>
-            <label>Phone<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
+            <label>{tr('Phone')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
             {error && <p className="error">{error}</p>}
-            <div className="form-actions"><button type="submit">Add {noun}</button></div>
+            <div className="form-actions"><button type="submit">{tr('Add')} {noun}</button></div>
           </form>
         </Modal>
       )}
@@ -143,7 +144,7 @@ export function NewOrderForm(props: {
     }
   }
 
-  if (!cat.ready || !parties.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!cat.ready || !parties.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   return (
     <section className="page">
@@ -155,36 +156,36 @@ export function NewOrderForm(props: {
           <label>
             {props.partyLabel}
             <select required value={partyId} onChange={(e) => setPartyId(e.target.value)}>
-              <option value="">Choose…</option>
+              <option value="">{tr('Choose…')}</option>
               {parties.data.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
           <label>
-            Warehouse
+            {tr('Warehouse')}
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </label>
         </div>
-        <strong>Items</strong>
+        <strong>{tr('Items')}</strong>
         {lines.map((l, i) => (
           <div className="form-row three" key={i}>
             <label>
-              Item
+              {tr('Item')}
               <select value={l.itemId} onChange={(e) => setLine(i, { itemId: e.target.value })}>
-                <option value="">Choose an item…</option>
+                <option value="">{tr('Choose an item…')}</option>
                 {cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}
               </select>
             </label>
-            <label>Quantity<input type="number" min="1" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
-            <label>{props.priceLabel} (EGP)<input type="number" min="0" step="0.01" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
+            <label>{tr('Quantity')}<input type="number" min="1" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
+            <label>{props.priceLabel} {tr('(EGP)')}<input type="number" min="0" step="0.01" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
           </div>
         ))}
         <div className="form-actions">
-          <button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>Add another item</button>
+          <button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>{tr('Add another item')}</button>
         </div>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? 'Saving…' : props.submitLabel}</button></div>
+        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</button></div>
       </form>
     </section>
   );

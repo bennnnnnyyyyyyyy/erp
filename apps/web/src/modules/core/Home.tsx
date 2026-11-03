@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { hasPermission } from '@erp/shared';
 import { Link } from '../../lib/router';
-import { useI18n } from '../../lib/i18n';
+import {useI18n, tr } from '../../lib/i18n';
 import { useSession } from '../../session';
 import { SUITE_ORDER, type AppDef } from '../registry';
 import { OwnerSummary } from './OwnerHome';
@@ -71,7 +71,7 @@ export function Home({ apps }: { apps: AppDef[] }) {
 
       {!hasBusinessApps && canManageApps && (
         <p className="notice">
-          No business apps are switched on yet. <Link to="/settings/apps">Switch on Inventory</Link> to start managing stock.
+          {tr('No business apps are switched on yet.')} <Link to="/settings/apps">{tr('Switch on Inventory')}</Link> {tr('to start managing stock.')}
         </p>
       )}
 

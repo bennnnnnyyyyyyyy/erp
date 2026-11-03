@@ -5,6 +5,7 @@ import { formatDateTime } from '../lib/format';
 import { Link, navigate } from '../lib/router';
 import { useSession } from '../session';
 
+import { tr, trf } from '../lib/i18n';
 export type AppNotification = { id: string; title: string; body: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string };
 
 /** Where a notification leads when clicked. */
@@ -64,7 +65,7 @@ export function NotificationBell() {
   const unread = data?.unread ?? 0;
   return (
     <div className="bell" ref={ref}>
-      <button className="icon-btn bell-btn" onClick={() => { setOpen((o) => !o); load(); }} aria-haspopup="menu" aria-expanded={open} aria-label={`Notifications, ${unread} unread`}>
+      <button className="icon-btn bell-btn" onClick={() => { setOpen((o) => !o); load(); }} aria-haspopup="menu" aria-expanded={open} aria-label={trf('Notifications, {n} unread', { n: unread })}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8" />
           <path d="M10.3 20a1.9 1.9 0 003.4 0" />
@@ -74,11 +75,11 @@ export function NotificationBell() {
       {open && (
         <div className="menu bell-menu" role="menu">
           <div className="bell-head">
-            <strong>Notifications</strong>
+            <strong>{tr('Notifications')}</strong>
             <span className="spacer" />
-            {unread > 0 && <button className="link-btn" onClick={markAll}>Mark all read</button>}
+            {unread > 0 && <button className="link-btn" onClick={markAll}>{tr('Mark all read')}</button>}
           </div>
-          {(data?.items ?? []).length === 0 && <p className="muted small bell-empty">Nothing yet.</p>}
+          {(data?.items ?? []).length === 0 && <p className="muted small bell-empty">{tr('Nothing yet.')}</p>}
           <div className="bell-list">
             {(data?.items ?? []).slice(0, 8).map((n) => (
               <button key={n.id} role="menuitem" className={n.readAt ? 'bell-item' : 'bell-item unread'} onClick={() => openItem(n)}>
@@ -88,7 +89,7 @@ export function NotificationBell() {
               </button>
             ))}
           </div>
-          <Link to="/messaging" className="bell-all" onClick={() => setOpen(false)}>See all</Link>
+          <Link to="/messaging" className="bell-all" onClick={() => setOpen(false)}>{tr('See all')}</Link>
         </div>
       )}
     </div>

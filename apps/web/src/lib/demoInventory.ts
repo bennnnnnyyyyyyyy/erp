@@ -43,6 +43,8 @@ export type LedgerMove = {
   qty: number;
   kind: 'receipt' | 'issue' | 'transfer_out' | 'transfer_in';
   requestId: string | null;
+  /** The request's own number (OUT-0340). Sent by the API; the demo derives it from the id. */
+  requestNumber?: string | null;
   /** Free-text origin for movements that are not a request, e.g. a purchase order number. */
   ref: string | null;
   postedBy: string;

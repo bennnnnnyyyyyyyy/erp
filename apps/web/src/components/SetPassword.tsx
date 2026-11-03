@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 
+import { tr } from '../lib/i18n';
 // Shown after the user follows a password-reset or invite link. Supabase has already signed them in
 // with a short-lived recovery session; this sets the new password on that session.
 export function SetPassword({ invited = false, onDone }: { invited?: boolean; onDone: () => void }) {
@@ -26,9 +27,9 @@ export function SetPassword({ invited = false, onDone }: { invited?: boolean; on
   return (
     <main className="center">
       <form className="card stack" onSubmit={submit}>
-        <h1>{invited ? 'Welcome! Choose a password' : 'Set a new password'}</h1>
+        <h1>{invited ? tr('Welcome! Choose a password') : tr('Set a new password')}</h1>
         <label>
-          New password
+          {tr('New password')}
           <input
             type="password"
             autoComplete="new-password"
@@ -38,7 +39,7 @@ export function SetPassword({ invited = false, onDone }: { invited?: boolean; on
           />
         </label>
         <label>
-          Confirm new password
+          {tr('Confirm new password')}
           <input
             type="password"
             autoComplete="new-password"
@@ -49,7 +50,7 @@ export function SetPassword({ invited = false, onDone }: { invited?: boolean; on
         </label>
         {error && <p className="error">{error}</p>}
         <button type="submit" disabled={busy}>
-          {busy ? 'Saving…' : 'Save password'}
+          {busy ? tr('Saving…') : tr('Save password')}
         </button>
       </form>
     </main>

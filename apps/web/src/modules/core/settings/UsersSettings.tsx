@@ -6,6 +6,7 @@ import { formatDate } from '../../../lib/format';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 
+import { tr, trf } from '../../../lib/i18n';
 const ROLE_HELP: Record<Role, string> = {
   owner: 'Everything, including managing owners',
   admin: 'Everything except managing owners',
@@ -17,22 +18,21 @@ function InviteLinkBox({ email, link, onClose }: { email: string; link: string; 
   const [copied, setCopied] = useState(false);
   return (
     <div className="notice stack">
-      <strong>Send this link to {email}</strong>
+      <strong>{tr('Send this link to')} {email}</strong>
       <p className="muted small">
-        It lets them set a password and sign in. It works once and expires; you can make a new one from the list. Treat
-        it like a password: send it only to them.
+        {tr('It lets them set a password and sign in. It works once and expires; you can make a new one from the list. Treat it like a password: send it only to them.')}
       </p>
       <div className="copy-row">
-        <input readOnly value={link} onFocus={(e) => e.target.select()} aria-label="Invite link" />
+        <input readOnly value={link} onFocus={(e) => e.target.select()} aria-label={tr('Invite link')} />
         <button
           type="button"
           onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true))}
         >
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? tr('Copied') : tr('Copy')}
         </button>
       </div>
       <button type="button" className="secondary" onClick={onClose}>
-        Done
+        {tr('Done')}
       </button>
     </div>
   );
@@ -61,14 +61,14 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
 
   return (
     <form className="form-card stack" onSubmit={submit}>
-      <strong>Invite someone</strong>
+      <strong>{tr('Invite someone')}</strong>
       <div className="form-row">
         <label>
-          Email
+          {tr('Email')}
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label>
-          Role
+          {tr('Role')}
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
             {ROLES.filter((r) => r !== 'owner' || canInviteOwner).map((r) => (
               <option key={r} value={r}>
@@ -78,11 +78,11 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
           </select>
         </label>
       </div>
-      <p className="hint muted small">{ROLE_HELP[role]}</p>
+      <p className="hint muted small">{tr(ROLE_HELP[role])}</p>
       {error && <p className="error">{error}</p>}
       <div className="form-actions">
         <button type="submit" disabled={busy}>
-          {busy ? 'Inviting…' : 'Invite'}
+          {busy ? tr('Inviting…') : tr('Invite')}
         </button>
       </div>
     </form>
@@ -124,7 +124,7 @@ export function UsersSettings() {
   const toggle = (m: Member) =>
     act(m, async () => {
       const action = m.status === 'disabled' ? 'enable' : 'disable';
-      if (action === 'disable' && !window.confirm(`Disable ${m.email}? They will lose access to ${session.org?.name}.`)) return;
+      if (action === 'disable' && !window.confirm(trf('Disable {email}? They will lose access to {org}.', { email: m.email, org: session.org?.name ?? '' }))) return;
       replace(await api<Member>(`/v1/core/members/${m.id}/${action}`, { method: 'POST' }));
     });
 
@@ -151,19 +151,19 @@ export function UsersSettings() {
   const columns: Column<Member>[] = [
     {
       key: 'email',
-      label: 'User',
+      label: tr('User'),
       value: (m) => m.name ?? m.email,
       render: (m) => (
         <div>
           <div>{m.name ?? m.email}</div>
           {m.name && <div className="muted small">{m.email}</div>}
-          {m.userId === session.userId && <span className="badge">You</span>}
+          {m.userId === session.userId && <span className="badge">{tr('You')}</span>}
         </div>
       ),
     },
     {
       key: 'role',
-      label: 'Role',
+      label: tr('Role'),
       value: (m) => m.role,
       render: (m) => {
         const locked = !canManage || m.userId === session.userId || (!isOwner && m.role === 'owner');
@@ -173,7 +173,7 @@ export function UsersSettings() {
             value={m.role}
             disabled={busyId === m.id}
             onChange={(e) => changeRole(m, e.target.value as Role)}
-            aria-label={`Role for ${m.email}`}
+            aria-label={trf('Role for {email}', { email: m.email })}
           >
             {ROLES.filter((r) => r !== 'owner' || isOwner).map((r) => (
               <option key={r} value={r}>
@@ -186,23 +186,23 @@ export function UsersSettings() {
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       value: (m) => m.status,
       render: (m) => <span className={`status status-${m.status}`}>{m.status}</span>,
     },
-    { key: 'joined', label: 'Added', value: (m) => m.joinedAt, render: (m) => formatDate(m.joinedAt, session.org) },
+    { key: 'joined', label: tr('Added'), value: (m) => m.joinedAt, render: (m) => formatDate(m.joinedAt, session.org) },
     {
       key: 'last',
-      label: 'Last sign-in',
+      label: tr('Last sign-in'),
       value: (m) => m.lastSignInAt,
-      render: (m) => formatDate(m.lastSignInAt, session.org) || <span className="muted">Never</span>,
+      render: (m) => formatDate(m.lastSignInAt, session.org) || <span className="muted">{tr('Never')}</span>,
     },
   ];
 
   return (
     <section className="page">
-      <h1>Users</h1>
-      <p className="muted">Who can sign in to {session.org?.name}, and what they can do.</p>
+      <h1>{tr('Users')}</h1>
+      <p className="muted">{trf('Who can sign in to {org}, and what they can do.', { org: session.org?.name ?? '' })}</p>
 
       {link && <InviteLinkBox email={link.email} link={link.link} onClose={() => setLink(null)} />}
       {inviting && !link && (
@@ -216,7 +216,7 @@ export function UsersSettings() {
             } else {
               const others = (invitations.data ?? []).filter((i) => i.id !== r.invitation.id);
               invitations.setData([...others, r.invitation]);
-              setNotice(`${r.invitation.email} has been invited. They will see the invitation when they sign in and join once they accept it.`);
+              setNotice(trf('{email} has been invited. They will see the invitation when they sign in and join once they accept it.', { email: r.invitation.email }));
             }
           }}
         />
@@ -227,7 +227,7 @@ export function UsersSettings() {
 
       {canManage && (invitations.data?.length ?? 0) > 0 && (
         <div className="form-card stack">
-          <strong>Waiting to accept</strong>
+          <strong>{tr('Waiting to accept')}</strong>
           {invitations.data?.map((i) => (
             <div key={i.id} className="copy-row">
               <span>
@@ -235,7 +235,7 @@ export function UsersSettings() {
               </span>
               {(isOwner || i.role !== 'owner') && (
                 <button className="link-btn" disabled={busyId === i.id} onClick={() => withdraw(i)}>
-                  Withdraw
+                  {tr('Withdraw')}
                 </button>
               )}
             </div>
@@ -245,16 +245,16 @@ export function UsersSettings() {
 
       {members.data ? (
         <ListView
-          title="Users"
+          title={tr('Users')}
           rows={members.data}
           columns={columns}
           rowKey={(m) => m.id}
           toolbar={
             canManage && !inviting ? (
-              <button onClick={() => setInviting(true)}>Invite user</button>
+              <button onClick={() => setInviting(true)}>{tr('Invite user')}</button>
             ) : canManage ? (
               <button className="secondary" onClick={() => setInviting(false)}>
-                Cancel invite
+                {tr('Cancel invite')}
               </button>
             ) : null
           }
@@ -265,11 +265,11 @@ export function UsersSettings() {
                     <>
                       {m.status === 'invited' && (
                         <button className="link-btn" disabled={busyId === m.id} onClick={() => newLink(m)}>
-                          New invite link
+                          {tr('New invite link')}
                         </button>
                       )}
                       <button className="link-btn" disabled={busyId === m.id} onClick={() => toggle(m)}>
-                        {m.status === 'disabled' ? 'Enable' : 'Disable'}
+                        {m.status === 'disabled' ? tr('Enable') : tr('Disable')}
                       </button>
                     </>
                   )
@@ -277,7 +277,7 @@ export function UsersSettings() {
           }
         />
       ) : (
-        !members.error && <p className="muted">Loading…</p>
+        !members.error && <p className="muted">{tr('Loading…')}</p>
       )}
     </section>
   );

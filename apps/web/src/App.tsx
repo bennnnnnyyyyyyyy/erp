@@ -5,11 +5,13 @@ import { api, getActiveOrgId, setActiveOrgId } from './lib/api';
 import { arrivedFromInvite, arrivedToSetPassword, supabase } from './lib/supabase';
 import { SessionContext } from './session';
 import { SignIn } from './components/SignIn';
+import {useI18n, tr } from './lib/i18n';
 import { SetPassword } from './components/SetPassword';
 import { OrgPicker } from './components/OrgPicker';
 import { Shell } from './components/Shell';
 
 export function App() {
+  const { lang } = useI18n();
   const [auth, setAuth] = useState<Session | null | undefined>(undefined);
   const [orgId, setOrgId] = useState<string | null>(getActiveOrgId());
   const [session, setSession] = useState<SessionInfo | null>(null);
@@ -44,17 +46,17 @@ export function App() {
   }
 
   if (auth === undefined) return null;
-  if (!auth) return <SignIn />;
-  if (recovering) return <SetPassword invited={arrivedFromInvite} onDone={() => setRecovering(false)} />;
+  if (!auth) return <SignIn key={lang} />;
+  if (recovering) return <SetPassword key={lang} invited={arrivedFromInvite} onDone={() => setRecovering(false)} />;
   if (!orgId) {
     return (
       <>
         {error && <p className="error banner">{error}</p>}
-        <OrgPicker onPick={chooseOrg} />
+        <OrgPicker key={lang} onPick={chooseOrg} />
       </>
     );
   }
-  if (!session) return <main className="center"><p className="muted">Loading…</p></main>;
+  if (!session) return <main className="center"><p className="muted">{tr('Loading…')}</p></main>;
 
   return (
     <SessionContext.Provider value={{ session, reload: () => setSessionTick((t) => t + 1) }}>

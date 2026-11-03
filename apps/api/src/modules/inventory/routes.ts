@@ -112,16 +112,20 @@ inventoryRoutes.get('/stock', requirePermission('inventory.items.read'), async (
 inventoryRoutes.get('/ledger', requirePermission('inventory.items.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('inv_stock_moves')
-    .select('id, item_id, warehouse_id, qty, kind, request_id, ref, posted_by, posted_at')
+    .select('id, item_id, warehouse_id, qty, kind, request_id, ref, posted_by, posted_at, inv_requests(number)')
     .eq('org_id', orgOf(c))
     .order('id', { ascending: false })
     .limit(500);
   if (error) throw error;
+  type LedgerRow = { id: number; item_id: string; warehouse_id: string; qty: number; kind: string; request_id: string | null; ref: string | null; posted_by: string; posted_at: string; inv_requests: { number: string } | { number: string }[] | null };
   return ok(
     c,
-    ((data ?? []) as { id: number; item_id: string; warehouse_id: string; qty: number; kind: string; request_id: string | null; ref: string | null; posted_by: string; posted_at: string }[]).map((m) => ({
-      id: m.id, itemId: m.item_id, warehouseId: m.warehouse_id, qty: Number(m.qty), kind: m.kind, requestId: m.request_id, ref: m.ref, postedBy: m.posted_by, postedAt: m.posted_at,
-    })),
+    ((data ?? []) as unknown as LedgerRow[]).map((m) => {
+      const req = Array.isArray(m.inv_requests) ? m.inv_requests[0] : m.inv_requests;
+      return {
+        id: m.id, itemId: m.item_id, warehouseId: m.warehouse_id, qty: Number(m.qty), kind: m.kind, requestId: m.request_id, requestNumber: req?.number ?? null, ref: m.ref, postedBy: m.posted_by, postedAt: m.posted_at,
+      };
+    }),
   );
 });
 

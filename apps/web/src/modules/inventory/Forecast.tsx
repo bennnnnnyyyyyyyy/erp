@@ -3,6 +3,7 @@ import { useLoad } from '../../lib/useLoad';
 import { Link } from '../../lib/router';
 import { Pill } from '../trade/common';
 
+import { tr, trf } from '../../lib/i18n';
 // When will each item run out? From this organization's own issue history (sql/029). Items nobody issued in 90 days get no forecast.
 // A date from thin data is a guess, and the screen says so.
 
@@ -15,7 +16,7 @@ const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('
 
 export function ForecastPage() {
   const data = useLoad(() => api<Row[]>('/v1/inventory/forecast'));
-  if (!data.data) return <section className="page"><p className="muted">{data.error ?? 'Loading…'}</p></section>;
+  if (!data.data) return <section className="page"><p className="muted">{data.error ?? tr('Loading…')}</p></section>;
   const rows = data.data;
   const used = rows.filter((r) => r.confidence !== 'none');
   const soon = used.filter((r) => (r.daysOfCover ?? 999) <= 14).length;
@@ -24,13 +25,13 @@ export function ForecastPage() {
 
   return (
     <section className="page wide">
-      <h1>Stock forecast</h1>
-      <p className="muted">When each item will run out, worked out from what your own warehouse issued in the last 90 days (the latest month counts most). A date based on thin history is a guess: look at the "How sure" column.</p>
+      <h1>{tr('Stock forecast')}</h1>
+      <p className="muted">{tr('When each item will run out, worked out from what your own warehouse issued in the last 90 days (the latest month counts most). A date based on thin history is a guess: look at the "How sure" column.')}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {[
-          { label: 'Running out within 14 days', value: String(soon), tone: soon > 0 ? 'text-destructive-foreground' : 'text-success-foreground' },
-          { label: 'Worth ordering now', value: String(toOrder.length), tone: toOrder.length > 0 ? 'text-warning-foreground' : 'text-success-foreground' },
-          { label: 'Items with a forecast', value: `${used.length} of ${rows.length}`, tone: '' },
+          { label: tr('Running out within 14 days'), value: String(soon), tone: soon > 0 ? 'text-destructive-foreground' : 'text-success-foreground' },
+          { label: tr('Worth ordering now'), value: String(toOrder.length), tone: toOrder.length > 0 ? 'text-warning-foreground' : 'text-success-foreground' },
+          { label: tr('Items with a forecast'), value: `${used.length} of ${rows.length}`, tone: '' },
         ].map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-card p-5 shadow-xs">
             <div className="text-sm font-medium text-muted-foreground">{k.label}</div>
@@ -39,26 +40,24 @@ export function ForecastPage() {
         ))}
       </div>
 
-      <div className="table-wrap mt-5"><table><thead><tr><th>Item</th><th className="right">Available</th><th className="right">Used per day</th><th>Runs out</th><th>How sure</th><th className="right">Supplier takes</th><th className="right">Already ordered</th><th className="right">Order now</th></tr></thead><tbody>
+      <div className="table-wrap mt-5"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Available')}</th><th className="right">{tr('Used per day')}</th><th>{tr('Runs out')}</th><th>{tr('How sure')}</th><th className="right">{tr('Supplier takes')}</th><th className="right">{tr('Already ordered')}</th><th className="right">{tr('Order now')}</th></tr></thead><tbody>
         {rows.map((r) => (
           <tr key={r.itemId}>
             <td>{r.sku} · {r.name}</td>
             <td className="right">{fmt(r.available)} {r.uom}</td>
             <td className="right">{r.confidence === 'none' ? '—' : fmt(r.dailyRate)}</td>
-            <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={`${r.daysOfCover} days`} /> <span className="muted small">{r.runsOutOn}</span></> : <span className="muted">no use in 90 days</span>}</td>
-            <td>{r.confidence === 'good' ? <Pill status="received" label="Solid history" /> : r.confidence === 'thin' ? <span title={`${r.issuesCount} issue(s) over ${r.historyDays} days`}><Pill status="submitted" label="Thin: a guess" /></span> : ''}</td>
-            <td className="right">{r.confidence === 'none' ? '' : `${r.leadDays} days`}</td>
+            <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={trf('{n} days', { n: r.daysOfCover ?? '' })} /> <span className="muted small">{r.runsOutOn}</span></> : <span className="muted">{tr('no use in 90 days')}</span>}</td>
+            <td>{r.confidence === 'good' ? <Pill status="received" label={tr('Solid history')} /> : r.confidence === 'thin' ? <span title={trf('{issues} issue(s) over {days} days', { issues: r.issuesCount, days: r.historyDays })}><Pill status="submitted" label={tr('Thin: a guess')} /></span> : ''}</td>
+            <td className="right">{r.confidence === 'none' ? '' : trf('{n} days', { n: r.leadDays })}</td>
             <td className="right">{r.onOrder > 0 ? fmt(r.onOrder) : ''}</td>
             <td className="right">{r.suggestedOrder ? <b>{fmt(r.suggestedOrder)}</b> : ''}</td>
           </tr>
         ))}
-        {!rows.length && <tr><td colSpan={8} className="muted empty">No items yet.</td></tr>}
+        {!rows.length && <tr><td colSpan={8} className="muted empty">{tr('No items yet.')}</td></tr>}
       </tbody></table></div>
 
       <p className="muted small">
-        How it is worked out: usage per day = 50% of the latest 30 days + 30% of the 30 before + 20% of the 30 before that. Days left = available stock (on hand minus reserved) divided by usage per day.
-        Order now = usage per day x (supplier lead time + 7 safety days) minus available minus what is already on order. The supplier time is the average of your own past purchases (7 days if the item was never bought). Seasonal swings are not modelled yet.
-        To be told automatically, add an <Link to="/alerts">alert rule</Link>.
+        {tr('How it is worked out: usage per day = 50% of the latest 30 days + 30% of the 30 before + 20% of the 30 before that. Days left = available stock (on hand minus reserved) divided by usage per day. Order now = usage per day x (supplier lead time + 7 safety days) minus available minus what is already on order. The supplier time is the average of your own past purchases (7 days if the item was never bought). Seasonal swings are not modelled yet. To be told automatically, add an')} <Link to="/alerts">{tr('alert rule')}</Link>.
       </p>
     </section>
   );

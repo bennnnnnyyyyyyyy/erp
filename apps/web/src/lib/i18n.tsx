@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 // The Arabic below is a MACHINE DRAFT for the shell only and needs review by a native speaker before it is shown to customers.
 
 import { NAV_AR } from './i18nNav';
+import { SCREENS_AR } from './i18nScreens';
 
 export type Lang = 'en' | 'ar';
 
@@ -25,7 +26,27 @@ const AR: Record<string, string> = {
   'Arabic (right to left)': 'العربية (من اليمين إلى اليسار)',
 };
 
-Object.assign(AR, NAV_AR);
+Object.assign(AR, NAV_AR, SCREENS_AR);
+
+// The language in use right now, readable from anywhere (including plain functions and column definitions that are not React components).
+// The provider sets it while rendering, before any child renders; the page is re-mounted when the language changes, so nothing keeps a stale text.
+let currentLang: Lang = 'en';
+
+/** The language in use right now (for date and number formatting in plain functions). */
+export const currentLanguage = (): Lang => currentLang;
+
+/** The locale for dates: Arabic names, Western digits (like the rest of the app), or British English. */
+export const dateLocale = (): string => (currentLang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB');
+
+/** Translates an English text to the language in use. Missing Arabic shows the English text, never a blank or a code. Safe to call anywhere during render. */
+export function tr(text: string): string {
+  return currentLang === 'ar' ? (AR[text] ?? text) : text;
+}
+
+/** Like tr(), then fills {name} placeholders: trf('{n} items', { n: 3 }). The Arabic text may put the placeholders in a different order. */
+export function trf(template: string, values: Record<string, string | number>): string {
+  return tr(template).replace(/\{(\w+)\}/g, (m, k: string) => (k in values ? String(values[k]) : m));
+}
 
 /** How many UI strings have an Arabic text. Shown honestly in the language menu so nobody assumes the whole app is translated. */
 export const arabicStringCount = Object.keys(AR).length;
@@ -106,6 +127,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [asked, setAsked] = useState<boolean>(() => storedLang() !== null || storedAsked());
   const [ready, setReady] = useState(false);
   const lang: Lang = personalLang ?? orgLang ?? 'en';
+  currentLang = lang;
   const saver = useRef<((l: Lang | null) => Promise<void>) | null>(null);
   const remember = useCallback((l: Lang | null) => {
     try {

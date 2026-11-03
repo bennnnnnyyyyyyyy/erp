@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { demoMode } from '../../../lib/demo';
-import { arabicStringCount, useI18n, type Lang } from '../../../lib/i18n';
+import { arabicStringCount, useI18n, type Lang, tr, trf } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 
@@ -29,7 +29,7 @@ export function GeneralSettings() {
   }, [org.data]);
 
   if (org.error) return <p className="error">{org.error}</p>;
-  if (!form || !org.data) return <p className="muted">Loading…</p>;
+  if (!form || !org.data) return <p className="muted">{tr('Loading…')}</p>;
 
   const original = org.data;
   const changes: OrgSettingsUpdate = {};
@@ -68,8 +68,8 @@ export function GeneralSettings() {
 
   return (
     <section className="page">
-      <h1>General</h1>
-      <p className="muted">How your organization appears and the defaults every app uses.</p>
+      <h1>{tr('General')}</h1>
+      <p className="muted">{tr('How your organization appears and the defaults every app uses.')}</p>
       <div className="form-card stack">
         <label>
           {t('My language')}
@@ -84,19 +84,19 @@ export function GeneralSettings() {
             <option value="ar">{t('Arabic (right to left)')}</option>
           </select>
           <span className="hint muted">
-            Only for you, on this browser. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {arabicStringCount} menu strings, the home page, the Getting-started tutorial, the tour and the Guide so far; the rest of the app stays in English until it is translated and reviewed by a native speaker.
+            {trf('Only for you, on this account. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {n} menu strings, the home page and most screens so far; it must be reviewed by a native speaker before customers rely on it.', { n: arabicStringCount })}
           </span>
         </label>
       </div>
       <form className="form-card stack" onSubmit={save}>
         <fieldset disabled={!canEdit || saving} className="stack">
           <label>
-            Organization name
+            {tr('Organization name')}
             <input required maxLength={200} value={form.name} onChange={(e) => set('name', e.target.value)} />
           </label>
           <div className="form-row">
             <label>
-              Default currency
+              {tr('Default currency')}
               <input
                 required
                 list="currencies"
@@ -111,7 +111,7 @@ export function GeneralSettings() {
               </datalist>
             </label>
             <label>
-              Date format
+              {tr('Date format')}
               <select value={form.dateFormat} onChange={(e) => set('dateFormat', e.target.value as OrgSettings['dateFormat'])}>
                 {DATE_FORMATS.map((f) => (
                   <option key={f} value={f}>
@@ -122,45 +122,45 @@ export function GeneralSettings() {
             </label>
           </div>
           <label>
-            Default language for the company
+            {tr('Default language for the company')}
             <select value={form.language} onChange={(e) => set('language', e.target.value as OrgSettings['language'])}>
-              <option value="en">English (left to right)</option>
+              <option value="en">{tr('English (left to right)')}</option>
               <option value="ar">العربية: Arabic (right to left)</option>
             </select>
-            <span className="hint muted">The language people see until they choose their own under "My language" above. It is chosen when the company signs up and can be changed here. Arabic is a machine draft covering the menus only so far; a native speaker must review it before customers see it.</span>
+            <span className="hint muted">{tr('The language people see until they choose their own under "My language" above. It is chosen when the company signs up and can be changed here. Arabic is a machine draft; a native speaker must review it before customers see it.')}</span>
           </label>
           <label>
-            Time zone
+            {tr('Time zone')}
             <input required list="timezones" value={form.timezone} onChange={(e) => set('timezone', e.target.value)} />
             <datalist id="timezones">
               {timeZones().map((tz) => (
                 <option key={tz} value={tz} />
               ))}
             </datalist>
-            <span className="hint muted">Dates and times across the app are shown in this zone.</span>
+            <span className="hint muted">{tr('Dates and times across the app are shown in this zone.')}</span>
           </label>
         </fieldset>
         {error && <p className="error">{error}</p>}
         {canEdit ? (
           <div className="form-actions">
             <button type="submit" disabled={!dirty || saving}>
-              {saving ? 'Saving…' : 'Save changes'}
+              {saving ? tr('Saving…') : tr('Save changes')}
             </button>
             {dirty && (
               <button type="button" className="secondary" onClick={() => setForm(original)} disabled={saving}>
-                Discard
+                {tr('Discard')}
               </button>
             )}
-            {saved && !dirty && <span className="muted">Saved.</span>}
+            {saved && !dirty && <span className="muted">{tr('Saved.')}</span>}
           </div>
         ) : (
-          <p className="muted small">Only owners and admins can change these settings.</p>
+          <p className="muted small">{tr('Only owners and admins can change these settings.')}</p>
         )}
       </form>
       {canEdit && !demoMode && (
         <div className="form-card stack">
-          <h2>Getting-started guide</h2>
-          <p className="muted small">A short tutorial for new companies, shown as the "Getting started" app. It is {session.org?.showTutorial ? 'on' : 'off'} for this company.</p>
+          <h2>{tr('Getting-started guide')}</h2>
+          <p className="muted small">{session.org?.showTutorial ? tr('A short tutorial for new companies, shown as the "Getting started" app. It is on for this company.') : tr('A short tutorial for new companies, shown as the "Getting started" app. It is off for this company.')}</p>
           <div>
             <button type="button" className="secondary" onClick={async () => {
               setError(null);
@@ -170,14 +170,14 @@ export function GeneralSettings() {
               } catch (err) {
                 setError((err as Error).message);
               }
-            }}>{session.org?.showTutorial ? 'Hide the guide' : 'Show the guide'}</button>
+            }}>{session.org?.showTutorial ? tr('Hide the guide') : tr('Show the guide')}</button>
           </div>
         </div>
       )}
       {canEdit && !demoMode && (
         <div className="form-card stack">
-          <h2>Guided tour</h2>
-          <p className="muted small">A step-by-step tour that walks people through the real screens, in English or Arabic. It is {session.org?.showTour ? 'on' : 'off'} for this company; when it is on, a "Take the tour" button appears on the Guide and Getting-started pages.</p>
+          <h2>{tr('Guided tour')}</h2>
+          <p className="muted small">{session.org?.showTour ? tr('A step-by-step tour that walks people through the real screens, in English or Arabic. It is on for this company: a "Take the tour" button appears on the Guide and Getting-started pages.') : tr('A step-by-step tour that walks people through the real screens, in English or Arabic. It is off for this company; when it is on, a "Take the tour" button appears on the Guide and Getting-started pages.')}</p>
           <div>
             <button type="button" className="secondary" onClick={async () => {
               setError(null);
@@ -187,7 +187,7 @@ export function GeneralSettings() {
               } catch (err) {
                 setError((err as Error).message);
               }
-            }}>{session.org?.showTour ? 'Switch the tour off' : 'Switch the tour on'}</button>
+            }}>{session.org?.showTour ? tr('Switch the tour off') : tr('Switch the tour on')}</button>
           </div>
         </div>
       )}

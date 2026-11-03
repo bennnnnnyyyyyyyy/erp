@@ -9,6 +9,7 @@ import { Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
+import { tr, trf } from '../../lib/i18n';
 // Tasks (documentation/plans/TASKS_AND_OUTBOX_PLAN.md): a manager assigns work with a due time; the assignee gets a
 // notification, updates the status, and a reminder goes out if it is overdue. Rules live in the database.
 
@@ -40,21 +41,21 @@ function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose
   }
 
   return (
-    <Modal title="New task" onClose={onClose}>
+    <Modal title={tr('New task')} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
-        <label>What needs doing<input required value={form.title} onChange={set('title')} placeholder="Count aisle 4" /></label>
+        <label>{tr('What needs doing')}<input required value={form.title} onChange={set('title')} placeholder={tr('Count aisle 4')} /></label>
         <div className="form-row">
           <label>
-            For
+            {tr('For')}
             <select required value={form.assigneeId} onChange={set('assigneeId')}>
               {choices.map((m) => <option key={m.userId} value={m.userId}>{m.name ?? m.email} ({m.role})</option>)}
             </select>
           </label>
-          <label>Due<input type="datetime-local" value={form.dueAt} onChange={set('dueAt')} /></label>
+          <label>{tr('Due')}<input type="datetime-local" value={form.dueAt} onChange={set('dueAt')} /></label>
         </div>
-        <label>Details (optional)<input value={form.description} onChange={set('description')} /></label>
+        <label>{tr('Details (optional)')}<input value={form.description} onChange={set('description')} /></label>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? 'Assigning…' : 'Assign task'}</button></div>
+        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Assigning…') : tr('Assign task')}</button></div>
       </form>
     </Modal>
   );
@@ -86,48 +87,48 @@ export function TasksPage() {
   const overdue = (t: Task) => Boolean(t.dueAt) && (t.status === 'open' || t.status === 'in_progress') && new Date(t.dueAt as string).getTime() < Date.now();
 
   const columns: Column<Task>[] = [
-    { key: 'title', label: 'Task', value: (t) => t.title, render: (t) => (<><Link to={`/tasks/${t.id}`}><strong>{t.title}</strong></Link>{t.description && <div className="muted small">{t.description}</div>}</>) },
-    { key: 'for', label: 'For', value: (t) => who(t.assigneeId) },
-    { key: 'by', label: 'Assigned by', value: (t) => who(t.createdBy) },
-    { key: 'due', label: 'Due', value: (t) => t.dueAt ?? '', render: (t) => (t.dueAt ? <span className={overdue(t) ? 'overdue nowrap' : 'nowrap'}>{formatDateTime(t.dueAt, session.org)}{overdue(t) ? ' (overdue)' : ''}</span> : <span className="muted">none</span>) },
-    { key: 'status', label: 'Status', value: (t) => t.status, render: (t) => <span className={`pill st-${t.status}`}>{STATUS_LABEL[t.status]}</span> },
+    { key: 'title', label: tr('Task'), value: (t) => t.title, render: (t) => (<><Link to={`/tasks/${t.id}`}><strong>{t.title}</strong></Link>{t.description && <div className="muted small">{t.description}</div>}</>) },
+    { key: 'for', label: tr('For'), value: (t) => who(t.assigneeId) },
+    { key: 'by', label: tr('Assigned by'), value: (t) => who(t.createdBy) },
+    { key: 'due', label: tr('Due'), value: (t) => t.dueAt ?? '', render: (t) => (t.dueAt ? <span className={overdue(t) ? 'overdue nowrap' : 'nowrap'}>{formatDateTime(t.dueAt, session.org)}{overdue(t) ? tr(' (overdue)') : ''}</span> : <span className="muted">none</span>) },
+    { key: 'status', label: tr('Status'), value: (t) => t.status, render: (t) => <span className={`pill st-${t.status}`}>{tr(STATUS_LABEL[t.status])}</span> },
   ];
 
   const canAct = (t: Task) => (t.status === 'open' || t.status === 'in_progress') && (t.assigneeId === session.userId || t.createdBy === session.userId || isManager);
 
   return (
     <section className="page">
-      <h1>Tasks</h1>
-      <p className="muted">Work assigned to people, with a due time. An overdue task triggers a reminder to the assignee and then an escalation to whoever assigned it.</p>
+      <h1>{tr('Tasks')}</h1>
+      <p className="muted">{tr('Work assigned to people, with a due time. An overdue task triggers a reminder to the assignee and then an escalation to whoever assigned it.')}</p>
       {error && <p className="error notice">{error}</p>}
       {tasks.data && members.data ? (
         <ListView
-          title="Tasks"
+          title={tr('Tasks')}
           rows={rows}
           columns={columns}
           rowKey={(t) => t.id}
-          empty={view === 'mine' ? 'Nothing assigned to you.' : 'No tasks yet.'}
+          empty={view === 'mine' ? tr('Nothing assigned to you.') : tr('No tasks yet.')}
           toolbar={
             <>
-              <select className="narrow-select" value={view} onChange={(e) => setView(e.target.value as 'mine' | 'all')} aria-label="Show">
-                <option value="mine">My tasks</option>
-                <option value="all">All tasks</option>
+              <select className="narrow-select" value={view} onChange={(e) => setView(e.target.value as 'mine' | 'all')} aria-label={tr('Show')}>
+                <option value="mine">{tr('My tasks')}</option>
+                <option value="all">{tr('All tasks')}</option>
               </select>
-              {canCreate && <button onClick={() => setAdding(true)}>New task</button>}
+              {canCreate && <button onClick={() => setAdding(true)}>{tr('New task')}</button>}
             </>
           }
           actions={(t) =>
             canAct(t) ? (
               <>
-                {t.status === 'open' && <button className="secondary" onClick={() => setStatus(t, 'in_progress')}>Acknowledge</button>}{' '}
-                <button onClick={() => setStatus(t, 'done')}>Done</button>{' '}
-                <button className="secondary" onClick={() => setStatus(t, 'cancelled')}>Cancel</button>
+                {t.status === 'open' && <button className="secondary" onClick={() => setStatus(t, 'in_progress')}>{tr('Acknowledge')}</button>}{' '}
+                <button onClick={() => setStatus(t, 'done')}>{tr('Done')}</button>{' '}
+                <button className="secondary" onClick={() => setStatus(t, 'cancelled')}>{tr('Cancel')}</button>
               </>
             ) : null
           }
         />
       ) : (
-        <p className="muted">{tasks.error ?? members.error ?? 'Loading…'}</p>
+        <p className="muted">{tasks.error ?? members.error ?? tr('Loading…')}</p>
       )}
       {adding && members.data && <NewTaskModal members={members.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); tasks.reload(); }} />}
     </section>
@@ -162,8 +163,8 @@ export function TaskPage() {
     }
   }
 
-  if (task.error) return <section className="page"><Link to="/tasks" className="back-link">← Tasks</Link><p className="error">{task.error}</p></section>;
-  if (!t) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (task.error) return <section className="page"><Link to="/tasks" className="back-link">{tr('← Tasks')}</Link><p className="error">{task.error}</p></section>;
+  if (!t) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   const open = t.status === 'open' || t.status === 'in_progress';
   const canAct = open && (t.assigneeId === session.userId || t.createdBy === session.userId || isManager);
@@ -172,15 +173,15 @@ export function TaskPage() {
 
   return (
     <section className="page">
-      <Link to="/tasks" className="back-link">← Tasks</Link>
+      <Link to="/tasks" className="back-link">{tr('← Tasks')}</Link>
       <div className="page-head">
         <h1>{t.title}</h1>
-        <span className={`pill st-${t.status}`}>{STATUS_LABEL[t.status]}</span>
+        <span className={`pill st-${t.status}`}>{tr(STATUS_LABEL[t.status])}</span>
       </div>
       <p className="muted">
-        For {who(t.assigneeId)}, assigned by {who(t.createdBy)} on {formatDateTime(t.createdAt, session.org)}.
-        {t.dueAt && <> Due <span className={late ? 'overdue' : undefined}>{formatDateTime(t.dueAt, session.org)}{late ? ' (overdue)' : ''}</span>.</>}
-        {t.completedAt && <> Completed {formatDateTime(t.completedAt, session.org)}.</>}
+        {trf('For {assignee}, assigned by {creator} on {date}.', { assignee: who(t.assigneeId), creator: who(t.createdBy), date: formatDateTime(t.createdAt, session.org) })}
+        {t.dueAt && <> {tr('Due')} <span className={late ? 'overdue' : undefined}>{formatDateTime(t.dueAt, session.org)}{late ? tr(' (overdue)') : ''}</span>.</>}
+        {t.completedAt && <> {tr('Completed')} {formatDateTime(t.completedAt, session.org)}.</>}
       </p>
       {t.description && <p>{t.description}</p>}
 
@@ -188,20 +189,20 @@ export function TaskPage() {
 
       {canAct && (
         <div className="form-card stack">
-          <strong>{t.assigneeId === session.userId ? 'Your task' : 'Task actions'}</strong>
-          <p className="hint muted small">Acknowledge tells {who(t.createdBy)} you have seen it and are on it. Complete when it is done.</p>
+          <strong>{t.assigneeId === session.userId ? tr('Your task') : tr('Task actions')}</strong>
+          <p className="hint muted small">{trf('Acknowledge tells {name} you have seen it and are on it. Complete when it is done.', { name: who(t.createdBy) })}</p>
           <div className="form-actions">
-            {t.status === 'open' && <button className="secondary" disabled={busy} onClick={() => act('in_progress', 'Acknowledged. The person who assigned it can see that you are on it.')}>Acknowledge</button>}
-            <button disabled={busy} onClick={() => act('done', 'Marked as done. The person who assigned it will be notified.')}>Complete</button>
-            <button className="secondary" disabled={busy} onClick={() => act('cancelled', 'Task cancelled.')}>Cancel task</button>
+            {t.status === 'open' && <button className="secondary" disabled={busy} onClick={() => act('in_progress', 'Acknowledged. The person who assigned it can see that you are on it.')}>{tr('Acknowledge')}</button>}
+            <button disabled={busy} onClick={() => act('done', 'Marked as done. The person who assigned it will be notified.')}>{tr('Complete')}</button>
+            <button className="secondary" disabled={busy} onClick={() => act('cancelled', 'Task cancelled.')}>{tr('Cancel task')}</button>
           </div>
         </div>
       )}
 
-      <h2 className="related">History</h2>
+      <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}>
@@ -211,7 +212,7 @@ export function TaskPage() {
                 <td>{a.summary}</td>
               </tr>
             ))}
-            {history.length === 0 && <tr><td colSpan={4} className="muted empty">No history yet.</td></tr>}
+            {history.length === 0 && <tr><td colSpan={4} className="muted empty">{tr('No history yet.')}</td></tr>}
           </tbody>
         </table>
       </div>

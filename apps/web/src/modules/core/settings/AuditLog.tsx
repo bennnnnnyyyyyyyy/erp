@@ -5,6 +5,17 @@ import { formatDateTime } from '../../../lib/format';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 
+import { tr, trf } from '../../../lib/i18n';
+import { usePeople } from '../../../lib/people';
+
+/** 'organization.tutorial_changed' becomes 'Organization: tutorial changed'. The raw key stays in the tooltip and the CSV. */
+function readableAction(key: string): string {
+  const [area, ...rest] = key.replace(/_/g, ' ').split('.');
+  const text = [area, rest.join(' ')].filter(Boolean);
+  const first = text[0] ? text[0].charAt(0).toUpperCase() + text[0].slice(1) : key;
+  return text.length > 1 ? `${first}: ${text[1]}` : first;
+}
+
 export function AuditLog() {
   const session = useSession();
   const canSeeUsers = hasPermission(session.permissions, 'core.users.read');
@@ -12,28 +23,38 @@ export function AuditLog() {
   // Turns actor ids into emails when the viewer may see the member list.
   const members = useLoad(() => (canSeeUsers ? api<Member[]>('/v1/core/members') : Promise.resolve([] as Member[])));
   const emails = new Map((members.data ?? []).map((m) => [m.userId, m.email]));
+  const who = usePeople();
 
   const columns: Column<AuditEntry>[] = [
     {
       key: 'when',
-      label: 'When',
+      label: tr('When'),
       value: (e) => e.occurred_at,
       render: (e) => <span className="nowrap">{formatDateTime(e.occurred_at, session.org)}</span>,
     },
-    { key: 'who', label: 'Who', value: (e) => (e.actor_user_id ? (emails.get(e.actor_user_id) ?? e.actor_user_id) : 'System') },
-    { key: 'action', label: 'Action', value: (e) => e.action, render: (e) => <code>{e.action}</code> },
-    { key: 'summary', label: 'Details', value: (e) => e.summary },
+    {
+      key: 'who',
+      label: tr('Who'),
+      value: (e) => {
+        if (!e.actor_user_id) return 'System';
+        const name = who(e.actor_user_id);
+        // 'Someone' means the person is no longer in the people list (disabled): fall back to the email, then the id.
+        return name === 'Someone' ? (emails.get(e.actor_user_id) ?? e.actor_user_id) : name;
+      },
+    },
+    { key: 'action', label: tr('Action'), value: (e) => e.action, render: (e) => <span title={e.action}>{readableAction(e.action)}</span> },
+    { key: 'summary', label: tr('Details'), value: (e) => e.summary },
   ];
 
   return (
     <section className="page">
-      <h1>Audit log</h1>
-      <p className="muted">Every change made in {session.org?.name}, newest first. Entries can't be edited or deleted.</p>
+      <h1>{tr('Audit log')}</h1>
+      <p className="muted">{trf('Every change made in {org}, newest first. Entries can\'t be edited or deleted.', { org: session.org?.name ?? '' })}</p>
       {entries.error && <p className="error">{entries.error}</p>}
       {entries.data ? (
-        <ListView title="Audit log" rows={entries.data} columns={columns} rowKey={(e) => String(e.id)} empty="No activity yet." />
+        <ListView title={tr('Audit log')} rows={entries.data} columns={columns} rowKey={(e) => String(e.id)} empty={tr('No activity yet.')} />
       ) : (
-        !entries.error && <p className="muted">Loading…</p>
+        !entries.error && <p className="muted">{tr('Loading…')}</p>
       )}
     </section>
   );

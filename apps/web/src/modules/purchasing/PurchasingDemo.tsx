@@ -9,13 +9,14 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
+import { tr } from '../../lib/i18n';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
 
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
 const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Waiting for goods', received: 'Received', cancelled: 'Cancelled' };
 
 export function Suppliers() {
-  return <PartyList title="Suppliers" endpoint="/v1/purchasing/suppliers" noun="supplier" />;
+  return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" />;
 }
 
 export function PurchaseOrders() {
@@ -26,29 +27,29 @@ export function PurchaseOrders() {
   const supplier = (id: string) => suppliers.data?.find((s) => s.id === id)?.name ?? id;
 
   const columns: Column<PurchaseOrder>[] = [
-    { key: 'number', label: 'Order', value: (o) => o.number, render: (o) => <Link to={`/purchasing/orders/${o.id}`}><code>{o.number}</code></Link> },
-    { key: 'supplier', label: 'Supplier', value: (o) => supplier(o.supplierId) },
-    { key: 'wh', label: 'Deliver to', value: (o) => cat.warehouseName(o.warehouseId) },
-    { key: 'status', label: 'Status', value: (o) => o.status, render: (o) => <Pill status={o.status} label={STATUS[o.status]} /> },
-    { key: 'total', label: 'Total', value: (o) => o.totalMinor, align: 'right', render: (o) => money(o.totalMinor, o.currency) },
-    { key: 'when', label: 'Ordered', value: (o) => o.createdAt, render: (o) => <span className="nowrap">{formatDateTime(o.createdAt, session.org)}</span> },
+    { key: 'number', label: tr('Order'), value: (o) => o.number, render: (o) => <Link to={`/purchasing/orders/${o.id}`}><code>{o.number}</code></Link> },
+    { key: 'supplier', label: tr('Supplier'), value: (o) => supplier(o.supplierId) },
+    { key: 'wh', label: tr('Deliver to'), value: (o) => cat.warehouseName(o.warehouseId) },
+    { key: 'status', label: tr('Status'), value: (o) => o.status, render: (o) => <Pill status={o.status} label={tr(STATUS[o.status])} /> },
+    { key: 'total', label: tr('Total'), value: (o) => o.totalMinor, align: 'right', render: (o) => money(o.totalMinor, o.currency) },
+    { key: 'when', label: tr('Ordered'), value: (o) => o.createdAt, render: (o) => <span className="nowrap">{formatDateTime(o.createdAt, session.org)}</span> },
   ];
 
   return (
     <section className="page">
-      <h1>Purchase orders</h1>
-      <p className="muted">Goods you have ordered from suppliers. Receiving an order puts the goods into stock.</p>
+      <h1>{tr('Purchase orders')}</h1>
+      <p className="muted">{tr('Goods you have ordered from suppliers. Receiving an order puts the goods into stock.')}</p>
       {orders.data && suppliers.data && cat.ready ? (
         <ListView
-          title="Purchase orders"
+          title={tr('Purchase orders')}
           rows={orders.data}
           columns={columns}
           rowKey={(o) => o.id}
-          empty="No purchase orders yet."
-          toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/purchasing/orders/new')}>New purchase order</button> : undefined}
+          empty={tr('No purchase orders yet.')}
+          toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</button> : undefined}
         />
       ) : (
-        <p className="muted">Loading…</p>
+        <p className="muted">{tr('Loading…')}</p>
       )}
     </section>
   );
@@ -57,17 +58,17 @@ export function PurchaseOrders() {
 export function NewPurchaseOrder() {
   return (
     <NewOrderForm
-      title="New purchase order"
-      intro="Order goods from a supplier. Nothing changes in stock until the goods arrive and you receive the order."
+      title={tr('New purchase order')}
+      intro={tr('Order goods from a supplier. Nothing changes in stock until the goods arrive and you receive the order.')}
       partyLabel="Supplier"
       partyEndpoint="/v1/purchasing/suppliers"
       orderEndpoint="/v1/purchasing/orders"
       partyField="supplierId"
       priceField="unitCostMinor"
-      priceLabel="Unit cost"
+      priceLabel={tr('Unit cost')}
       backTo="/purchasing/orders"
-      backLabel="Purchase orders"
-      submitLabel="Place order"
+      backLabel={tr('Purchase orders')}
+      submitLabel={tr('Place order')}
     />
   );
 }
@@ -99,27 +100,27 @@ export function PurchaseOrderPage() {
   }
 
   if (order.error) return <section className="page"><p className="error">{order.error}</p></section>;
-  if (!o || !cat.ready || !suppliers.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!o || !cat.ready || !suppliers.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   const supplier = suppliers.data.find((s) => s.id === o.supplierId);
   const history = (audit.data ?? []).filter((a) => a.entity_id === o.id);
 
   return (
     <section className="page">
-      <Link to="/purchasing/orders" className="back-link">← Purchase orders</Link>
+      <Link to="/purchasing/orders" className="back-link">{tr('← Purchase orders')}</Link>
       <div className="page-head">
         <h1 className="mono">{o.number}</h1>
-        <Pill status={o.status} label={STATUS[o.status]} />
+        <Pill status={o.status} label={tr(STATUS[o.status])} />
       </div>
       <p className="muted">
-        {supplier?.name} ({supplier?.city}) · deliver to {cat.warehouseName(o.warehouseId)} · ordered {formatDateTime(o.createdAt, session.org)}
-        {o.receivedAt && <> · received {formatDateTime(o.receivedAt, session.org)}</>}
+        {supplier?.name} ({supplier?.city}{tr(') · deliver to')} {cat.warehouseName(o.warehouseId)} {tr('· ordered')} {formatDateTime(o.createdAt, session.org)}
+        {o.receivedAt && <> {tr('· received')} {formatDateTime(o.receivedAt, session.org)}</>}
       </p>
 
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Item</th><th className="right">Quantity</th><th className="right">Unit cost</th><th className="right">Line total</th></tr>
+            <tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th><th className="right">{tr('Unit cost')}</th><th className="right">{tr('Line total')}</th></tr>
           </thead>
           <tbody>
             {o.lines.map((l, i) => (
@@ -131,7 +132,7 @@ export function PurchaseOrderPage() {
               </tr>
             ))}
             <tr>
-              <td colSpan={3} className="right"><strong>Total</strong></td>
+              <td colSpan={3} className="right"><strong>{tr('Total')}</strong></td>
               <td className="right"><strong>{money(o.totalMinor, o.currency)}</strong></td>
             </tr>
           </tbody>
@@ -142,23 +143,23 @@ export function PurchaseOrderPage() {
 
       {o.status === 'ordered' && session.role !== 'viewer' && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
-          <button disabled={busy} onClick={() => act('receive', 'Goods received. The quantities were added to stock and the ledger.')}>Receive goods</button>
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>Cancel order</button>
+          <button disabled={busy} onClick={() => act('receive', 'Goods received. The quantities were added to stock and the ledger.')}>{tr('Receive goods')}</button>
+          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</button>
         </div>
       )}
       {o.status === 'received' && (
-        <p className="notice">The goods are in stock. <Link to="/inventory/ledger">See the receipts in the stock ledger</Link> or <Link to="/inventory">check stock on hand</Link>.</p>
+        <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory">{tr('check stock on hand')}</Link>.</p>
       )}
 
-      <h2 className="related">History</h2>
+      <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>When</th><th>Action</th><th>Details</th></tr></thead>
+          <thead><tr><th>{tr('When')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}><td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td><td><code>{a.action}</code></td><td>{a.summary}</td></tr>
             ))}
-            {history.length === 0 && <tr><td colSpan={3} className="muted empty">No history yet.</td></tr>}
+            {history.length === 0 && <tr><td colSpan={3} className="muted empty">{tr('No history yet.')}</td></tr>}
           </tbody>
         </table>
       </div>

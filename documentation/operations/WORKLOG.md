@@ -11,6 +11,36 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (evening) — UI audit of the live demo path, and four low-risk fixes (not deployed)
+
+**Objective.** Audit the demo path in a browser (read-only, signed in as the owner) before a management demo, and fix the low-risk findings. Report: [`documentation/plans/2026-11-04-ui-audit.md`](../plans/2026-11-04-ui-audit.md). Merged by hand, uncommitted, with the Arabic work below.
+
+**Actions Completed.**
+- `apps/api/src/modules/inventory/routes.ts`: the ledger response now includes `requestNumber` (the request's own number, via the existing foreign key to `inv_requests`). The web page showed a chopped UUID.
+- `apps/web/src/modules/inventory/Inventory.tsx`, `lib/demoInventory.ts`: ledger "Request" column shows `requestNumber`; falls back to the demo format or "Request" if an older API does not send it.
+- `apps/web/src/modules/trade/common.tsx`: `Pill` no longer forces Title Case on finished labels ("34 days", "Solid history", "Expired 14 days ago").
+- `apps/web/src/modules/core/settings/AuditLog.tsx`: "Who" shows the person's name (email only for people who are no longer listed); "Action" shows a readable form, the raw key stays in the tooltip and the CSV.
+- Audit finding #9 (the two contradictory Arabic-coverage texts) was fixed by the Arabic work instead.
+
+**Database / System Result.** None. No SQL, no data, no settings changed. Nothing deployed.
+
+**Safety Status.** See the checks run after the merge in the hand-off message. Needs a deploy of both the Worker and Pages before the live ledger shows the number. **Not changed, Ben's decisions:** the leftover cancelled request OUT-0372 ("Browser check by Claude"), e-invoicing switched on in the demo company, "(sample)" in customer and supplier names, no transfers in the demo company, and people showing as email prefixes (set a full name on each user: `core_org_people` already prefers `full_name`). `components/LanguageChooser.tsx` still says "other screens stay in English for now", which is out of date now that most screens are translated.
+
+## 2026-11-04 (early) — Arabic for every screen (machine draft), re-runnable translation tooling, not deployed
+
+**Objective.** Make the whole app readable in Arabic before the demo review, with a way to rerun the work when other chats change screens.
+
+**Actions Completed.**
+- `scripts/i18n-extract.mjs` (measures untranslated text; `--missing` checks every `tr()`/`trf()` key has Arabic) and `scripts/i18n-wrap.mjs` (wraps English text in `tr()`; `--check` exits 1 if anything is unwrapped). Both use `rolldown/parseAst` and are safe to rerun.
+- 34 screens wrapped (inventory, finance, tasks, alerts, owner home, settings, sales, purchasing, messaging, shared components). Sentences with values rewritten as whole-sentence templates (`trf('… {name} …')`) so Arabic word order works; singular/plural split into separate templates.
+- `apps/web/src/lib/i18nScreens.ts`: 657 Arabic drafts, merged into the dictionary. Global `tr()`/`trf()` helpers; the page remounts when the language changes.
+- Review material: `documentation/reviews/arabic-review-sheet.md`, `documentation/reference/arabic-glossary.md`. Test `i18nScreens.test.ts` checks placeholders and bold markers survive.
+- Stale "menus only so far" wording in Settings and the create-company form updated.
+
+**Database / System Result.** None. Web code only.
+
+**Safety Status.** Machine draft: a native speaker must review it. Not browser-checked in Arabic (needs Ben's go-ahead to use Chrome). `npm run typecheck` and `npm test` pass. Uncommitted in the worktree; not deployed. The UI-audit chat may edit the same screens: afterwards run `node scripts/i18n-wrap.mjs --write` then `node scripts/i18n-extract.mjs --missing` and translate whatever new text appears.
+
 ## 2026-11-03 (final night) — Language selection finalized, per-company tour switch, Arabic navigation, sign-in checks
 
 **Objective.** Ben: language selection and finishing it is crucial before the demo; the tour must be switchable in any company and stay in the old empty one for now; the demo passwords are in `.temp/demo-credentials.txt` (explicitly authorized).

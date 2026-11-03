@@ -4,6 +4,7 @@ import { api } from '../../../lib/api';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 
+import { tr, trf } from '../../../lib/i18n';
 // Switch modules on or off for the organization. Data is kept when a module is switched off.
 export function AppsSettings() {
   const session = useSession();
@@ -14,7 +15,7 @@ export function AppsSettings() {
   const [error, setError] = useState<string | null>(null);
 
   async function toggle(m: ModuleStatus) {
-    if (m.enabled && !window.confirm(`Switch off ${m.name}? Its data is kept, but nobody can open it until it's switched back on.`)) return;
+    if (m.enabled && !window.confirm(trf('Switch off {name}? Its data is kept, but nobody can open it until it\'s switched back on.', { name: tr(m.name) }))) return;
     setBusy(m.key);
     setError(null);
     try {
@@ -30,8 +31,8 @@ export function AppsSettings() {
 
   return (
     <section className="page">
-      <h1>Apps</h1>
-      <p className="muted">Choose which apps {session.org?.name} uses. Switching one off hides it but keeps its data.</p>
+      <h1>{tr('Apps')}</h1>
+      <p className="muted">{trf('Choose which apps {org} uses. Switching one off hides it but keeps its data.', { org: session.org?.name ?? '' })}</p>
       {error && <p className="error">{error}</p>}
       {modules.error && <p className="error">{modules.error}</p>}
       <div className="app-list">
@@ -45,13 +46,13 @@ export function AppsSettings() {
             </div>
             <span className="spacer" />
             {m.core ? (
-              <span className="muted small">Always on</span>
+              <span className="muted small">{tr('Always on')}</span>
             ) : canEdit ? (
               <button className={m.enabled ? 'secondary' : undefined} disabled={busy === m.key} onClick={() => toggle(m)}>
-                {busy === m.key ? 'Working…' : m.enabled ? 'Switch off' : 'Switch on'}
+                {busy === m.key ? tr('Working…') : m.enabled ? tr('Switch off') : tr('Switch on')}
               </button>
             ) : (
-              <span className="muted small">{m.enabled ? 'On' : 'Off'}</span>
+              <span className="muted small">{m.enabled ? tr('On') : tr('Off')}</span>
             )}
           </div>
         ))}

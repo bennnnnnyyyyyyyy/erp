@@ -11,6 +11,7 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { useCatalog } from './Inventory';
 
+import { tr, trf } from '../../lib/i18n';
 // Transfers between warehouses (sql/033, documentation/plans/INVENTORY_TRANSFERS_PLAN.md). A person requests, a manager approves,
 // the source warehouse dispatches (stock is in transit, in no warehouse), the destination warehouse receives. The database refuses
 // every step that skips the approval; these screens only show the buttons that make sense.
@@ -28,7 +29,7 @@ const STATUS_CLASS: Record<TransferStatus, string> = {
 };
 
 function StatusPill({ status }: { status: TransferStatus }) {
-  return <span className={`pill ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</span>;
+  return <span className={`pill ${STATUS_CLASS[status]}`}>{tr(STATUS_LABEL[status])}</span>;
 }
 
 // Requested, approved, in transit, received: where this transfer is on its way.
@@ -38,7 +39,7 @@ function Steps({ status }: { status: TransferStatus }) {
   const at = order.indexOf(status);
   const labels = ['Requested', ended ? (status === 'rejected' ? 'Rejected' : 'Cancelled') : 'Approved', 'In transit', 'Received'];
   return (
-    <ol className="steps" aria-label="Transfer progress">
+    <ol className="steps" aria-label={tr('Transfer progress')}>
       {labels.map((text, i) => {
         const cls = ended ? (i === 0 ? 'done' : i === 1 ? 'bad' : '') : i < at || (i === at && status === 'received') ? 'done' : i === at ? 'current' : '';
         return (
@@ -62,48 +63,48 @@ export function TransfersList() {
   const rows = (transfers.data ?? []).filter((t) => filter === 'all' || t.status === filter);
 
   const columns: Column<DemoTransfer>[] = [
-    { key: 'number', label: 'Transfer', value: (t) => t.number, render: (t) => <Link to={`/inventory/transfers/${t.id}`}><code>{t.number}</code></Link> },
-    { key: 'route', label: 'From → to', value: (t) => `${cat.warehouseName(t.fromWarehouseId)} → ${cat.warehouseName(t.toWarehouseId)}` },
-    { key: 'items', label: 'Items', value: (t) => t.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
-    { key: 'by', label: 'Requested by', value: (t) => who(t.requesterId) },
-    { key: 'status', label: 'Status', value: (t) => t.status, render: (t) => <StatusPill status={t.status} /> },
-    { key: 'when', label: 'Requested', value: (t) => t.createdAt, render: (t) => <span className="nowrap">{formatDateTime(t.createdAt, session.org)}</span> },
+    { key: 'number', label: tr('Transfer'), value: (t) => t.number, render: (t) => <Link to={`/inventory/transfers/${t.id}`}><code>{t.number}</code></Link> },
+    { key: 'route', label: tr('From → to'), value: (t) => `${cat.warehouseName(t.fromWarehouseId)} → ${cat.warehouseName(t.toWarehouseId)}` },
+    { key: 'items', label: tr('Items'), value: (t) => t.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
+    { key: 'by', label: tr('Requested by'), value: (t) => who(t.requesterId) },
+    { key: 'status', label: tr('Status'), value: (t) => t.status, render: (t) => <StatusPill status={t.status} /> },
+    { key: 'when', label: tr('Requested'), value: (t) => t.createdAt, render: (t) => <span className="nowrap">{formatDateTime(t.createdAt, session.org)}</span> },
   ];
 
   return (
     <section className="page wide">
-      <h1>Stock transfers</h1>
-      <p className="muted">Move stock between warehouses. A manager approves first; stock then leaves the source, sits in transit, and enters the destination when received.</p>
+      <h1>{tr('Stock transfers')}</h1>
+      <p className="muted">{tr('Move stock between warehouses. A manager approves first; stock then leaves the source, sits in transit, and enters the destination when received.')}</p>
       {transit.data && transit.data.length > 0 && (
         <div className="form-card stack">
-          <strong>In transit now</strong>
-          <p className="muted small">Dispatched and not yet received. This stock belongs to no warehouse, so nobody can sell it meanwhile.</p>
+          <strong>{tr('In transit now')}</strong>
+          <p className="muted small">{tr('Dispatched and not yet received. This stock belongs to no warehouse, so nobody can sell it meanwhile.')}</p>
           <ul className="plain-list">
-            {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {r.uom} in {r.transfers} transfer{r.transfers === 1 ? '' : 's'}</li>)}
+            {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {r.uom} {trf(r.transfers === 1 ? 'in {n} transfer' : 'in {n} transfers', { n: r.transfers })}</li>)}
           </ul>
         </div>
       )}
       {transfers.error && <p className="error notice">{transfers.error}</p>}
       {transfers.data && cat.ready ? (
         <ListView
-          title="Stock transfers"
+          title={tr('Stock transfers')}
           rows={rows}
           columns={columns}
           rowKey={(t) => t.id}
-          empty="No transfers yet."
+          empty={tr('No transfers yet.')}
           toolbar={
             <>
-              <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label="Filter">
-                <option value="all">All transfers</option>
-                <option value="submitted">Waiting for approval</option>
-                <option value="dispatched">In transit</option>
+              <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label={tr('Filter')}>
+                <option value="all">{tr('All transfers')}</option>
+                <option value="submitted">{tr('Waiting for approval')}</option>
+                <option value="dispatched">{tr('In transit')}</option>
               </select>
-              {canCreate && <button onClick={() => navigate('/inventory/transfers/new')}>New transfer</button>}
+              {canCreate && <button onClick={() => navigate('/inventory/transfers/new')}>{tr('New transfer')}</button>}
             </>
           }
         />
       ) : (
-        !transfers.error && <p className="muted">Loading…</p>
+        !transfers.error && <p className="muted">{tr('Loading…')}</p>
       )}
     </section>
   );
@@ -141,32 +142,32 @@ export function NewTransfer() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
   const same = fromId === toId;
 
   return (
     <section className="page">
-      <Link to="/inventory/transfers" className="back-link">← Stock transfers</Link>
-      <h1>New transfer</h1>
-      <p className="muted">The stock is reserved at the source as soon as you submit, and a manager must approve before anything moves.</p>
+      <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
+      <h1>{tr('New transfer')}</h1>
+      <p className="muted">{tr('The stock is reserved at the source as soon as you submit, and a manager must approve before anything moves.')}</p>
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
-          <label>From warehouse<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-          <label>To warehouse<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
         </div>
-        {same && <p className="error small">Choose two different warehouses.</p>}
-        <strong>Items</strong>
+        {same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
+        <strong>{tr('Items')}</strong>
         {lines.map((l, i) => (
           <div className="form-row" key={i}>
-            <label>Item<select required value={l.itemId} onChange={(e) => setLine(i, { itemId: e.target.value })}><option value="">Choose an item…</option>{cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}</select></label>
-            <label>Quantity<input required type="number" min="0.001" step="0.001" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />{l.itemId && <span className="muted small">Available here: {available(l.itemId)}</span>}</label>
-            {lines.length > 1 && <button type="button" className="secondary" onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>Remove</button>}
+            <label>{tr('Item')}<select required value={l.itemId} onChange={(e) => setLine(i, { itemId: e.target.value })}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}</select></label>
+            <label>{tr('Quantity')}<input required type="number" min="0.001" step="0.001" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />{l.itemId && <span className="muted small">{tr('Available here:')} {available(l.itemId)}</span>}</label>
+            {lines.length > 1 && <button type="button" className="secondary" onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>{tr('Remove')}</button>}
           </div>
         ))}
-        <div><button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>Add another item</button></div>
-        <label>Reason<input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="Restock the branch, move to the cold room…" /></label>
-        <div className="form-actions"><button type="submit" disabled={busy || same}>{busy ? 'Submitting…' : 'Submit transfer'}</button></div>
+        <div><button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</button></div>
+        <label>{tr('Reason')}<input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder={tr('Restock the branch, move to the cold room…')} /></label>
+        <div className="form-actions"><button type="submit" disabled={busy || same}>{busy ? tr('Submitting…') : tr('Submit transfer')}</button></div>
       </form>
     </section>
   );
@@ -203,7 +204,7 @@ export function TransferPage() {
   }
 
   if (transfer.error) return <section className="page"><p className="error">{transfer.error}</p></section>;
-  if (!t || !cat.ready) return <section className="page"><p className="muted">Loading…</p></section>;
+  if (!t || !cat.ready) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   const history = (audit.data ?? []).filter((a) => a.entity_id === t.id);
   const open = t.status === 'submitted' || t.status === 'approved';
@@ -211,34 +212,34 @@ export function TransferPage() {
 
   return (
     <section className="page">
-      <Link to="/inventory/transfers" className="back-link">← Stock transfers</Link>
+      <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
       <div className="page-head">
         <h1 className="mono">{t.number}</h1>
         <StatusPill status={t.status} />
       </div>
       <Steps status={t.status} />
       <p className="muted">
-        {cat.warehouseName(t.fromWarehouseId)} → {cat.warehouseName(t.toWarehouseId)}. Requested by {who(t.requesterId)} on {formatDateTime(t.createdAt, session.org)}. Reason: {t.reason || 'none given'}.
-        {t.decidedBy && <> Approved or decided by {who(t.decidedBy)}{t.decisionComment ? `: "${t.decisionComment}"` : ''}.</>}
-        {t.dispatchedBy && <> Dispatched by {who(t.dispatchedBy)}.</>}
-        {t.receivedBy && <> Received by {who(t.receivedBy)}.</>}
+        {cat.warehouseName(t.fromWarehouseId)} → {cat.warehouseName(t.toWarehouseId)}. {trf('Requested by {who} on {date}. Reason: {reason}.', { who: who(t.requesterId), date: formatDateTime(t.createdAt, session.org), reason: t.reason || tr('none given') })}
+        {t.decidedBy && <> {trf('Approved or decided by {who}', { who: who(t.decidedBy) })}{t.decisionComment ? `: "${t.decisionComment}"` : ''}.</>}
+        {t.dispatchedBy && <> {tr('Dispatched by')} {who(t.dispatchedBy)}.</>}
+        {t.receivedBy && <> {tr('Received by')} {who(t.receivedBy)}.</>}
       </p>
 
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Item</th><th className="right">Quantity</th></tr></thead>
+          <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th></tr></thead>
           <tbody>{t.lines.map((l, i) => <tr key={i}><td>{cat.itemName(l.itemId)}</td><td className="right">{l.qty}</td></tr>)}</tbody>
         </table>
       </div>
 
       {t.batches.length > 0 && (
         <>
-          <h2 className="related">Batches moved</h2>
-          <p className="muted small">The first batches to expire go first. The destination receives the same batches with the same expiry dates.</p>
+          <h2 className="related">{tr('Batches moved')}</h2>
+          <p className="muted small">{tr('The first batches to expire go first. The destination receives the same batches with the same expiry dates.')}</p>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Item</th><th>Batch</th><th>Expires</th><th className="right">Quantity</th></tr></thead>
-              <tbody>{t.batches.map((b) => <tr key={b.batchId}><td>{cat.itemName(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{b.expiryDate ?? 'No expiry'}</td><td className="right">{b.qty}</td></tr>)}</tbody>
+              <thead><tr><th>{tr('Item')}</th><th>{tr('Batch')}</th><th>{tr('Expires')}</th><th className="right">{tr('Quantity')}</th></tr></thead>
+              <tbody>{t.batches.map((b) => <tr key={b.batchId}><td>{cat.itemName(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{b.expiryDate ?? tr('No expiry')}</td><td className="right">{b.qty}</td></tr>)}</tbody>
             </table>
           </div>
         </>
@@ -246,10 +247,10 @@ export function TransferPage() {
 
       {t.approvals.length > 0 && (
         <>
-          <h2 className="related">Approvals</h2>
+          <h2 className="related">{tr('Approvals')}</h2>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Who</th><th>Decision</th><th>Via</th><th>When</th><th>Comment</th></tr></thead>
+              <thead><tr><th>{tr('Who')}</th><th>{tr('Decision')}</th><th>{tr('Via')}</th><th>{tr('When')}</th><th>{tr('Comment')}</th></tr></thead>
               <tbody>{t.approvals.map((a, i) => <tr key={i}><td>{who(a.approverId)}</td><td>{a.decision}</td><td>{a.channel}</td><td className="nowrap">{formatDateTime(a.decidedAt, session.org)}</td><td>{a.comment ?? ''}</td></tr>)}</tbody>
             </table>
           </div>
@@ -260,32 +261,32 @@ export function TransferPage() {
 
       {t.status === 'submitted' && can('inventory.transfers.approve') && (
         <div className="form-card stack">
-          <strong>Manager decision</strong>
-          <label>Comment (optional)<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
+          <strong>{tr('Manager decision')}</strong>
+          <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
-            <button disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>Approve</button>
-            <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>Reject</button>
+            <button disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</button>
+            <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</button>
           </div>
-          {demoMode && <p className="hint muted small">Try approving a transfer you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.</p>}
+          {demoMode && <p className="hint muted small">{tr('Try approving a transfer you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
       )}
-      {t.status === 'submitted' && !can('inventory.transfers.approve') && <p className="notice">Waiting for a manager to approve.{demoMode && ' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.'}</p>}
+      {t.status === 'submitted' && !can('inventory.transfers.approve') && <p className="notice">{tr('Waiting for a manager to approve.')}{demoMode && tr(' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.')}</p>}
 
       <div className="form-actions">
-        {t.status === 'approved' && can('inventory.transfers.dispatch') && <button disabled={busy} onClick={() => act('dispatch', 'Dispatched. The stock left the source and is now in transit.')}>Dispatch</button>}
-        {t.status === 'dispatched' && can('inventory.transfers.receive') && <button disabled={busy} onClick={() => act('receive', 'Received. The stock is now in the destination warehouse.')}>Receive at destination</button>}
+        {t.status === 'approved' && can('inventory.transfers.dispatch') && <button disabled={busy} onClick={() => act('dispatch', 'Dispatched. The stock left the source and is now in transit.')}>{tr('Dispatch')}</button>}
+        {t.status === 'dispatched' && can('inventory.transfers.receive') && <button disabled={busy} onClick={() => act('receive', 'Received. The stock is now in the destination warehouse.')}>{tr('Receive at destination')}</button>}
         {open && (mine || can('inventory.transfers.approve')) && can('inventory.transfers.create') && (
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Transfer cancelled. The reserved stock was released.')}>Cancel transfer</button>
+          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Transfer cancelled. The reserved stock was released.')}>{tr('Cancel transfer')}</button>
         )}
       </div>
-      {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">Approved. Waiting for the source warehouse to dispatch it.</p>}
-      {t.status === 'dispatched' && !can('inventory.transfers.receive') && <p className="notice">In transit. Waiting for the destination warehouse to receive it.</p>}
+      {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">{tr('Approved. Waiting for the source warehouse to dispatch it.')}</p>}
+      {t.status === 'dispatched' && !can('inventory.transfers.receive') && <p className="notice">{tr('In transit. Waiting for the destination warehouse to receive it.')}</p>}
 
-      <h2 className="related">History</h2>
-      <p className="muted small">Written by the system in the same step as each change.</p>
+      <h2 className="related">{tr('History')}</h2>
+      <p className="muted small">{tr('Written by the system in the same step as each change.')}</p>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}>
@@ -295,7 +296,7 @@ export function TransferPage() {
                 <td>{a.summary}</td>
               </tr>
             ))}
-            {history.length === 0 && <tr><td colSpan={4} className="muted empty">No history yet.</td></tr>}
+            {history.length === 0 && <tr><td colSpan={4} className="muted empty">{tr('No history yet.')}</td></tr>}
           </tbody>
         </table>
       </div>
