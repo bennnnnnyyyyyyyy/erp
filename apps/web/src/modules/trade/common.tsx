@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Loading } from '../../components/Loading';
 import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/ui/badge';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -78,7 +79,7 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
           toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <button onClick={() => setAdding(true)}>{tr('Add')} {noun}</button> : undefined}
         />
       ) : (
-        <p className="muted">{tr('Loading…')}</p>
+        <Loading />
       )}
       {adding && (
         <Modal title={trf('Add {noun}', { noun: tr(noun) })} onClose={() => setAdding(false)}>
@@ -144,7 +145,7 @@ export function NewOrderForm(props: {
     }
   }
 
-  if (!cat.ready || !parties.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.ready || !parties.data) return <section className="page"><Loading /></section>;
 
   return (
     <section className="page">

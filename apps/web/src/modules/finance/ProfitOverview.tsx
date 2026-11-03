@@ -1,4 +1,5 @@
 import { formatMoney } from '@erp/shared';
+import { Loading } from '../../components/Loading';
 import { formatWhole } from '../../lib/money';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/cn';
@@ -26,7 +27,7 @@ export function ProfitOverviewPage() {
   const data = useLoad(() => api<Insights>('/v1/finance/insights'));
   if (data.error) return <section className="page"><p className="error">{data.error}</p></section>;
   const s = data.data;
-  if (!s) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!s) return <section className="page"><Loading /></section>;
 
   const money = (n: number) => formatMoney({ amountMinor: n, currency: s.currency });
   const whole = (n: number) => formatWhole(n, s.currency);
@@ -50,7 +51,7 @@ export function ProfitOverviewPage() {
   return (
     <section className="page wide">
       <h1>{tr('Profit overview')}</h1>
-      <p className="muted">{tr('Sales against what it cost to make and run the business, month by month. Cost of goods is the average cost of the stock that was sold; running costs are the expenses you recorded. No VAT. Not an accounts report.')}</p>
+      <p className="muted">{tr('Sales against the cost of goods and running costs, month by month.')}</p>
 
       <div className="mt-5 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 17rem), 1fr))' }}>
         {[
@@ -108,7 +109,7 @@ export function ProfitOverviewPage() {
         ))}
         <tr><td><b>{tr('Last 12 months')}</b></td><td className="right"><b>{money(revenue)}</b></td><td className="right"><b>{money(sum('cogs'))}</b></td><td className="right"><b>{money(sum('expenses'))}</b></td><td className={cn('right font-semibold', net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')}>{money(net)}</td><td className="right">{margin.toFixed(1)}%</td></tr>
       </tbody></table></div>
-      <p className="muted small">{trf('As of {datetime}. The current month is incomplete until it ends.', { datetime: new Date(s.asOf).toLocaleString(dateLocale()) })}</p>
+      <p className="muted small">{trf('As of {datetime}. The current month is incomplete until it ends.', { datetime: new Date(s.asOf).toLocaleString(dateLocale()) })} {tr('A management view: cost of goods is the average cost of the stock sold, running costs are the expenses recorded, and there is no VAT. Not an accounts report.')}</p>
     </section>
   );
 }

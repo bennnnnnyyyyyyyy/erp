@@ -33,7 +33,7 @@ const TONE: Record<Tone, { dot: string; word: string }> = {
 };
 
 // Every card has a visible title, a one-line plain-words subtitle, and the period its figures cover.
-function Card({ to, title, subtitle, period, tone, children }: { to: string; title: string; subtitle: string; period: string; tone?: Tone; children: ReactNode }) {
+function Card({ to, title, subtitle, period, tone, children }: { to: string; title: string; subtitle: string; period: string; tone?: Tone | undefined; children: ReactNode }) {
   return (
     <Link to={to} className="flex min-w-0 flex-col gap-3 break-words rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors hover:bg-accent">
       <span className="flex flex-col gap-0.5">
@@ -70,32 +70,38 @@ export function OwnerSummary() {
   const now = s.months[s.months.length - 1];    // this month so far
   const prev = s.months[s.months.length - 3];
   const peak = Math.max(1, ...s.months.map((m) => Math.abs(m.net)));
-  const profitTone: Tone = !last ? 'watch' : last.net < 0 ? 'bad' : prev && last.net < prev.net * 0.7 ? 'watch' : 'good';
+  // A new or empty company has twelve months of zeros. "Made EGP 0" in green with an "All good" dot reads as a verdict on nothing,
+  // so a card only shows a figure's colour and a status once there is something behind it.
+  const active = s.months.some((m) => m.revenue !== 0 || m.cogs !== 0 || m.expenses !== 0);
+  const profitTone: Tone | undefined = !active || !last ? undefined : last.net < 0 ? 'bad' : prev && last.net < prev.net * 0.7 ? 'watch' : 'good';
   const yearNet = s.months.reduce((n, m) => n + m.net, 0);
   const oldWait = s.decisions.oldestSubmittedHours;
   const decisionTone: Tone = s.decisions.submitted === 0 ? 'good' : oldWait >= 24 ? 'bad' : 'watch';
   const expiring = s.expiry.expired.batches + s.expiry.in30.batches;
-  const stockTone: Tone = s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
-  const moneyTone: Tone = s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
-  const supplierTone: Tone = (s.topSuppliers[0]?.sharePercent ?? 0) > 40 ? 'bad' : s.singleSourceItems > 0 ? 'watch' : 'good';
+  const hasStock = s.stockValueMinor !== 0 || s.itemsLow > 0 || expiring + s.expiry.in60.batches + s.expiry.in90.batches > 0;
+  const stockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
+  const hasMoney = s.owedToMeMinor !== 0 || s.iOweMinor !== 0;
+  const moneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
+  const supplierTone: Tone | undefined = s.topSuppliers.length === 0 ? undefined : (s.topSuppliers[0]?.sharePercent ?? 0) > 40 ? 'bad' : s.singleSourceItems > 0 ? 'watch' : 'good';
+  const count = (n: number, one: string, many: string) => trf(n === 1 ? one : many, { n });
 
   return (
     <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label={tr('Business summary')}>
       <Card to="/finance/overview" title={tr('Am I making or losing money?')} subtitle={tr('What the business earned after its costs')} period={last ? trf('{month}, and the last 12 months', { month: monthName(last.month) }) : tr('last 12 months')} tone={profitTone}>
-        {last ? (
+        {active && last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
               {trf(last.net < 0 ? 'Lost {amount}' : 'Made {amount}', { amount: money(Math.abs(last.net)) })}
             </span>
             <span className="text-sm text-muted-foreground">{trf('in {month}: sales {revenue}, cost of what you sold {cogs}, running costs {expenses}.', { month: monthName(last.month), revenue: money(last.revenue), cogs: money(last.cogs), expenses: money(last.expenses) })}</span>
+            <div className="flex h-12 items-end gap-1" aria-hidden="true">
+              {s.months.map((m) => (
+                <span key={m.month} title={`${monthName(m.month)}: ${money(m.net)}`} className={cn('flex-1 rounded-sm', m.net < 0 ? 'bg-destructive' : 'bg-success')} style={{ height: `${Math.max(6, (Math.abs(m.net) / peak) * 100)}%` }} />
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">{trf(yearNet < 0 ? 'Last 12 months: lost {amount} in total.' : 'Last 12 months: made {amount} in total.', { amount: money(Math.abs(yearNet)) })} {now && now.revenue + now.expenses > 0 ? trf(now.net < 0 ? 'This month so far: down {amount}.' : 'This month so far: up {amount}.', { amount: money(Math.abs(now.net)) }) : tr('This month so far: nothing recorded yet.')}</span>
           </>
-        ) : <span className="text-sm text-muted-foreground">{tr('No sales recorded yet.')}</span>}
-        <div className="flex h-12 items-end gap-1" aria-hidden="true">
-          {s.months.map((m) => (
-            <span key={m.month} title={`${monthName(m.month)}: ${money(m.net)}`} className={cn('flex-1 rounded-sm', m.net < 0 ? 'bg-destructive' : 'bg-success')} style={{ height: `${Math.max(6, (Math.abs(m.net) / peak) * 100)}%` }} />
-          ))}
-        </div>
-        <span className="text-xs text-muted-foreground">{trf(yearNet < 0 ? 'Last 12 months: lost {amount} in total.' : 'Last 12 months: made {amount} in total.', { amount: money(Math.abs(yearNet)) })} {now && now.revenue + now.expenses > 0 ? trf(now.net < 0 ? 'This month so far: down {amount}.' : 'This month so far: up {amount}.', { amount: money(Math.abs(now.net)) }) : tr('This month so far: nothing recorded yet.')}</span>
+        ) : <span className="text-sm text-muted-foreground">{tr('Nothing to show yet. Once you invoice sales and record expenses, this shows whether the business is making money.')}</span>}
       </Card>
 
       <Card to="/sales/invoices" title={tr('Money coming in and going out')} subtitle={tr('Who owes you and who you owe')} period={trf('all unpaid bills, as of {date}', { date: asOfDay })} tone={moneyTone}>
@@ -116,9 +122,11 @@ export function OwnerSummary() {
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
         <span className="text-sm text-muted-foreground">{tr('of stock on the shelves, at cost.')}</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
-          <li><b className={s.expiry.expired.batches ? 'text-destructive-foreground' : ''}>{s.expiry.expired.batches}</b> {trf('batch(es) already expired ({value})', { value: money(s.expiry.expired.valueMinor) })}</li>
-          <li><Rich text={trf('**{a}** expire within 30 days ({value}), **{b}** within 60, **{c}** within 90', { a: s.expiry.in30.batches, value: money(s.expiry.in30.valueMinor), b: s.expiry.in60.batches, c: s.expiry.in90.batches })} /></li>
-          <li><b>{s.itemsLow}</b> {tr('item(s) at or below their reorder level')}</li>
+          {s.expiry.expired.batches > 0 && <li className="text-destructive-foreground"><b>{count(s.expiry.expired.batches, '{n} batch has expired', '{n} batches have expired')}</b> ({money(s.expiry.expired.valueMinor)})</li>}
+          {s.expiry.in30.batches + s.expiry.in60.batches + s.expiry.in90.batches > 0
+            ? <li><Rich text={trf('**{a}** expire within 30 days ({value}), **{b}** within 60, **{c}** within 90', { a: s.expiry.in30.batches, value: money(s.expiry.in30.valueMinor), b: s.expiry.in60.batches, c: s.expiry.in90.batches })} /></li>
+            : <li className="text-muted-foreground">{tr('Nothing expires in the next 90 days.')}</li>}
+          <li>{s.itemsLow > 0 ? <b>{count(s.itemsLow, '{n} item is at or below its reorder level', '{n} items are at or below their reorder level')}</b> : <span className="text-muted-foreground">{tr('No item is below its reorder level.')}</span>}</li>
         </ul>
       </Card>
 
@@ -137,7 +145,7 @@ export function OwnerSummary() {
           {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{trf('{pct}% of purchases', { pct: p.sharePercent })}</b></li>)}
           {s.topSuppliers.length === 0 && <li className="text-muted-foreground">{tr('No purchases yet.')}</li>}
         </ul>
-        <span className="text-sm text-muted-foreground">{s.singleSourceItems} {tr('item(s) bought from only one supplier in the last year.')}</span>
+        {s.topSuppliers.length > 0 && <span className="text-sm text-muted-foreground">{s.singleSourceItems === 0 ? tr('Every item has more than one supplier.') : count(s.singleSourceItems, '{n} item comes from only one supplier.', '{n} items come from only one supplier.')}</span>}
       </Card>
 
       <p className="text-xs text-muted-foreground sm:col-span-2 xl:col-span-3">

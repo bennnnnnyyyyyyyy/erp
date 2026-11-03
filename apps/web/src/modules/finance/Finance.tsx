@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { formatMoney } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
@@ -46,7 +47,7 @@ export function ExpensesPage() {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
 
-  if (!categories.data || !expenses.data || !suppliers.data) return <section className="page"><p className="muted">{categories.error ?? expenses.error ?? tr('Loading…')}</p></section>;
+  if (!categories.data || !expenses.data || !suppliers.data) return <section className="page"><Loading error={categories.error ?? expenses.error} /></section>;
   const category = (id: string) => categories.data?.find((c) => c.id === id)?.name ?? '—';
   const supplier = (id: string | null) => (id ? suppliers.data?.find((s) => s.id === id)?.name ?? '—' : '');
   const total = expenses.data.filter((e) => e.status === 'recorded').reduce((n, e) => n + e.amountMinor, 0);
@@ -55,7 +56,7 @@ export function ExpensesPage() {
   return (
     <section className="page wide">
       <h1>{tr('Expenses')}</h1>
-      <p className="muted">{tr('Rent, salaries, utilities, transport: the costs of running the business that are not stock. They are taken off sales to show profit.')}</p>
+      <p className="muted">{tr('Running costs that are not stock, such as rent, salaries and transport.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       <FormToggle label={tr('Record an expense')}>
@@ -130,7 +131,7 @@ export function PaymentsPage() {
   }, [preset, payments.data, customerInvoices.data, supplierInvoices.data, expenses.data]);
 
   if (!payments.data || !customerInvoices.data || !supplierInvoices.data || !expenses.data || !customers.data || !suppliers.data) {
-    return <section className="page"><p className="muted">{payments.error ?? tr('Loading…')}</p></section>;
+    return <section className="page"><Loading error={payments.error} /></section>;
   }
   const paid = (key: 'customerInvoiceId' | 'supplierInvoiceId' | 'expenseId', id: string) =>
     payments.data?.filter((p) => p.status === 'recorded' && p[key] === id).reduce((n, p) => n + p.amountMinor, 0) ?? 0;
@@ -154,7 +155,7 @@ export function PaymentsPage() {
   return (
     <section className="page wide">
       <h1>{tr('Payments')}</h1>
-      <p className="muted">{tr('Money received from customers and money paid to suppliers and for expenses. A payment can never be more than what is still owed.')}</p>
+      <p className="muted">{tr('Money in from customers, and money out to suppliers and for expenses.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       <FormToggle label={tr('Record a payment')} open={formOpen} onOpenChange={setFormOpen}>

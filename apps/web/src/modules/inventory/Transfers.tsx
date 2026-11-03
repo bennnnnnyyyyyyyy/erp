@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
@@ -74,7 +75,7 @@ export function TransfersList() {
   return (
     <section className="page wide">
       <h1>{tr('Stock transfers')}</h1>
-      <p className="muted">{tr('Move stock between warehouses. A manager approves first; stock then leaves the source, sits in transit, and enters the destination when received.')}</p>
+      <p className="muted">{tr('Move stock between warehouses, with a manager approving first.')}</p>
       {transit.data && transit.data.length > 0 && (
         <div className="form-card stack">
           <strong>{tr('In transit now')}</strong>
@@ -105,7 +106,7 @@ export function TransfersList() {
           }
         />
       ) : (
-        !transfers.error && <p className="muted">{tr('Loading…')}</p>
+        !transfers.error && <Loading />
       )}
     </section>
   );
@@ -143,14 +144,14 @@ export function NewTransfer() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><Loading /></section>;
   const same = fromId === toId;
 
   return (
     <section className="page">
       <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
       <h1>{tr('New transfer')}</h1>
-      <p className="muted">{tr('The stock is reserved at the source as soon as you submit, and a manager must approve before anything moves.')}</p>
+      <p className="muted">{tr('The stock is held at the source until a manager approves.')}</p>
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
@@ -205,7 +206,7 @@ export function TransferPage() {
   }
 
   if (transfer.error) return <section className="page"><p className="error">{transfer.error}</p></section>;
-  if (!t || !cat.ready) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!t || !cat.ready) return <section className="page"><Loading /></section>;
 
   const history = (audit.data ?? []).filter((a) => a.entity_id === t.id);
   const open = t.status === 'submitted' || t.status === 'approved';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
@@ -44,14 +45,14 @@ export function BatchesPage() {
   }
   const reloadAll = () => { batches.reload(); expiry.reload(); };
 
-  if (!batches.data || !expiry.data || !items.data || !warehouses.data || !conditions.data) return <section className="page"><p className="muted">{batches.error ?? tr('Loading…')}</p></section>;
+  if (!batches.data || !expiry.data || !items.data || !warehouses.data || !conditions.data) return <section className="page"><Loading error={batches.error} /></section>;
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
   const wh = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? id;
 
   return (
     <section className="page wide">
       <h1>{tr('Batches and expiry')}</h1>
-      <p className="muted">{tr('Stock that expires is kept in batches. The system always issues the batch that expires first, and never issues a quarantined or expired batch. Owners and admins switch batch tracking on per item at the bottom of this page.')}</p>
+      <p className="muted">{tr('Batches and expiry dates. The batch that expires first is always issued first.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
       <h2 className="related">{tr('Expiring in the next 90 days')}</h2>

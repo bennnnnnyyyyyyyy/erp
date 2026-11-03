@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { billingFor, formatMoney, type BillingFlag } from '@erp/shared';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
@@ -50,7 +51,7 @@ export function CustomerInvoices() {
     return m;
   }, [invoices.data]);
 
-  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><p className="muted">{orders.error ?? invoices.error ?? tr('Loading…')}</p></section>;
+  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><Loading error={orders.error ?? invoices.error} /></section>;
 
   const customer = (id: string) => customers.data?.find((c) => c.id === id)?.name ?? 'Unknown customer';
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
@@ -83,7 +84,7 @@ export function CustomerInvoices() {
   return (
     <section className="page wide">
       <h1>{tr('Customer invoices')}</h1>
-      <p className="muted">{tr('Bill delivered sales orders. An order can only be invoiced once its stock has been issued, and never for more than was delivered. A wrong invoice is voided, not edited.')}</p>
+      <p className="muted">{tr('Invoice delivered sales orders. A wrong invoice is voided, not edited.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       {canManage && (
@@ -149,7 +150,7 @@ export function CustomerInvoicePage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
-  if (!invoices.data || !orders.data || !customers.data || !items.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!invoices.data || !orders.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoices.data.find((i) => i.id === id);
   if (!inv) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Customer invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
 

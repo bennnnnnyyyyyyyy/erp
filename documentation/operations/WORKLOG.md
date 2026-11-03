@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (latest) — UI polish round 1: plain intros, page rhythm, loading skeletons, honest Home cards, stock status (not deployed)
+
+**Objective.** Ben: "the ERP feels vibecoded, I need to polish everything". Looked at the live screens (read-only) and measured the web code; plan with the causes and four rounds: [`documentation/plans/2026-11-03-ui-polish-plan.md`](../plans/2026-11-03-ui-polish-plan.md). This entry is round 1.
+
+**Actions Completed.**
+- Copy: 18 page intros rewritten to one plain line each (English and Arabic, in the screens and `lib/i18nScreens.ts`; the old keys were replaced on the same lines). Profit overview's "management view, no VAT, not an accounts report" moved into its footnote.
+- `components/Loading.tsx` (new): skeleton while loading, error notice on failure; replaces the plain "Loading…" on 38 screens (script; two table-cell placeholders left).
+- `styles.css`: page header rhythm (title, one line, gap), form cards up to 880 px with a wrapping field grid, notices aligned, skeleton styles.
+- `core/OwnerHome.tsx`: no colour or "All good" status on cards with no data behind them; the profit card explains itself when nothing is recorded; real singular/plural wording instead of "batch(es)" and "item(s)".
+- `inventory/Inventory.tsx` Stock on hand: a status column against the reorder level (Low / OK / —) replaces the always-full stock bar; the "Units on hand" total (kilograms + litres + pieces) replaced by "Low on stock" (links to Reorder levels) and the count of items held for requests; quantities formatted (thousands, at most three decimals); "in {n} warehouses" translated.
+
+**Database / System Result.** None. Frontend only. Browser: live pages opened read-only; the local sample build (`vite --mode demo`, port 5199) for the after-look, stopped afterwards.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. Seen after the change in the sample build: Stock on hand (LTR and RTL), New request. Not seen: Home cards with live data, Profit overview, the money screens; Ben to check after deploy. Arabic for the new lines is a machine draft.
+
 ## 2026-11-03 (late night) — Usability pass from a live look: tour language once, lists before forms, confirm before void (not deployed)
 
 **Objective.** Ben: the UI is hard to use, and the tour "asks for the language at every step". Looked at the live site in Chrome (read-only, owner, Demo Cosmetics Factory): every tour card carried the English/Arabic buttons; Payments, Expenses and both invoice screens opened with a large form and the list half a screen down; Customer invoices listed every order ("Fully invoiced" hundreds of times) above the invoices; one-click Void sat on every list row next to the now-clickable row; request numbers wrapped ("OUT-" / "0372"); one request row could list 20+ items; record titles (PAY-0443) were body-text size; New request defaulted to the Packaging store.

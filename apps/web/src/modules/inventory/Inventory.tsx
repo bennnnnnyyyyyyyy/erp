@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type FormEvent } from 'react';
+import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -10,10 +11,14 @@ import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { Pill } from '../trade/common';
 
 import { tr, trf } from '../../lib/i18n';
 // Inventory slice 1 screens. They call /v1/inventory/... : the real API in the real app, and the in-browser sample
 // (lib/demoInventory.ts) in demo mode. Plan: documentation/plans/INVENTORY_PLAN.md.
+
+/** A quantity for display: thousands separated, at most three decimals, no trailing zeros (4,826 or 12.5). */
+const qty = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 3 });
 
 const STATUS_LABEL: Record<RequestStatus, string> = {
   submitted: 'Waiting for approval',
@@ -155,50 +160,44 @@ export function StockPage() {
     { key: 'name', label: tr('Item'), value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
     { key: 'ar', label: tr('Arabic name'), value: (r) => r.nameAr, render: (r) => <span dir="rtl">{r.nameAr}</span> },
     { key: 'uom', label: tr('Unit'), value: (r) => r.uom },
-    {
-      key: 'level',
-      label: tr('Stock level'),
-      value: (r) => r.available,
-      render: (r) => {
-        const total = Math.max(r.onHand, 1);
-        const low = r.available / total < 0.2;
-        return (
-          <span className={low ? 'bar low' : 'bar'} title={trf('{available} available, {reserved} reserved, {onHand} on hand', { available: r.available, reserved: r.reserved, onHand: r.onHand })}>
-            <i className="fill-avail" style={{ width: `${(r.available / total) * 100}%` }} />
-            <i className="fill-resv" style={{ width: `${(r.reserved / total) * 100}%` }} />
-          </span>
-        );
-      },
-    },
-    { key: 'onHand', label: tr('On hand'), value: (r) => r.onHand, align: 'right' },
-    { key: 'reserved', label: tr('Reserved'), value: (r) => r.reserved, align: 'right' },
-    { key: 'available', label: tr('Available'), value: (r) => r.available, align: 'right', render: (r) => <strong>{r.available}</strong> },
+    // Status against the item's reorder level. The old bar showed available ÷ on hand, which is almost always 100%: every row had the
+    // same full bar and it said nothing.
+    { key: 'level', label: tr('Status'), value: (r) => (r.reorderLevel === null ? '' : r.available <= r.reorderLevel ? 'low' : 'ok'), render: (r) =>
+      r.reorderLevel === null
+        ? <span className="muted" title={tr('No reorder level set')}>—</span>
+        : r.available <= r.reorderLevel
+          ? <Pill status="rejected" label={tr('Low')} />
+          : <Pill status="received" label={tr('OK')} /> },
+    { key: 'onHand', label: tr('On hand'), value: (r) => r.onHand, align: 'right', render: (r) => qty(r.onHand) },
+    { key: 'reserved', label: tr('Reserved'), value: (r) => r.reserved, align: 'right', render: (r) => (r.reserved ? qty(r.reserved) : <span className="muted">0</span>) },
+    { key: 'available', label: tr('Available'), value: (r) => r.available, align: 'right', render: (r) => <strong>{qty(r.available)}</strong> },
   ];
 
-  const totalOnHand = rows.reduce((a, r) => a + r.onHand, 0);
-  const totalReserved = rows.reduce((a, r) => a + r.reserved, 0);
+  // Totals of units are left out on purpose: they add kilograms, litres and pieces together (287,963.501 "units").
+  const lowCount = rows.filter((r) => r.reorderLevel !== null && r.available <= r.reorderLevel).length;
+  const reservedItems = rows.filter((r) => r.reserved > 0).length;
   const waiting = (requests.data ?? []).filter((r) => r.status === 'submitted').length;
 
   return (
     <section className="page">
       <h1>{tr('Stock on hand')}</h1>
-      <p className="muted">{tr('Reserved stock is promised to a request that is waiting for approval or not yet issued. Available = on hand minus reserved.')}</p>
+      <p className="muted">{tr('What each warehouse holds, and how much of it is free to use.')}</p>
       {cat.ready && stock.data && (
         <div className="stats">
           <div className="stat" style={{ '--i': 0 } as CSSProperties}>
             <div className="stat-label">{tr('Items')}</div>
             <div className="stat-value">{rows.length}</div>
-            <div className="stat-note">in {warehouseId === 'all' ? trf('{n} warehouses', { n: cat.warehouses.data?.length ?? 0 }) : cat.warehouseName(warehouseId)}</div>
+            <div className="stat-note">{warehouseId === 'all' ? trf('in {n} warehouses', { n: cat.warehouses.data?.length ?? 0 }) : cat.warehouseName(warehouseId)}</div>
           </div>
-          <div className="stat" style={{ '--i': 1 } as CSSProperties}>
-            <div className="stat-label">{tr('Units on hand')}</div>
-            <div className="stat-value">{totalOnHand.toLocaleString('en-US')}</div>
-            <div className="stat-note">{(totalOnHand - totalReserved).toLocaleString('en-US')} available</div>
-          </div>
+          <Link to="/inventory/reorder-levels" className={lowCount > 0 ? 'stat warn' : 'stat'} style={{ '--i': 1, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
+            <div className="stat-label">{tr('Low on stock')}</div>
+            <div className="stat-value">{lowCount}</div>
+            <div className="stat-note">{lowCount > 0 ? tr('at or below their reorder level') : tr('nothing below its reorder level')}</div>
+          </Link>
           <div className="stat" style={{ '--i': 2 } as CSSProperties}>
             <div className="stat-label">{tr('Reserved')}</div>
-            <div className="stat-value">{totalReserved.toLocaleString('en-US')}</div>
-            <div className="stat-note">{tr('held for open requests')}</div>
+            <div className="stat-value">{reservedItems}</div>
+            <div className="stat-note">{tr('items held for open requests')}</div>
           </div>
           <Link to="/inventory/requests" className={waiting > 0 ? 'stat warn' : 'stat'} style={{ '--i': 3, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
             <div className="stat-label">{tr('Waiting for approval')}</div>
@@ -225,7 +224,7 @@ export function StockPage() {
           }
         />
       ) : (
-        <p className="muted">{tr('Loading…')}</p>
+        <Loading />
       )}
       {cat.ready && (cat.warehouses.data?.length ?? 0) === 0 && (
         <p className="notice">{canAddWarehouse ? tr('Start by adding your first warehouse (any place you keep stock), then add items to it.') : tr('No warehouse exists yet. Ask an owner or admin to add one.')}</p>
@@ -282,12 +281,12 @@ export function ReorderLevelsPage() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><Loading /></section>;
 
   return (
     <section className="page">
       <h1>{tr('Reorder levels')}</h1>
-      <p className="muted">{tr('Set the minimum available stock for each item. Managers receive one low-stock notification per item per day when available stock reaches the level.')}</p>
+      <p className="muted">{tr('The lowest stock you want of each item before it is reordered.')}</p>
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error notice">{error}</p>}
       <div className="table-wrap">
@@ -355,12 +354,12 @@ export function ApprovalPoliciesPage() {
 
   const warehouseName = (id: string | null) => id ? cat.warehouseName(id) : 'All warehouses';
 
-  if (!cat.warehouses.data || !policies.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.warehouses.data || !policies.data) return <section className="page"><Loading /></section>;
 
   return (
     <section className="page">
       <h1>{tr('Approval policies')}</h1>
-      <p className="muted">{tr('Set when a stock request needs more than one manager. The highest matching rule applies; requests below all thresholds need one approval.')}</p>
+      <p className="muted">{tr('When a stock request needs more than one manager to approve it.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canManage && (
         <form className="form-card stack" onSubmit={save}>
@@ -431,12 +430,12 @@ export function AdjustmentsPage() {
     }
   }
 
-  if (!cat.ready || !cat.warehouses.data || !adjustments.data || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.ready || !cat.warehouses.data || !adjustments.data || !stock.data) return <section className="page"><Loading /></section>;
 
   return (
     <section className="page">
       <h1>{tr('Stock adjustments')}</h1>
-      <p className="muted">{tr('Count stock in a warehouse. A manager must approve the difference before it reaches the stock ledger.')}</p>
+      <p className="muted">{tr('Record a stock count. A manager approves any difference.')}</p>
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <strong>{tr('New cycle count')}</strong>
@@ -508,7 +507,7 @@ export function RequestsList() {
           }
         />
       ) : (
-        <p className="muted">{tr('Loading…')}</p>
+        <Loading />
       )}
     </section>
   );
@@ -566,13 +565,13 @@ export function NewRequest() {
     }
   }
 
-  if (!cat.ready || !stock.data || !past.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.ready || !stock.data || !past.data) return <section className="page"><Loading /></section>;
 
   return (
     <section className="page">
       <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
       <h1>{tr('New stock request')}</h1>
-      <p className="muted">{tr('The quantity is reserved as soon as you submit, so nobody else can take it while a manager decides.')}</p>
+      <p className="muted">{tr('The stock is held for you while a manager decides.')}</p>
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
           <label>
@@ -641,7 +640,7 @@ export function RequestPage() {
   }
 
   if (request.error) return <section className="page"><p className="error">{request.error}</p></section>;
-  if (!r || !cat.ready) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!r || !cat.ready) return <section className="page"><Loading /></section>;
 
   const history = (audit.data ?? []).filter((a) => a.entity_id === r.id);
   const open = r.status === 'submitted' || r.status === 'approved';
@@ -736,8 +735,8 @@ export function LedgerPage() {
   return (
     <section className="page">
       <h1>{tr('Stock ledger')}</h1>
-      <p className="muted">{tr('Every movement, newest first. Entries are only ever added, never edited. An outgoing movement always points at an approved request.')}</p>
-      {moves.data && cat.ready ? <ListView title={tr('Stock ledger')} rows={moves.data} columns={columns} rowKey={(m) => String(m.id)} /> : <p className="muted">{tr('Loading…')}</p>}
+      <p className="muted">{tr('Every stock movement, newest first. Entries are never edited.')}</p>
+      {moves.data && cat.ready ? <ListView title={tr('Stock ledger')} rows={moves.data} columns={columns} rowKey={(m) => String(m.id)} /> : <Loading />}
     </section>
   );
 }

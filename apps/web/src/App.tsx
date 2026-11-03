@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Loading } from './components/Loading';
 import type { Session } from '@supabase/supabase-js';
 import type { SessionInfo } from '@erp/shared';
 import { api, getActiveOrgId, setActiveOrgId } from './lib/api';
@@ -56,7 +57,7 @@ export function App() {
       </>
     );
   }
-  if (!session) return <main className="center"><p className="muted">{tr('Loading…')}</p></main>;
+  if (!session) return <main className="center"><Loading /></main>;
 
   return (
     <SessionContext.Provider value={{ session, reload: () => setSessionTick((t) => t + 1) }}>

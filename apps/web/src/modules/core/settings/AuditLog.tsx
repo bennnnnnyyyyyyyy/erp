@@ -1,4 +1,5 @@
 import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
+import { Loading } from '../../../components/Loading';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
@@ -54,7 +55,7 @@ export function AuditLog() {
       {entries.data ? (
         <ListView title={tr('Audit log')} rows={entries.data} columns={columns} rowKey={(e) => String(e.id)} empty={tr('No activity yet.')} />
       ) : (
-        !entries.error && <p className="muted">{tr('Loading…')}</p>
+        !entries.error && <Loading />
       )}
     </section>
   );

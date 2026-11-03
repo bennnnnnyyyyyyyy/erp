@@ -149,9 +149,23 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 }
 .nav-item:hover { background: var(--surface-2); }
 .nav-item.active { background: var(--accent); color: var(--primary); font-weight: 600; border-inline-start-color: var(--primary); }
-.content { padding: 2rem 2.25rem; min-width: 0; }
+.content { padding: 2rem 2.25rem 4rem; min-width: 0; }
 .page { max-width: 1120px; animation: rise 0.35s ease-out both; }
-.page > h1 + .muted { margin-block-start: 0; }
+/* Page header: the title, one plain line under it, then a clear gap before the content. Every screen gets the same rhythm. */
+.page > h1 { margin-block-end: 0.3rem; }
+.page > h1 + .muted, .page > .page-head + .muted { margin-block: 0 1.5rem; max-width: 68ch; font-size: 0.95rem; }
+.page > h1:not(:has(+ .muted)) { margin-block-end: 1.25rem; }
+
+/* Loading skeleton (components/Loading.tsx): the shape of a page, gently pulsing. */
+.skeleton { display: flex; flex-direction: column; gap: 0.7rem; max-width: 1120px; }
+.center .skeleton { width: min(420px, 90vw); }
+.sk { border-radius: var(--radius); background: var(--surface-2); animation: shimmer 1.4s ease-in-out infinite; }
+.sk-title { height: 1.9rem; width: min(260px, 60%); }
+.sk-line { height: 0.95rem; width: min(520px, 85%); margin-block-end: 0.8rem; }
+.sk-table { display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.sk-table .sk { border-radius: 0; }
+.sk-row { height: 2.6rem; }
+@keyframes shimmer { 50% { opacity: 0.55; } }
 .page-head { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
 .page-head h1 { margin: 0; }
 .back-link { display: inline-block; margin-bottom: 0.6rem; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
@@ -192,13 +206,15 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* ---- forms and notices ---- */
 .form-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  padding: 1.25rem; max-width: 600px; margin-block: 1rem; box-shadow: var(--shadow-sm);
+  padding: 1.25rem 1.35rem; max-width: 880px; margin-block: 1rem 1.5rem; box-shadow: var(--shadow-sm);
 }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.form-card h2 { font-size: 1.05rem; }
+/* Fields sit on a grid that fills the card and wraps on its own: two to four per row on a desktop, one on a phone. */
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 0.9rem 1rem; align-items: end; }
 .form-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .notice {
   position: relative; background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
-  border-radius: var(--radius); padding: 0.85rem 1rem; max-width: 600px; margin-block: 1rem; overflow: hidden;
+  border-radius: var(--radius); padding: 0.85rem 1rem; max-width: 880px; margin-block: 1rem; overflow: hidden;
   padding-inline-start: 1.3rem;
 }
 .notice::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; width: 5px; background: var(--info); }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { ListView, type Column } from '../../components/views/ListView';
 import { notificationTarget, type AppNotification } from '../../components/NotificationBell';
 import { api } from '../../lib/api';
@@ -48,7 +49,7 @@ export function NotificationsPage() {
           toolbar={inbox.data.unread > 0 ? <button className="secondary" onClick={markAll}>{tr('Mark all read (')}{inbox.data.unread})</button> : undefined}
         />
       ) : (
-        <p className="muted">{inbox.error ?? tr('Loading…')}</p>
+        <Loading error={inbox.error} />
       )}
     </section>
   );
@@ -94,7 +95,7 @@ export function OutboxPage() {
   return (
     <section className="page wide">
       <h1>{tr('Message outbox')}</h1>
-      <p className="muted">{tr('Every message the system queued, and whether it was delivered. Failed sends are retried with a growing delay, and messages that wait too long expire. A background job runs every five minutes; you can run it now.')}</p>
+      <p className="muted">{tr('Every message the system sent, and whether it arrived.')}</p>
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
       {outbox.data ? (
         <ListView
@@ -106,7 +107,7 @@ export function OutboxPage() {
           toolbar={<button onClick={run} disabled={busy}>{busy ? tr('Running…') : tr('Run delivery and reminders now')}</button>}
         />
       ) : (
-        <p className="muted">{outbox.error ?? tr('Loading…')}</p>
+        <Loading error={outbox.error} />
       )}
     </section>
   );

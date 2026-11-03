@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -99,7 +100,7 @@ export function TasksPage() {
   return (
     <section className="page">
       <h1>{tr('Tasks')}</h1>
-      <p className="muted">{tr('Work assigned to people, with a due time. An overdue task triggers a reminder to the assignee and then an escalation to whoever assigned it.')}</p>
+      <p className="muted">{tr('Work assigned to people, with a due time and reminders.')}</p>
       {error && <p className="error notice">{error}</p>}
       {tasks.data && members.data ? (
         <ListView
@@ -129,7 +130,7 @@ export function TasksPage() {
           }
         />
       ) : (
-        <p className="muted">{tasks.error ?? members.error ?? tr('Loading…')}</p>
+        <Loading error={tasks.error ?? members.error} />
       )}
       {adding && members.data && <NewTaskModal members={members.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); tasks.reload(); }} />}
     </section>
@@ -165,7 +166,7 @@ export function TaskPage() {
   }
 
   if (task.error) return <section className="page"><Link to="/tasks" className="back-link">{tr('← Tasks')}</Link><p className="error">{task.error}</p></section>;
-  if (!t) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!t) return <section className="page"><Loading /></section>;
 
   const open = t.status === 'open' || t.status === 'in_progress';
   const canAct = open && (t.assigneeId === session.userId || t.createdBy === session.userId || isManager);

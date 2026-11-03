@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
@@ -25,12 +26,12 @@ export function ConnectPhonePage() {
     try { setMsg({ ok: true, text: await work() }); identities.reload(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
 
-  if (!identities.data) return <section className="page"><p className="muted">{identities.error ?? tr('Loading…')}</p></section>;
+  if (!identities.data) return <section className="page"><Loading error={identities.error} /></section>;
 
   return (
     <section className="page">
       <h1>{tr('Connect your WhatsApp')}</h1>
-      <p className="muted">{tr('Approve or reject stock requests and answer tasks from WhatsApp. Every answer is saved with who gave it and from which number. Only a number you have confirmed here is trusted.')}</p>
+      <p className="muted">{tr('Approve requests and answer tasks from WhatsApp.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
       <div className="form-card stack">

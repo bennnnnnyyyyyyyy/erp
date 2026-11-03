@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { formatMoney } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
@@ -50,7 +51,7 @@ export function PurchaseOrders() {
           toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</button> : undefined}
         />
       ) : (
-        <p className="muted">{tr('Loading…')}</p>
+        <Loading />
       )}
     </section>
   );
@@ -101,7 +102,7 @@ export function PurchaseOrderPage() {
   }
 
   if (order.error) return <section className="page"><p className="error">{order.error}</p></section>;
-  if (!o || !cat.ready || !suppliers.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!o || !cat.ready || !suppliers.data) return <section className="page"><Loading /></section>;
 
   const supplier = suppliers.data.find((s) => s.id === o.supplierId);
   const history = (audit.data ?? []).filter((a) => a.entity_id === o.id);

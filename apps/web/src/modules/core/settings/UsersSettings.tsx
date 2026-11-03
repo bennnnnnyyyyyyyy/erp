@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Loading } from '../../../components/Loading';
 import { ROLES, hasPermission, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
@@ -277,7 +278,7 @@ export function UsersSettings() {
           }
         />
       ) : (
-        !members.error && <p className="muted">{tr('Loading…')}</p>
+        !members.error && <Loading />
       )}
     </section>
   );

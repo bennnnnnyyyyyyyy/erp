@@ -1,4 +1,5 @@
 import { api } from '../../lib/api';
+import { Loading } from '../../components/Loading';
 import { useLoad } from '../../lib/useLoad';
 import { Link } from '../../lib/router';
 import { Pill } from '../trade/common';
@@ -16,7 +17,7 @@ const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('
 
 export function ForecastPage() {
   const data = useLoad(() => api<Row[]>('/v1/inventory/forecast'));
-  if (!data.data) return <section className="page"><p className="muted">{data.error ?? tr('Loading…')}</p></section>;
+  if (!data.data) return <section className="page"><Loading error={data.error} /></section>;
   const rows = data.data;
   const used = rows.filter((r) => r.confidence !== 'none');
   const soon = used.filter((r) => (r.daysOfCover ?? 999) <= 14).length;
@@ -26,7 +27,7 @@ export function ForecastPage() {
   return (
     <section className="page wide">
       <h1>{tr('Stock forecast')}</h1>
-      <p className="muted">{tr('When each item will run out, worked out from what your own warehouse issued in the last 90 days (the latest month counts most). A date based on thin history is a guess: look at the "How sure" column.')}</p>
+      <p className="muted">{tr('When each item is likely to run out, based on the last 90 days.')}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {[
           { label: tr('Running out within 14 days'), value: String(soon), tone: soon > 0 ? 'text-destructive-foreground' : 'text-success-foreground' },

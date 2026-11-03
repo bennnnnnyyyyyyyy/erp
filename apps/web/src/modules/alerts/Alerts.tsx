@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
@@ -44,7 +45,7 @@ export function AlertsPage() {
   }
   const reloadAll = () => { rules.reload(); teams.reload(); };
 
-  if (!rules.data || !teams.data || !people.data || !items.data) return <section className="page"><p className="muted">{rules.error ?? teams.error ?? tr('Loading…')}</p></section>;
+  if (!rules.data || !teams.data || !people.data || !items.data) return <section className="page"><Loading error={rules.error ?? teams.error} /></section>;
   const person = (id?: string) => people.data?.find((p) => p.userId === id)?.name ?? 'Someone';
   // The rule description, built in the language in use: the sentence pieces are translated and the numbers and names are filled in.
   const ruleText = (r: Rule) => {
@@ -67,7 +68,7 @@ export function AlertsPage() {
   return (
     <section className="page wide">
       <h1>{tr('Alerts')}</h1>
-      <p className="muted">{tr('Rules tell the right people when something needs attention. They are checked every five minutes, and the same thing is not repeated until the "repeat after" time has passed (unless it gets clearly worse). Alerts arrive as notifications; WhatsApp comes later.')}</p>
+      <p className="muted">{tr('Tell the right people when stock runs low, a batch expires or money is late.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
       <h2 className="related">{tr('Rules')}</h2>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Loading } from '../../../components/Loading';
 import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { demoMode } from '../../../lib/demo';
@@ -29,7 +30,7 @@ export function GeneralSettings() {
   }, [org.data]);
 
   if (org.error) return <p className="error">{org.error}</p>;
-  if (!form || !org.data) return <p className="muted">{tr('Loading…')}</p>;
+  if (!form || !org.data) return <Loading />;
 
   const original = org.data;
   const changes: OrgSettingsUpdate = {};

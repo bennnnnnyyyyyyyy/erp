@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { formatMoney } from '@erp/shared';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
@@ -37,7 +38,7 @@ export function SupplierInvoices(){
     try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId])}))})});setMessage({ok:true,text:tr('Supplier invoice recorded.')});setOrderId('');setNumber('');setQuantities({});summaries.reload();invoices.reload();}
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
-  if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading /></section>;
   const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
   const toBill=billingRows.filter(r=>r.billed<r.received);
   const shownBilling=showAll?billingRows:toBill;
@@ -78,7 +79,7 @@ export function SupplierInvoicePage() {
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
 
   if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
-  if (!invoices.data || !summaries.data || !suppliers.data || !items.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!invoices.data || !summaries.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoices.data.find((i) => i.id === id);
   if (!inv) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Supplier invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
   const order = summaries.data.find((o) => o.orderId === inv.orderId);

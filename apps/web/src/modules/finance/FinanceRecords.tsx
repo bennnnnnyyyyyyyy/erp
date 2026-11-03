@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { RecordHistory } from '../../components/RecordHistory';
@@ -79,7 +80,7 @@ export function PaymentPage() {
   const voiding = useVoid(`/v1/finance/payments/${id}/void`, () => payments.reload());
 
   if (payments.error) return <section className="page"><p className="error">{payments.error}</p></section>;
-  if (!payments.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!payments.data) return <section className="page"><Loading /></section>;
   const p = payments.data.find((x) => x.id === id);
   if (!p) return <section className="page"><Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link><p className="muted">{tr('This payment was not found.')}</p></section>;
 
@@ -128,7 +129,7 @@ export function ExpensePage() {
   const voiding = useVoid(`/v1/finance/expenses/${id}/void`, () => expenses.reload());
 
   if (expenses.error) return <section className="page"><p className="error">{expenses.error}</p></section>;
-  if (!expenses.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!expenses.data) return <section className="page"><Loading /></section>;
   const e = expenses.data.find((x) => x.id === id);
   if (!e) return <section className="page"><Link to="/finance" className="back-link">{tr('← Expenses')}</Link><p className="muted">{tr('This expense was not found.')}</p></section>;
   const category = categories.data?.find((c) => c.id === e.categoryId)?.name ?? '—';
