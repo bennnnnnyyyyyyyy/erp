@@ -142,19 +142,22 @@ export function CustomerInvoices() {
 export function CustomerInvoicePage() {
   const id = useParam('id');
   const session = useSession();
-  const invoices = useLoad(() => api<Invoice[]>('/v1/sales/invoices'));
-  const orders = useLoad(() => api<Order[]>('/v1/sales/orders'));
+  // The invoice and its order by id (the lists hold the newest 200 only, so an older invoice would not be found in them).
+  const record = useLoad(async () => {
+    const invoice = await api<Invoice>(`/v1/sales/invoices/${id}`);
+    const order = await api<Order>(`/v1/sales/orders/${invoice.orderId}`).catch(() => null);
+    return { invoice, order };
+  });
   const customers = useLoad(() => api<Customer[]>('/v1/sales/customers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const invoices = { reload: record.reload };
 
-  if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
-  if (!invoices.data || !orders.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
-  const inv = invoices.data.find((i) => i.id === id);
-  if (!inv) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
-
-  const order = orders.data.find((o) => o.id === inv.orderId);
+  if (record.error) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link><Loading error={record.error} /></section>;
+  if (!record.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
+  const inv = record.data.invoice;
+  const order = record.data.order;
   const customer = customers.data.find((c) => c.id === inv.customerId)?.name ?? tr('Unknown customer');
   const itemOf = (orderLineId: string) => {
     const itemId = order?.lines.find((l) => l.id === orderLineId)?.itemId;

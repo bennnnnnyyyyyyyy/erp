@@ -9,17 +9,23 @@ const env = { APP_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:5173' };
 const source = readFileSync(join(__dirname, '../src/modules/core/routes.ts'), 'utf8');
 // Just the language route: from its start to the next route.
 const start = source.indexOf("coreRoutes.post('/me/language'");
-const languageRoute = source.slice(start, source.indexOf('coreRoutes.', start + 10) === -1 ? undefined : source.indexOf('coreRoutes.', start + 10));
+const languageRoute = source.slice(
+  start,
+  source.indexOf('coreRoutes.', start + 10) === -1 ? undefined : source.indexOf('coreRoutes.', start + 10),
+);
 
 describe('saved language API', () => {
   it('needs a signed-in user to save or to read the session', async () => {
-    for (const [method, path] of [['POST', '/v1/core/me/language'], ['GET', '/v1/core/session']] as const) {
+    for (const [method, path] of [
+      ['POST', '/v1/core/me/language'],
+      ['GET', '/v1/core/session'],
+    ] as const) {
       const res = await app.request(path, { method }, env);
       expect(res.status).toBe(401);
       expect(await res.json()).toMatchObject({ success: false, code: 'unauthenticated' });
     }
   });
-  it('saves only through the database function, which uses the caller\'s own identity', () => {
+  it("saves only through the database function, which uses the caller's own identity", () => {
     const route = languageRoute;
     expect(route).toContain("'core_set_my_language'");
     expect(route).not.toMatch(/\.(insert|update|upsert|delete)\(/);
@@ -61,4 +67,4 @@ describe('guided tour switch API', () => {
     expect(source).toContain('showTour: tenant.showTour');
     expect(source).toContain('userLanguageAsked: saved.asked');
   });
-});
+});

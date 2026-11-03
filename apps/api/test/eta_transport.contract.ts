@@ -26,14 +26,31 @@ function testBody(opts: ContractOptions): { body: string; internalId: string } {
     kind: 'invoice',
     version: '0.9', // signature validation off: lets the contract run before any real signer exists
     issuer: {
-      id: opts.issuer?.id ?? '100200300', name: 'Contract Test Seller', branchId: opts.issuer?.branchId ?? '0',
+      id: opts.issuer?.id ?? '100200300',
+      name: 'Contract Test Seller',
+      branchId: opts.issuer?.branchId ?? '0',
       address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 Test St', buildingNumber: '1' },
     },
-    receiver: { type: 'B', id: '200300400', name: 'Contract Test Buyer', address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 Test St', buildingNumber: '2' } },
+    receiver: {
+      type: 'B',
+      id: '200300400',
+      name: 'Contract Test Buyer',
+      address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 Test St', buildingNumber: '2' },
+    },
     dateTimeIssued: new Date(Date.now() - 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z'),
     taxpayerActivityCode: '4620',
     internalId,
-    lines: [{ description: 'Contract item', itemType: 'EGS', itemCode: 'EG-100200300-CT', unitType: 'EA', quantity: '1', unitPriceEGP: '100.00', taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }] }],
+    lines: [
+      {
+        description: 'Contract item',
+        itemType: 'EGS',
+        itemCode: 'EG-100200300-CT',
+        unitType: 'EA',
+        quantity: '1',
+        unitPriceEGP: '100.00',
+        taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }],
+      },
+    ],
   };
   return { body: submissionBodyJson([buildDocument(input).doc]), internalId };
 }
@@ -52,7 +69,7 @@ export function runTransportContract(opts: ContractOptions): void {
     it('submit answers with a submission id and every document either accepted or rejected', async () => {
       const t = opts.make();
       const { body, internalId } = testBody(opts);
-      let r;
+      let r: Awaited<ReturnType<typeof t.submit>>;
       try {
         r = await t.submit(body);
       } catch (e) {
@@ -81,7 +98,7 @@ export function runTransportContract(opts: ContractOptions): void {
     it('status of a submission has a documented overall status and per-document statuses', async () => {
       const t = opts.make();
       const { body } = testBody(opts);
-      let r;
+      let r: Awaited<ReturnType<typeof t.submit>>;
       try {
         r = await t.submit(body);
       } catch (e) {

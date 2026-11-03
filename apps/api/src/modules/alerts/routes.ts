@@ -48,7 +48,14 @@ alertsRoutes.get('/teams', requirePermission('alerts.rules.view'), async (c) => 
   ]);
   if (teams.error) throw teams.error;
   if (members.error) throw members.error;
-  return ok(c, (teams.data ?? []).map((t) => ({ id: t.id, name: t.name, userIds: (members.data ?? []).filter((m) => m.team_id === t.id).map((m) => m.user_id) })));
+  return ok(
+    c,
+    (teams.data ?? []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      userIds: (members.data ?? []).filter((m) => m.team_id === t.id).map((m) => m.user_id),
+    })),
+  );
 });
 
 alertsRoutes.post('/teams', requirePermission('alerts.rules.manage'), async (c) => {
@@ -69,22 +76,45 @@ alertsRoutes.put('/teams/:id/members', requirePermission('alerts.rules.manage'),
 alertsRoutes.get('/rules', requirePermission('alerts.rules.view'), async (c) => {
   const db = userDb(c);
   const [rules, recipients, firings] = await Promise.all([
-    db.from('alr_rules').select('id, name, kind, item_id, threshold, repeat_hours, enabled, created_at').eq('org_id', orgOf(c)).is('deleted_at', null).order('created_at'),
+    db
+      .from('alr_rules')
+      .select('id, name, kind, item_id, threshold, repeat_hours, enabled, created_at')
+      .eq('org_id', orgOf(c))
+      .is('deleted_at', null)
+      .order('created_at'),
     db.from('alr_rule_recipients').select('rule_id, team_id, role, user_id').eq('org_id', orgOf(c)),
     db.from('alr_firings').select('rule_id, last_fired_at, times').eq('org_id', orgOf(c)),
   ]);
   if (rules.error) throw rules.error;
   if (recipients.error) throw recipients.error;
   if (firings.error) throw firings.error;
-  return ok(c, (rules.data ?? []).map((r) => {
-    const fired = (firings.data ?? []).filter((f) => f.rule_id === r.id);
-    return {
-      id: r.id, name: r.name, kind: r.kind, itemId: r.item_id, threshold: r.threshold === null ? null : Number(r.threshold), repeatHours: r.repeat_hours, enabled: r.enabled, createdAt: r.created_at,
-      recipients: (recipients.data ?? []).filter((x) => x.rule_id === r.id).map((x) => (x.team_id ? { type: 'team', id: x.team_id } : x.user_id ? { type: 'user', id: x.user_id } : { type: 'role', role: x.role })),
-      timesFired: fired.reduce((n, f) => n + f.times, 0),
-      lastFiredAt: fired.map((f) => f.last_fired_at).sort().pop() ?? null,
-    };
-  }));
+  return ok(
+    c,
+    (rules.data ?? []).map((r) => {
+      const fired = (firings.data ?? []).filter((f) => f.rule_id === r.id);
+      return {
+        id: r.id,
+        name: r.name,
+        kind: r.kind,
+        itemId: r.item_id,
+        threshold: r.threshold === null ? null : Number(r.threshold),
+        repeatHours: r.repeat_hours,
+        enabled: r.enabled,
+        createdAt: r.created_at,
+        recipients: (recipients.data ?? [])
+          .filter((x) => x.rule_id === r.id)
+          .map((x) =>
+            x.team_id ? { type: 'team', id: x.team_id } : x.user_id ? { type: 'user', id: x.user_id } : { type: 'role', role: x.role },
+          ),
+        timesFired: fired.reduce((n, f) => n + f.times, 0),
+        lastFiredAt:
+          fired
+            .map((f) => f.last_fired_at)
+            .sort()
+            .pop() ?? null,
+      };
+    }),
+  );
 });
 
 alertsRoutes.post('/rules', requirePermission('alerts.rules.manage'), async (c) => {
@@ -94,11 +124,27 @@ alertsRoutes.post('/rules', requirePermission('alerts.rules.manage'), async (c) 
   const itemId = text(b.itemId);
   const threshold = b.threshold === null || b.threshold === undefined || b.threshold === '' ? null : Number(b.threshold);
   const repeatHours = b.repeatHours === undefined ? 24 : Number(b.repeatHours);
-  if (!name || !KINDS.includes(kind) || (itemId && !UUID_RE.test(itemId)) || (threshold !== null && (!Number.isFinite(threshold) || threshold < 0)) || !Number.isInteger(repeatHours) || repeatHours < 1 || repeatHours > 720) {
+  if (
+    !name ||
+    !KINDS.includes(kind) ||
+    (itemId && !UUID_RE.test(itemId)) ||
+    (threshold !== null && (!Number.isFinite(threshold) || threshold < 0)) ||
+    !Number.isInteger(repeatHours) ||
+    repeatHours < 1 ||
+    repeatHours > 720
+  ) {
     invalid('A name, a rule type, and valid numbers are required');
   }
-  if ((kind === 'expiry_within' || kind === 'receivable_overdue' || kind === 'forecast_stockout') && threshold === null) invalid('This rule needs a number of days');
-  const id = await callRpc<string>(userDb(c), 'alr_create_rule', { p_name: name, p_kind: kind, p_item_id: itemId || null, p_threshold: threshold, p_repeat_hours: repeatHours, p_recipients: parseRecipients(b.recipients) });
+  if ((kind === 'expiry_within' || kind === 'receivable_overdue' || kind === 'forecast_stockout') && threshold === null)
+    invalid('This rule needs a number of days');
+  const id = await callRpc<string>(userDb(c), 'alr_create_rule', {
+    p_name: name,
+    p_kind: kind,
+    p_item_id: itemId || null,
+    p_threshold: threshold,
+    p_repeat_hours: repeatHours,
+    p_recipients: parseRecipients(b.recipients),
+  });
   return ok(c, { id }, 201);
 });
 

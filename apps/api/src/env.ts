@@ -3,6 +3,8 @@ import type { Role } from '@erp/shared';
 export type Bindings = {
   APP_ENV: string;
   ALLOWED_ORIGINS: string;
+  /** Workers rate limiting binding (wrangler.toml [[ratelimits]]); absent in tests and local dev. See middleware/rateLimit.ts. */
+  API_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_SECRET_KEY?: string;

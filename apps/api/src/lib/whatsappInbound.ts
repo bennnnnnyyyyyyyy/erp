@@ -19,8 +19,14 @@ const REFUSAL: Record<string, string> = {
 };
 
 export function replyFor(o: Outcome, kind: 'decision' | 'task'): string | null {
-  if (o.ok) return kind === 'decision' ? `Done. You ${o.decision}. Thank you.` : o.status === 'done' ? 'Done. The task is marked as completed.' : 'Thanks. The task is marked as acknowledged.';
-  if (o.code === 'AMBIGUOUS' && o.tasks) return `You have several open tasks. Reply with the reference, for example "DONE ${o.tasks[0]?.ref}":\n${o.tasks.map((t) => `${t.ref}: ${t.title}`).join('\n')}`;
+  if (o.ok)
+    return kind === 'decision'
+      ? `Done. You ${o.decision}. Thank you.`
+      : o.status === 'done'
+        ? 'Done. The task is marked as completed.'
+        : 'Thanks. The task is marked as acknowledged.';
+  if (o.code === 'AMBIGUOUS' && o.tasks)
+    return `You have several open tasks. Reply with the reference, for example "DONE ${o.tasks[0]?.ref}":\n${o.tasks.map((t) => `${t.ref}: ${t.title}`).join('\n')}`;
   if (o.code === 'UNKNOWN_IDENTITY' || o.code === 'NOT_A_DECISION' || o.code === 'NOT_A_TASK_REPLY') return null;
   return REFUSAL[o.code] ?? 'That was not accepted. Please open the app.';
 }

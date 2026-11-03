@@ -16,24 +16,52 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
 type TaskRow = {
-  id: string; title: string; description: string; assignee_id: string; created_by: string; due_at: string | null; status: string;
-  linked_type: string | null; linked_id: string | null; completed_at: string | null; created_at: string;
+  id: string;
+  title: string;
+  description: string;
+  assignee_id: string;
+  created_by: string;
+  due_at: string | null;
+  status: string;
+  linked_type: string | null;
+  linked_id: string | null;
+  completed_at: string | null;
+  created_at: string;
 };
 const toTask = (r: TaskRow) => ({
-  id: r.id, title: r.title, description: r.description, assigneeId: r.assignee_id, createdBy: r.created_by, dueAt: r.due_at,
-  status: r.status, linkedType: r.linked_type, linkedId: r.linked_id, completedAt: r.completed_at, createdAt: r.created_at,
+  id: r.id,
+  title: r.title,
+  description: r.description,
+  assigneeId: r.assignee_id,
+  createdBy: r.created_by,
+  dueAt: r.due_at,
+  status: r.status,
+  linkedType: r.linked_type,
+  linkedId: r.linked_id,
+  completedAt: r.completed_at,
+  createdAt: r.created_at,
 });
 const COLUMNS = 'id, title, description, assignee_id, created_by, due_at, status, linked_type, linked_id, completed_at, created_at';
 
 async function loadTask(c: Context<AppEnv>, id: string) {
-  const { data, error } = await userDb(c).from('tsk_tasks').select(COLUMNS).eq('org_id', c.var.tenant.orgId).eq('id', id).maybeSingle<TaskRow>();
+  const { data, error } = await userDb(c)
+    .from('tsk_tasks')
+    .select(COLUMNS)
+    .eq('org_id', c.var.tenant.orgId)
+    .eq('id', id)
+    .maybeSingle<TaskRow>();
   if (error) throw error;
   if (!data) throw new HttpError(404, 'Task not found', 'not_found');
   return toTask(data);
 }
 
 tasksRoutes.get('/', requirePermission('tasks.tasks.read'), async (c) => {
-  const { data, error } = await userDb(c).from('tsk_tasks').select(COLUMNS).eq('org_id', c.var.tenant.orgId).order('created_at', { ascending: false }).limit(200);
+  const { data, error } = await userDb(c)
+    .from('tsk_tasks')
+    .select(COLUMNS)
+    .eq('org_id', c.var.tenant.orgId)
+    .order('created_at', { ascending: false })
+    .limit(200);
   if (error) throw error;
   return ok(c, ((data ?? []) as TaskRow[]).map(toTask));
 });

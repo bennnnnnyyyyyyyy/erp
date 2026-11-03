@@ -1,27 +1,55 @@
-import type { ComponentType } from 'react';
+import { lazy, type ComponentType } from 'react';
 import { hasPermission, type SessionInfo } from '@erp/shared';
-import { AppsSettings } from './core/settings/AppsSettings';
-import { AuditLog } from './core/settings/AuditLog';
-import { GeneralSettings } from './core/settings/GeneralSettings';
-import { UsersSettings } from './core/settings/UsersSettings';
 import { demoMode } from '../lib/demo';
-import { BatchesPage } from './inventory/Batches';
-import { ForecastPage } from './inventory/Forecast';
-import { GuidePage } from './help/Guide';
-import { NewTransfer, TransferPage, TransfersList } from './inventory/Transfers';
-import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
-import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
-import { SupplierInvoicePage, SupplierInvoices } from './purchasing/SupplierInvoices';
-import { NotificationsPage, OutboxPage } from './messaging/Messaging';
-import { ConnectPhonePage } from './messaging/ConnectPhone';
-import { TaskPage, TasksPage } from './tasks/Tasks';
-import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
-import { CustomerInvoicePage, CustomerInvoices } from './sales/CustomerInvoices';
-import { ExpensesPage, PaymentsPage } from './finance/Finance';
-import { ExpensePage, PaymentPage } from './finance/FinanceRecords';
-import { AlertsPage } from './alerts/Alerts';
-import { GettingStartedPage } from './help/GettingStarted';
-import { ProfitOverviewPage } from './finance/ProfitOverview';
+
+// Each screen file is its own chunk, fetched the first time one of its pages is opened (system audit 2026-11-03, finding 11:
+// the app shipped as a single 627 kB file). The Shell shows the loading skeleton while a chunk arrives.
+function lazyNamed<M, K extends keyof M>(load: () => Promise<M>, name: K): ComponentType {
+  return lazy(() => load().then((m) => ({ default: m[name] as unknown as ComponentType })));
+}
+const AppsSettings = lazyNamed(() => import('./core/settings/AppsSettings'), 'AppsSettings');
+const AuditLog = lazyNamed(() => import('./core/settings/AuditLog'), 'AuditLog');
+const GeneralSettings = lazyNamed(() => import('./core/settings/GeneralSettings'), 'GeneralSettings');
+const UsersSettings = lazyNamed(() => import('./core/settings/UsersSettings'), 'UsersSettings');
+const BatchesPage = lazyNamed(() => import('./inventory/Batches'), 'BatchesPage');
+const ForecastPage = lazyNamed(() => import('./inventory/Forecast'), 'ForecastPage');
+const GuidePage = lazyNamed(() => import('./help/Guide'), 'GuidePage');
+const NewTransfer = lazyNamed(() => import('./inventory/Transfers'), 'NewTransfer');
+const TransferPage = lazyNamed(() => import('./inventory/Transfers'), 'TransferPage');
+const TransfersList = lazyNamed(() => import('./inventory/Transfers'), 'TransfersList');
+const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
+const ApprovalPoliciesPage = lazyNamed(() => import('./inventory/Inventory'), 'ApprovalPoliciesPage');
+const LedgerPage = lazyNamed(() => import('./inventory/Inventory'), 'LedgerPage');
+const NewRequest = lazyNamed(() => import('./inventory/Inventory'), 'NewRequest');
+const ReorderLevelsPage = lazyNamed(() => import('./inventory/Inventory'), 'ReorderLevelsPage');
+const RequestPage = lazyNamed(() => import('./inventory/Inventory'), 'RequestPage');
+const RequestsList = lazyNamed(() => import('./inventory/Inventory'), 'RequestsList');
+const StockPage = lazyNamed(() => import('./inventory/Inventory'), 'StockPage');
+const NewPurchaseOrder = lazyNamed(() => import('./purchasing/PurchasingDemo'), 'NewPurchaseOrder');
+const PurchaseOrderPage = lazyNamed(() => import('./purchasing/PurchasingDemo'), 'PurchaseOrderPage');
+const PurchaseOrders = lazyNamed(() => import('./purchasing/PurchasingDemo'), 'PurchaseOrders');
+const Suppliers = lazyNamed(() => import('./purchasing/PurchasingDemo'), 'Suppliers');
+const SupplierInvoicePage = lazyNamed(() => import('./purchasing/SupplierInvoices'), 'SupplierInvoicePage');
+const SupplierInvoices = lazyNamed(() => import('./purchasing/SupplierInvoices'), 'SupplierInvoices');
+const NotificationsPage = lazyNamed(() => import('./messaging/Messaging'), 'NotificationsPage');
+const OutboxPage = lazyNamed(() => import('./messaging/Messaging'), 'OutboxPage');
+const ConnectPhonePage = lazyNamed(() => import('./messaging/ConnectPhone'), 'ConnectPhonePage');
+const TaskPage = lazyNamed(() => import('./tasks/Tasks'), 'TaskPage');
+const TasksPage = lazyNamed(() => import('./tasks/Tasks'), 'TasksPage');
+const Customers = lazyNamed(() => import('./sales/SalesDemo'), 'Customers');
+const NewSalesOrder = lazyNamed(() => import('./sales/SalesDemo'), 'NewSalesOrder');
+const SalesOrderPage = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrderPage');
+const SalesOrders = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrders');
+const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
+const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
+const ExpensesPage = lazyNamed(() => import('./finance/Finance'), 'ExpensesPage');
+const PaymentsPage = lazyNamed(() => import('./finance/Finance'), 'PaymentsPage');
+const ExpensePage = lazyNamed(() => import('./finance/FinanceRecords'), 'ExpensePage');
+const PaymentPage = lazyNamed(() => import('./finance/FinanceRecords'), 'PaymentPage');
+const AlertsPage = lazyNamed(() => import('./alerts/Alerts'), 'AlertsPage');
+const GettingStartedPage = lazyNamed(() => import('./help/GettingStarted'), 'GettingStartedPage');
+const ProfitOverviewPage = lazyNamed(() => import('./finance/ProfitOverview'), 'ProfitOverviewPage');
+
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
 // an app appears only when its module is enabled for the org and the user can open at least one page.
@@ -91,8 +119,11 @@ const PURCHASING_APP: AppDef = {
     { path: '/orders/new', label: 'New purchase order', component: NewPurchaseOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Purchase order', component: PurchaseOrderPage, nav: false, parent: '' },
     { path: '/suppliers', label: 'Suppliers', component: Suppliers },
-    { path: '/invoices', label: 'Purchase invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
-    { path: '/invoices/:id', label: 'Purchase invoice', permission: 'purchasing.invoices.read', component: SupplierInvoicePage, nav: false, parent: '/invoices' },
+    // Real API only: the sample build has no purchase-invoice data (its page stayed on "Loading…"; found by the smoke test).
+    ...(demoMode ? [] : [
+      { path: '/invoices', label: 'Purchase invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
+      { path: '/invoices/:id', label: 'Purchase invoice', permission: 'purchasing.invoices.read', component: SupplierInvoicePage, nav: false, parent: '/invoices' },
+    ]),
   ],
 };
 

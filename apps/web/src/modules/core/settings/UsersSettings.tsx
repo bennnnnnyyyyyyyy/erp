@@ -47,6 +47,7 @@ function InviteLinkBox({ email, link, onClose }: { email: string; link: string; 
 
 function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; onInvited: (r: InviteResult) => void }) {
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [role, setRole] = useState<Role>('member');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +57,9 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
     setBusy(true);
     setError(null);
     try {
-      const result = await api<InviteResult>('/v1/core/members', { method: 'POST', body: JSON.stringify({ email, role }) });
+      const result = await api<InviteResult>('/v1/core/members', { method: 'POST', body: JSON.stringify({ email, name, role }) });
       setEmail('');
+      setName('');
       onInvited(result);
     } catch (err) {
       setError((err as Error).message);
@@ -71,6 +73,10 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
       <strong>{tr('Invite someone')}</strong>
       <div className="form-row">
         <label>
+          {tr('Full name')}
+          <input required minLength={2} maxLength={120} autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label>
           {tr('Email')}
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
@@ -79,7 +85,7 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
             {ROLES.filter((r) => r !== 'owner' || canInviteOwner).map((r) => (
               <option key={r} value={r}>
-                {r}
+                {tr(ROLE_NAME[r])}
               </option>
             ))}
           </select>

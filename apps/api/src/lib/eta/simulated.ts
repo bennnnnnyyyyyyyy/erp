@@ -68,14 +68,26 @@ export class SimulatedTransport implements EtaTransport {
     }
     const documents = (parsed as DocObject | null)?.documents;
     if (!Array.isArray(documents) || documents.length === 0 || documents.some((d) => !d || typeof d !== 'object' || Array.isArray(d))) {
-      throw new EtaError(400, 'BadStructure', 'The submission must be { "documents": [ ... ] } with at least one document', this.corr(), null);
+      throw new EtaError(
+        400,
+        'BadStructure',
+        'The submission must be { "documents": [ ... ] } with at least one document',
+        this.corr(),
+        null,
+      );
     }
 
     // Official rule: an identical payload from the same taxpayer within 10 minutes is a duplicate (422, Retry-After).
     const window = (this.opts.duplicateWindowSeconds ?? 600) * 1000;
     const firstSeen = this.seen.get(bodyJson);
     if (firstSeen !== undefined && this.now() - firstSeen < window) {
-      throw new EtaError(422, 'DuplicateSubmission', 'An identical submission was received in the last 10 minutes', this.corr(), Math.ceil((window - (this.now() - firstSeen)) / 1000));
+      throw new EtaError(
+        422,
+        'DuplicateSubmission',
+        'An identical submission was received in the last 10 minutes',
+        this.corr(),
+        Math.ceil((window - (this.now() - firstSeen)) / 1000),
+      );
     }
     this.seen.set(bodyJson, this.now());
 
@@ -87,15 +99,27 @@ export class SimulatedTransport implements EtaTransport {
       const idv = d.internalID ?? d.internalId;
       const internalId = typeof idv === 'string' ? idv : '';
       if (!internalId) {
-        rejectedDocuments.push({ internalId: '', error: { code: 'BadStructure', message: 'The document has no internalID', target: 'internalID' } });
+        rejectedDocuments.push({
+          internalId: '',
+          error: { code: 'BadStructure', message: 'The document has no internalID', target: 'internalID' },
+        });
         continue;
       }
       const scenario = this.scenarioFor(internalId);
       if (scenario === 'rejected') {
-        rejectedDocuments.push({ internalId, error: { code: 'SimulatedRejection', message: 'Simulated rejection (scenario "rejected")', target: internalId } });
+        rejectedDocuments.push({
+          internalId,
+          error: { code: 'SimulatedRejection', message: 'Simulated rejection (scenario "rejected")', target: internalId },
+        });
         continue;
       }
-      const doc: SimDoc = { uuid: this.next('DOC'), longId: this.next('LONG'), internalId, submissionUuid, status: scenario === 'pending' ? 'submitted' : 'valid' };
+      const doc: SimDoc = {
+        uuid: this.next('DOC'),
+        longId: this.next('LONG'),
+        internalId,
+        submissionUuid,
+        status: scenario === 'pending' ? 'submitted' : 'valid',
+      };
       this.docs.set(doc.uuid, doc);
       sub.docs.push(doc.uuid);
       if (scenario === 'pending') sub.pollsLeft = Math.max(sub.pollsLeft, this.opts.pendingPolls ?? 1);
@@ -121,13 +145,26 @@ export class SimulatedTransport implements EtaTransport {
     const docs = sub.docs.map((u) => this.docs.get(u) as SimDoc);
     const statuses = docs.map((d) => d.status);
     const overall: SubmissionStatus['overallStatus'] =
-      docs.length === 0 ? 'invalid' : inProgress && statuses.includes('submitted') ? 'in progress' : statuses.every((s) => s === 'invalid') ? 'invalid' : statuses.some((s) => s === 'invalid') ? 'partially valid' : 'valid';
+      docs.length === 0
+        ? 'invalid'
+        : inProgress && statuses.includes('submitted')
+          ? 'in progress'
+          : statuses.every((s) => s === 'invalid')
+            ? 'invalid'
+            : statuses.some((s) => s === 'invalid')
+              ? 'partially valid'
+              : 'valid';
     return {
       simulated: true,
       submissionUUID: sub.uuid,
       overallStatus: overall,
       documentCount: docs.length,
-      documents: docs.map((d) => ({ uuid: d.uuid, internalId: d.internalId, status: inProgress && d.status === 'submitted' ? 'submitted' : d.status, longId: d.longId })),
+      documents: docs.map((d) => ({
+        uuid: d.uuid,
+        internalId: d.internalId,
+        status: inProgress && d.status === 'submitted' ? 'submitted' : d.status,
+        longId: d.longId,
+      })),
       correlationId: this.corr(),
     };
   }
@@ -137,7 +174,8 @@ export class SimulatedTransport implements EtaTransport {
     if (!reason.trim()) throw new Error('REASON_REQUIRED');
     const d = this.docs.get(documentUuid);
     if (!d) throw new EtaError(404, 'NotFound', 'Document not found', this.corr(), null);
-    if (d.status !== 'valid') throw new EtaError(400, 'IncorrectState', `A document that is ${d.status} cannot be ${to}`, this.corr(), null);
+    if (d.status !== 'valid')
+      throw new EtaError(400, 'IncorrectState', `A document that is ${d.status} cannot be ${to}`, this.corr(), null);
     d.status = to;
     return { correlationId: this.corr() };
   }

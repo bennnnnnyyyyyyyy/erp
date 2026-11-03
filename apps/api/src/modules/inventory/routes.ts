@@ -27,12 +27,39 @@ const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
 // ------------------------------------------------------------------ shapes
 
-type ItemRow = { id: string; sku: string; name: string; name_ar: string | null; uom: string; reorder_level: number | null; tracks_batches?: boolean; storage_condition_id?: string | null };
-const toItem = (r: ItemRow) => ({ id: r.id, sku: r.sku, name: r.name, nameAr: r.name_ar ?? '', uom: r.uom, reorderLevel: r.reorder_level === null ? null : Number(r.reorder_level), tracksBatches: Boolean(r.tracks_batches), storageConditionId: r.storage_condition_id ?? null });
+type ItemRow = {
+  id: string;
+  sku: string;
+  name: string;
+  name_ar: string | null;
+  uom: string;
+  reorder_level: number | null;
+  tracks_batches?: boolean;
+  storage_condition_id?: string | null;
+};
+const toItem = (r: ItemRow) => ({
+  id: r.id,
+  sku: r.sku,
+  name: r.name,
+  nameAr: r.name_ar ?? '',
+  uom: r.uom,
+  reorderLevel: r.reorder_level === null ? null : Number(r.reorder_level),
+  tracksBatches: Boolean(r.tracks_batches),
+  storageConditionId: r.storage_condition_id ?? null,
+});
 
 type RequestRow = {
-  id: string; number: string; requester_id: string; warehouse_id: string; reason: string; status: string;
-  decided_by: string | null; decided_at: string | null; decision_comment: string | null; issued_at: string | null; created_at: string;
+  id: string;
+  number: string;
+  requester_id: string;
+  warehouse_id: string;
+  reason: string;
+  status: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_comment: string | null;
+  issued_at: string | null;
+  created_at: string;
 };
 
 async function loadRequests(c: Context<AppEnv>, filter?: { id: string }) {
@@ -50,7 +77,11 @@ async function loadRequests(c: Context<AppEnv>, filter?: { id: string }) {
   const ids = rows.map((r) => r.id);
   const lines = new Map<string, { itemId: string; qty: number }[]>();
   if (ids.length > 0) {
-    const { data: l, error: lErr } = await client.from('inv_request_lines').select('request_id, item_id, qty').eq('org_id', orgOf(c)).in('request_id', ids);
+    const { data: l, error: lErr } = await client
+      .from('inv_request_lines')
+      .select('request_id, item_id, qty')
+      .eq('org_id', orgOf(c))
+      .in('request_id', ids);
     if (lErr) throw lErr;
     for (const row of (l ?? []) as { request_id: string; item_id: string; qty: number }[]) {
       lines.set(row.request_id, [...(lines.get(row.request_id) ?? []), { itemId: row.item_id, qty: Number(row.qty) }]);
@@ -83,19 +114,35 @@ async function oneRequest(c: Context<AppEnv>, id: string) {
 // ------------------------------------------------------------------ reads
 
 inventoryRoutes.get('/warehouses', requirePermission('inventory.items.read'), async (c) => {
-  const { data, error } = await userDb(c).from('inv_warehouses').select('id, code, name').eq('org_id', orgOf(c)).is('deleted_at', null).order('code');
+  const { data, error } = await userDb(c)
+    .from('inv_warehouses')
+    .select('id, code, name')
+    .eq('org_id', orgOf(c))
+    .is('deleted_at', null)
+    .order('code');
   if (error) throw error;
-  return ok(c, (data ?? []).map((w: { id: string; code: string; name: string }) => ({ id: w.id, code: w.code, name: w.name })));
+  return ok(
+    c,
+    (data ?? []).map((w: { id: string; code: string; name: string }) => ({ id: w.id, code: w.code, name: w.name })),
+  );
 });
 
 inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
-  const { data, error } = await userDb(c).from('inv_items').select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id').eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
+  const { data, error } = await userDb(c)
+    .from('inv_items')
+    .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id')
+    .eq('org_id', orgOf(c))
+    .is('deleted_at', null)
+    .order('sku');
   if (error) throw error;
   return ok(c, ((data ?? []) as ItemRow[]).map(toItem));
 });
 
 inventoryRoutes.get('/stock', requirePermission('inventory.items.read'), async (c) => {
-  const { data, error } = await userDb(c).from('inv_stock_balances').select('item_id, warehouse_id, on_hand, reserved').eq('org_id', orgOf(c));
+  const { data, error } = await userDb(c)
+    .from('inv_stock_balances')
+    .select('item_id, warehouse_id, on_hand, reserved')
+    .eq('org_id', orgOf(c));
   if (error) throw error;
   return ok(
     c,
@@ -117,13 +164,33 @@ inventoryRoutes.get('/ledger', requirePermission('inventory.items.read'), async 
     .order('id', { ascending: false })
     .limit(500);
   if (error) throw error;
-  type LedgerRow = { id: number; item_id: string; warehouse_id: string; qty: number; kind: string; request_id: string | null; ref: string | null; posted_by: string; posted_at: string; inv_requests: { number: string } | { number: string }[] | null };
+  type LedgerRow = {
+    id: number;
+    item_id: string;
+    warehouse_id: string;
+    qty: number;
+    kind: string;
+    request_id: string | null;
+    ref: string | null;
+    posted_by: string;
+    posted_at: string;
+    inv_requests: { number: string } | { number: string }[] | null;
+  };
   return ok(
     c,
     ((data ?? []) as unknown as LedgerRow[]).map((m) => {
       const req = Array.isArray(m.inv_requests) ? m.inv_requests[0] : m.inv_requests;
       return {
-        id: m.id, itemId: m.item_id, warehouseId: m.warehouse_id, qty: Number(m.qty), kind: m.kind, requestId: m.request_id, requestNumber: req?.number ?? null, ref: m.ref, postedBy: m.posted_by, postedAt: m.posted_at,
+        id: m.id,
+        itemId: m.item_id,
+        warehouseId: m.warehouse_id,
+        qty: Number(m.qty),
+        kind: m.kind,
+        requestId: m.request_id,
+        requestNumber: req?.number ?? null,
+        ref: m.ref,
+        postedBy: m.posted_by,
+        postedAt: m.posted_at,
       };
     }),
   );
@@ -139,31 +206,60 @@ inventoryRoutes.get('/approval-policies', requirePermission('inventory.items.rea
     .eq('org_id', orgOf(c))
     .order('min_total_qty', { ascending: true });
   if (error) throw error;
-  return ok(c, ((data ?? []) as { id: string; warehouse_id: string | null; min_total_qty: number; required_approvals: number }[]).map((p) => ({
-    id: p.id,
-    warehouseId: p.warehouse_id,
-    minTotalQty: Number(p.min_total_qty),
-    requiredApprovals: Number(p.required_approvals),
-  })));
+  return ok(
+    c,
+    ((data ?? []) as { id: string; warehouse_id: string | null; min_total_qty: number; required_approvals: number }[]).map((p) => ({
+      id: p.id,
+      warehouseId: p.warehouse_id,
+      minTotalQty: Number(p.min_total_qty),
+      requiredApprovals: Number(p.required_approvals),
+    })),
+  );
 });
 
 type AdjustmentRow = {
-  id: string; number: string; item_id: string; warehouse_id: string; counted_qty: number; expected_qty: number;
-  delta: number; reason: string; status: string; requester_id: string; decided_by: string | null;
-  decided_at: string | null; decision_comment: string | null; created_at: string;
+  id: string;
+  number: string;
+  item_id: string;
+  warehouse_id: string;
+  counted_qty: number;
+  expected_qty: number;
+  delta: number;
+  reason: string;
+  status: string;
+  requester_id: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_comment: string | null;
+  created_at: string;
 };
 
 const toAdjustment = (a: AdjustmentRow) => ({
-  id: a.id, number: a.number, itemId: a.item_id, warehouseId: a.warehouse_id,
-  countedQty: Number(a.counted_qty), expectedQty: Number(a.expected_qty), delta: Number(a.delta),
-  reason: a.reason, status: a.status, requesterId: a.requester_id, decidedBy: a.decided_by,
-  decidedAt: a.decided_at, decisionComment: a.decision_comment, createdAt: a.created_at,
+  id: a.id,
+  number: a.number,
+  itemId: a.item_id,
+  warehouseId: a.warehouse_id,
+  countedQty: Number(a.counted_qty),
+  expectedQty: Number(a.expected_qty),
+  delta: Number(a.delta),
+  reason: a.reason,
+  status: a.status,
+  requesterId: a.requester_id,
+  decidedBy: a.decided_by,
+  decidedAt: a.decided_at,
+  decisionComment: a.decision_comment,
+  createdAt: a.created_at,
 });
 
 async function loadAdjustments(c: Context<AppEnv>, id?: string) {
-  let q = userDb(c).from('inv_adjustments')
-    .select('id, number, item_id, warehouse_id, counted_qty, expected_qty, delta, reason, status, requester_id, decided_by, decided_at, decision_comment, created_at')
-    .eq('org_id', orgOf(c)).order('created_at', { ascending: false }).limit(200);
+  let q = userDb(c)
+    .from('inv_adjustments')
+    .select(
+      'id, number, item_id, warehouse_id, counted_qty, expected_qty, delta, reason, status, requester_id, decided_by, decided_at, decision_comment, created_at',
+    )
+    .eq('org_id', orgOf(c))
+    .order('created_at', { ascending: false })
+    .limit(200);
   if (id) q = q.eq('id', id);
   const { data, error } = await q;
   if (error) throw error;
@@ -203,7 +299,11 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
     p_opening_qty: opening,
     p_warehouse_id: text(body.warehouseId) || null,
   });
-  return ok(c, toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }), 201);
+  return ok(
+    c,
+    toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }),
+    201,
+  );
 });
 
 inventoryRoutes.post('/items/:id/reorder-level', requirePermission('inventory.reorder.manage'), async (c) => {
@@ -211,9 +311,15 @@ inventoryRoutes.post('/items/:id/reorder-level', requirePermission('inventory.re
   const body = await jsonBody(c);
   const raw = body.level;
   const level = raw === null ? null : Number(raw);
-  if (raw === undefined || (level !== null && (!Number.isFinite(level) || level < 0))) invalid('Reorder level must be zero or more, or empty');
+  if (raw === undefined || (level !== null && (!Number.isFinite(level) || level < 0)))
+    invalid('Reorder level must be zero or more, or empty');
   await callRpc<void>(userDb(c), 'inv_set_reorder_level', { p_item_id: id, p_level: level });
-  const { data, error } = await userDb(c).from('inv_items').select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id').eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
+  const { data, error } = await userDb(c)
+    .from('inv_items')
+    .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id')
+    .eq('org_id', orgOf(c))
+    .eq('id', id)
+    .maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, 'Item not found', 'not_found');
   return ok(c, toItem(data as ItemRow));
@@ -224,7 +330,13 @@ inventoryRoutes.post('/approval-policies', requirePermission('inventory.approval
   const minTotalQty = Number(body.minTotalQty);
   const requiredApprovals = Number(body.requiredApprovals);
   const warehouseId = body.warehouseId ? text(body.warehouseId) : null;
-  if (!Number.isFinite(minTotalQty) || minTotalQty < 0 || !Number.isInteger(requiredApprovals) || requiredApprovals < 1 || requiredApprovals > 3) {
+  if (
+    !Number.isFinite(minTotalQty) ||
+    minTotalQty < 0 ||
+    !Number.isInteger(requiredApprovals) ||
+    requiredApprovals < 1 ||
+    requiredApprovals > 3
+  ) {
     invalid('Enter a quantity threshold and between 1 and 3 approvals');
   }
   await callRpc<string>(userDb(c), 'inv_set_approval_policy', {
@@ -232,9 +344,21 @@ inventoryRoutes.post('/approval-policies', requirePermission('inventory.approval
     p_min_total_qty: minTotalQty,
     p_required: requiredApprovals,
   });
-  const { data, error } = await userDb(c).from('inv_approval_policies').select('id, warehouse_id, min_total_qty, required_approvals').eq('org_id', orgOf(c)).order('min_total_qty');
+  const { data, error } = await userDb(c)
+    .from('inv_approval_policies')
+    .select('id, warehouse_id, min_total_qty, required_approvals')
+    .eq('org_id', orgOf(c))
+    .order('min_total_qty');
   if (error) throw error;
-  return ok(c, ((data ?? []) as { id: string; warehouse_id: string | null; min_total_qty: number; required_approvals: number }[]).map((p) => ({ id: p.id, warehouseId: p.warehouse_id, minTotalQty: Number(p.min_total_qty), requiredApprovals: Number(p.required_approvals) })));
+  return ok(
+    c,
+    ((data ?? []) as { id: string; warehouse_id: string | null; min_total_qty: number; required_approvals: number }[]).map((p) => ({
+      id: p.id,
+      warehouseId: p.warehouse_id,
+      minTotalQty: Number(p.min_total_qty),
+      requiredApprovals: Number(p.required_approvals),
+    })),
+  );
 });
 
 inventoryRoutes.delete('/approval-policies/:id', requirePermission('inventory.approval_policies.manage'), async (c) => {
@@ -248,20 +372,29 @@ inventoryRoutes.post('/adjustments', requirePermission('inventory.adjustments.cr
   const warehouseId = text(body.warehouseId);
   const countedQty = Number(body.countedQty);
   const reason = text(body.reason);
-  if (!itemId || !warehouseId || !Number.isFinite(countedQty) || countedQty < 0 || !reason) invalid('Item, warehouse, counted quantity and reason are required');
+  if (!itemId || !warehouseId || !Number.isFinite(countedQty) || countedQty < 0 || !reason)
+    invalid('Item, warehouse, counted quantity and reason are required');
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'inv_submit_adjustment', {
-    p_item_id: itemId, p_warehouse_id: warehouseId, p_counted_qty: countedQty, p_reason: reason,
+    p_item_id: itemId,
+    p_warehouse_id: warehouseId,
+    p_counted_qty: countedQty,
+    p_reason: reason,
   });
   const [adjustment] = await loadAdjustments(c, made.id);
   return ok(c, adjustment, 201);
 });
 
-for (const [action, decision] of [['approve', 'approved'], ['reject', 'rejected']] as const) {
+for (const [action, decision] of [
+  ['approve', 'approved'],
+  ['reject', 'rejected'],
+] as const) {
   inventoryRoutes.post(`/adjustments/:id/${action}`, requirePermission('inventory.adjustments.approve'), async (c) => {
     const body = await c.req.json().catch(() => ({}));
     await callRpc<void>(userDb(c), 'inv_decide_adjustment', {
-      p_adjustment_id: idParam(c), p_decision: decision,
-      p_comment: text((body as Record<string, unknown>).comment) || null, p_channel: 'app',
+      p_adjustment_id: idParam(c),
+      p_decision: decision,
+      p_comment: text((body as Record<string, unknown>).comment) || null,
+      p_channel: 'app',
     });
     const [adjustment] = await loadAdjustments(c, c.req.param('id'));
     return ok(c, adjustment);
@@ -289,7 +422,10 @@ inventoryRoutes.post('/requests', requirePermission('inventory.request.create'),
   return ok(c, await oneRequest(c, made.id), 201);
 });
 
-for (const [action, decision] of [['approve', 'approved'], ['reject', 'rejected']] as const) {
+for (const [action, decision] of [
+  ['approve', 'approved'],
+  ['reject', 'rejected'],
+] as const) {
   inventoryRoutes.post(`/requests/:id/${action}`, requirePermission('inventory.request.approve'), async (c) => {
     const id = idParam(c);
     const body = await c.req.json().catch(() => ({}));
@@ -320,9 +456,21 @@ inventoryRoutes.post('/requests/:id/cancel', requirePermission('inventory.reques
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 inventoryRoutes.get('/storage-conditions', requirePermission('inventory.batches.read'), async (c) => {
-  const { data, error } = await userDb(c).from('inv_storage_conditions').select('id, name, min_temp_c, max_temp_c').eq('org_id', orgOf(c)).order('name');
+  const { data, error } = await userDb(c)
+    .from('inv_storage_conditions')
+    .select('id, name, min_temp_c, max_temp_c')
+    .eq('org_id', orgOf(c))
+    .order('name');
   if (error) throw error;
-  return ok(c, (data ?? []).map((s) => ({ id: s.id, name: s.name, minTempC: s.min_temp_c === null ? null : Number(s.min_temp_c), maxTempC: s.max_temp_c === null ? null : Number(s.max_temp_c) })));
+  return ok(
+    c,
+    (data ?? []).map((s) => ({
+      id: s.id,
+      name: s.name,
+      minTempC: s.min_temp_c === null ? null : Number(s.min_temp_c),
+      maxTempC: s.max_temp_c === null ? null : Number(s.max_temp_c),
+    })),
+  );
 });
 
 inventoryRoutes.post('/storage-conditions', requirePermission('inventory.batches.manage'), async (c) => {
@@ -330,7 +478,8 @@ inventoryRoutes.post('/storage-conditions', requirePermission('inventory.batches
   const name = text(b.name);
   const min = b.minTempC === null || b.minTempC === undefined || b.minTempC === '' ? null : Number(b.minTempC);
   const max = b.maxTempC === null || b.maxTempC === undefined || b.maxTempC === '' ? null : Number(b.maxTempC);
-  if (!name || (min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max))) invalid('A name is required; temperatures must be numbers');
+  if (!name || (min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max)))
+    invalid('A name is required; temperatures must be numbers');
   const id = await callRpc<string>(userDb(c), 'inv_create_storage_condition', { p_name: name, p_min_temp_c: min, p_max_temp_c: max });
   return ok(c, { id }, 201);
 });
@@ -361,20 +510,54 @@ inventoryRoutes.get('/batches', requirePermission('inventory.batches.read'), asy
     .order('expiry_date', { ascending: true, nullsFirst: false })
     .limit(500);
   if (error) throw error;
-  return ok(c, (data ?? []).map((b) => ({
-    id: b.id, itemId: b.item_id, batchNo: b.batch_no, mfgDate: b.mfg_date, expiryDate: b.expiry_date, status: b.status, supplierId: b.supplier_id,
-    stock: ((b.inv_batch_balances ?? []) as { warehouse_id: string; qty: number }[]).map((s) => ({ warehouseId: s.warehouse_id, qty: Number(s.qty) })),
-  })));
+  return ok(
+    c,
+    (data ?? []).map((b) => ({
+      id: b.id,
+      itemId: b.item_id,
+      batchNo: b.batch_no,
+      mfgDate: b.mfg_date,
+      expiryDate: b.expiry_date,
+      status: b.status,
+      supplierId: b.supplier_id,
+      stock: ((b.inv_batch_balances ?? []) as { warehouse_id: string; qty: number }[]).map((s) => ({
+        warehouseId: s.warehouse_id,
+        qty: Number(s.qty),
+      })),
+    })),
+  );
 });
 
 inventoryRoutes.post('/batches', requirePermission('inventory.batches.receive'), async (c) => {
   const b = await jsonBody(c);
-  const itemId = text(b.itemId), warehouseId = text(b.warehouseId), batchNo = text(b.batchNo);
-  const qty = Number(b.qty), mfg = text(b.mfgDate), exp = text(b.expiryDate), supplier = text(b.supplierId);
-  if (!UUID_RE.test(itemId) || !UUID_RE.test(warehouseId) || !batchNo || !Number.isFinite(qty) || qty <= 0 || (mfg && !DATE_RE.test(mfg)) || (exp && !DATE_RE.test(exp)) || (supplier && !UUID_RE.test(supplier))) {
+  const itemId = text(b.itemId),
+    warehouseId = text(b.warehouseId),
+    batchNo = text(b.batchNo);
+  const qty = Number(b.qty),
+    mfg = text(b.mfgDate),
+    exp = text(b.expiryDate),
+    supplier = text(b.supplierId);
+  if (
+    !UUID_RE.test(itemId) ||
+    !UUID_RE.test(warehouseId) ||
+    !batchNo ||
+    !Number.isFinite(qty) ||
+    qty <= 0 ||
+    (mfg && !DATE_RE.test(mfg)) ||
+    (exp && !DATE_RE.test(exp)) ||
+    (supplier && !UUID_RE.test(supplier))
+  ) {
     invalid('Item, warehouse, batch number and a quantity above zero are required');
   }
-  const id = await callRpc<string>(userDb(c), 'inv_receive_batch', { p_item_id: itemId, p_warehouse_id: warehouseId, p_qty: qty, p_batch_no: batchNo, p_mfg_date: mfg || null, p_expiry_date: exp || null, p_supplier_id: supplier || null });
+  const id = await callRpc<string>(userDb(c), 'inv_receive_batch', {
+    p_item_id: itemId,
+    p_warehouse_id: warehouseId,
+    p_qty: qty,
+    p_batch_no: batchNo,
+    p_mfg_date: mfg || null,
+    p_expiry_date: exp || null,
+    p_supplier_id: supplier || null,
+  });
   return ok(c, { id }, 201);
 });
 
@@ -389,18 +572,77 @@ inventoryRoutes.post('/batches/:id/status', requirePermission('inventory.batches
 
 inventoryRoutes.get('/expiry', requirePermission('inventory.batches.read'), async (c) => {
   const days = Math.min(Math.max(Math.trunc(Number(c.req.query('days') ?? 90)) || 90, 0), 3650);
-  const rows = await callRpc<{ batch_id: string; item_id: string; sku: string; name: string; batch_no: string; warehouse_id: string; qty: number; expiry_date: string; days_left: number; status: string }[]>(userDb(c), 'inv_expiry_report', { p_days: days });
-  return ok(c, rows.map((r) => ({ batchId: r.batch_id, itemId: r.item_id, sku: r.sku, name: r.name, batchNo: r.batch_no, warehouseId: r.warehouse_id, qty: Number(r.qty), expiryDate: r.expiry_date, daysLeft: r.days_left, status: r.status })));
+  const rows = await callRpc<
+    {
+      batch_id: string;
+      item_id: string;
+      sku: string;
+      name: string;
+      batch_no: string;
+      warehouse_id: string;
+      qty: number;
+      expiry_date: string;
+      days_left: number;
+      status: string;
+    }[]
+  >(userDb(c), 'inv_expiry_report', { p_days: days });
+  return ok(
+    c,
+    rows.map((r) => ({
+      batchId: r.batch_id,
+      itemId: r.item_id,
+      sku: r.sku,
+      name: r.name,
+      batchNo: r.batch_no,
+      warehouseId: r.warehouse_id,
+      qty: Number(r.qty),
+      expiryDate: r.expiry_date,
+      daysLeft: r.days_left,
+      status: r.status,
+    })),
+  );
 });
 
 // ------------------------------------------------------------------ stock forecast (sql/029): from the organization's own issue history
 
 inventoryRoutes.get('/forecast', requirePermission('inventory.forecast.read'), async (c) => {
-  const rows = await callRpc<{ item_id: string; sku: string; name: string; uom: string; available: number; daily_rate: number; days_of_cover: number | null; runs_out_on: string | null; history_days: number; issues_count: number; confidence: 'good' | 'thin' | 'none'; lead_days: number; on_order: number; suggested_order: number | null }[]>(userDb(c), 'inv_forecast', {});
-  return ok(c, rows.map((r) => ({
-    itemId: r.item_id, sku: r.sku, name: r.name, uom: r.uom, available: Number(r.available), dailyRate: Number(r.daily_rate), daysOfCover: r.days_of_cover, runsOutOn: r.runs_out_on,
-    historyDays: r.history_days, issuesCount: r.issues_count, confidence: r.confidence, leadDays: r.lead_days, onOrder: Number(r.on_order), suggestedOrder: r.suggested_order === null ? null : Number(r.suggested_order),
-  })));
+  const rows = await callRpc<
+    {
+      item_id: string;
+      sku: string;
+      name: string;
+      uom: string;
+      available: number;
+      daily_rate: number;
+      days_of_cover: number | null;
+      runs_out_on: string | null;
+      history_days: number;
+      issues_count: number;
+      confidence: 'good' | 'thin' | 'none';
+      lead_days: number;
+      on_order: number;
+      suggested_order: number | null;
+    }[]
+  >(userDb(c), 'inv_forecast', {});
+  return ok(
+    c,
+    rows.map((r) => ({
+      itemId: r.item_id,
+      sku: r.sku,
+      name: r.name,
+      uom: r.uom,
+      available: Number(r.available),
+      dailyRate: Number(r.daily_rate),
+      daysOfCover: r.days_of_cover,
+      runsOutOn: r.runs_out_on,
+      historyDays: r.history_days,
+      issuesCount: r.issues_count,
+      confidence: r.confidence,
+      leadDays: r.lead_days,
+      onOrder: Number(r.on_order),
+      suggestedOrder: r.suggested_order === null ? null : Number(r.suggested_order),
+    })),
+  );
 });
 
 // ------------------------------------------------------------------ transfers between warehouses (sql/033)
@@ -408,17 +650,33 @@ inventoryRoutes.get('/forecast', requirePermission('inventory.forecast.read'), a
 // Each change is one database function that checks role, module and state and writes its audit row itself.
 
 type TransferRow = {
-  id: string; number: string; requester_id: string; from_warehouse_id: string; to_warehouse_id: string; reason: string; status: string;
-  decided_by: string | null; decided_at: string | null; decision_comment: string | null; dispatched_by: string | null; dispatched_at: string | null;
-  received_by: string | null; received_at: string | null; created_at: string;
+  id: string;
+  number: string;
+  requester_id: string;
+  from_warehouse_id: string;
+  to_warehouse_id: string;
+  reason: string;
+  status: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_comment: string | null;
+  dispatched_by: string | null;
+  dispatched_at: string | null;
+  received_by: string | null;
+  received_at: string | null;
+  created_at: string;
 };
 
 async function loadTransfers(c: Context<AppEnv>, id?: string) {
   const client = userDb(c);
   let q = client
     .from('inv_transfers')
-    .select('id, number, requester_id, from_warehouse_id, to_warehouse_id, reason, status, decided_by, decided_at, decision_comment, dispatched_by, dispatched_at, received_by, received_at, created_at')
-    .eq('org_id', orgOf(c)).order('created_at', { ascending: false }).limit(200);
+    .select(
+      'id, number, requester_id, from_warehouse_id, to_warehouse_id, reason, status, decided_by, decided_at, decision_comment, dispatched_by, dispatched_at, received_by, received_at, created_at',
+    )
+    .eq('org_id', orgOf(c))
+    .order('created_at', { ascending: false })
+    .limit(200);
   if (id) q = q.eq('id', id);
   const { data, error } = await q;
   if (error) throw error;
@@ -426,13 +684,21 @@ async function loadTransfers(c: Context<AppEnv>, id?: string) {
   const ids = rows.map((r) => r.id);
   const lines = new Map<string, { itemId: string; qty: number }[]>();
   const batches = new Map<string, { itemId: string; batchId: string; batchNo: string; expiryDate: string | null; qty: number }[]>();
-  const approvals = new Map<string, { approverId: string; decision: string; comment: string | null; channel: string; decidedAt: string }[]>();
+  const approvals = new Map<
+    string,
+    { approverId: string; decision: string; comment: string | null; channel: string; decidedAt: string }[]
+  >();
   if (ids.length > 0) {
     const org = orgOf(c);
     const [l, b, a] = await Promise.all([
       client.from('inv_transfer_lines').select('transfer_id, item_id, qty').eq('org_id', org).in('transfer_id', ids),
       client.from('inv_transfer_batches').select('transfer_id, item_id, batch_id, qty').eq('org_id', org).in('transfer_id', ids),
-      client.from('inv_transfer_approvals').select('transfer_id, approver_id, decision, comment, channel, decided_at').eq('org_id', org).in('transfer_id', ids).order('decided_at'),
+      client
+        .from('inv_transfer_approvals')
+        .select('transfer_id, approver_id, decision, comment, channel, decided_at')
+        .eq('org_id', org)
+        .in('transfer_id', ids)
+        .order('decided_at'),
     ]);
     if (l.error) throw l.error;
     if (b.error) throw b.error;
@@ -443,23 +709,60 @@ async function loadTransfers(c: Context<AppEnv>, id?: string) {
     const batchRows = (b.data ?? []) as { transfer_id: string; item_id: string; batch_id: string; qty: number }[];
     const info = new Map<string, { batch_no: string; expiry_date: string | null }>();
     if (batchRows.length > 0) {
-      const { data: bi, error: biErr } = await client.from('inv_batches').select('id, batch_no, expiry_date').eq('org_id', org).in('id', [...new Set(batchRows.map((r) => r.batch_id))]);
+      const { data: bi, error: biErr } = await client
+        .from('inv_batches')
+        .select('id, batch_no, expiry_date')
+        .eq('org_id', org)
+        .in('id', [...new Set(batchRows.map((r) => r.batch_id))]);
       if (biErr) throw biErr;
       for (const r of (bi ?? []) as { id: string; batch_no: string; expiry_date: string | null }[]) info.set(r.id, r);
     }
     for (const row of batchRows) {
       const meta = info.get(row.batch_id);
-      batches.set(row.transfer_id, [...(batches.get(row.transfer_id) ?? []), { itemId: row.item_id, batchId: row.batch_id, batchNo: meta?.batch_no ?? '', expiryDate: meta?.expiry_date ?? null, qty: Number(row.qty) }]);
+      batches.set(row.transfer_id, [
+        ...(batches.get(row.transfer_id) ?? []),
+        {
+          itemId: row.item_id,
+          batchId: row.batch_id,
+          batchNo: meta?.batch_no ?? '',
+          expiryDate: meta?.expiry_date ?? null,
+          qty: Number(row.qty),
+        },
+      ]);
     }
-    for (const row of (a.data ?? []) as { transfer_id: string; approver_id: string; decision: string; comment: string | null; channel: string; decided_at: string }[]) {
-      approvals.set(row.transfer_id, [...(approvals.get(row.transfer_id) ?? []), { approverId: row.approver_id, decision: row.decision, comment: row.comment, channel: row.channel, decidedAt: row.decided_at }]);
+    for (const row of (a.data ?? []) as {
+      transfer_id: string;
+      approver_id: string;
+      decision: string;
+      comment: string | null;
+      channel: string;
+      decided_at: string;
+    }[]) {
+      approvals.set(row.transfer_id, [
+        ...(approvals.get(row.transfer_id) ?? []),
+        { approverId: row.approver_id, decision: row.decision, comment: row.comment, channel: row.channel, decidedAt: row.decided_at },
+      ]);
     }
   }
   return rows.map((r) => ({
-    id: r.id, number: r.number, requesterId: r.requester_id, fromWarehouseId: r.from_warehouse_id, toWarehouseId: r.to_warehouse_id,
-    reason: r.reason, status: r.status, decidedBy: r.decided_by, decidedAt: r.decided_at, decisionComment: r.decision_comment,
-    dispatchedBy: r.dispatched_by, dispatchedAt: r.dispatched_at, receivedBy: r.received_by, receivedAt: r.received_at, createdAt: r.created_at,
-    lines: lines.get(r.id) ?? [], batches: batches.get(r.id) ?? [], approvals: approvals.get(r.id) ?? [],
+    id: r.id,
+    number: r.number,
+    requesterId: r.requester_id,
+    fromWarehouseId: r.from_warehouse_id,
+    toWarehouseId: r.to_warehouse_id,
+    reason: r.reason,
+    status: r.status,
+    decidedBy: r.decided_by,
+    decidedAt: r.decided_at,
+    decisionComment: r.decision_comment,
+    dispatchedBy: r.dispatched_by,
+    dispatchedAt: r.dispatched_at,
+    receivedBy: r.received_by,
+    receivedAt: r.received_at,
+    createdAt: r.created_at,
+    lines: lines.get(r.id) ?? [],
+    batches: batches.get(r.id) ?? [],
+    approvals: approvals.get(r.id) ?? [],
   }));
 }
 
@@ -472,8 +775,15 @@ async function oneTransfer(c: Context<AppEnv>, id: string) {
 inventoryRoutes.get('/transfers', requirePermission('inventory.transfers.read'), async (c) => ok(c, await loadTransfers(c)));
 
 inventoryRoutes.get('/in-transit', requirePermission('inventory.transfers.read'), async (c) => {
-  const rows = await callRpc<{ item_id: string; sku: string; name: string; uom: string; qty: number; transfers: number }[]>(userDb(c), 'inv_in_transit', {});
-  return ok(c, (rows ?? []).map((r) => ({ itemId: r.item_id, sku: r.sku, name: r.name, uom: r.uom, qty: Number(r.qty), transfers: r.transfers })));
+  const rows = await callRpc<{ item_id: string; sku: string; name: string; uom: string; qty: number; transfers: number }[]>(
+    userDb(c),
+    'inv_in_transit',
+    {},
+  );
+  return ok(
+    c,
+    (rows ?? []).map((r) => ({ itemId: r.item_id, sku: r.sku, name: r.name, uom: r.uom, qty: Number(r.qty), transfers: r.transfers })),
+  );
 });
 
 inventoryRoutes.get('/transfers/:id', requirePermission('inventory.transfers.read'), async (c) => ok(c, await oneTransfer(c, idParam(c))));
@@ -490,17 +800,26 @@ inventoryRoutes.post('/transfers', requirePermission('inventory.transfers.create
     .filter((l) => l.itemId && Number.isFinite(l.qty) && l.qty > 0);
   if (cleaned.length === 0 || cleaned.length !== lines.length) invalid('Add at least one item, each with a quantity above zero');
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'inv_submit_transfer', {
-    p_from_warehouse_id: fromWarehouseId, p_to_warehouse_id: toWarehouseId, p_reason: text(body.reason), p_lines: cleaned,
+    p_from_warehouse_id: fromWarehouseId,
+    p_to_warehouse_id: toWarehouseId,
+    p_reason: text(body.reason),
+    p_lines: cleaned,
   });
   return ok(c, await oneTransfer(c, made.id), 201);
 });
 
-for (const [action, decision] of [['approve', 'approved'], ['reject', 'rejected']] as const) {
+for (const [action, decision] of [
+  ['approve', 'approved'],
+  ['reject', 'rejected'],
+] as const) {
   inventoryRoutes.post(`/transfers/:id/${action}`, requirePermission('inventory.transfers.approve'), async (c) => {
     const id = idParam(c);
     const body = await c.req.json().catch(() => ({}));
     await callRpc<void>(userDb(c), 'inv_decide_transfer', {
-      p_transfer_id: id, p_decision: decision, p_comment: text((body as Record<string, unknown>).comment) || null, p_channel: 'app',
+      p_transfer_id: id,
+      p_decision: decision,
+      p_comment: text((body as Record<string, unknown>).comment) || null,
+      p_channel: 'app',
     });
     return ok(c, await oneTransfer(c, id));
   });

@@ -43,6 +43,9 @@ const DEMO_MODULES: Omit<ModuleStatus, 'enabled'>[] = [
   { key: 'purchasing', name: 'Purchasing', description: 'Suppliers, purchase orders and receiving goods into stock (demo).', suite: 'Sales & Purchasing', core: false },
   { key: 'sales', name: 'Sales', description: 'Customers and sales orders that raise stock requests (demo).', suite: 'Sales & Purchasing', core: false },
 ];
+// The shared list (MODULES) now has purchasing and sales too; the demo versions replace them instead of appearing twice (two
+// entries with the same key broke Settings > Apps; found by the smoke test).
+const ALL_DEMO_MODULES = [...MODULES.filter((m) => !DEMO_MODULES.some((d) => d.key === m.key)), ...DEMO_MODULES];
 const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales']);
 
 let auditId = 0;
@@ -98,9 +101,9 @@ function handle(method: string, area: string | undefined, id: string | undefined
 
   if (area === 'modules') {
     if (!id) {
-      return [...MODULES, ...DEMO_MODULES].map<ModuleStatus>((m) => ({ key: m.key, name: m.name, description: m.description, suite: m.suite, core: m.core, enabled: enabledModules.has(m.key) }));
+      return ALL_DEMO_MODULES.map<ModuleStatus>((m) => ({ key: m.key, name: m.name, description: m.description, suite: m.suite, core: m.core, enabled: enabledModules.has(m.key) }));
     }
-    const mod = [...MODULES, ...DEMO_MODULES].find((m) => m.key === id);
+    const mod = ALL_DEMO_MODULES.find((m) => m.key === id);
     if (!mod) throw new DemoError(404, 'Unknown module', 'not_found');
     if (action === 'enable') enabledModules.add(id);
     else if (action === 'disable') enabledModules.delete(id);

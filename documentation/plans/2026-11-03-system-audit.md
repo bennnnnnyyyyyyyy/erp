@@ -72,3 +72,36 @@ Severity: **P0** breaks a customer or the demo, **P1** wrong data shown or a non
 1. Before the demo: **3** (decide e-invoicing), **12** and **8** (data), and do not take payments on very old invoices on stage (**1**).
 2. Next: **1** (server-side balances and by-id endpoints), **2** (isolation tests), **5** (Biome), **4** (rate limit).
 3. Then: **7** (native Arabic), **9** (repo root), **6** (smoke tests), **11** (lazy loading).
+
+## Status after the fix pass (2026-11-03, same day)
+
+| # | Status | What was done |
+|---|---|---|
+| 1 | **Fixed (in code, not deployed)** | New read endpoints compute everything on the server over all rows (paged by 1000): `GET /v1/finance/open-items?direction=in|out` (outstanding per invoice and expense), `GET /v1/finance/payments?for=c:|s:|e:<id>` (all payments for one record), `GET /v1/finance/payments/:id`, `/expenses/:id`, `/v1/sales/invoices/:id`, `/v1/purchasing/supplier-invoices/:id` (with item and order number); payment rows carry their target's number. The Payments form, the payment, expense and both invoice pages use them; nothing adds up money from a capped list any more. Tests: `apps/api/test/finance_balances.test.ts`. |
+| 2 | **Fixed (test written, runs in CI)** | `sql/tests/034_isolation_gaps.sql` covers the 7 tables: org A sees its rows, org B sees none and cannot insert, update or delete. Not run locally (needs the local Supabase of the SQL-tests workflow); it runs on the next push. |
+| 3 | **Open, Ben** | The Supabase connection available to Claude here is a different account (project `saleooperations`, not `ggoerp`), so the live state was not read. Run the query in the finding. |
+| 4 | **Fixed (not deployed)** | Workers rate limiting binding `API_LIMITER` (600 requests a minute per user, per IP for webhooks) in `apps/api/wrangler.toml`; `middleware/rateLimit.ts` answers 429 `rate_limited`. `wrangler deploy --dry-run` accepts the binding. Tests: `apps/api/test/rate_limit.test.ts`. |
+| 5 | **Open, needs Ben** | Adding Biome (a new dev dependency) was refused by the permission system in this session. Allow `npm install -D @biomejs/biome` (or add it yourself), then format `apps/api/src/modules/*/routes.ts` and add `biome ci` to CI. |
+| 6 | Not done | agents.md forbids automated browser testing by agents; a CI smoke job is Ben's call. |
+| 7 | Open, a person | Native Arabic review. |
+| 8 | **Half fixed** | Invites now require a full name, stored on the new account (`authAdmin.createInvitedAccount`); existing demo users still need their names set (live data, Ben). |
+| 9 | Open, Ben | Repo-root files are Ben's; not moved or deleted. |
+| 10 | Open | Needs a live occurrence. |
+| 11 | **Partly fixed** | Every screen is a lazy chunk (`modules/registry.tsx`, Suspense in `Shell.tsx`): 29 files, 174 kB of screens no longer loaded at start. Start-up is still 620 kB, mostly React and the Supabase client that sign-in needs. |
+| 12 | Open, Ben | Demo data. |
+| 13 | Not done | Low value; left. |
+
+## Second fix pass (2026-11-03, after Ben's go-ahead)
+
+Ben: use the Supabase CLI (the MCP connector is another account), allow the formatter, do the smoke test (the agents.md browser rule
+is for Antigravity and Codex only), he reviews the Arabic himself, drop "Failed to fetch".
+
+| # | Status now | What was done |
+|---|---|---|
+| 3 | **Answered; decision open** | Read-only on project ggoerp via `supabase db query --linked`: `einvoicing` is ON for **Demo Cosmetics Factory** (since 3 Nov 16:30 Cairo) and **Demo Trading Co.** (since 18:43). The WORKLOG line "on for 0 organizations" was true when written and is out of date (corrected in the WORKLOG). Switching it off is a live change: Ben's call. |
+| 5 | **Fixed** | Biome 2.6.4 (`biome.json`): formatter and recommended lint rules for `apps/api` and `packages/shared` (`noNonNullAssertion` off: the code uses `!` on purpose). 70 files formatted; longest API line 799 → 195 characters (long text literals). Two real lint errors fixed (untyped `let` in `eta_transport.contract.ts`). `npm run lint` = `biome ci`; a CI step runs it before the typecheck. `lineEnding: auto` so it passes on Windows checkouts and on Linux CI. The web app is not formatted yet (left out to avoid a 100-file diff colliding with parallel work). |
+| 6 | **Fixed** | Playwright 1.64 smoke test (`apps/web/e2e/smoke.e2e.ts`, `playwright.config.ts`): starts the sample build, discovers every page (Home tiles → sidebars → first record of each list), on desktop and a phone; fails on a missing heading, "Page not found", any console error or exception, and sideways scrolling on the phone; plus a right-to-left pass. CI runs it before the deploy. It found two real bugs on its first run, both fixed: the sample build's Purchase invoices page stayed on "Loading…" forever (the sample has no such data; the page now shows load errors and the sample build no longer lists it), and Settings > Apps listed Purchasing and Sales twice (duplicate module entries in `lib/demo.ts`). |
+| 7 | **Handed to Ben** | `2026-11-03-arabic-review-sheet.md`: the 216 Arabic strings new or changed today, with a column for corrections. |
+| 10 | **Dropped** | At Ben's request. |
+| 8 | **Fixed** | Ben gave the names; set on the four accounts on ggoerp (`full_name`, see WORKLOG). Live: "Requested by" shows Grant Holden. |
+| 9, 12 | Open, Ben | The repo-root files and the demo data are Ben's files and live data: not touched. |

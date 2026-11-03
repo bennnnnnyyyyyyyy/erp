@@ -15,8 +15,14 @@ import { requirePermission } from '../../middleware/tenant';
 type Ctx = Context<AppEnv>;
 
 type MemberRow = {
-  id: string; user_id: string; role: Role; created_at: string; disabled_at: string | null;
-  email: string; name: string | null; last_sign_in_at: string | null;
+  id: string;
+  user_id: string;
+  role: Role;
+  created_at: string;
+  disabled_at: string | null;
+  email: string;
+  name: string | null;
+  last_sign_in_at: string | null;
 };
 type InvitationRow = { id: string; user_id: string; email: string; role: Role; invited_by: string; created_at: string };
 
@@ -36,7 +42,14 @@ function toMember(r: MemberRow): Member {
   };
 }
 
-const toInvitation = (r: InvitationRow): Invitation => ({ id: r.id, userId: r.user_id, email: r.email, role: r.role, invitedBy: r.invited_by, createdAt: r.created_at });
+const toInvitation = (r: InvitationRow): Invitation => ({
+  id: r.id,
+  userId: r.user_id,
+  email: r.email,
+  role: r.role,
+  invitedBy: r.invited_by,
+  createdAt: r.created_at,
+});
 
 const idParam = (c: Ctx) => {
   const id = c.req.param('id') ?? '';
@@ -76,9 +89,15 @@ memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
   if (!EMAIL_RE.test(email)) invalid('Enter a valid email address');
   const role = body.role as Role;
   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
+  // The person's name is required (system audit 2026-11-03, finding 8): without it every screen shows an email prefix.
+  const fullName = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : '';
+  if (fullName.length < 2 || fullName.length > 120) invalid("Enter the person's full name");
 
   // An existing account only gets an invitation they must accept (it never becomes a member without consent).
-  const step = await callRpc<{ kind: 'invitation' | 'needs_account'; id?: string }>(userDb(c), 'core_invite_member', { p_email: email, p_role: role });
+  const step = await callRpc<{ kind: 'invitation' | 'needs_account'; id?: string }>(userDb(c), 'core_invite_member', {
+    p_email: email,
+    p_role: role,
+  });
   if (step.kind === 'invitation') {
     const rows = await callRpc<InvitationRow[]>(userDb(c), 'core_list_invitations');
     const row = rows.find((r) => r.id === step.id);
@@ -88,7 +107,7 @@ memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
   }
 
   // A new email: create the account (Auth admin), then the database checks it is this org's fresh account and adds it.
-  const account = await createInvitedAccount(c.env, email, c.var.tenant.orgId, appOrigin(c));
+  const account = await createInvitedAccount(c.env, email, fullName, c.var.tenant.orgId, appOrigin(c));
   const membershipId = await callRpc<string>(userDb(c), 'core_add_invited_account', { p_user_id: account.userId, p_role: role });
   const result: InviteResult = { kind: 'added', member: await loadMember(c, membershipId), inviteLink: account.link };
   return ok(c, result, 201);

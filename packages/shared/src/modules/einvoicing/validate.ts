@@ -59,7 +59,8 @@ export function validateInput(input: EtaDocInput, now: Date = new Date()): Issue
   });
 
   const refs = input.references ?? [];
-  if (input.kind === 'invoice' && refs.length > 0) add('REFERENCES_ON_INVOICE', 'references', 'An invoice cannot reference other documents.');
+  if (input.kind === 'invoice' && refs.length > 0)
+    add('REFERENCES_ON_INVOICE', 'references', 'An invoice cannot reference other documents.');
   if (input.kind !== 'invoice' && refs.length === 0) {
     add('REFERENCES_MISSING', 'references', 'A credit or debit note must reference the original invoice.');
   }
@@ -82,7 +83,8 @@ export type OriginalInvoice = {
  */
 export function validateNote(input: EtaDocInput, originals: OriginalInvoice[], now?: Date): Issue[] {
   const issues: Issue[] = validateInput(input, now);
-  const add = (code: string, path: string, message: string, severity: Issue['severity'] = 'error') => issues.push({ code, path, message, severity });
+  const add = (code: string, path: string, message: string, severity: Issue['severity'] = 'error') =>
+    issues.push({ code, path, message, severity });
   if (input.kind === 'invoice') return issues;
 
   const refs = new Set(input.references ?? []);
@@ -90,7 +92,8 @@ export function validateNote(input: EtaDocInput, originals: OriginalInvoice[], n
   if (refs.size > 0) add('REFERENCE_UNKNOWN', 'references', `Referenced invoice not found: ${[...refs].join(', ')}.`);
 
   for (const o of originals) {
-    if (o.receiverId !== input.receiver.id) add('REFERENCE_RECIPIENT', 'references', 'The note and the invoice must have the same customer.');
+    if (o.receiverId !== input.receiver.id)
+      add('REFERENCE_RECIPIENT', 'references', 'The note and the invoice must have the same customer.');
     if (!(o.dateTimeIssued < input.dateTimeIssued)) add('REFERENCE_DATE', 'dateTimeIssued', 'The note must be dated after the invoice.');
   }
   const originalCodes = new Set(originals.flatMap((o) => o.lines.map((l) => l.itemCode)));
@@ -99,11 +102,20 @@ export function validateNote(input: EtaDocInput, originals: OriginalInvoice[], n
   // The SDK says a note's lines must equal the referenced invoices' lines with only quantities and amounts changed, but also that a
   // line's quantity must be above zero. Whether a partial note may leave an item out is therefore Unverified (plan section 13): warn, do not block.
   for (const c of originalCodes) {
-    if (!noteCodes.has(c)) add('NOTE_MISSING_ITEM', 'lines', `Item ${c} from the original invoice(s) is not on the note. ETA may require every original line; check on PreProd.`, 'warning');
+    if (!noteCodes.has(c))
+      add(
+        'NOTE_MISSING_ITEM',
+        'lines',
+        `Item ${c} from the original invoice(s) is not on the note. ETA may require every original line; check on PreProd.`,
+        'warning',
+      );
   }
 
   if (input.kind === 'credit') {
-    const noteTotal = calcTotals(input.lines.map((l) => calcLine(l)), input.extraDiscountAmount ? parseDec(input.extraDiscountAmount) : ZERO).totalAmount;
+    const noteTotal = calcTotals(
+      input.lines.map((l) => calcLine(l)),
+      input.extraDiscountAmount ? parseDec(input.extraDiscountAmount) : ZERO,
+    ).totalAmount;
     const originalTotal = originals.reduce((s, o) => s + parseDec(o.totalAmount), ZERO);
     if (noteTotal > originalTotal) add('CREDIT_EXCEEDS_ORIGINAL', 'totalAmount', 'A credit note cannot exceed the original invoice total.');
   }

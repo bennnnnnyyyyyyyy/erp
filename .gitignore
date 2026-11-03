@@ -55,3 +55,7 @@ Trial_capture_workbook_v12.xlsx
 documentation/research
 documentation/reference/eta-sdk/
 .github/prompts
+
+# Playwright smoke test output (apps/web/e2e)
+apps/web/test-results/
+apps/web/playwright-report/

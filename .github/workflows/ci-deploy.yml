@@ -34,11 +34,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Format and lint (biome.json: apps/api, packages/shared). Fails on errors and unformatted files, not on warnings.
+      - name: Lint and format check
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Test
         run: npm test
+
+      # Browser smoke test of every screen in the sample build (apps/web/e2e, no secrets, no database). A broken screen stops the deploy.
+      - name: Install the smoke-test browser
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Smoke test every screen
+        run: npm run test:e2e -w apps/web
 
       - name: Build web app
         run: npm run build -w apps/web

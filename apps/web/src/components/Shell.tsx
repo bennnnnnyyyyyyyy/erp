@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { Loading } from './Loading';
 import { api } from '../lib/api';
 import { demoMode } from '../lib/demo';
 import { useI18n } from '../lib/i18n';
@@ -142,7 +143,10 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           <Home apps={apps} />
         ) : Page ? (
           <ParamsContext.Provider value={route.params}>
-            <Page key={`${lang}:${path}`} />
+            {/* Pages are lazy chunks (modules/registry.tsx): the skeleton shows while one is fetched the first time. */}
+            <Suspense fallback={<section className="page"><Loading /></section>}>
+              <Page key={`${lang}:${path}`} />
+            </Suspense>
           </ParamsContext.Provider>
         ) : (
           <section>

@@ -15,7 +15,12 @@ describe('permissions', () => {
 
   it('lets members run a transfer but never approve one', () => {
     const member = defaultPermissionsFor('member');
-    for (const key of ['inventory.transfers.read', 'inventory.transfers.create', 'inventory.transfers.dispatch', 'inventory.transfers.receive']) {
+    for (const key of [
+      'inventory.transfers.read',
+      'inventory.transfers.create',
+      'inventory.transfers.dispatch',
+      'inventory.transfers.receive',
+    ]) {
       expect(member).toContain(key);
     }
     expect(member).not.toContain('inventory.transfers.approve');

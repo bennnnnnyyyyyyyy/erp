@@ -33,13 +33,23 @@ describe('inventory transfers API', () => {
 
   it('puts a permission check on every transfer route', () => {
     const declared = transferSource.match(/inventoryRoutes\.(get|post)\(/g) ?? [];
-    const guarded = transferSource.match(/inventoryRoutes\.(get|post)\([^\n]*requirePermission\('inventory\.transfers\.(read|create|approve|dispatch|receive)'\)/g) ?? [];
+    const guarded =
+      transferSource.match(
+        /inventoryRoutes\.(get|post)\([^\n]*requirePermission\('inventory\.transfers\.(read|create|approve|dispatch|receive)'\)/g,
+      ) ?? [];
     expect(declared.length).toBeGreaterThan(0);
     expect(guarded.length).toBe(declared.length);
   });
 
   it('reaches the stock only through the database functions', () => {
-    for (const fn of ['inv_submit_transfer', 'inv_decide_transfer', 'inv_dispatch_transfer', 'inv_receive_transfer', 'inv_cancel_transfer', 'inv_in_transit']) {
+    for (const fn of [
+      'inv_submit_transfer',
+      'inv_decide_transfer',
+      'inv_dispatch_transfer',
+      'inv_receive_transfer',
+      'inv_cancel_transfer',
+      'inv_in_transit',
+    ]) {
       expect(transferSource).toContain(`'${fn}'`);
     }
     expect(transferSource).not.toMatch(/\.from\('inv_stock_(moves|balances)'\)/);
@@ -47,7 +57,10 @@ describe('inventory transfers API', () => {
   });
 
   it('asks for approval permission on approve and reject, never the create permission', () => {
-    const loop = transferSource.slice(transferSource.indexOf("for (const [action, decision]"), transferSource.indexOf("'/transfers/:id/dispatch'"));
+    const loop = transferSource.slice(
+      transferSource.indexOf('for (const [action, decision]'),
+      transferSource.indexOf("'/transfers/:id/dispatch'"),
+    );
     expect(loop).toContain("requirePermission('inventory.transfers.approve')");
     expect(loop).not.toContain("requirePermission('inventory.transfers.create')");
   });

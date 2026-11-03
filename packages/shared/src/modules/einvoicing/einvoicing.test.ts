@@ -64,9 +64,7 @@ describe('raw json', () => {
 describe('canonical serialization', () => {
   it('upper-cases names, quotes values, repeats array names, keeps number text', () => {
     const doc = parseDoc('{"a":{"b":"x","n":10.50},"items":[{"q":1},{"q":2.0}],"refs":["u1","u2"],"signatures":[{"v":"s"}]}') as DocObject;
-    expect(canonicalize(doc)).toBe(
-      '"A""B""x""N""10.50"' + '"ITEMS""ITEMS""Q""1""ITEMS""Q""2.0"' + '"REFS""REFS""u1""REFS""u2"',
-    );
+    expect(canonicalize(doc)).toBe('"A""B""x""N""10.50"' + '"ITEMS""ITEMS""Q""1""ITEMS""Q""2.0"' + '"REFS""REFS""u1""REFS""u2"');
   });
   it('ignores signatures', () => {
     const a = parseDoc('{"a":"1"}') as DocObject;
@@ -90,14 +88,49 @@ const sampleTaxes = (rates: Record<string, string>, fixed: Record<string, string
     const t = `T${i + 1}`;
     return fixed[t] !== undefined ? { taxType: t, subType: t, amount: fixed[t] } : { taxType: t, subType: t, rate: rates[t] ?? '0' };
   });
-const RATES = { T1: '14', T2: '12', T4: '5', T5: '14', T7: '10', T8: '14', T9: '12', T10: '10', T11: '14', T12: '12', T13: '10', T14: '14', T15: '12', T16: '10', T17: '10', T18: '14', T19: '12', T20: '10' };
+const RATES = {
+  T1: '14',
+  T2: '12',
+  T4: '5',
+  T5: '14',
+  T7: '10',
+  T8: '14',
+  T9: '12',
+  T10: '10',
+  T11: '14',
+  T12: '12',
+  T13: '10',
+  T14: '14',
+  T15: '12',
+  T16: '10',
+  T17: '10',
+  T18: '14',
+  T19: '12',
+  T20: '10',
+};
 const sampleLine1: LineInput = {
-  description: 'Computer1', itemType: 'GS1', itemCode: '10001774', unitType: 'EA', quantity: '5', unitPriceEGP: '189.40',
-  discountRate: '7', itemsDiscount: '5', valueDifference: '7', taxes: sampleTaxes(RATES, { T3: '30', T6: '60' }),
+  description: 'Computer1',
+  itemType: 'GS1',
+  itemCode: '10001774',
+  unitType: 'EA',
+  quantity: '5',
+  unitPriceEGP: '189.40',
+  discountRate: '7',
+  itemsDiscount: '5',
+  valueDifference: '7',
+  taxes: sampleTaxes(RATES, { T3: '30', T6: '60' }),
 };
 const sampleLine2: LineInput = {
-  description: 'Computer2', itemType: 'GS1', itemCode: '10003752', unitType: 'EA', quantity: '7', unitPriceEGP: '94.70',
-  discountAmount: '10', itemsDiscount: '9', valueDifference: '6', taxes: sampleTaxes(RATES, { T3: '30', T6: '60' }),
+  description: 'Computer2',
+  itemType: 'GS1',
+  itemCode: '10003752',
+  unitType: 'EA',
+  quantity: '7',
+  unitPriceEGP: '94.70',
+  discountAmount: '10',
+  itemsDiscount: '9',
+  valueDifference: '6',
+  taxes: sampleTaxes(RATES, { T3: '30', T6: '60' }),
 };
 
 describe('line and document arithmetic reproduces ETA equations (SDK sample)', () => {
@@ -142,7 +175,9 @@ describe('line and document arithmetic reproduces ETA equations (SDK sample)', (
   });
   it('rejects bad lines', () => {
     expect(() => calcLine({ ...sampleLine1, quantity: '0' })).toThrow('INVALID_QUANTITY');
-    expect(() => calcLine({ ...sampleLine1, taxes: [...sampleLine1.taxes, { taxType: 'T1', subType: 'V009', rate: '14' }] })).toThrow('DUPLICATE_TAX_TYPE');
+    expect(() => calcLine({ ...sampleLine1, taxes: [...sampleLine1.taxes, { taxType: 'T1', subType: 'V009', rate: '14' }] })).toThrow(
+      'DUPLICATE_TAX_TYPE',
+    );
     expect(() => calcLine({ ...sampleLine1, taxes: [{ taxType: 'T3', subType: 'Tbl02', rate: '5' }] })).toThrow('FIXED_AMOUNT_REQUIRED');
     expect(() => calcLine({ ...sampleLine1, discountAmount: '1' })).toThrow('DISCOUNT_MISMATCH');
     expect(() => calcLine({ ...sampleLine1, discountRate: '0', discountAmount: '99999' })).toThrow('INVALID_DISCOUNT');
@@ -153,19 +188,43 @@ const baseInput = (over: Partial<EtaDocInput> = {}): EtaDocInput => ({
   kind: 'invoice',
   version: '1.0',
   issuer: {
-    id: '100200300', name: 'Test Seller LLC', branchId: '0',
+    id: '100200300',
+    name: 'Test Seller LLC',
+    branchId: '0',
     address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 Test St', buildingNumber: '1' },
   },
   receiver: {
-    type: 'B', id: '200300400', name: 'Test Buyer LLC',
+    type: 'B',
+    id: '200300400',
+    name: 'Test Buyer LLC',
     address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 Test St', buildingNumber: '2' },
   },
   dateTimeIssued: '2026-11-02T10:15:00Z',
   taxpayerActivityCode: '4620',
   internalId: 'INV-0001',
   lines: [
-    { description: 'Face cream 50ml', itemType: 'EGS', itemCode: 'EG-100200300-FC50', unitType: 'EA', quantity: '10', unitPriceEGP: '125.50', taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }] },
-    { description: 'Consulting', itemType: 'EGS', itemCode: 'EG-100200300-SVC', unitType: 'EA', quantity: '1', unitPriceEGP: '1000', discountRate: '10', taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }, { taxType: 'T4', subType: 'W004', rate: '5' }] },
+    {
+      description: 'Face cream 50ml',
+      itemType: 'EGS',
+      itemCode: 'EG-100200300-FC50',
+      unitType: 'EA',
+      quantity: '10',
+      unitPriceEGP: '125.50',
+      taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }],
+    },
+    {
+      description: 'Consulting',
+      itemType: 'EGS',
+      itemCode: 'EG-100200300-SVC',
+      unitType: 'EA',
+      quantity: '1',
+      unitPriceEGP: '1000',
+      discountRate: '10',
+      taxes: [
+        { taxType: 'T1', subType: 'V009', rate: '14' },
+        { taxType: 'T4', subType: 'W004', rate: '5' },
+      ],
+    },
   ],
   ...over,
 });
@@ -197,9 +256,22 @@ describe('buildDocument', () => {
     expect(canonicalize(sent)).toBe(canonicalize(doc));
   });
   it('a foreign-currency line carries amount sold and rate', () => {
-    const { doc } = buildDocument(baseInput({
-      lines: [{ description: 'Export', itemType: 'EGS', itemCode: 'EG-1-X', unitType: 'EA', quantity: '1', unitPriceEGP: '189.40', foreign: { currency: 'EUR', amountSold: '10', exchangeRate: '18.94' }, taxes: [{ taxType: 'T1', subType: 'V001', rate: '0' }] }],
-    }));
+    const { doc } = buildDocument(
+      baseInput({
+        lines: [
+          {
+            description: 'Export',
+            itemType: 'EGS',
+            itemCode: 'EG-1-X',
+            unitType: 'EA',
+            quantity: '1',
+            unitPriceEGP: '189.40',
+            foreign: { currency: 'EUR', amountSold: '10', exchangeRate: '18.94' },
+            taxes: [{ taxType: 'T1', subType: 'V001', rate: '0' }],
+          },
+        ],
+      }),
+    );
     const uv = (doc.invoiceLines as DocObject[])[0]!.unitValue as DocObject;
     expect(uv.currencySold).toBe('EUR');
     expect(stringifyDoc(uv)).toBe('{"currencySold":"EUR","amountEGP":189.40,"amountSold":10.00,"currencyExchangeRate":18.94}');
@@ -237,8 +309,16 @@ describe('pre-flight validation', () => {
     expect(codes(baseInput({ references: ['x'] }), NOW)).toContain('REFERENCES_ON_INVOICE');
   });
   it('note rules against the original invoice', () => {
-    const original = { etaUuid: 'U1', receiverId: '200300400', dateTimeIssued: '2026-11-01T10:00:00Z', totalAmount: '2411.70',
-      lines: [{ itemCode: 'EG-100200300-FC50', quantity: '10', unitPriceEGP: '125.50' }, { itemCode: 'EG-100200300-SVC', quantity: '1', unitPriceEGP: '1000' }] };
+    const original = {
+      etaUuid: 'U1',
+      receiverId: '200300400',
+      dateTimeIssued: '2026-11-01T10:00:00Z',
+      totalAmount: '2411.70',
+      lines: [
+        { itemCode: 'EG-100200300-FC50', quantity: '10', unitPriceEGP: '125.50' },
+        { itemCode: 'EG-100200300-SVC', quantity: '1', unitPriceEGP: '1000' },
+      ],
+    };
     const ok = baseInput({ kind: 'credit', references: ['U1'] });
     ok.lines[0]!.quantity = '2';
     expect(validateNote(ok, [original], NOW)).toEqual([]);
@@ -271,14 +351,41 @@ describe('pre-flight validation', () => {
 describe('from our invoice to an ETA document', () => {
   const vat = { taxType: 'T1', subType: 'V009', rate: 14 };
   const company = {
-    registrationNumber: '100200300', legalName: 'Test Seller LLC', activityCode: '4620',
-    branch: { code: '0', address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 Test St', buildingNumber: '1' } },
+    registrationNumber: '100200300',
+    legalName: 'Test Seller LLC',
+    activityCode: '4620',
+    branch: {
+      code: '0',
+      address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 Test St', buildingNumber: '1' },
+    },
   };
-  const customer = { taxIdType: 'B' as const, taxId: '200300400', name: 'Test Buyer LLC', country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 Test St', buildingNumber: '2' };
-  const cream = { name: 'Face cream 50ml', etaItemType: 'EGS' as const, etaItemCode: 'EG-100200300-FC50', etaUnitCode: 'EA', defaultTaxRate: vat };
+  const customer = {
+    taxIdType: 'B' as const,
+    taxId: '200300400',
+    name: 'Test Buyer LLC',
+    country: 'EG',
+    governate: 'Giza',
+    regionCity: 'Dokki',
+    street: '2 Test St',
+    buildingNumber: '2',
+  };
+  const cream = {
+    name: 'Face cream 50ml',
+    etaItemType: 'EGS' as const,
+    etaItemCode: 'EG-100200300-FC50',
+    etaUnitCode: 'EA',
+    defaultTaxRate: vat,
+  };
   const source = (over: Record<string, unknown> = {}) => ({
-    kind: 'invoice' as const, version: '1.0' as const, number: 'INV-0001', issuedAt: '2026-11-02T10:15:00Z', currency: 'EGP', company, customer,
-    lines: [{ item: cream, qty: 10, unitPriceMinor: 12550 }], ...over,
+    kind: 'invoice' as const,
+    version: '1.0' as const,
+    number: 'INV-0001',
+    issuedAt: '2026-11-02T10:15:00Z',
+    currency: 'EGP',
+    company,
+    customer,
+    lines: [{ item: cream, qty: 10, unitPriceMinor: 12550 }],
+    ...over,
   });
 
   it('converts minor units and builds the same document as a hand-written input', () => {
@@ -291,10 +398,12 @@ describe('from our invoice to an ETA document', () => {
     expect(validateInput(input!, new Date('2026-11-03T00:00:00Z'))).toEqual([]);
   });
   it('reports what is missing instead of guessing', () => {
-    const { input, issues } = toEtaInput(source({
-      lines: [{ item: { ...cream, etaItemCode: null, etaUnitCode: null, defaultTaxRate: null }, qty: 1, unitPriceMinor: 100 }],
-      customer: { ...customer, taxIdType: null },
-    }));
+    const { input, issues } = toEtaInput(
+      source({
+        lines: [{ item: { ...cream, etaItemCode: null, etaUnitCode: null, defaultTaxRate: null }, qty: 1, unitPriceMinor: 100 }],
+        customer: { ...customer, taxIdType: null },
+      }),
+    );
     expect(input).not.toBeNull();
     const codes = issues.map((x) => x.code);
     expect(codes).toEqual(expect.arrayContaining(['ITEM_CODE', 'UNIT_TYPE', 'NO_TAX_RATE', 'CUSTOMER_TAX_IDENTITY']));

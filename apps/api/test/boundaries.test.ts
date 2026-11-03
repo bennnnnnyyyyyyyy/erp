@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest';
 
 // ADR-0003: the secret-key client bypasses row level security. Only these files may import it.
 // No request route is on this list: member routes reach Supabase Auth only through lib/authAdmin.ts (sql/025).
-const ADMIN_DB_ALLOWED = new Set(['lib/db.admin.ts', 'lib/authAdmin.ts', 'jobs/outbox.ts', 'lib/channels/index.ts', 'lib/channels/whatsapp.ts', 'lib/whatsappInbound.ts']);
+const ADMIN_DB_ALLOWED = new Set([
+  'lib/db.admin.ts',
+  'lib/authAdmin.ts',
+  'jobs/outbox.ts',
+  'lib/channels/index.ts',
+  'lib/channels/whatsapp.ts',
+  'lib/whatsappInbound.ts',
+]);
 // Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.
 const AUTH_ADMIN_ALLOWED = new Set(['modules/core/memberRoutes.ts']);
 
@@ -37,7 +44,9 @@ describe('database client boundaries (ADR-0003)', () => {
   it('nothing inserts into audit_log directly from the API', () => {
     const offenders = sourceFiles(srcDir)
       .map((f) => relative(srcDir, f).split(sep).join('/'))
-      .filter((rel) => /from\(\s*['"]audit_log['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(readFileSync(join(srcDir, rel), 'utf8')));
+      .filter((rel) =>
+        /from\(\s*['"]audit_log['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(readFileSync(join(srcDir, rel), 'utf8')),
+      );
     expect(offenders).toEqual([]);
   });
 });

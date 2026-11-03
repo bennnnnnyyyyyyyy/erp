@@ -16,7 +16,14 @@ export class EtaError extends Error {
   /** Seconds to wait before trying again, when ETA said so (429 Retry-After, 422 DuplicateSubmission). */
   readonly retryAfterSeconds: number | null;
   readonly details: unknown;
-  constructor(status: number, code: string, message: string, correlationId: string | null, retryAfterSeconds: number | null, details?: unknown) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    correlationId: string | null,
+    retryAfterSeconds: number | null,
+    details?: unknown,
+  ) {
     super(message);
     this.name = 'EtaError';
     this.status = status;

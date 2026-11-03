@@ -30,12 +30,7 @@ export class StubSigner implements Signer {
 }
 
 /** Sign one document and return it with the issuer signature appended as the last property. */
-export async function signDocument(
-  doc: DocObject,
-  orgId: string,
-  signer: Signer,
-  sha256: Sha256 = webCryptoSha256,
-): Promise<DocObject> {
+export async function signDocument(doc: DocObject, orgId: string, signer: Signer, sha256: Sha256 = webCryptoSha256): Promise<DocObject> {
   if ('signatures' in doc) throw new Error('ALREADY_SIGNED');
   const canonicalBytes = utf8(canonicalize(doc));
   const digest = await sha256(canonicalBytes);

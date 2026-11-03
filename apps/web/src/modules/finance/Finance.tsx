@@ -16,9 +16,9 @@ import { tr, trf } from '../../lib/i18n';
 
 type Category = { id: string; name: string };
 type Expense = { id: string; number: string; date: string; categoryId: string; supplierId: string | null; amountMinor: number; currency: string; note: string | null; status: 'recorded' | 'void' };
-type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; note: string | null; status: 'recorded' | 'void' };
-type CustomerInvoice = { id: string; number: string; status: 'issued' | 'void'; totalMinor: number; currency: string; customerId: string };
-type SupplierInvoice = { id: string; number: string; supplierId: string; totalMinor: number; currency: string };
+type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; targetNumber: string | null; note: string | null; status: 'recorded' | 'void' };
+/** An invoice or expense with money still outstanding (GET /v1/finance/open-items). */
+type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' | 'expense'; id: string; number: string; partyId: string | null; currency: string; totalMinor: number; paidMinor: number; leftMinor: number };
 type Named = { id: string; name: string };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -106,9 +106,10 @@ export function ExpensesPage() {
 export function PaymentsPage() {
   const session = useSession();
   const payments = useLoad(() => api<Payment[]>('/v1/finance/payments'));
-  const customerInvoices = useLoad(() => api<CustomerInvoice[]>('/v1/sales/invoices'));
-  const supplierInvoices = useLoad(() => api<SupplierInvoice[]>('/v1/purchasing/supplier-invoices'));
-  const expenses = useLoad(() => api<Expense[]>('/v1/finance/expenses'));
+  // What can still be paid, with the outstanding balance worked out on the server over ALL payments (audit finding 1). Both
+  // directions are loaded once, so switching the direction needs no second request.
+  const openIn = useLoad(() => api<OpenItem[]>('/v1/finance/open-items?direction=in'));
+  const openOut = useLoad(() => api<OpenItem[]>('/v1/finance/open-items?direction=out'));
   const customers = useLoad(() => api<Named[]>('/v1/sales/customers'));
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers'));
   const { message, busy, run } = useNotice();
@@ -123,33 +124,29 @@ export function PaymentsPage() {
   const [method, setMethod] = useState('bank');
   const [note, setNote] = useState('');
   useEffect(() => {
-    if (!preset || !payments.data || !customerInvoices.data || !supplierInvoices.data || !expenses.data) return;
-    const [kind, id] = preset.split(':');
-    const total = kind === 'c' ? customerInvoices.data.find((i) => i.id === id)?.totalMinor : kind === 's' ? supplierInvoices.data.find((i) => i.id === id)?.totalMinor : expenses.data.find((e) => e.id === id)?.amountMinor;
-    const key = kind === 'c' ? 'customerInvoiceId' : kind === 's' ? 'supplierInvoiceId' : 'expenseId';
-    const paidSoFar = payments.data.filter((p) => p.status === 'recorded' && p[key] === id).reduce((n, p) => n + p.amountMinor, 0);
-    if (total !== undefined && total - paidSoFar > 0) setAmount(((total - paidSoFar) / 100).toFixed(2));
-  }, [preset, payments.data, customerInvoices.data, supplierInvoices.data, expenses.data]);
+    if (!preset || !openIn.data || !openOut.data) return;
+    const item = [...openIn.data, ...openOut.data].find((t) => t.value === preset);
+    if (item) setAmount((item.leftMinor / 100).toFixed(2));
+  }, [preset, openIn.data, openOut.data]);
 
-  if (!payments.data || !customerInvoices.data || !supplierInvoices.data || !expenses.data || !customers.data || !suppliers.data) {
-    return <section className="page"><Loading error={payments.error} /></section>;
+  if (!payments.data || !openIn.data || !openOut.data || !customers.data || !suppliers.data) {
+    return <section className="page"><Loading error={payments.error ?? openIn.error ?? openOut.error} /></section>;
   }
-  const paid = (key: 'customerInvoiceId' | 'supplierInvoiceId' | 'expenseId', id: string) =>
-    payments.data?.filter((p) => p.status === 'recorded' && p[key] === id).reduce((n, p) => n + p.amountMinor, 0) ?? 0;
-  const name = (list: Named[] | null, id: string) => list?.find((x) => x.id === id)?.name ?? '';
+  const name = (list: Named[] | null, id: string | null) => (id ? list?.find((x) => x.id === id)?.name ?? '' : '');
 
-  // What can be paid: each target with what is still owed.
-  const targets = direction === 'in'
-    ? customerInvoices.data.filter((i) => i.status === 'issued').map((i) => ({ value: `c:${i.id}`, label: `${i.number} · ${name(customers.data, i.customerId)}`, left: i.totalMinor - paid('customerInvoiceId', i.id), currency: i.currency }))
-    : [
-        ...supplierInvoices.data.map((i) => ({ value: `s:${i.id}`, label: `${trf('Purchase invoice {number}', { number: i.number })} · ${name(suppliers.data, i.supplierId)}`, left: i.totalMinor - paid('supplierInvoiceId', i.id), currency: i.currency })),
-        ...expenses.data.filter((e) => e.status === 'recorded').map((e) => ({ value: `e:${e.id}`, label: trf('Expense {number}', { number: e.number }), left: e.amountMinor - paid('expenseId', e.id), currency: e.currency })),
-      ];
-  const open = targets.filter((t) => t.left > 0);
+  // What can be paid: each open item with what is still outstanding (from the server).
+  const open = (direction === 'in' ? openIn.data : openOut.data).map((t) => ({
+    value: t.value,
+    label: t.kind === 'customer_invoice' ? `${t.number} · ${name(customers.data, t.partyId)}`
+      : t.kind === 'supplier_invoice' ? `${trf('Purchase invoice {number}', { number: t.number })} · ${name(suppliers.data, t.partyId)}`
+      : trf('Expense {number}', { number: t.number }),
+    left: t.leftMinor,
+    currency: t.currency,
+  }));
   const chosen = open.find((t) => t.value === target);
-  const label = (p: Payment) => p.customerInvoiceId ? customerInvoices.data?.find((i) => i.id === p.customerInvoiceId)?.number ?? 'Invoice'
-    : p.supplierInvoiceId ? trf('Purchase invoice {number}', { number: supplierInvoices.data?.find((i) => i.id === p.supplierInvoiceId)?.number ?? '' })
-    : trf('Expense {number}', { number: expenses.data?.find((e) => e.id === p.expenseId)?.number ?? '' });
+  const label = (p: Payment) => p.customerInvoiceId ? p.targetNumber ?? tr('Sales invoice')
+    : p.supplierInvoiceId ? trf('Purchase invoice {number}', { number: p.targetNumber ?? '' })
+    : trf('Expense {number}', { number: p.targetNumber ?? '' });
   const targetPath = (p: Payment) => p.customerInvoiceId ? `/sales/invoices/${p.customerInvoiceId}` : p.supplierInvoiceId ? `/purchasing/invoices/${p.supplierInvoiceId}` : `/finance/expenses/${p.expenseId}`;
   const currency = session.org?.defaultCurrency ?? 'EGP';
 
@@ -187,7 +184,7 @@ export function PaymentsPage() {
             customerInvoiceId: kind === 'c' ? id : undefined, supplierInvoiceId: kind === 's' ? id : undefined, expenseId: kind === 'e' ? id : undefined,
           }) });
           return trf('Payment {number} recorded.', { number: made.number });
-        }, () => { setTarget(''); setAmount(''); setNote(''); payments.reload(); })}>{busy ? tr('Saving…') : tr('Record payment')}</Button>
+        }, () => { setTarget(''); setAmount(''); setNote(''); payments.reload(); openIn.reload(); openOut.reload(); })}>{busy ? tr('Saving…') : tr('Record payment')}</Button>
         {chosen && toMinor(amount) > chosen.left && <span className="error small"> {trf('Exceeds the outstanding balance of {amount}.', { amount: money(chosen.left, chosen.currency) })}</span>}</div>
       </FormToggle>
 

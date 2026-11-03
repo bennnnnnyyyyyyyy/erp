@@ -7,7 +7,16 @@ import { adapterFor, type OutboxMessage } from '../lib/channels';
 // calls the service-role database functions from sql/007: queue reminders and escalations, hand out due messages,
 // send each through its channel adapter, record the result. The database does the retry, backoff and expiry.
 
-export type OutboxPassResult = { reminders: number; escalations: number; lowStock: number; alerts: number; claimed: number; sent: number; failed: number; auditCheck: 'skipped' | 'clean' | 'BROKEN' | 'error' };
+export type OutboxPassResult = {
+  reminders: number;
+  escalations: number;
+  lowStock: number;
+  alerts: number;
+  claimed: number;
+  sent: number;
+  failed: number;
+  auditCheck: 'skipped' | 'clean' | 'BROKEN' | 'error';
+};
 
 export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit?: number } = {}): Promise<OutboxPassResult> {
   const client = adminDb(env);
@@ -58,5 +67,14 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
     else failed++;
   }
 
-  return { reminders: chased.reminders ?? 0, escalations: chased.escalations ?? 0, lowStock: chased.low_stock ?? 0, alerts, claimed: messages.length, sent, failed, auditCheck };
+  return {
+    reminders: chased.reminders ?? 0,
+    escalations: chased.escalations ?? 0,
+    lowStock: chased.low_stock ?? 0,
+    alerts,
+    claimed: messages.length,
+    sent,
+    failed,
+    auditCheck,
+  };
 }

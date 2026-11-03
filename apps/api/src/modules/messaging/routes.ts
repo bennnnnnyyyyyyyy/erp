@@ -23,8 +23,24 @@ messagingRoutes.get('/notifications', requirePermission('messaging.notifications
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) throw error;
-  const items = ((data ?? []) as { id: string; title: string; body: string; entity_type: string | null; entity_id: string | null; read_at: string | null; created_at: string }[]).map((n) => ({
-    id: n.id, title: n.title, body: n.body, entityType: n.entity_type, entityId: n.entity_id, readAt: n.read_at, createdAt: n.created_at,
+  const items = (
+    (data ?? []) as {
+      id: string;
+      title: string;
+      body: string;
+      entity_type: string | null;
+      entity_id: string | null;
+      read_at: string | null;
+      created_at: string;
+    }[]
+  ).map((n) => ({
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    entityType: n.entity_type,
+    entityId: n.entity_id,
+    readAt: n.read_at,
+    createdAt: n.created_at,
   }));
   return ok(c, { items, unread: items.filter((n) => !n.readAt).length });
 });
@@ -39,20 +55,52 @@ messagingRoutes.post('/notifications/read', requirePermission('messaging.notific
 messagingRoutes.get('/outbox', requirePermission('messaging.outbox.manage'), async (c) => {
   const { data, error } = await userDb(c)
     .from('msg_outbox')
-    .select('id, recipient_id, channel, kind, subject, status, attempts, max_attempts, next_attempt_at, expires_at, last_error, sent_at, created_at')
+    .select(
+      'id, recipient_id, channel, kind, subject, status, attempts, max_attempts, next_attempt_at, expires_at, last_error, sent_at, created_at',
+    )
     .eq('org_id', c.var.tenant.orgId)
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) throw error;
-  type Row = { id: string; recipient_id: string; channel: string; kind: string; subject: string; status: string; attempts: number; max_attempts: number; next_attempt_at: string; expires_at: string; last_error: string | null; sent_at: string | null; created_at: string };
-  return ok(c, ((data ?? []) as Row[]).map((m) => ({
-    id: m.id, recipientId: m.recipient_id, channel: m.channel, kind: m.kind, subject: m.subject, status: m.status, attempts: m.attempts,
-    maxAttempts: m.max_attempts, nextAttemptAt: m.next_attempt_at, expiresAt: m.expires_at, lastError: m.last_error, sentAt: m.sent_at, createdAt: m.created_at,
-  })));
+  type Row = {
+    id: string;
+    recipient_id: string;
+    channel: string;
+    kind: string;
+    subject: string;
+    status: string;
+    attempts: number;
+    max_attempts: number;
+    next_attempt_at: string;
+    expires_at: string;
+    last_error: string | null;
+    sent_at: string | null;
+    created_at: string;
+  };
+  return ok(
+    c,
+    ((data ?? []) as Row[]).map((m) => ({
+      id: m.id,
+      recipientId: m.recipient_id,
+      channel: m.channel,
+      kind: m.kind,
+      subject: m.subject,
+      status: m.status,
+      attempts: m.attempts,
+      maxAttempts: m.max_attempts,
+      nextAttemptAt: m.next_attempt_at,
+      expiresAt: m.expires_at,
+      lastError: m.last_error,
+      sentAt: m.sent_at,
+      createdAt: m.created_at,
+    })),
+  );
 });
 
 // Runs one delivery and chasing pass now (the scheduled job does the same every five minutes). Owners and admins only.
-messagingRoutes.post('/process', requirePermission('messaging.outbox.manage'), async (c) => ok(c, await runOutboxPass(c.env, { orgId: c.var.tenant.orgId })));
+messagingRoutes.post('/process', requirePermission('messaging.outbox.manage'), async (c) =>
+  ok(c, await runOutboxPass(c.env, { orgId: c.var.tenant.orgId })),
+);
 
 // ---- connect a phone (sql/008): the person starts binding, a one-time code is sent to that number through the outbox,
 // they type it back. Only the person's own bindings are visible. The code itself is never readable by anyone.
@@ -67,14 +115,25 @@ messagingRoutes.get('/identities', requirePermission('messaging.notifications.re
     .neq('status', 'revoked')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return ok(c, (data ?? []).map((i) => ({ id: i.id, channel: i.channel, address: i.address, status: i.status, verifiedAt: i.verified_at, createdAt: i.created_at })));
+  return ok(
+    c,
+    (data ?? []).map((i) => ({
+      id: i.id,
+      channel: i.channel,
+      address: i.address,
+      status: i.status,
+      verifiedAt: i.verified_at,
+      createdAt: i.created_at,
+    })),
+  );
 });
 
 messagingRoutes.post('/identities', requirePermission('messaging.notifications.read'), async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { channel?: unknown; address?: unknown };
   const channel = typeof body.channel === 'string' ? body.channel : 'whatsapp';
   const address = typeof body.address === 'string' ? body.address.replace(/[\s()-]/g, '') : '';
-  if (channel !== 'whatsapp' || !PHONE_RE.test(address)) throw new HttpError(400, 'Enter the number with its country code, for example +201001234567', 'invalid_input');
+  if (channel !== 'whatsapp' || !PHONE_RE.test(address))
+    throw new HttpError(400, 'Enter the number with its country code, for example +201001234567', 'invalid_input');
   const id = await callRpc<string>(userDb(c), 'msg_identity_start', { p_channel: channel, p_address: address });
   return ok(c, { id }, 201);
 });

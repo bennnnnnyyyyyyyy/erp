@@ -10,8 +10,16 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   APPROVAL_REQUIRED: { status: 409, message: 'This needs an approved request first', code: 'approval_required' },
   SELF_APPROVAL: { status: 403, message: 'You cannot approve your own request', code: 'self_approval' },
   INSUFFICIENT_AVAILABLE: { status: 409, message: 'Not enough stock available', code: 'insufficient_available' },
-  STORAGE_MISMATCH: { status: 409, message: "This item's storage condition does not match the destination warehouse", code: 'storage_mismatch' },
-  BATCH_STOCK_SHORT: { status: 409, message: 'Not enough usable batch stock (quarantined and expired batches cannot move)', code: 'batch_stock_short' },
+  STORAGE_MISMATCH: {
+    status: 409,
+    message: "This item's storage condition does not match the destination warehouse",
+    code: 'storage_mismatch',
+  },
+  BATCH_STOCK_SHORT: {
+    status: 409,
+    message: 'Not enough usable batch stock (quarantined and expired batches cannot move)',
+    code: 'batch_stock_short',
+  },
   INVALID_STATE: { status: 409, message: 'That is not possible in the current state', code: 'invalid_state' },
   NOT_FOUND: { status: 404, message: 'Not found', code: 'not_found' },
   MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },
@@ -23,8 +31,16 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   ALREADY_MEMBER: { status: 409, message: 'This person is already a member (re-enable them if they are disabled)', code: 'already_member' },
   IN_USE: { status: 409, message: 'That is still in use', code: 'in_use' },
   NOTE_EXCEEDS_INVOICE: { status: 409, message: 'A credit note cannot credit more than was invoiced', code: 'note_exceeds_invoice' },
-  PRODUCTION_NOT_READY: { status: 409, message: 'Production mode needs stored ETA credentials and a real signer, which are not set up', code: 'production_not_ready' },
-  ACTIVE_NOTES: { status: 409, message: 'Credit or debit notes still refer to this invoice: cancel or reject them first', code: 'active_notes' },
+  PRODUCTION_NOT_READY: {
+    status: 409,
+    message: 'Production mode needs stored ETA credentials and a real signer, which are not set up',
+    code: 'production_not_ready',
+  },
+  ACTIVE_NOTES: {
+    status: 409,
+    message: 'Credit or debit notes still refer to this invoice: cancel or reject them first',
+    code: 'active_notes',
+  },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */

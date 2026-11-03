@@ -66,10 +66,15 @@ const rateText = (r: number | string): string => (typeof r === 'number' ? String
 
 export function toEtaInput(src: SourceDocument): { input: EtaDocInput | null; issues: Issue[] } {
   const issues: Issue[] = [];
-  const add = (code: string, path: string, message: string, severity: Issue['severity'] = 'error') => issues.push({ code, path, message, severity });
+  const add = (code: string, path: string, message: string, severity: Issue['severity'] = 'error') =>
+    issues.push({ code, path, message, severity });
 
   if (src.currency !== 'EGP') {
-    add('CURRENCY_NOT_SUPPORTED', 'currency', `This invoice is in ${src.currency}. E-invoicing supports EGP invoices only for now (ETA needs the bank exchange rate of the day, which is not stored).`);
+    add(
+      'CURRENCY_NOT_SUPPORTED',
+      'currency',
+      `This invoice is in ${src.currency}. E-invoicing supports EGP invoices only for now (ETA needs the bank exchange rate of the day, which is not stored).`,
+    );
     return { input: null, issues };
   }
   if (src.lines.length === 0) {
@@ -87,7 +92,12 @@ export function toEtaInput(src: SourceDocument): { input: EtaDocInput | null; is
     if (it.defaultTaxRate) {
       taxes.push({ taxType: it.defaultTaxRate.taxType, subType: it.defaultTaxRate.subType, rate: rateText(it.defaultTaxRate.rate) });
     } else {
-      add('NO_TAX_RATE', p, `"${it.name}" has no default tax rate, so it would be sent with no tax. Set the rate (even 0 or exempt) on the item.`, 'warning');
+      add(
+        'NO_TAX_RATE',
+        p,
+        `"${it.name}" has no default tax rate, so it would be sent with no tax. Set the rate (even 0 or exempt) on the item.`,
+        'warning',
+      );
     }
     lines.push({
       description: it.name,
@@ -110,7 +120,12 @@ export function toEtaInput(src: SourceDocument): { input: EtaDocInput | null; is
   const input: EtaDocInput = {
     kind: src.kind,
     version: src.version,
-    issuer: { id: src.company.registrationNumber, name: src.company.legalName, branchId: src.company.branch.code, address: src.company.branch.address },
+    issuer: {
+      id: src.company.registrationNumber,
+      name: src.company.legalName,
+      branchId: src.company.branch.code,
+      address: src.company.branch.address,
+    },
     receiver: {
       type: c.taxIdType ?? 'B',
       ...(c.taxId ? { id: c.taxId } : {}),

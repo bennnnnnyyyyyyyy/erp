@@ -43,13 +43,18 @@ describe('e-invoicing and credit / debit note API', () => {
 
   it('puts a permission check on every e-invoicing route', () => {
     const declared = einvoicingSource.match(/einvoicingRoutes\.(get|post|put|delete)\(/g) ?? [];
-    const guarded = einvoicingSource.match(/einvoicingRoutes\.(get|post|put|delete)\([^\n]*requirePermission\('einvoicing\.settings\.(read|manage)'\)/g) ?? [];
+    const guarded =
+      einvoicingSource.match(
+        /einvoicingRoutes\.(get|post|put|delete)\([^\n]*requirePermission\('einvoicing\.settings\.(read|manage)'\)/g,
+      ) ?? [];
     expect(declared.length).toBe(12);
     expect(guarded.length).toBe(declared.length);
   });
 
   it('asks for the manage permission on every change and only the read permission on reads', () => {
-    const changes = einvoicingSource.match(/einvoicingRoutes\.(post|put|delete)\([^\n]*requirePermission\('einvoicing\.settings\.(read|manage)'\)/g) ?? [];
+    const changes =
+      einvoicingSource.match(/einvoicingRoutes\.(post|put|delete)\([^\n]*requirePermission\('einvoicing\.settings\.(read|manage)'\)/g) ??
+      [];
     expect(changes.length).toBe(9);
     expect(changes.every((x) => x.includes('einvoicing.settings.manage'))).toBe(true);
     const reads = einvoicingSource.match(/einvoicingRoutes\.get\([^\n]*requirePermission\('einvoicing\.settings\.(read|manage)'\)/g) ?? [];
@@ -57,7 +62,15 @@ describe('e-invoicing and credit / debit note API', () => {
   });
 
   it('changes tax data only through database functions', () => {
-    for (const fn of ['eta_save_profile', 'eta_save_branch', 'eta_remove_branch', 'eta_save_tax_rate', 'eta_remove_tax_rate', 'eta_set_customer_tax', 'eta_set_item_codes']) {
+    for (const fn of [
+      'eta_save_profile',
+      'eta_save_branch',
+      'eta_remove_branch',
+      'eta_save_tax_rate',
+      'eta_remove_tax_rate',
+      'eta_set_customer_tax',
+      'eta_set_item_codes',
+    ]) {
       expect(einvoicingSource).toContain(`'${fn}'`);
     }
     // Query-builder writes only; `einvoicingRoutes.delete(` is an HTTP route, not a database delete.

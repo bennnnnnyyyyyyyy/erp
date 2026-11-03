@@ -10,7 +10,13 @@ import { parseWebhook, safeEqual, sendText, toGraphNumber, verifySignature } fro
 
 const SECRET = 'test-app-secret';
 const baseEnv = { APP_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:5173' };
-const cfgEnv = { ...baseEnv, WHATSAPP_ACCESS_TOKEN: 'tok', WHATSAPP_PHONE_NUMBER_ID: '123', WHATSAPP_APP_SECRET: SECRET, WHATSAPP_VERIFY_TOKEN: 'verify-me' };
+const cfgEnv = {
+  ...baseEnv,
+  WHATSAPP_ACCESS_TOKEN: 'tok',
+  WHATSAPP_PHONE_NUMBER_ID: '123',
+  WHATSAPP_APP_SECRET: SECRET,
+  WHATSAPP_VERIFY_TOKEN: 'verify-me',
+};
 
 async function sign(body: string, secret = SECRET): Promise<string> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -45,12 +51,14 @@ describe('safeEqual', () => {
 describe('parseWebhook', () => {
   const payload = (messages: unknown[]) => ({ entry: [{ changes: [{ value: { messages } }] }] });
   it('extracts plain text messages and ignores everything else', () => {
-    const got = parseWebhook(payload([
-      { from: '201001234567', id: 'wamid.1', type: 'text', text: { body: 'APPROVE ABC234' } },
-      { from: '201001234567', id: 'wamid.2', type: 'audio', audio: { id: 'x' } },
-      { from: 5, id: 'wamid.3', type: 'text', text: { body: 'bad sender' } },
-      { from: '201001234567', id: 'wamid.4', type: 'text', text: {} },
-    ]));
+    const got = parseWebhook(
+      payload([
+        { from: '201001234567', id: 'wamid.1', type: 'text', text: { body: 'APPROVE ABC234' } },
+        { from: '201001234567', id: 'wamid.2', type: 'audio', audio: { id: 'x' } },
+        { from: 5, id: 'wamid.3', type: 'text', text: { body: 'bad sender' } },
+        { from: '201001234567', id: 'wamid.4', type: 'text', text: {} },
+      ]),
+    );
     expect(got).toEqual([{ from: '201001234567', id: 'wamid.1', text: 'APPROVE ABC234' }]);
   });
   it('copes with status updates and malformed payloads', () => {
@@ -77,23 +85,53 @@ describe('webhook route', () => {
   it('refuses a POST without a valid signature and when not configured', async () => {
     const body = JSON.stringify({ entry: [] });
     expect((await app.request('/webhooks/whatsapp', { method: 'POST', body }, cfgEnv)).status).toBe(401);
-    expect((await app.request('/webhooks/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body, 'wrong') } }, cfgEnv)).status).toBe(401);
-    expect((await app.request('/webhooks/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body) } }, baseEnv)).status).toBe(503);
+    expect(
+      (
+        await app.request(
+          '/webhooks/whatsapp',
+          { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body, 'wrong') } },
+          cfgEnv,
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (await app.request('/webhooks/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body) } }, baseEnv))
+        .status,
+    ).toBe(503);
   });
   it('accepts a signed payload with nothing to handle', async () => {
     const body = JSON.stringify({ entry: [{ changes: [{ value: { statuses: [] } }] }] });
-    const res = await app.request('/webhooks/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body) } }, cfgEnv);
+    const res = await app.request(
+      '/webhooks/whatsapp',
+      { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body) } },
+      cfgEnv,
+    );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ success: true, data: { handled: 0 } });
   });
   it('rejects an oversized body before doing any work', async () => {
     const body = 'x'.repeat(100_001);
-    expect((await app.request('/webhooks/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body) } }, cfgEnv)).status).toBe(413);
+    expect(
+      (await app.request('/webhooks/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': await sign(body) } }, cfgEnv))
+        .status,
+    ).toBe(413);
   });
 });
 
 describe('sending', () => {
-  const message: OutboxMessage = { id: 'm1', org_id: 'o1', recipient_id: 'u1', channel: 'whatsapp', kind: 'approval_request', subject: 'OUT-0001 needs your approval', body: 'Reply in WhatsApp', entity_type: 'stock_request', entity_id: 'r1', secret_body: 'Reply APPROVE ABC234 to approve', attempts: 1 };
+  const message: OutboxMessage = {
+    id: 'm1',
+    org_id: 'o1',
+    recipient_id: 'u1',
+    channel: 'whatsapp',
+    kind: 'approval_request',
+    subject: 'OUT-0001 needs your approval',
+    body: 'Reply in WhatsApp',
+    entity_type: 'stock_request',
+    entity_id: 'r1',
+    secret_body: 'Reply APPROVE ABC234 to approve',
+    attempts: 1,
+  };
 
   it('formats the number and sends the secret text, with the token only in the Authorization header', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
@@ -104,22 +142,36 @@ describe('sending', () => {
     expect(url).toBe('https://graph.facebook.com/v21.0/123/messages');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
     const sent = JSON.parse(String(init.body));
-    expect(sent).toMatchObject({ messaging_product: 'whatsapp', to: '201001234567', type: 'text', text: { body: 'Reply APPROVE ABC234 to approve' } });
+    expect(sent).toMatchObject({
+      messaging_product: 'whatsapp',
+      to: '201001234567',
+      type: 'text',
+      text: { body: 'Reply APPROVE ABC234 to approve' },
+    });
     expect(String(init.body)).not.toContain('tok');
   });
   it('falls back to the template when Meta refuses free text and a template is configured', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: 'Re-engagement message', code: 131047 } }), { status: 400 }))
       .mockResolvedValueOnce(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     await sendText({ ...cfgEnv, WHATSAPP_TEMPLATE_NAME: 'approval_request' }, '+201001234567', 'hello');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body))).toMatchObject({ type: 'template', template: { name: 'approval_request' } });
+    expect(JSON.parse(String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body))).toMatchObject({
+      type: 'template',
+      template: { name: 'approval_request' },
+    });
   });
   it('fails visibly: no number, not configured, Meta refuses', async () => {
     await expect(makeWhatsAppAdapter(async () => null).send(message, cfgEnv)).rejects.toThrow('no verified WhatsApp number');
     await expect(sendText(baseEnv, '+201001234567', 'x')).rejects.toThrow('not configured');
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { message: 'Recipient not in allowed list', code: 131030 } }), { status: 400 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () => new Response(JSON.stringify({ error: { message: 'Recipient not in allowed list', code: 131030 } }), { status: 400 }),
+      ),
+    );
     await expect(sendText(cfgEnv, '+201001234567', 'x')).rejects.toThrow('Recipient not in allowed list');
   });
   it('converts numbers', () => expect(toGraphNumber('+201001234567')).toBe('201001234567'));

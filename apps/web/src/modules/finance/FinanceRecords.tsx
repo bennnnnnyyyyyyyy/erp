@@ -16,7 +16,7 @@ import { Pill } from '../trade/common';
 // list endpoints the Payments and Expenses screens already use (owner/admin only, finance.reports.view); voiding goes through the same
 // database functions as the list's Void button.
 
-export type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; note: string | null; status: 'recorded' | 'void'; createdAt?: string };
+export type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; targetNumber?: string | null; note: string | null; status: 'recorded' | 'void'; createdAt?: string };
 type Expense = { id: string; number: string; date: string; categoryId: string; supplierId: string | null; amountMinor: number; currency: string; note: string | null; status: 'recorded' | 'void'; createdAt?: string };
 type CustomerInvoice = { id: string; number: string; customerId: string };
 type SupplierInvoice = { id: string; number: string; supplierId: string };
@@ -33,9 +33,11 @@ export function PaymentStatus({ status }: { status: 'recorded' | 'void' }) {
 export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'customerInvoiceId' | 'supplierInvoiceId' | 'expenseId'; id: string; totalMinor: number; currency: string }) {
   const session = useSession();
   const allowed = hasPermission(session.permissions, 'finance.reports.view');
-  const payments = useLoad(() => (allowed ? api<Payment[]>('/v1/finance/payments') : none<Payment>()));
+  const prefix = field === 'customerInvoiceId' ? 'c' : field === 'supplierInvoiceId' ? 's' : 'e';
+  // Every payment against this one record, from the server (the general list holds the newest 300 only).
+  const payments = useLoad(() => (allowed ? api<Payment[]>(`/v1/finance/payments?for=${prefix}:${id}`) : none<Payment>()));
   if (!allowed) return null;
-  const rows = (payments.data ?? []).filter((p) => p[field] === id);
+  const rows = payments.data ?? [];
   const paid = rows.filter((p) => p.status === 'recorded').reduce((n, p) => n + p.amountMinor, 0);
   const left = totalMinor - paid;
   return (
@@ -51,7 +53,7 @@ export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'c
         {!rows.length && <tr><td colSpan={5} className="muted empty">{payments.data ? tr('No payments recorded yet.') : tr('Loading…')}</td></tr>}
       </tbody></table></div>
       {left > 0 && hasPermission(session.permissions, 'finance.entries.manage') && (
-        <p className="small"><Link to={`/finance/payments?for=${field === 'customerInvoiceId' ? 'c' : field === 'supplierInvoiceId' ? 's' : 'e'}:${id}`}>{tr('Record a payment →')}</Link></p>
+        <p className="small"><Link to={`/finance/payments?for=${prefix}:${id}`}>{tr('Record a payment →')}</Link></p>
       )}
     </>
   );
@@ -72,29 +74,31 @@ function useVoid(path: string, done: () => void) {
 export function PaymentPage() {
   const id = useParam('id');
   const session = useSession();
-  const payments = useLoad(() => api<Payment[]>('/v1/finance/payments'));
-  const customerInvoices = useLoad(() => (hasPermission(session.permissions, 'sales.invoices.read') ? api<CustomerInvoice[]>('/v1/sales/invoices') : none<CustomerInvoice>()));
-  const supplierInvoices = useLoad(() => (hasPermission(session.permissions, 'purchasing.invoices.read') ? api<SupplierInvoice[]>('/v1/purchasing/supplier-invoices') : none<SupplierInvoice>()));
-  const expenses = useLoad(() => api<Expense[]>('/v1/finance/expenses'));
+  // The payment by id, then the one invoice or expense it pays (for the customer or supplier). No capped list is involved.
+  const record = useLoad(async () => {
+    const pay = await api<Payment>(`/v1/finance/payments/${id}`);
+    const partyId = pay.customerInvoiceId && hasPermission(session.permissions, 'sales.invoices.read')
+      ? (await api<CustomerInvoice>(`/v1/sales/invoices/${pay.customerInvoiceId}`).catch(() => null))?.customerId
+      : pay.supplierInvoiceId && hasPermission(session.permissions, 'purchasing.invoices.read')
+        ? (await api<SupplierInvoice>(`/v1/purchasing/supplier-invoices/${pay.supplierInvoiceId}`).catch(() => null))?.supplierId
+        : pay.expenseId ? (await api<Expense>(`/v1/finance/expenses/${pay.expenseId}`).catch(() => null))?.supplierId : null;
+    return { pay, partyId: partyId ?? null };
+  });
   const customers = useLoad(() => (hasPermission(session.permissions, 'sales.customers.read') ? api<Named[]>('/v1/sales/customers') : none<Named>()));
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));
-  const voiding = useVoid(`/v1/finance/payments/${id}/void`, () => payments.reload());
+  const voiding = useVoid(`/v1/finance/payments/${id}/void`, () => record.reload());
 
-  if (payments.error) return <section className="page"><p className="error">{payments.error}</p></section>;
-  if (!payments.data) return <section className="page"><Loading /></section>;
-  const p = payments.data.find((x) => x.id === id);
-  if (!p) return <section className="page"><Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link><p className="muted">{tr('This payment was not found.')}</p></section>;
+  if (record.error) return <section className="page"><Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link><Loading error={record.error} /></section>;
+  if (!record.data) return <section className="page"><Loading /></section>;
+  const p = record.data.pay;
 
-  const name = (list: Named[] | null, x: string | undefined) => list?.find((n) => n.id === x)?.name ?? '';
-  const ci = p.customerInvoiceId ? customerInvoices.data?.find((i) => i.id === p.customerInvoiceId) : undefined;
-  const si = p.supplierInvoiceId ? supplierInvoices.data?.find((i) => i.id === p.supplierInvoiceId) : undefined;
-  const ex = p.expenseId ? expenses.data?.find((e) => e.id === p.expenseId) : undefined;
+  const name = (list: Named[] | null, x: string | null) => (x ? list?.find((n) => n.id === x)?.name ?? '' : '');
   const target = p.customerInvoiceId
-    ? <Link to={`/sales/invoices/${p.customerInvoiceId}`}><code>{ci?.number ?? tr('Sales invoice')}</code></Link>
+    ? <Link to={`/sales/invoices/${p.customerInvoiceId}`}><code>{p.targetNumber ?? tr('Sales invoice')}</code></Link>
     : p.supplierInvoiceId
-      ? <Link to={`/purchasing/invoices/${p.supplierInvoiceId}`}><code>{si?.number ?? tr('Purchase invoice')}</code></Link>
-      : p.expenseId ? <Link to={`/finance/expenses/${p.expenseId}`}><code>{ex?.number ?? tr('Expense')}</code></Link> : '—';
-  const party = ci ? name(customers.data, ci.customerId) : si ? name(suppliers.data, si.supplierId) : ex?.supplierId ? name(suppliers.data, ex.supplierId) : '';
+      ? <Link to={`/purchasing/invoices/${p.supplierInvoiceId}`}><code>{p.targetNumber ?? tr('Purchase invoice')}</code></Link>
+      : p.expenseId ? <Link to={`/finance/expenses/${p.expenseId}`}><code>{p.targetNumber ?? tr('Expense')}</code></Link> : '—';
+  const party = p.customerInvoiceId ? name(customers.data, record.data.partyId) : name(suppliers.data, record.data.partyId);
   const canVoid = p.status === 'recorded' && hasPermission(session.permissions, 'finance.entries.manage');
 
   return (
@@ -124,15 +128,14 @@ export function PaymentPage() {
 export function ExpensePage() {
   const id = useParam('id');
   const session = useSession();
-  const expenses = useLoad(() => api<Expense[]>('/v1/finance/expenses'));
+  const expense = useLoad(() => api<Expense>(`/v1/finance/expenses/${id}`));
   const categories = useLoad(() => api<Named[]>('/v1/finance/categories'));
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));
-  const voiding = useVoid(`/v1/finance/expenses/${id}/void`, () => expenses.reload());
+  const voiding = useVoid(`/v1/finance/expenses/${id}/void`, () => expense.reload());
 
-  if (expenses.error) return <section className="page"><p className="error">{expenses.error}</p></section>;
-  if (!expenses.data) return <section className="page"><Loading /></section>;
-  const e = expenses.data.find((x) => x.id === id);
-  if (!e) return <section className="page"><Link to="/finance" className="back-link">{tr('← Expenses')}</Link><p className="muted">{tr('This expense was not found.')}</p></section>;
+  if (expense.error) return <section className="page"><Link to="/finance" className="back-link">{tr('← Expenses')}</Link><Loading error={expense.error} /></section>;
+  if (!expense.data) return <section className="page"><Loading /></section>;
+  const e = expense.data;
   const category = categories.data?.find((c) => c.id === e.categoryId)?.name ?? '—';
   const supplier = e.supplierId ? suppliers.data?.find((s) => s.id === e.supplierId)?.name ?? '—' : '';
   const canVoid = e.status === 'recorded' && hasPermission(session.permissions, 'finance.entries.manage');

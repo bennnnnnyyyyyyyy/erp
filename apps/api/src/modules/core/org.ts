@@ -71,11 +71,7 @@ export function parseOrgUpdate(body: Record<string, unknown>): OrgSettingsUpdate
 export const orgRoutes = new Hono<AppEnv>();
 
 async function loadOrg(c: Context<AppEnv>): Promise<OrgRow> {
-  const { data, error } = await userDb(c)
-    .from('organizations')
-    .select(ORG_COLUMNS)
-    .eq('id', c.var.tenant.orgId)
-    .single<OrgRow>();
+  const { data, error } = await userDb(c).from('organizations').select(ORG_COLUMNS).eq('id', c.var.tenant.orgId).single<OrgRow>();
   if (error) throw error;
   return data;
 }

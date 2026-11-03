@@ -111,7 +111,8 @@ export function calcLine(input: LineInput, places = 2): CalcLine {
   for (const t of input.taxes) {
     const fixed = t.amount !== undefined;
     if (FIXED_AMOUNT_TYPES.has(t.taxType) && !fixed) throw new Error(`FIXED_AMOUNT_REQUIRED: ${t.taxType} needs an amount and rate 0`);
-    if (fixed && t.rate !== undefined && parseDec(t.rate) !== 0n) throw new Error(`FIXED_AMOUNT_RATE: ${t.taxType} fixed amounts carry rate 0`);
+    if (fixed && t.rate !== undefined && parseDec(t.rate) !== 0n)
+      throw new Error(`FIXED_AMOUNT_RATE: ${t.taxType} fixed amounts carry rate 0`);
     const isFee = TAXABLE_FEE_TYPES.has(t.taxType) || NON_TAXABLE_FEE_TYPES.has(t.taxType);
     if (t.taxType === 'T3' || isFee) {
       const rate = fixed ? ZERO : optDec(t.rate);
@@ -129,13 +130,23 @@ export function calcLine(input: LineInput, places = 2): CalcLine {
   for (const t of input.taxes) {
     if (t.taxType !== 'T2') continue;
     const rate = optDec(t.rate);
-    calculated.set('T2', { taxType: 'T2', subType: t.subType, rate, amount: r(pct(netTotal + totalTaxableFees + valueDifference + t3, rate)) });
+    calculated.set('T2', {
+      taxType: 'T2',
+      subType: t.subType,
+      rate,
+      amount: r(pct(netTotal + totalTaxableFees + valueDifference + t3, rate)),
+    });
   }
   const t2 = calculated.get('T2')?.amount ?? ZERO;
   for (const t of input.taxes) {
     if (t.taxType !== 'T1') continue;
     const rate = optDec(t.rate);
-    calculated.set('T1', { taxType: 'T1', subType: t.subType, rate, amount: r(pct(t2 + netTotal + totalTaxableFees + valueDifference + t3, rate)) });
+    calculated.set('T1', {
+      taxType: 'T1',
+      subType: t.subType,
+      rate,
+      amount: r(pct(t2 + netTotal + totalTaxableFees + valueDifference + t3, rate)),
+    });
   }
   for (const t of input.taxes) {
     if (t.taxType !== 'T4') continue;
@@ -148,8 +159,7 @@ export function calcLine(input: LineInput, places = 2): CalcLine {
 
   const taxes = input.taxes.map((t) => calculated.get(t.taxType) as CalcTax);
   const amt = (type: string): Dec => calculated.get(type)?.amount ?? ZERO;
-  const total =
-    netTotal + amt('T1') + amt('T2') + amt('T3') + totalTaxableFees + totalNonTaxableFees - itemsDiscount - amt('T4');
+  const total = netTotal + amt('T1') + amt('T2') + amt('T3') + totalTaxableFees + totalNonTaxableFees - itemsDiscount - amt('T4');
 
   return {
     quantity,

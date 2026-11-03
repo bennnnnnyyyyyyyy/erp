@@ -45,8 +45,8 @@ export type Sha256 = (bytes: Uint8Array) => Promise<Uint8Array>;
 
 /** SHA-256 through Web Crypto (available in Cloudflare Workers, browsers and Node 22). */
 export const webCryptoSha256: Sha256 = async (bytes) => {
-  const subtle = (globalThis as unknown as { crypto: { subtle: { digest(a: string, d: Uint8Array): Promise<ArrayBuffer> } } })
-    .crypto.subtle;
+  const subtle = (globalThis as unknown as { crypto: { subtle: { digest(a: string, d: Uint8Array): Promise<ArrayBuffer> } } }).crypto
+    .subtle;
   return new Uint8Array(await subtle.digest('SHA-256', bytes));
 };
 

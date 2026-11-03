@@ -69,10 +69,13 @@ coreRoutes.post('/me/language', async (c) => {
 // Names only (no email, role or sign-in data), for any member, so every screen can show who did what.
 coreRoutes.get('/people', async (c) => {
   const people = await callRpc<{ user_id: string; name: string }[]>(userDb(c), 'core_org_people', {});
-  return ok(c, people.map((p) => ({ userId: p.user_id, name: p.name })));
+  return ok(
+    c,
+    people.map((p) => ({ userId: p.user_id, name: p.name })),
+  );
 });
 
-coreRoutes.get('/audit',requirePermission('core.audit.read'), async (c) => {
+coreRoutes.get('/audit', requirePermission('core.audit.read'), async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 50) || 50, 200);
   // Optional: only the entries about one record (a detail page's History). Ignored unless it is a uuid.
   const entity = c.req.query('entity') ?? '';

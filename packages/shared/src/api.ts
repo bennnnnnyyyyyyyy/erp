@@ -15,7 +15,17 @@ export type Role = 'owner' | 'admin' | 'member' | 'viewer';
 export type SessionInfo = {
   userId: string;
   email: string;
-  org: { id: string; name: string; slug: string; defaultCurrency: string; timezone: string; dateFormat: string; language: 'en' | 'ar'; showTutorial: boolean; showTour: boolean } | null;
+  org: {
+    id: string;
+    name: string;
+    slug: string;
+    defaultCurrency: string;
+    timezone: string;
+    dateFormat: string;
+    language: 'en' | 'ar';
+    showTutorial: boolean;
+    showTour: boolean;
+  } | null;
   /** The person's own saved language (sql/038), or null to follow the company default. Same in every company they belong to. */
   userLanguage: 'en' | 'ar' | null;
   /** True once the person has been asked about language (a saved row exists, even if they chose the company default), so they are asked only once. */

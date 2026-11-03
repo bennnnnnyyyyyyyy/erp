@@ -22,7 +22,10 @@ function fakeNetwork(handlers: ((call: Call) => Response)[]) {
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', correlationId: 'CORR-1', ...headers } });
-const tokenOk = (expiresIn = 3600) => () => json(200, { access_token: 'TOKEN-A', token_type: 'Bearer', expires_in: expiresIn });
+const tokenOk =
+  (expiresIn = 3600) =>
+  () =>
+    json(200, { access_token: 'TOKEN-A', token_type: 'Bearer', expires_in: expiresIn });
 
 const make = (handlers: ((c: Call) => Response)[], now: () => number = () => 0) => {
   const net = fakeNetwork(handlers);
@@ -70,11 +73,34 @@ describe('login', () => {
 });
 
 const input = (): EtaDocInput => ({
-  kind: 'invoice', version: '0.9',
-  issuer: { id: '100200300', name: 'Test Seller LLC', branchId: '0', address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 Test St', buildingNumber: '1' } },
-  receiver: { type: 'B', id: '200300400', name: 'Buyer', address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 Test St', buildingNumber: '2' } },
-  dateTimeIssued: '2026-11-02T10:15:00Z', taxpayerActivityCode: '4620', internalId: 'INV-1',
-  lines: [{ description: 'Cream', itemType: 'EGS', itemCode: 'EG-100200300-FC', unitType: 'EA', quantity: '1', unitPriceEGP: '125.50', taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }] }],
+  kind: 'invoice',
+  version: '0.9',
+  issuer: {
+    id: '100200300',
+    name: 'Test Seller LLC',
+    branchId: '0',
+    address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 Test St', buildingNumber: '1' },
+  },
+  receiver: {
+    type: 'B',
+    id: '200300400',
+    name: 'Buyer',
+    address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 Test St', buildingNumber: '2' },
+  },
+  dateTimeIssued: '2026-11-02T10:15:00Z',
+  taxpayerActivityCode: '4620',
+  internalId: 'INV-1',
+  lines: [
+    {
+      description: 'Cream',
+      itemType: 'EGS',
+      itemCode: 'EG-100200300-FC',
+      unitType: 'EA',
+      quantity: '1',
+      unitPriceEGP: '125.50',
+      taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }],
+    },
+  ],
 });
 
 describe('submit', () => {
@@ -83,7 +109,12 @@ describe('submit', () => {
     const body = submissionBodyJson([doc]);
     const { client, calls } = make([
       tokenOk(),
-      () => json(202, { submissionUUID: 'SUBMISSION123456789012345', acceptedDocuments: [{ uuid: 'UUID1234567890', longId: 'LONG', internalId: 'INV-1' }], rejectedDocuments: [] }),
+      () =>
+        json(202, {
+          submissionUUID: 'SUBMISSION123456789012345',
+          acceptedDocuments: [{ uuid: 'UUID1234567890', longId: 'LONG', internalId: 'INV-1' }],
+          rejectedDocuments: [],
+        }),
     ]);
     const r = await client.submit(body);
     expect(r.submissionUUID).toBe('SUBMISSION123456789012345');
@@ -98,12 +129,23 @@ describe('submit', () => {
     expect((parseDoc(post.body!) as DocObject).documents).toHaveLength(1);
   });
   it('reports rejected documents without throwing (a 202 is not a failure)', async () => {
-    const { client } = make([tokenOk(), () => json(202, { submissionUUID: 'S', acceptedDocuments: [], rejectedDocuments: [{ internalId: 'INV-1', error: { code: 'BadStructure', message: 'bad' } }] })]);
+    const { client } = make([
+      tokenOk(),
+      () =>
+        json(202, {
+          submissionUUID: 'S',
+          acceptedDocuments: [],
+          rejectedDocuments: [{ internalId: 'INV-1', error: { code: 'BadStructure', message: 'bad' } }],
+        }),
+    ]);
     const r = await client.submit('{"documents":[]}');
     expect(r.rejectedDocuments[0]!.error.code).toBe('BadStructure');
   });
   it('maps 429 to a retryable error that carries Retry-After', async () => {
-    const { client } = make([tokenOk(), () => json(429, { error: { code: 'TooManyRequests', message: 'slow down' } }, { 'Retry-After': '7' })]);
+    const { client } = make([
+      tokenOk(),
+      () => json(429, { error: { code: 'TooManyRequests', message: 'slow down' } }, { 'Retry-After': '7' }),
+    ]);
     const err = await client.submit('{}').catch((e) => e as EtaError);
     expect(err).toBeInstanceOf(EtaError);
     expect(err).toMatchObject({ status: 429, code: 'TooManyRequests', retryAfterSeconds: 7, retryable: true, correlationId: 'CORR-1' });
@@ -124,9 +166,15 @@ describe('submit', () => {
     let posts = 0;
     const { client, calls } = make([
       tokenOk(),
-      () => { posts++; return json(401, { error: { code: 'Unauthorized', message: 'expired' } }); },
+      () => {
+        posts++;
+        return json(401, { error: { code: 'Unauthorized', message: 'expired' } });
+      },
       tokenOk(),
-      () => { posts++; return json(401, { error: { code: 'Unauthorized', message: 'still' } }); },
+      () => {
+        posts++;
+        return json(401, { error: { code: 'Unauthorized', message: 'still' } });
+      },
     ]);
     await expect(client.submit('{}')).rejects.toMatchObject({ status: 401 });
     expect(posts).toBe(2);
@@ -136,7 +184,16 @@ describe('submit', () => {
 
 describe('status, cancel, reject', () => {
   it('reads a submission using the documented fields', async () => {
-    const { client, calls } = make([tokenOk(), () => json(200, { uuid: 'SUBMISSION123456789012345', documentCount: 1, overallStatus: 'valid', documentSummary: [{ uuid: 'UUID1234567890', internalId: 'INV-1', status: 'valid', longId: 'LONG', total: 1430.7 }] })]);
+    const { client, calls } = make([
+      tokenOk(),
+      () =>
+        json(200, {
+          uuid: 'SUBMISSION123456789012345',
+          documentCount: 1,
+          overallStatus: 'valid',
+          documentSummary: [{ uuid: 'UUID1234567890', internalId: 'INV-1', status: 'valid', longId: 'LONG', total: 1430.7 }],
+        }),
+    ]);
     const s = await client.getSubmission('SUBMISSION123456789012345');
     expect(s.overallStatus).toBe('valid');
     expect(s.documents[0]).toMatchObject({ uuid: 'UUID1234567890', status: 'valid', total: 1430.7 });
@@ -159,7 +216,14 @@ describe('status, cancel, reject', () => {
   });
   it('sends onbehalfof only when acting for a taxpayer, and the language header always', async () => {
     const net = fakeNetwork([tokenOk(), () => json(200, {})]);
-    const client = new EtaClient({ environment: 'production', clientId: 'a', clientSecret: 'b', onBehalfOf: '100200300', language: 'ar', fetch: net.fetch });
+    const client = new EtaClient({
+      environment: 'production',
+      clientId: 'a',
+      clientSecret: 'b',
+      onBehalfOf: '100200300',
+      language: 'ar',
+      fetch: net.fetch,
+    });
     await client.getDocumentType(1);
     expect(net.calls[1]!.headers.onbehalfof).toBe('100200300');
     expect(net.calls[1]!.headers['Accept-Language']).toBe('ar');

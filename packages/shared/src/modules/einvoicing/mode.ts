@@ -45,16 +45,28 @@ export type SentDocument = { uuid: string; longId: string; internalId: string };
 export function toSendRecord(mode: EtaMode, submissionUuid: string, doc: SentDocument): EtaSendRecord {
   if (mode === 'simulated') {
     return {
-      mode, simulated: true, badge: SIMULATED_BADGE, internalId: doc.internalId,
-      etaUuid: null, etaLongId: null, etaSubmissionUuid: null, simulationId: doc.uuid,
+      mode,
+      simulated: true,
+      badge: SIMULATED_BADGE,
+      internalId: doc.internalId,
+      etaUuid: null,
+      etaLongId: null,
+      etaSubmissionUuid: null,
+      simulationId: doc.uuid,
     };
   }
   if (isSimulationId(doc.uuid) || isSimulationId(submissionUuid)) {
     throw new Error('SIMULATED_ID_IN_REAL_MODE: a simulated id must never be stored as an ETA reference');
   }
   return {
-    mode, simulated: false, badge: null, internalId: doc.internalId,
-    etaUuid: doc.uuid, etaLongId: doc.longId, etaSubmissionUuid: submissionUuid, simulationId: null,
+    mode,
+    simulated: false,
+    badge: null,
+    internalId: doc.internalId,
+    etaUuid: doc.uuid,
+    etaLongId: doc.longId,
+    etaSubmissionUuid: submissionUuid,
+    simulationId: null,
   };
 }
 
@@ -66,7 +78,14 @@ export function badgeFor(record: Pick<EtaSendRecord, 'simulated'>): string | nul
 /** True when a stored record obeys the rules above. Used by tests and by any future database check. */
 export function recordIsConsistent(r: EtaSendRecord): boolean {
   if (r.simulated) {
-    return r.mode === 'simulated' && r.badge === SIMULATED_BADGE && r.etaUuid === null && r.etaLongId === null && r.etaSubmissionUuid === null && r.simulationId !== null;
+    return (
+      r.mode === 'simulated' &&
+      r.badge === SIMULATED_BADGE &&
+      r.etaUuid === null &&
+      r.etaLongId === null &&
+      r.etaSubmissionUuid === null &&
+      r.simulationId !== null
+    );
   }
   return r.mode !== 'simulated' && r.badge === null && r.simulationId === null && r.etaUuid !== null && !isSimulationId(r.etaUuid);
 }

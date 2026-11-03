@@ -20,7 +20,16 @@ describe('sales billing per line', () => {
   });
 
   it('is ok when invoiced equals delivered', () => {
-    expect(billingFor(lines, 'issued', new Map([['l1', 10], ['l2', 5]])).map((b) => b.flag)).toEqual(['ok', 'ok']);
+    expect(
+      billingFor(
+        lines,
+        'issued',
+        new Map([
+          ['l1', 10],
+          ['l2', 5],
+        ]),
+      ).map((b) => b.flag),
+    ).toEqual(['ok', 'ok']);
   });
 
   it('flags invoiced beyond delivered, including invoices on an undelivered order', () => {

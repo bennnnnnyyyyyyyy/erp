@@ -11,6 +11,45 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (final) — Full names set on the four demo accounts (live data change, Ben's request)
+
+**Objective.** Audit finding 8: people showed as email prefixes (`grant.holden.wiz`). Ben gave the names: "chris johnson, joseph brown, grant holden, ben arthur".
+
+**Actions Completed.** Read-only check first on ggoerp (`supabase db query --linked`): exactly four accounts matched (`chris.johnson.wiz@`, `joseph.brown.wiz@`, `grant.holden.wiz@`, `ben.arthur.wiz@gmail.com`), none had a `full_name`. Then one transaction updated those four rows of `auth.users`, matched by id **and** email, adding `full_name` to `raw_user_meta_data` (other keys kept): Chris Johnson, Joseph Brown, Grant Holden, Ben Arthur.
+
+**Database / System Result.** 4 rows changed in `auth.users` (user metadata only; no business table, no membership, no role). `core_org_people` (sql/016, sql/025) now returns the names. Seen on the live site: Stock requests "Requested by" shows Grant Holden.
+
+**Safety Status.** No schema change, no deploy needed. Not an `audit_log` event: account metadata is not a business record and there is no database function for it (the invite path stores the name on new accounts since the audit fixes). Anyone already signed in may see their own name in the top-bar menu only after their next sign-in.
+
+## 2026-11-03 (last) — Audit findings 3, 5, 6, 7: e-invoicing state read, Biome, browser smoke test in CI, Arabic review sheet (not deployed)
+
+**Objective.** Ben unblocked the remaining findings: Supabase CLI for the live project, the formatter allowed, the smoke test allowed (agents.md's browser rule is for Antigravity and Codex only), he reviews the Arabic. Status per finding: end of [`documentation/plans/2026-11-03-system-audit.md`](../plans/2026-11-03-system-audit.md).
+
+**Actions Completed.**
+- Finding 3: read-only `supabase db query --linked` on ggoerp. **Correction to the "Migrations 036 and 037 applied" entry above:** the `einvoicing` module is now ON for 2 organizations, Demo Cosmetics Factory (since 3 Nov 14:30 UTC) and Demo Trading Co. (since 16:43 UTC), switched on in the app after that entry was written. Nothing changed.
+- Finding 5: `@biomejs/biome` 2.6.4 (root dev dependency), `biome.json` (apps/api, packages/shared; recommended rules, `noNonNullAssertion` off, `lineEnding` auto), 70 files formatted, 2 lint errors fixed in `apps/api/test/eta_transport.contract.ts`; root scripts `lint` and `format`; CI step "Lint and format check".
+- Finding 6: `@playwright/test` 1.64.1 (apps/web dev dependency), `apps/web/playwright.config.ts`, `apps/web/e2e/smoke.e2e.ts` (every page discovered from the sample build, desktop and phone, console errors, missing headings, sideways scroll, RTL pass), `test:e2e` script, CI steps before the deploy; `.gitignore` for its output. Bugs it found and fixed: `purchasing/SupplierInvoices.tsx` hid load errors behind "Loading…" (now shown) and the sample build listed a page it has no data for (`modules/registry.tsx`: Purchase invoices real API only); `lib/demo.ts` listed Purchasing and Sales twice in Settings > Apps.
+- Finding 7: `documentation/plans/2026-11-03-arabic-review-sheet.md` (216 strings new or changed since `c282b86`) for Ben.
+
+**Database / System Result.** None changed. One read-only query on ggoerp. Chromium for Playwright downloaded to the user profile (`%LOCALAPPDATA%\ms-playwright`).
+
+**Safety Status.** `npm run lint`, `npm run typecheck`, `npm test` (shared 30, api 132, web 42), `vite build` and the smoke test (4 passed: every page on desktop and phone, plus RTL) pass locally. The new CI steps run on the next push (they add about two minutes; the browser download happens in CI). Open for Ben: e-invoicing on/off in the two demo companies, names of the existing users, demo data, repo-root files.
+
+## 2026-11-03 (late) — System audit fixes: server-side balances, isolation tests for 7 tables, rate limit, lazy screens, name on invite (not deployed)
+
+**Objective.** Ben: "fix the findings" of [`documentation/plans/2026-11-03-system-audit.md`](../plans/2026-11-03-system-audit.md). Status per finding is at the end of that report.
+
+**Actions Completed.**
+- Finding 1 (P1): `apps/api/src/modules/finance/routes.ts` new reads computed over all rows (`fetchAll`, pages of 1000): `/open-items`, `/payments?for=`, `/payments/:id`, `/expenses/:id`; payment rows carry `targetNumber`. `sales/routes.ts` `GET /invoices/:id`; `purchasing/routes.ts` `GET /supplier-invoices/:id` (lines with item, order number). Web: Payments form (`finance/Finance.tsx`), payment and expense pages and the payments block (`finance/FinanceRecords.tsx`), sales and purchase invoice pages use them. Tests `apps/api/test/finance_balances.test.ts` (12).
+- Finding 2 (P1): `sql/tests/034_isolation_gaps.sql` (+ README row) for `inv_warehouses`, `inv_counters`, `inv_request_lines`, `pur_suppliers`, `inv_storage_conditions`, `alr_team_members`, `alr_rule_recipients`.
+- Finding 4: `apps/api/wrangler.toml` `[[ratelimits]] API_LIMITER` (600/60 s); `apps/api/src/middleware/rateLimit.ts` on `/v1/*` (per user) and `/webhooks/*` (per IP); `env.ts` binding type. Tests `apps/api/test/rate_limit.test.ts` (3).
+- Finding 8 (code half): invite form asks for the full name; `memberRoutes.ts` requires it; `lib/authAdmin.ts` stores it as `full_name` on the new account.
+- Finding 11: `modules/registry.tsx` loads every screen lazily (42 components, one chunk per file); `components/Shell.tsx` wraps the page in `Suspense` with the skeleton.
+
+**Database / System Result.** None changed. No migration. `wrangler deploy --dry-run` only (shows `env.API_LIMITER (600 requests/60s)`). The Supabase tool available here points at another account's project (`saleooperations`), so finding 3 was not checked and nothing was run there.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 132, web 42) and `vite build` pass. Not run: the new SQL test (runs in the SQL-tests workflow on push); the new endpoints against live data (need the Worker deploy). Refused by the permission system: installing Biome (finding 5). Still Ben's: findings 3, 8 (names of existing users), 9, 12; 7 needs a native speaker.
+
 ## 2026-11-03 (after round 5) — System-wide audit; last browser pop-up and untranslated strings fixed (not deployed)
 
 **Objective.** Ben: after the polish rounds, "a system wide audit of everything". Report: [`documentation/plans/2026-11-03-system-audit.md`](../plans/2026-11-03-system-audit.md) (13 findings: 3 P1, 7 P2, 3 P3).

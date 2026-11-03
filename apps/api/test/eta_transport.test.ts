@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
-  SIMULATED_BADGE, StubSigner, badgeFor, buildDocument, isSimulationId, recordIsConsistent, submissionBodyJson, toSendRecord,
-  type EtaDocInput, type Signer,
+  SIMULATED_BADGE,
+  StubSigner,
+  badgeFor,
+  buildDocument,
+  isSimulationId,
+  recordIsConsistent,
+  submissionBodyJson,
+  toSendRecord,
+  type EtaDocInput,
+  type Signer,
 } from '@erp/shared';
 import { EtaClient } from '../src/lib/eta/client';
 import { SimulatedTransport, type SimulatedScenario } from '../src/lib/eta/simulated';
@@ -12,7 +20,12 @@ import { runTransportContract } from './eta_transport.contract';
 // environment (ETA_PREPROD_CLIENT_ID and ETA_PREPROD_CLIENT_SECRET, optionally ETA_PREPROD_REG_NUMBER and ETA_PREPROD_BRANCH_ID);
 // otherwise the suite below is reported as SKIPPED, never silently dropped and never run against a fake pretending to be PreProd.
 
-runTransportContract({ label: 'SimulatedTransport', make: () => new SimulatedTransport(), expectMode: 'simulated', tolerateRefusal: false });
+runTransportContract({
+  label: 'SimulatedTransport',
+  make: () => new SimulatedTransport(),
+  expectMode: 'simulated',
+  tolerateRefusal: false,
+});
 
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
 const preprod = { id: env.ETA_PREPROD_CLIENT_ID, secret: env.ETA_PREPROD_CLIENT_SECRET };
@@ -29,11 +42,34 @@ describe.skipIf(!havePreprod)('PreProd (skipped unless ETA_PREPROD_CLIENT_ID and
 });
 
 const input = (internalId: string): EtaDocInput => ({
-  kind: 'invoice', version: '0.9',
-  issuer: { id: '100200300', name: 'Seller', branchId: '0', address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 St', buildingNumber: '1' } },
-  receiver: { type: 'B', id: '200300400', name: 'Buyer', address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 St', buildingNumber: '2' } },
-  dateTimeIssued: '2026-11-02T10:15:00Z', taxpayerActivityCode: '4620', internalId,
-  lines: [{ description: 'Item', itemType: 'EGS', itemCode: 'EG-100200300-X', unitType: 'EA', quantity: '1', unitPriceEGP: '100.00', taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }] }],
+  kind: 'invoice',
+  version: '0.9',
+  issuer: {
+    id: '100200300',
+    name: 'Seller',
+    branchId: '0',
+    address: { country: 'EG', governate: 'Cairo', regionCity: 'Nasr City', street: '1 St', buildingNumber: '1' },
+  },
+  receiver: {
+    type: 'B',
+    id: '200300400',
+    name: 'Buyer',
+    address: { country: 'EG', governate: 'Giza', regionCity: 'Dokki', street: '2 St', buildingNumber: '2' },
+  },
+  dateTimeIssued: '2026-11-02T10:15:00Z',
+  taxpayerActivityCode: '4620',
+  internalId,
+  lines: [
+    {
+      description: 'Item',
+      itemType: 'EGS',
+      itemCode: 'EG-100200300-X',
+      unitType: 'EA',
+      quantity: '1',
+      unitPriceEGP: '100.00',
+      taxes: [{ taxType: 'T1', subType: 'V009', rate: '14' }],
+    },
+  ],
 });
 const body = (...ids: string[]) => submissionBodyJson(ids.map((i) => buildDocument(input(i)).doc));
 
@@ -99,13 +135,17 @@ describe('SimulatedTransport scenarios', () => {
   it('every id it hands out is visibly simulated and nothing in it can pass for an ETA id', async () => {
     const t = new SimulatedTransport();
     const r = await t.submit(body('I-1'));
-    for (const id of [r.submissionUUID, r.acceptedDocuments[0]!.uuid, r.acceptedDocuments[0]!.longId]) expect(isSimulationId(id)).toBe(true);
+    for (const id of [r.submissionUUID, r.acceptedDocuments[0]!.uuid, r.acceptedDocuments[0]!.longId])
+      expect(isSimulationId(id)).toBe(true);
     expect(r.simulated).toBe(true);
   });
   it('makes no network call (it imports no HTTP client and never touches fetch)', async () => {
     const original = globalThis.fetch;
     let called = 0;
-    globalThis.fetch = (() => { called += 1; throw new Error('network used'); }) as typeof fetch;
+    globalThis.fetch = (() => {
+      called += 1;
+      throw new Error('network used');
+    }) as typeof fetch;
     try {
       const t = new SimulatedTransport();
       const r = await t.submit(body('N-1'));
@@ -123,7 +163,14 @@ describe('what a simulated send may store and show', () => {
     const t = new SimulatedTransport();
     const r = await t.submit(body('S-1'));
     const rec = toSendRecord(t.mode, r.submissionUUID, r.acceptedDocuments[0]!);
-    expect(rec).toMatchObject({ mode: 'simulated', simulated: true, badge: SIMULATED_BADGE, etaUuid: null, etaLongId: null, etaSubmissionUuid: null });
+    expect(rec).toMatchObject({
+      mode: 'simulated',
+      simulated: true,
+      badge: SIMULATED_BADGE,
+      etaUuid: null,
+      etaLongId: null,
+      etaSubmissionUuid: null,
+    });
     expect(rec.simulationId).toBe(r.acceptedDocuments[0]!.uuid);
     expect(recordIsConsistent(rec)).toBe(true);
     expect(badgeFor(rec)).toBe('SIMULATED, not sent to ETA');
@@ -137,11 +184,21 @@ describe('what a simulated send may store and show', () => {
   });
   it('a real send stores the ETA references and no badge, and refuses a simulated id', () => {
     const rec = toSendRecord('preprod', 'SUBMISSION123456', { uuid: 'DOCUMENT1234567', longId: 'LONG', internalId: 'X' });
-    expect(rec).toMatchObject({ simulated: false, badge: null, etaUuid: 'DOCUMENT1234567', etaSubmissionUuid: 'SUBMISSION123456', simulationId: null });
+    expect(rec).toMatchObject({
+      simulated: false,
+      badge: null,
+      etaUuid: 'DOCUMENT1234567',
+      etaSubmissionUuid: 'SUBMISSION123456',
+      simulationId: null,
+    });
     expect(badgeFor(rec)).toBeNull();
     expect(recordIsConsistent(rec)).toBe(true);
-    expect(() => toSendRecord('preprod', 'SUBMISSION123456', { uuid: 'SIMULATED-DOC-0001', longId: 'L', internalId: 'X' })).toThrow('SIMULATED_ID_IN_REAL_MODE');
-    expect(() => toSendRecord('production', 'SIMULATED-SUB-0001', { uuid: 'DOCUMENT1234567', longId: 'L', internalId: 'X' })).toThrow('SIMULATED_ID_IN_REAL_MODE');
+    expect(() => toSendRecord('preprod', 'SUBMISSION123456', { uuid: 'SIMULATED-DOC-0001', longId: 'L', internalId: 'X' })).toThrow(
+      'SIMULATED_ID_IN_REAL_MODE',
+    );
+    expect(() => toSendRecord('production', 'SIMULATED-SUB-0001', { uuid: 'DOCUMENT1234567', longId: 'L', internalId: 'X' })).toThrow(
+      'SIMULATED_ID_IN_REAL_MODE',
+    );
   });
   it('flags an inconsistent record (simulated with an ETA reference, real without one)', () => {
     const good = toSendRecord('simulated', 'S', { uuid: 'SIMULATED-DOC-0001', longId: 'L', internalId: 'X' });
@@ -167,19 +224,34 @@ describe('choosing the transport for a company', () => {
   });
   it('preprod needs credentials; it does not need a real signer (version 0.9 documents are not signature-checked)', () => {
     expect(() => transportFor({ mode: 'preprod', credentials: null, signer: null }, factories)).toThrow(EtaModeError);
-    expect(() => transportFor({ mode: 'preprod', credentials: { clientId: '', clientSecret: '' }, signer: null }, factories)).toThrow(/credentials/i);
+    expect(() => transportFor({ mode: 'preprod', credentials: { clientId: '', clientSecret: '' }, signer: null }, factories)).toThrow(
+      /credentials/i,
+    );
     expect(transportFor({ mode: 'preprod', credentials: creds, signer: null }, factories).mode).toBe('preprod');
   });
   it('production is refused without credentials, and refused with credentials but no real signer (the stub never qualifies)', () => {
-    const code = (f: () => unknown) => { try { f(); return 'allowed'; } catch (e) { return (e as EtaModeError).code; } };
+    const code = (f: () => unknown) => {
+      try {
+        f();
+        return 'allowed';
+      } catch (e) {
+        return (e as EtaModeError).code;
+      }
+    };
     expect(code(() => transportFor({ mode: 'production', credentials: null, signer: realSigner }, factories))).toBe('CREDENTIALS_MISSING');
     expect(code(() => transportFor({ mode: 'production', credentials: creds, signer: null }, factories))).toBe('PRODUCTION_NOT_READY');
-    expect(code(() => transportFor({ mode: 'production', credentials: creds, signer: new StubSigner() }, factories))).toBe('PRODUCTION_NOT_READY');
+    expect(code(() => transportFor({ mode: 'production', credentials: creds, signer: new StubSigner() }, factories))).toBe(
+      'PRODUCTION_NOT_READY',
+    );
     expect(transportFor({ mode: 'production', credentials: creds, signer: realSigner }, factories).mode).toBe('production');
   });
   it('an unknown mode is an error, never a quiet fallback to simulated or to a real system', () => {
     expect(() => transportFor({ mode: 'live', credentials: creds, signer: realSigner }, factories)).toThrow(EtaModeError);
-    try { transportFor({ mode: 'live', credentials: creds, signer: realSigner }, factories); } catch (e) { expect((e as EtaModeError).code).toBe('INVALID_MODE'); }
+    try {
+      transportFor({ mode: 'live', credentials: creds, signer: realSigner }, factories);
+    } catch (e) {
+      expect((e as EtaModeError).code).toBe('INVALID_MODE');
+    }
   });
   it('the stub signer says it is a stub', () => {
     expect(new StubSigner().kind).toBe('stub');

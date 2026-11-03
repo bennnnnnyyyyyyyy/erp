@@ -38,7 +38,7 @@ export function SupplierInvoices(){
     try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId])}))})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});summaries.reload();invoices.reload();}
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
-  if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading /></section>;
+  if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading error={summaries.error??invoices.error??suppliers.error??items.error} /></section>;
   const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
   const toBill=billingRows.filter(r=>r.billed<r.received);
   const shownBilling=showAll?billingRows:toBill;
@@ -73,19 +73,18 @@ export function SupplierInvoices(){
 export function SupplierInvoicePage() {
   const id = useParam('id');
   const session = useSession();
-  const invoices = useLoad(() => api<Invoice[]>('/v1/purchasing/supplier-invoices'));
-  const summaries = useLoad(() => api<Summary[]>('/v1/purchasing/billing-summary'));
+  // The invoice by id, with each line's item and the order number (the list holds the newest 250 only).
+  const invoice = useLoad(() => api<Omit<Invoice, 'lines'> & { orderNumber: string | null; lines: { orderLineId: string; itemId: string | null; qty: number; unitCostMinor: number }[] }>(`/v1/purchasing/supplier-invoices/${id}`));
   const suppliers = useLoad(() => api<Supplier[]>('/v1/purchasing/suppliers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
 
-  if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
-  if (!invoices.data || !summaries.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
-  const inv = invoices.data.find((i) => i.id === id);
-  if (!inv) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
-  const order = summaries.data.find((o) => o.orderId === inv.orderId);
+  if (invoice.error) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><Loading error={invoice.error} /></section>;
+  if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
+  const inv = invoice.data;
+  const order = { number: inv.orderNumber };
   const supplier = suppliers.data.find((s) => s.id === inv.supplierId)?.name ?? '—';
   const itemOf = (orderLineId: string) => {
-    const itemId = order?.lines.find((l) => l.orderLineId === orderLineId)?.itemId;
+    const itemId = inv.lines.find((l) => l.orderLineId === orderLineId)?.itemId;
     const i = items.data?.find((v) => v.id === itemId);
     return i ? `${i.sku} · ${i.name}` : '—';
   };

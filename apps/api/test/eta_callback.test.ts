@@ -22,17 +22,36 @@ describe('ApiKey check', () => {
 
 describe('notification parsing', () => {
   const body = {
-    deliveryId: '838847HS2', type: 'document', count: 2,
+    deliveryId: '838847HS2',
+    type: 'document',
+    count: 2,
     message: [
-      { type: 'document-validated', uuid: 'F9D425P6DS7D8IU', submissionUUID: 'JU7GH07JNA23N', longId: 'LONG1', internalId: 'INV-1', status: 'Valid' },
-      { type: 'document-cancelled', uuid: 'G0E536Q7ET8E9JV', submissionUUID: 'JU7GH07JNA23N', longId: 'LONG2', internalId: 'INV-2', status: 'Cancelled' },
+      {
+        type: 'document-validated',
+        uuid: 'F9D425P6DS7D8IU',
+        submissionUUID: 'JU7GH07JNA23N',
+        longId: 'LONG1',
+        internalId: 'INV-1',
+        status: 'Valid',
+      },
+      {
+        type: 'document-cancelled',
+        uuid: 'G0E536Q7ET8E9JV',
+        submissionUUID: 'JU7GH07JNA23N',
+        longId: 'LONG2',
+        internalId: 'INV-2',
+        status: 'Cancelled',
+      },
     ],
   };
   it('reads the documented structure and normalises status', () => {
     const r = parseNotification(body)!;
     expect(r.deliveryId).toBe('838847HS2');
     expect(r.count).toBe(2);
-    expect(r.messages.map((m) => [m.type, m.status])).toEqual([['document-validated', 'valid'], ['document-cancelled', 'cancelled']]);
+    expect(r.messages.map((m) => [m.type, m.status])).toEqual([
+      ['document-validated', 'valid'],
+      ['document-cancelled', 'cancelled'],
+    ]);
     expect(r.messages[0]).toMatchObject({ uuid: 'F9D425P6DS7D8IU', internalId: 'INV-1', rawStatus: 'Valid' });
   });
   it('keeps an unexpected status as unknown instead of guessing', () => {
@@ -40,12 +59,30 @@ describe('notification parsing', () => {
     expect(r.messages[0]).toMatchObject({ status: 'unknown', rawStatus: 'In Progress' });
   });
   it('skips malformed messages but keeps the good ones', () => {
-    const r = parseNotification({ ...body, message: [null, 5, { type: 'surprise', uuid: 'U' }, { type: 'document-rejected' }, { type: 'document-rejected', uuid: 'U2', status: 'Rejected' }] })!;
+    const r = parseNotification({
+      ...body,
+      message: [
+        null,
+        5,
+        { type: 'surprise', uuid: 'U' },
+        { type: 'document-rejected' },
+        { type: 'document-rejected', uuid: 'U2', status: 'Rejected' },
+      ],
+    })!;
     expect(r.messages).toHaveLength(1);
     expect(r.messages[0]).toMatchObject({ uuid: 'U2', status: 'rejected' });
   });
   it('returns null for anything that is not a document notification', () => {
-    for (const bad of [null, 'x', 5, [], {}, { deliveryId: '', type: 'document', message: [] }, { deliveryId: 'd', type: 'receipt', message: [] }, { deliveryId: 'd', type: 'document' }]) {
+    for (const bad of [
+      null,
+      'x',
+      5,
+      [],
+      {},
+      { deliveryId: '', type: 'document', message: [] },
+      { deliveryId: 'd', type: 'receipt', message: [] },
+      { deliveryId: 'd', type: 'document' },
+    ]) {
       expect(parseNotification(bad)).toBeNull();
     }
   });

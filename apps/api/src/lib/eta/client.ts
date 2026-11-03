@@ -95,21 +95,42 @@ export class EtaClient implements EtaTransport {
       },
       body,
     });
-    const json = (await res.json().catch(() => null)) as { access_token?: string; expires_in?: number; error?: string; error_description?: string } | null;
+    const json = (await res.json().catch(() => null)) as {
+      access_token?: string;
+      expires_in?: number;
+      error?: string;
+      error_description?: string;
+    } | null;
     if (!res.ok || !json?.access_token) {
       // The identity service answers with { error: "invalid_client" } style bodies, not the API's error object.
-      throw new EtaError(res.status, json?.error ?? 'LoginFailed', 'ETA refused the login (check the Client ID, the Client Secret and the environment)', res.headers.get('correlationId'), null);
+      throw new EtaError(
+        res.status,
+        json?.error ?? 'LoginFailed',
+        'ETA refused the login (check the Client ID, the Client Secret and the environment)',
+        res.headers.get('correlationId'),
+        null,
+      );
     }
     const lifetimeMs = (typeof json.expires_in === 'number' && json.expires_in > 0 ? json.expires_in : 3600) * 1000;
     this.cached = { token: json.access_token, expiresAt: this.now() + lifetimeMs };
     return json.access_token;
   }
 
-  private async call<T>(method: string, path: string, body?: string, extraHeaders: Record<string, string> = {}): Promise<{ data: T; correlationId: string | null; status: number }> {
+  private async call<T>(
+    method: string,
+    path: string,
+    body?: string,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<{ data: T; correlationId: string | null; status: number }> {
     const doOnce = async () =>
       this.doFetch(`${this.hosts().api}${path}`, {
         method,
-        headers: { ...this.baseHeaders(), ...extraHeaders, Authorization: `Bearer ${await this.token()}`, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+        headers: {
+          ...this.baseHeaders(),
+          ...extraHeaders,
+          Authorization: `Bearer ${await this.token()}`,
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        },
         ...(body !== undefined ? { body } : {}),
       });
     let res = await doOnce();
@@ -123,14 +144,25 @@ export class EtaClient implements EtaTransport {
     if (!res.ok) {
       const err = (json as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error;
       const retryAfter = Number(res.headers.get('Retry-After'));
-      throw new EtaError(res.status, err?.code ?? `HTTP_${res.status}`, err?.message ?? `ETA answered ${res.status}`, correlationId, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null, err?.details);
+      throw new EtaError(
+        res.status,
+        err?.code ?? `HTTP_${res.status}`,
+        err?.message ?? `ETA answered ${res.status}`,
+        correlationId,
+        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+        err?.details,
+      );
     }
     return { data: json as T, correlationId, status: res.status };
   }
 
   /** POST /api/v1.0/documentsubmissions/. `bodyJson` is the exact text from submissionBodyJson. */
   async submit(bodyJson: string): Promise<SubmitResult> {
-    const { data, correlationId } = await this.call<Omit<SubmitResult, 'correlationId' | 'simulated'>>('POST', '/api/v1.0/documentsubmissions/', bodyJson);
+    const { data, correlationId } = await this.call<Omit<SubmitResult, 'correlationId' | 'simulated'>>(
+      'POST',
+      '/api/v1.0/documentsubmissions/',
+      bodyJson,
+    );
     return {
       simulated: false,
       submissionUUID: data.submissionUUID,
@@ -145,23 +177,41 @@ export class EtaClient implements EtaTransport {
     if (!/^[A-Za-z0-9]{10,40}$/.test(submissionUuid)) throw new Error('INVALID_SUBMISSION_UUID');
     // Response fields per the Get Submission page: uuid, documentCount, overallStatus, documentSummary[] (uuid, longId, internalId, status, total, ...).
     // Per-document validation errors are NOT in this summary; they come from Get Document Details (not built yet).
-    const { data, correlationId } = await this.call<{ uuid?: string; documentCount: number; overallStatus: SubmissionStatus['overallStatus']; documentSummary?: { uuid: string; internalId: string; status: DocumentStatus; longId?: string; total?: number }[] }>(
-      'GET', `/api/v1.0/documentsubmissions/${submissionUuid}?pageNo=${pageNo}&pageSize=${pageSize}`);
+    const { data, correlationId } = await this.call<{
+      uuid?: string;
+      documentCount: number;
+      overallStatus: SubmissionStatus['overallStatus'];
+      documentSummary?: { uuid: string; internalId: string; status: DocumentStatus; longId?: string; total?: number }[];
+    }>('GET', `/api/v1.0/documentsubmissions/${submissionUuid}?pageNo=${pageNo}&pageSize=${pageSize}`);
     return {
       simulated: false,
       submissionUUID: data.uuid ?? submissionUuid,
       overallStatus: data.overallStatus,
       documentCount: data.documentCount,
-      documents: (data.documentSummary ?? []).map((d) => ({ uuid: d.uuid, internalId: d.internalId, status: d.status, ...(d.longId ? { longId: d.longId } : {}), ...(d.total !== undefined ? { total: d.total } : {}) })),
+      documents: (data.documentSummary ?? []).map((d) => ({
+        uuid: d.uuid,
+        internalId: d.internalId,
+        status: d.status,
+        ...(d.longId ? { longId: d.longId } : {}),
+        ...(d.total !== undefined ? { total: d.total } : {}),
+      })),
       correlationId,
     };
   }
 
   /** PUT /api/v1.0/documents/state/{uuid}/state. Issuer cancels, receiver rejects; inside the window ETA publishes per document type. */
-  private async setState(documentUuid: string, status: 'cancelled' | 'rejected', reason: string): Promise<{ correlationId: string | null }> {
+  private async setState(
+    documentUuid: string,
+    status: 'cancelled' | 'rejected',
+    reason: string,
+  ): Promise<{ correlationId: string | null }> {
     if (!/^[A-Za-z0-9]{10,40}$/.test(documentUuid)) throw new Error('INVALID_DOCUMENT_UUID');
     if (!reason.trim()) throw new Error('REASON_REQUIRED');
-    const { correlationId } = await this.call<unknown>('PUT', `/api/v1.0/documents/state/${documentUuid}/state`, JSON.stringify({ status, reason: reason.trim() }));
+    const { correlationId } = await this.call<unknown>(
+      'PUT',
+      `/api/v1.0/documents/state/${documentUuid}/state`,
+      JSON.stringify({ status, reason: reason.trim() }),
+    );
     return { correlationId };
   }
   cancelDocument(documentUuid: string, reason: string) {

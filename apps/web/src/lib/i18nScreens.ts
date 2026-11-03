@@ -650,6 +650,7 @@ export const SCREENS_AR: Record<string, string> = {
   "Unknown customer": "عميل غير معروف",
   "Skip to content": "تخطَّ إلى المحتوى",
   "Sign out": "تسجيل الخروج",
+  "Full name": "الاسم الكامل",
   "{n} items": "{n} أصناف",
   "Yes, switch off": "نعم، أوقِفها",
   // Polish round 3: forms behind buttons, empty profit page, settings sections, users

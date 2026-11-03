@@ -8,6 +8,7 @@ import { processInbound } from './lib/whatsappInbound';
 import { HttpError } from './lib/errors';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
+import { rateLimit } from './middleware/rateLimit';
 import { requireModule, requireTenant } from './middleware/tenant';
 import { MODULE_ROUTES } from './modules/registry';
 
@@ -22,7 +23,7 @@ app.get('/health', (c) => ok(c, { status: 'ok', env: c.env.APP_ENV }));
 
 // Everything under /v1 needs a signed-in user acting inside one organization.
 const v1 = new Hono<AppEnv>();
-v1.use('*', requireAuth, requireTenant);
+v1.use('*', requireAuth, rateLimit('api'), requireTenant);
 for (const [key, routes] of Object.entries(MODULE_ROUTES)) {
   v1.use(`/${key}/*`, requireModule(key));
   v1.route(`/${key}`, routes);
@@ -33,11 +34,14 @@ app.route('/v1', v1);
 // POST is accepted only with a valid `X-Hub-Signature-256`; the text is handed to the database functions, which find the
 // person by their verified number and apply the same rules as the app. Always answers 200 quickly once the signature is
 // valid, because Meta retries otherwise.
+app.use('/webhooks/*', rateLimit('webhook'));
 app.get('/webhooks/whatsapp', (c) => {
   const token = c.env.WHATSAPP_VERIFY_TOKEN;
   if (!token) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');
   const ok =
-    c.req.query('hub.mode') === 'subscribe' && safeEqual(c.req.query('hub.verify_token') ?? '', token) && Boolean(c.req.query('hub.challenge'));
+    c.req.query('hub.mode') === 'subscribe' &&
+    safeEqual(c.req.query('hub.verify_token') ?? '', token) &&
+    Boolean(c.req.query('hub.challenge'));
   return ok ? c.text(c.req.query('hub.challenge') ?? '') : fail(c, 403, 'Verification failed', 'forbidden');
 });
 

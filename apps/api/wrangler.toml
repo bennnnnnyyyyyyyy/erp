@@ -11,6 +11,13 @@ compatibility_flags = ["nodejs_compat"]
 APP_ENV = "production"
 ALLOWED_ORIGINS = "https://erp-live.pages.dev"
 
+# Request limit (src/middleware/rateLimit.ts; system audit 2026-11-03, finding 4): 600 requests a minute per signed-in user, or per
+# IP where there is no user (webhooks). A page makes about six requests, so this only stops runaway scripts.
+[[ratelimits]]
+name = "API_LIMITER"
+namespace_id = "1001"
+simple = { limit = 600, period = 60 }
+
 # Delivers queued messages and sends reminders and escalations (src/jobs/outbox.ts). Also runnable on demand.
 [triggers]
 crons = ["*/5 * * * *"]
