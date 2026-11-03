@@ -84,7 +84,7 @@ export function GeneralSettings() {
             <option value="ar">{t('Arabic (right to left)')}</option>
           </select>
           <span className="hint muted">
-            Only for you, on this browser. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {arabicStringCount} menu strings, the Getting-started tutorial and the Guide so far; the rest of the app stays in English until it is translated and reviewed by a native speaker.
+            Only for you, on this browser. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {arabicStringCount} menu strings, the home page, the Getting-started tutorial, the tour and the Guide so far; the rest of the app stays in English until it is translated and reviewed by a native speaker.
           </span>
         </label>
       </div>
@@ -171,6 +171,23 @@ export function GeneralSettings() {
                 setError((err as Error).message);
               }
             }}>{session.org?.showTutorial ? 'Hide the guide' : 'Show the guide'}</button>
+          </div>
+        </div>
+      )}
+      {canEdit && !demoMode && (
+        <div className="form-card stack">
+          <h2>Guided tour</h2>
+          <p className="muted small">A step-by-step tour that walks people through the real screens, in English or Arabic. It is {session.org?.showTour ? 'on' : 'off'} for this company; when it is on, a "Take the tour" button appears on the Guide and Getting-started pages.</p>
+          <div>
+            <button type="button" className="secondary" onClick={async () => {
+              setError(null);
+              try {
+                await api('/v1/core/org/tour', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTour }) });
+                reloadSession();
+              } catch (err) {
+                setError((err as Error).message);
+              }
+            }}>{session.org?.showTour ? 'Switch the tour off' : 'Switch the tour on'}</button>
           </div>
         </div>
       )}

@@ -28,6 +28,7 @@ export type Tenant = {
   dateFormat: string;
   language: 'en' | 'ar';
   showTutorial: boolean;
+  showTour: boolean;
   role: Role;
   permissions: string[];
   modules: string[];

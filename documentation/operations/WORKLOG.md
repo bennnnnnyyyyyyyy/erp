@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (final night) — Language selection finalized, per-company tour switch, Arabic navigation, sign-in checks
+
+**Objective.** Ben: language selection and finishing it is crucial before the demo; the tour must be switchable in any company and stay in the old empty one for now; the demo passwords are in `.temp/demo-credentials.txt` (explicitly authorized).
+
+**Actions Completed.**
+- **Sign-in checks (live API, real logins, passwords loaded into the process environment only and never printed):** `scripts/real-login-check.mjs` as chris (owner) 15/15, joseph (manager/admin) 15/15, grant (requester/member) 17/17, all PASS, same as the recorded baseline. The concurrency check was **not** run: it needs separate `CONC_*` logins that are not in that file, and it writes data.
+- **Language, finished:** first-run prompt shown once to a signed-in person never asked (English, Arabic, or *use my company's default*); any answer ends the question for good, even the default (a saved account row with no language means *asked*; session field `userLanguageAsked`); the account wins over the browser (five explicit cases in `planAccountSync`, unit tested); the prompt waits until the account has been checked so it cannot flash; the tutorial and the tour use the same rule. Chooser copy corrected to say what is translated.
+- **Arabic navigation:** home greeting and date (Arabic names, Western digits), suite headings, app names and descriptions, sidebar and top-bar labels, browser-tab title, role names, Guide app list (`lib/i18nNav.ts`, machine draft). A test reads the registry source and fails if any app, description, page label or suite has no Arabic text. Company names are isolated with `bdi` so a trailing period does not flip in right-to-left lines.
+- **Tour per company:** `sql/039_org_tour.sql` (`core_set_tour`, owner/admin, audited, off by default), `POST /v1/core/org/tour`, `showTour` in the session, a Settings > General switch; the Take the tour button shows only where it is on. **Applied to the live project; test 033 passed live; switched ON for Test Organization only** (audited, 'Guided tour switched on'). Cosmetics and Demo Trading are off.
+- **UI review against ui-ux-pro-max (from .github/prompts):** dialogs now take and hold keyboard focus (verified: focus lands on the first control and seven Tabs never leave the dialog), have an accessible label, decorative arrows and check marks are hidden from screen readers, tour buttons and the close control are 40px tall.
+
+**Database / System Result.** Production: `core_set_tour` added; one company setting changed (tour on for Test Organization), audited. Typecheck clean; tests: shared 31, API 117 + 7 skipped, web 39.
+
+**Safety Status.** Not committed, not deployed. The first-run prompt, account saving and the tour switch are verified in the local demo build (with temporary patches that were reverted and diff-checked) and by SQL and unit tests, **not yet end to end on the live site**: the live Worker and Pages do not have these changes until Ben pushes. After the push, the first sign-in of chris, joseph and grant in any company will show the language prompt once. Arabic still needs a native reviewer. A GitKraken hook crashed once (out of memory) during the browser work; it was not caused by this repo.
+
 ## 2026-11-03 (late night) — Guided tour version 1 (English and Arabic), not deployed
 
 **Objective.** Ben: the tutorial and Arabic were not good enough; build the real walk-through.

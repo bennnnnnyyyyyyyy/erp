@@ -45,6 +45,7 @@ Run the whole file at once with nothing else in the editor.
 | `030_einvoicing_tax_data.sql` | module switch, roles, ETA mode (default simulated, production refused), ETA code pairs, EGS code format, default-rate uniqueness, soft delete and in-use guard, customer and item fields, column grants, audit, no direct writes, other organization (needs 036) |
 | `031_credit_debit_notes.sql` | who requests and decides, credit cap per line and cumulative, debit notes, self-approval blocked in function and data, reject and cancel free the quantity, void blocked with active notes, immutability, other organization (needs 037) |
 | `032_user_language.sql` | save, change and clear a person's language, validation, each person sees only their own row, no direct writes, no anonymous use, no save without sign-in (needs 038) |
+| `033_org_tour.sql` | the tour switch is off by default, owner/admin only, audited, a no-op writes no audit row, leaves the tutorial flag alone, never affects another company, no anonymous use (needs 039) |
 | `021_security_audit_fixes.sql` | existing accounts must accept an invitation, invitations isolated, member role rules and audit in the database, sign-in link refused across organizations, no user-claimed 'whatsapp' channel, per-org delivery closed to users |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).

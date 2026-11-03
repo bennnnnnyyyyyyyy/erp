@@ -1,0 +1,87 @@
+// Arabic for the navigation layer: suite headings, app names and descriptions, page labels, the greeting and role names. The English text is
+// the key (see i18n.tsx); a missing entry shows English. MACHINE DRAFT: a native speaker must review these, and the company's own terms
+// (for example "ledger", "batch", "approval policy") should be agreed first.
+
+export const NAV_AR: Record<string, string> = {
+  // suites
+  Warehouse: 'المستودع',
+  'Sales & Purchasing': 'المبيعات والمشتريات',
+  Finance: 'المالية',
+  Core: 'الأساسيات',
+
+  // apps
+  Inventory: 'المخزون',
+  Purchasing: 'المشتريات',
+  Sales: 'المبيعات',
+  Tasks: 'المهام',
+  Messages: 'الرسائل',
+  'Getting started': 'البدء',
+  Alerts: 'التنبيهات',
+  Guide: 'دليل الاستخدام',
+  Settings: 'الإعدادات',
+  Apps: 'التطبيقات',
+
+  // app descriptions (the "(demo data)" variants are the local demo build only)
+  'Stock, requests, approvals and the ledger': 'المخزون والطلبات والموافقات وسجل الحركات',
+  'Stock, requests, approvals and the ledger (demo data)': 'المخزون والطلبات والموافقات وسجل الحركات (بيانات تجريبية)',
+  'Suppliers, purchase orders and receiving goods into stock': 'الموردون وأوامر الشراء واستلام البضاعة في المخزون',
+  'Suppliers and purchase orders; receiving adds stock (demo data)': 'الموردون وأوامر الشراء؛ والاستلام يزيد المخزون (بيانات تجريبية)',
+  'Customers and sales orders that raise stock requests (demo data)': 'العملاء وأوامر البيع التي تنشئ طلبات مخزون (بيانات تجريبية)',
+  'Customer orders fulfilled through approved warehouse stock requests': 'طلبات العملاء تُنفَّذ عبر طلبات مخزون معتمدة من المستودع',
+  'Assign work with a due time and follow it up': 'أسند العمل بموعد استحقاق وتابعه',
+  'Notifications, and delivery status for managers': 'الإشعارات وحالة التسليم للمديرين',
+  'Expenses and payments: money in, money out': 'المصروفات والمدفوعات: ما يدخل وما يخرج',
+  'A short guide to setting up and running your company': 'دليل قصير لإعداد شركتك وإدارتها',
+  'Tell the right people when stock runs low, a batch expires or money is late': 'أبلغ الأشخاص المناسبين عند انخفاض المخزون أو انتهاء صلاحية دفعة أو تأخر الأموال',
+  'How to find your way around, a five-step tour, and what is not ready yet': 'كيف تجد طريقك، ومسار من خمس خطوات، وما ليس جاهزًا بعد',
+  'Organization, users, apps and audit log': 'المؤسسة والمستخدمون والتطبيقات وسجل التدقيق',
+
+  // pages
+  'Stock on hand': 'المخزون الحالي',
+  'Reorder levels': 'حدود إعادة الطلب',
+  'Stock forecast': 'توقعات المخزون',
+  'Batches and expiry': 'الدفعات وتواريخ الانتهاء',
+  'Approval policies': 'سياسات الموافقة',
+  'Stock adjustments': 'تسويات المخزون',
+  'Stock transfers': 'تحويلات المخزون',
+  'New transfer': 'تحويل جديد',
+  Transfer: 'تحويل',
+  'Stock requests': 'طلبات المخزون',
+  'New request': 'طلب جديد',
+  Request: 'طلب',
+  'Stock ledger': 'سجل المخزون',
+  'Purchase orders': 'أوامر الشراء',
+  'New purchase order': 'أمر شراء جديد',
+  'Purchase order': 'أمر شراء',
+  Suppliers: 'الموردون',
+  'Supplier invoices': 'فواتير الموردين',
+  'Sales orders': 'أوامر البيع',
+  'New sales order': 'أمر بيع جديد',
+  'Sales order': 'أمر بيع',
+  Customers: 'العملاء',
+  'Customer invoices': 'فواتير العملاء',
+  Task: 'مهمة',
+  Notifications: 'الإشعارات',
+  'Connect WhatsApp': 'ربط واتساب',
+  'Message outbox': 'صندوق الرسائل الصادرة',
+  Expenses: 'المصروفات',
+  'Profit overview': 'نظرة على الأرباح',
+  Payments: 'المدفوعات',
+  Tutorial: 'الدليل التعليمي',
+  'Rules and teams': 'القواعد والفرق',
+  General: 'عام',
+  Users: 'المستخدمون',
+  'Audit log': 'سجل التدقيق',
+
+  // home
+  'Good morning': 'صباح الخير',
+  'Good afternoon': 'مساء الخير',
+  'Good evening': 'مساء الخير',
+  'No apps are available to you yet. Ask an admin for access.': 'لا توجد تطبيقات متاحة لك بعد. اطلب الوصول من مدير.',
+
+  // roles
+  owner: 'مالك',
+  admin: 'مدير',
+  member: 'موظف',
+  viewer: 'مشاهد',
+};

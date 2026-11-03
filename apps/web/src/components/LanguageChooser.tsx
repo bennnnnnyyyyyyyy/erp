@@ -1,3 +1,4 @@
+import { useEffect, useRef, type RefObject } from 'react';
 import { Button } from './ui/button';
 import { cn } from '../lib/cn';
 import { useI18n, type Lang } from '../lib/i18n';
@@ -6,7 +7,36 @@ import { useI18n, type Lang } from '../lib/i18n';
 // own lang and dir) so someone who reads only Arabic is not asked in English. Nothing is forced: the choice is the person's own, kept
 // in this browser (see lib/i18n.tsx), and it can be changed any time with the switch or in Settings > General.
 
-export function LanguageChooser() {
+/**
+ * Keyboard behaviour for a dialog that covers the app: focus moves into it when it opens, and Tab and Shift+Tab stay inside it, so the page
+ * behind cannot be reached by accident. (It does not close on Escape: the chooser's own buttons are the way out.)
+ */
+export function useDialogFocus(ref: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const focusables = () => [...root.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')];
+    focusables()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0] as HTMLElement;
+      const last = items[items.length - 1] as HTMLElement;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !root.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [ref]);
+}
+export function LanguageChooser({ withDefault = false }: { withDefault?: boolean }) {
   const { setPersonalLang } = useI18n();
   return (
     <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xs" role="group" aria-labelledby="lang-chooser-title">
@@ -16,16 +46,25 @@ export function LanguageChooser() {
         <span lang="ar" dir="rtl">اختر لغتك</span>
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        <span lang="en" dir="ltr" className="block">The tutorial and the tour will be shown in the language you pick. You can change it any time.</span>
-        <span lang="ar" dir="rtl" className="mt-1 block">سيُعرض الدليل والجولة باللغة التي تختارها. يمكنك تغييرها في أي وقت.</span>
+        <span lang="en" dir="ltr" className="block">Choose the language you want to use. The menus, the home page, the tutorial and the tour follow it. You can change it any time.</span>
+        <span lang="ar" dir="rtl" className="mt-1 block">اختر اللغة التي تريد استخدامها. تتبعها القوائم والصفحة الرئيسية والدليل والجولة. يمكنك تغييرها في أي وقت.</span>
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <Button variant="outline" className="h-12 text-base" lang="en" dir="ltr" onClick={() => setPersonalLang('en')}>English</Button>
         <Button variant="outline" className="h-12 text-base" lang="ar" dir="rtl" onClick={() => setPersonalLang('ar')}>العربية</Button>
       </div>
+      {withDefault && (
+        <div className="mt-3">
+          <Button variant="ghost" className="h-10 w-full text-sm" onClick={() => setPersonalLang(null)}>
+            <span lang="en" dir="ltr">Use my company's default language</span>
+            <span className="mx-2 text-muted-foreground" aria-hidden="true">·</span>
+            <span lang="ar" dir="rtl">استخدم لغة الشركة الافتراضية</span>
+          </Button>
+        </div>
+      )}
       <p className="mt-4 text-xs text-muted-foreground">
-        <span lang="en" dir="ltr" className="block">Arabic is a first draft awaiting review by a native speaker. Menus, this tutorial and the Guide are translated; other screens stay in English for now.</span>
-        <span lang="ar" dir="rtl" className="mt-1 block">العربية مسودة أولى بانتظار مراجعة متحدث أصلي. القوائم وهذا الدليل ودليل الاستخدام مترجمة؛ وتبقى بقية الشاشات بالإنجليزية حاليًا.</span>
+        <span lang="en" dir="ltr" className="block">Arabic is a first draft awaiting review by a native speaker. The menus, home page, tutorial, tour and Guide are translated; other screens stay in English for now.</span>
+        <span lang="ar" dir="rtl" className="mt-1 block">العربية مسودة أولى بانتظار مراجعة متحدث أصلي. القوائم والصفحة الرئيسية والدليل التعليمي والجولة ودليل الاستخدام مترجمة؛ وتبقى بقية الشاشات بالإنجليزية حاليًا.</span>
       </p>
     </div>
   );
@@ -47,11 +86,24 @@ export function LanguageSwitch({ className }: { className?: string }) {
           lang={o.value}
           aria-pressed={lang === o.value}
           onClick={() => setPersonalLang(o.value)}
-          className={cn('px-3 py-1.5', lang === o.value ? 'bg-accent font-semibold text-foreground ring-2 ring-inset ring-primary' : 'bg-card text-muted-foreground hover:bg-accent')}
+          className={cn('min-h-10 px-3 py-2', lang === o.value ? 'bg-accent font-semibold text-foreground ring-2 ring-inset ring-primary' : 'bg-card text-muted-foreground hover:bg-accent')}
         >
-          {lang === o.value ? '✓ ' : ''}{o.label}
+          {lang === o.value ? <span aria-hidden="true">✓ </span> : null}{o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Shown once, over the app, to a signed-in person who has never been asked. Any answer (even the company default) ends the question for good. */
+export function FirstRunLanguage() {
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogFocus(ref);
+  return (
+    <div ref={ref} className="fixed inset-0 z-[70] flex items-center justify-center overflow-auto bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="lang-chooser-title">
+      <div className="w-full max-w-2xl">
+        <LanguageChooser withDefault />
+      </div>
     </div>
   );
 }

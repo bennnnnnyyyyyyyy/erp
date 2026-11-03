@@ -45,6 +45,7 @@ Log every run in
 | `036_einvoicing_tax_data.sql` | e-invoicing tax master data: tax profile with ETA mode (simulated by default; production refused), branches, tax rates, ETA subtype and unit tables, customer tax identity, item ETA codes (module `einvoicing`, off by default) | Run via CLI 2026-11-03 (project ggoerp, Ben approved); tests 030/031 pass on the live project |
 | `037_credit_debit_notes.sql` | credit and debit notes with approval; a credit never exceeds what was invoiced; an invoice with active notes cannot be voided | Run via CLI 2026-11-03 (project ggoerp, Ben approved); tests 030/031 pass on the live project |
 | `038_user_language.sql` | a person's own display language saved on their account (en or ar, or none): table `user_preferences` (own-row read only), function `core_set_my_language` | Run via CLI 2026-11-03 (project ggoerp, Ben approved); test 032 passes on the live project |
+| `039_org_tour.sql` | per-company switch for the guided tour: function `core_set_tour` (owner/admin, audited, off by default) | Run via CLI 2026-11-03 (project ggoerp, Ben's approval); test 033 passes on the live project |
 
 Run order: 001 to 035. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
 

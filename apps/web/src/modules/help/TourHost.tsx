@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { LanguageChooser, LanguageSwitch } from '../../components/LanguageChooser';
+import { LanguageChooser, LanguageSwitch, useDialogFocus } from '../../components/LanguageChooser';
 import { Button } from '../../components/ui/button';
 import { useI18n } from '../../lib/i18n';
 import { navigate, usePath } from '../../lib/router';
@@ -34,7 +34,10 @@ function tourDone(): boolean {
 }
 
 export function TourButton({ className }: { className?: string }) {
+  const session = useSession();
   const { lang } = useI18n();
+  // The tour is offered only in companies where an owner or admin has switched it on (Settings > General).
+  if (!session.org?.showTour) return null;
   const c = tourContent(lang);
   return (
     <Button variant="outline" className={className} onClick={startTour}>
@@ -43,10 +46,28 @@ export function TourButton({ className }: { className?: string }) {
   );
 }
 
+/** The language question the tour asks first. Its own component so keyboard focus moves into it, and stays in it, the moment it appears. */
+function TourLanguageDialog({ onCancel }: { onCancel: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogFocus(ref);
+  return (
+    <div ref={ref} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" role="dialog" aria-modal="true" aria-labelledby="lang-chooser-title">
+      <div className="w-full max-w-2xl">
+        <LanguageChooser withDefault />
+        <div className="mt-3 text-center">
+          <Button variant="outline" className="h-10" onClick={onCancel}>
+            <span lang="en">Cancel</span> · <span lang="ar">إلغاء</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 export function TourHost() {
   const session = useSession();
-  const { lang, personalLang } = useI18n();
+  const { lang, asked } = useI18n();
   const path = usePath();
+  const tourOn = session.org?.showTour === true;
   const steps = useMemo(() => stepsFor(session), [session]);
   const [active, setActive] = useState(false);
   const [i, setI] = useState(0);
@@ -81,6 +102,7 @@ export function TourHost() {
 
   useEffect(() => {
     const on = () => {
+      if (!tourOn) return;
       direction.current = 1;
       located.current = null;
       setI(0);
@@ -88,7 +110,7 @@ export function TourHost() {
     };
     window.addEventListener(START, on);
     return () => window.removeEventListener(START, on);
-  }, []);
+  }, [tourOn]);
 
   useEffect(() => {
     if (!active) return;
@@ -101,7 +123,7 @@ export function TourHost() {
 
   // Go to the step's screen and find its element. If it never appears, move on in the direction the person was going.
   useEffect(() => {
-    if (!active || !personalLang || !step) return;
+    if (!active || !asked || !step) return;
     setBox(null);
     located.current = null;
     if (window.location.pathname !== step.route) navigate(step.route);
@@ -171,7 +193,7 @@ export function TourHost() {
       window.removeEventListener('resize', on);
       window.removeEventListener('scroll', on, true);
     };
-  }, [active, personalLang, i, step, steps.length, close]);
+  }, [active, asked, i, step, steps.length, close]);
 
   // Going to another screen by hand ends the tour: it never fights the person for the page.
   useEffect(() => {
@@ -187,26 +209,13 @@ export function TourHost() {
 
   // Keyboard and screen-reader users: focus moves to the tooltip when the step changes, and only then.
   useEffect(() => {
-    if (active && personalLang) tipRef.current?.focus({ preventScroll: true });
-  }, [active, personalLang, i, box === null]);
+    if (active && asked) tipRef.current?.focus({ preventScroll: true });
+  }, [active, asked, i, box === null]);
 
-  if (!active) return null;
+  if (!active || !tourOn) return null;
 
-  // First, a language. Nothing of the tour is shown until the person has chosen one.
-  if (!personalLang) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" role="dialog" aria-modal="true">
-        <div className="w-full max-w-2xl">
-          <LanguageChooser />
-          <div className="mt-3 text-center">
-            <Button variant="outline" onClick={() => close()}>
-              <span lang="en">Cancel</span> · <span lang="ar">إلغاء</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // First, a language. Nothing of the tour is shown until the person has been asked (English, Arabic or the company default).
+  if (!asked) return <TourLanguageDialog onCancel={() => close()} />;
   if (!step) return null;
 
   const text = c.steps[step.id];
@@ -237,7 +246,7 @@ export function TourHost() {
       >
         <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
           <span aria-live="polite">{c.stepOf(i + 1, steps.length)}</span>
-          <Button variant="ghost" size="icon" className="size-7" aria-label={c.close} onClick={() => close()}>✕</Button>
+          <Button variant="ghost" size="icon" className="size-10" aria-label={c.close} onClick={() => close()}>✕</Button>
         </div>
         <h2 className="m-0 mt-1 text-base font-semibold">{text?.title}</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{text?.body}</p>
@@ -246,16 +255,16 @@ export function TourHost() {
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <LanguageSwitch className="text-xs" />
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={i === 0} onClick={() => { direction.current = -1; setI(i - 1); }}>{backArrow} {c.back}</Button>
+            <Button variant="outline" size="sm" className="h-10 px-3" disabled={i === 0} onClick={() => { direction.current = -1; setI(i - 1); }}><span aria-hidden="true">{backArrow}</span> {c.back}</Button>
             {last ? (
-              <Button size="sm" onClick={() => close(true)}>{c.finish}</Button>
+              <Button size="sm" className="h-10 px-4" onClick={() => close(true)}>{c.finish}</Button>
             ) : (
-              <Button size="sm" onClick={() => { direction.current = 1; setI(i + 1); }}>{c.next} {arrow}</Button>
+              <Button size="sm" className="h-10 px-4" onClick={() => { direction.current = 1; setI(i + 1); }}>{c.next} <span aria-hidden="true">{arrow}</span></Button>
             )}
           </div>
         </div>
         <div className="mt-2 text-end">
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground underline" onClick={() => close()}>{c.skip}</Button>
+          <Button variant="ghost" size="sm" className="h-10 text-xs text-muted-foreground underline" onClick={() => close()}>{c.skip}</Button>
         </div>
       </div>
     </div>

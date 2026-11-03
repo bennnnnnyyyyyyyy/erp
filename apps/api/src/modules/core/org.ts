@@ -109,3 +109,11 @@ orgRoutes.post('/tutorial', requirePermission('core.org.manage'), async (c) => {
   await callRpc<boolean>(userDb(c), 'core_set_tutorial', { p_show: show });
   return ok(c, { show });
 });
+
+// Switch the in-app guided tour on or off for this company (sql/039). Owners and admins only; off by default.
+orgRoutes.post('/tour', requirePermission('core.org.manage'), async (c) => {
+  const show = (await jsonBody(c)).show;
+  if (typeof show !== 'boolean') invalid('show must be true or false');
+  await callRpc<boolean>(userDb(c), 'core_set_tour', { p_show: show });
+  return ok(c, { show });
+});

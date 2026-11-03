@@ -8,6 +8,7 @@ import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
 import { useSession } from '../session';
+import { FirstRunLanguage } from './LanguageChooser';
 import { NotificationBell } from './NotificationBell';
 
 function initials(email: string): string {
@@ -44,7 +45,7 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
           <div className="menu-head">
             <div>{session.email}</div>
             <div className="muted small">
-              {session.org?.name} · {session.role}
+              <bdi>{session.org?.name}</bdi> · {session.role ? t(session.role) : ''}
             </div>
           </div>
           <button role="menuitem" className="menu-item" onClick={onSwitchOrg}>
@@ -61,7 +62,7 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
-  const { t, setOrgLang, syncAccountLang, setAccountSaver } = useI18n();
+  const { t, setOrgLang, syncAccountLang, setAccountSaver, asked, ready } = useI18n();
   const { dark, toggle } = useTheme();
   // The company language (Settings > General) is only the default. A person's own choice (Settings > General > My language) wins.
   const orgLanguage = session.org?.language;
@@ -76,8 +77,8 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   }, [setAccountSaver]);
   const userLanguage = session.userLanguage ?? null;
   useEffect(() => {
-    if (!demoMode) syncAccountLang(userLanguage);
-  }, [session.userId, userLanguage, syncAccountLang]);
+    if (!demoMode) syncAccountLang(userLanguage, session.userLanguageAsked ?? false);
+  }, [session.userId, userLanguage, session.userLanguageAsked, syncAccountLang]);
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);
@@ -85,7 +86,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
 
   useEffect(() => setDrawerOpen(false), [path]);
   useEffect(() => {
-    const where = route?.page ? `${route.page.label} · ${route.app.name}` : route?.app.name;
+    const where = route?.page ? `${t(route.page.label)} · ${t(route.app.name)}` : route ? t(route.app.name) : undefined;
     document.title = [where, session.org?.name].filter(Boolean).join(' · ') || 'ERP';
   }, [route, session.org?.name]);
 
@@ -95,6 +96,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   return (
     <div className={route ? 'shell with-sidebar' : 'shell'}>
       <TourHost />
+      {!demoMode && ready && !asked && <FirstRunLanguage />}
       <header className="topbar">
         {route && (
           <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')}>
@@ -106,8 +108,8 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           <span className="grid-icon" aria-hidden="true" />
           {t('Apps')}
         </Link>
-        <span className="topbar-org">{session.org?.name}</span>
-        {route && <span className="topbar-app">/ {route.app.name}</span>}
+        <span className="topbar-org"><bdi>{session.org?.name}</bdi></span>
+        {route && <span className="topbar-app">/ {t(route.app.name)}</span>}
         <span className="spacer" />
         <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
           {dark ? '☀' : '☾'}
@@ -117,14 +119,14 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
       </header>
 
       {route && (
-        <nav className={drawerOpen ? 'sidebar open' : 'sidebar'} aria-label={`${route.app.name} pages`}>
-          <div className="nav-heading">{route.app.name}</div>
+        <nav className={drawerOpen ? 'sidebar open' : 'sidebar'} aria-label={`${t(route.app.name)} · ${t('Menu')}`}>
+          <div className="nav-heading">{t(route.app.name)}</div>
           {route.app.pages.filter((p) => p.nav !== false).map((p) => {
             const to = route.app.basePath + p.path;
             const active = p === route.page || route.page?.parent === p.path;
             return (
               <Link key={to} to={to} className={active ? 'nav-item active' : 'nav-item'}>
-                {p.label}
+                {t(p.label)}
               </Link>
             );
           })}

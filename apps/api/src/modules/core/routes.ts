@@ -18,19 +18,21 @@ coreRoutes.route('/modules', moduleRoutes);
 
 // The person's own saved language (sql/038). A display preference, not essential: if it cannot be read (for example the migration is not
 // applied yet) the session still loads and the person simply follows the company default.
-async function savedLanguage(c: Context<AppEnv>): Promise<'en' | 'ar' | null> {
+async function savedLanguage(c: Context<AppEnv>): Promise<{ language: 'en' | 'ar' | null; asked: boolean }> {
   try {
     const { data, error } = await userDb(c).from('user_preferences').select('language').eq('user_id', c.var.user.id).maybeSingle();
-    if (error) return null;
-    const l = (data as { language: string | null } | null)?.language;
-    return l === 'ar' || l === 'en' ? l : null;
+    if (error || !data) return { language: null, asked: false };
+    const l = (data as { language: string | null }).language;
+    // A row means the person was asked, even when they chose the company default (language null).
+    return { language: l === 'ar' || l === 'en' ? l : null, asked: true };
   } catch {
-    return null;
+    return { language: null, asked: false };
   }
 }
 
 coreRoutes.get('/session', async (c) => {
   const { user, tenant } = c.var;
+  const saved = await savedLanguage(c);
   const session: SessionInfo = {
     userId: user.id,
     email: user.email,
@@ -43,11 +45,13 @@ coreRoutes.get('/session', async (c) => {
       dateFormat: tenant.dateFormat,
       language: tenant.language,
       showTutorial: tenant.showTutorial,
+      showTour: tenant.showTour,
     },
     role: tenant.role,
     permissions: tenant.permissions,
     modules: tenant.modules,
-    userLanguage: await savedLanguage(c),
+    userLanguage: saved.language,
+    userLanguageAsked: saved.asked,
   };
   return ok(c, session);
 });

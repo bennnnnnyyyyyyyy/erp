@@ -17,7 +17,7 @@ import { TourButton } from './TourHost';
 
 export function GuidePage() {
   const session = useSession();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const c = guideContent(lang);
   const apps = visibleApps(session).filter((a) => a.key !== 'guide');
   const suites = SUITE_ORDER.map((suite) => ({ suite, apps: apps.filter((a) => a.suite === suite) })).filter((s) => s.apps.length > 0);
@@ -49,11 +49,11 @@ export function GuidePage() {
       <p className="muted small">{c.whereHint}</p>
       {suites.map(({ suite, apps: group }) => (
         <div key={suite} className="stack">
-          <strong>{suite}</strong>
+          <strong>{t(suite)}</strong>
           <ul className="plain-list">
             {group.map((a) => (
               <li key={a.key}>
-                <Link to={a.basePath}>{a.name}</Link> <span className="muted">: {a.description}</span>
+                <Link to={a.basePath}>{t(a.name)}</Link> <span className="muted">: {t(a.description)}</span>
               </li>
             ))}
           </ul>

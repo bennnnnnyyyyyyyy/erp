@@ -70,7 +70,7 @@ const TUTORIAL_EN: TutorialContent = {
   notReady: [
     '**Approving and assigning tasks by WhatsApp or voice** is built in the database but not yet connected to WhatsApp: today alerts and approvals arrive inside the app only.',
     '**Manufacturing** (recipes and production orders) is not built, so profit for a factory is approximate until it is.',
-    '**Arabic** covers the menus, this tutorial and the Guide so far, and it is a first draft awaiting review by a native speaker; the other screens are in English.',
+    '**Arabic** covers the menus, the home page, this tutorial, the tour and the Guide so far, and it is a first draft awaiting review by a native speaker; the other screens are in English.',
     "**Tax and e-invoicing** (VAT, the tax authority's electronic invoice) are not included. This is a management view, not statutory accounts.",
     'No printing or PDF of invoices yet.',
   ],
@@ -106,7 +106,7 @@ const TUTORIAL_AR: TutorialContent = {
   notReady: [
     '**الموافقة على المهام وإسنادها عبر واتساب أو الصوت** مبنية في قاعدة البيانات لكنها غير موصولة بواتساب بعد: التنبيهات والموافقات تصل اليوم داخل التطبيق فقط.',
     '**التصنيع** (الوصفات وأوامر الإنتاج) غير مبني، لذا تكون الأرباح لمصنع تقريبية إلى أن يُبنى.',
-    '**العربية** تشمل حتى الآن القوائم وهذا الدليل التعليمي ودليل الاستخدام، وهي مسودة أولى بانتظار مراجعة متحدث أصلي؛ أما بقية الشاشات فبالإنجليزية.',
+    '**العربية** تشمل حتى الآن القوائم والصفحة الرئيسية وهذا الدليل التعليمي والجولة ودليل الاستخدام، وهي مسودة أولى بانتظار مراجعة متحدث أصلي؛ أما بقية الشاشات فبالإنجليزية.',
     '**الضرائب والفاتورة الإلكترونية** (ضريبة القيمة المضافة والفاتورة الإلكترونية لمصلحة الضرائب) غير مشمولة. هذه نظرة إدارية وليست حسابات قانونية.',
     'لا طباعة ولا PDF للفواتير بعد.',
   ],
@@ -134,7 +134,7 @@ const GUIDE_EN: GuideContent = {
   notReadyHint: 'So nobody is surprised: these are planned or partly built.',
   notReady: [
     '**Approvals by WhatsApp and by voice.** Designed and partly built, but not tested on a real phone. Approvals today are in the app.',
-    '**Arabic.** Menus, the Getting-started tutorial and this Guide so far. Each person can choose English or Arabic; the other screens stay in English until they are translated and reviewed.',
+    '**Arabic.** Menus, the home page, the Getting-started tutorial, the tour and this Guide so far. Each person can choose English or Arabic; the other screens stay in English until they are translated and reviewed.',
     '**Accounting.** The profit figures are a management view (no VAT, cost is the average cost of stock). It is not a full ledger, tax return or Egypt e-invoicing.',
     '**Manufacturing.** No bill of materials or production orders yet, so profit for a factory is approximate.',
     '**Import and returns.** Importing items from a file, and customer or supplier returns and credit notes, are planned.',
@@ -161,7 +161,7 @@ const GUIDE_AR: GuideContent = {
   notReadyHint: 'حتى لا يتفاجأ أحد: هذه أمور مخطط لها أو مبنية جزئيًا.',
   notReady: [
     '**الموافقات عبر واتساب والصوت.** مصمَّمة ومبنية جزئيًا، لكنها لم تُختبر على هاتف حقيقي. الموافقات اليوم داخل التطبيق.',
-    '**العربية.** القوائم ودليل البدء وهذا الدليل حتى الآن. يختار كل شخص الإنجليزية أو العربية، وتبقى بقية الشاشات بالإنجليزية إلى أن تُترجم وتُراجع.',
+    '**العربية.** القوائم والصفحة الرئيسية ودليل البدء والجولة وهذا الدليل حتى الآن. يختار كل شخص الإنجليزية أو العربية، وتبقى بقية الشاشات بالإنجليزية إلى أن تُترجم وتُراجع.',
     '**المحاسبة.** أرقام الربح عرض إداري (دون ضريبة القيمة المضافة، والتكلفة هي متوسط تكلفة المخزون). وهي ليست دفتر أستاذ كاملًا ولا إقرارًا ضريبيًا ولا فاتورة إلكترونية لمصر.',
     '**التصنيع.** لا قائمة مواد ولا أوامر إنتاج بعد، لذا تكون الأرباح لمصنع تقريبية.',
     '**الاستيراد والمرتجعات.** استيراد الأصناف من ملف، ومرتجعات العملاء أو الموردين والإشعارات الدائنة، مخطط لها.',

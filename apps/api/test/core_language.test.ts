@@ -34,6 +34,31 @@ describe('saved language API', () => {
     const fn = source.slice(source.indexOf('async function savedLanguage'), source.indexOf("coreRoutes.get('/session'"));
     expect(fn).toContain('try {');
     expect(fn).toContain('catch');
-    expect(fn).toContain('if (error) return null');
+    expect(fn).toContain('if (error || !data) return { language: null, asked: false }');
+    // a saved row, even one with no language, means the person was asked
+    expect(fn).toContain('asked: true');
   });
 });
+
+// The per-company guided-tour switch (sql/039, tested in sql/tests/033).
+const orgSource = readFileSync(join(__dirname, '../src/modules/core/org.ts'), 'utf8');
+const tourRoute = orgSource.slice(orgSource.indexOf("orgRoutes.post('/tour'"));
+
+describe('guided tour switch API', () => {
+  it('needs a signed-in user', async () => {
+    const res = await app.request('/v1/core/org/tour', { method: 'POST' }, env);
+    expect(res.status).toBe(401);
+  });
+  it('is owner/admin only, takes a boolean, and changes the setting only through the database function', () => {
+    expect(tourRoute).toContain("requirePermission('core.org.manage')");
+    expect(tourRoute).toContain("typeof show !== 'boolean'");
+    expect(tourRoute).toContain("'core_set_tour'");
+    expect(tourRoute).not.toMatch(/\.(insert|update|upsert|delete)\(/);
+  });
+  it('reaches the session as showTour, off unless the company switched it on', () => {
+    const tenant = readFileSync(join(__dirname, '../src/middleware/tenant.ts'), 'utf8');
+    expect(tenant).toContain('showTour: org.settings?.show_tour === true');
+    expect(source).toContain('showTour: tenant.showTour');
+    expect(source).toContain('userLanguageAsked: saved.asked');
+  });
+});

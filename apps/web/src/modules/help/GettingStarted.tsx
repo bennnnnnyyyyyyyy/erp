@@ -54,7 +54,7 @@ const CHECKLIST_ROUTES = ['/settings', '/inventory', '/inventory', '/settings/us
 export function GettingStartedPage() {
   const session = useSession();
   const reload = useReloadSession();
-  const { lang, personalLang } = useI18n();
+  const { lang, asked } = useI18n();
   const can = (p: string) => hasPermission(session.permissions, p);
   const canHide = can('core.org.manage');
   const warehouses = useCount('/v1/inventory/warehouses', can('inventory.items.read'));
@@ -66,8 +66,8 @@ export function GettingStartedPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // First, the person chooses a language. Until they do, nothing else of the tutorial is shown.
-  if (personalLang === null) return <section className="page"><LanguageChooser /></section>;
+  // First, the person chooses a language (or the company default). Until they have been asked, nothing else of the tutorial is shown.
+  if (!asked) return <section className="page"><LanguageChooser /></section>;
 
   const c = tutorialContent(lang);
   const dones: (boolean | null)[] = [
