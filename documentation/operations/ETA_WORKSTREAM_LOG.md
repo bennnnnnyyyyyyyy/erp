@@ -2,7 +2,7 @@
 
 This is the worklog entry for the e-invoicing work stream, kept in its own file because the stream lives in a separate git worktree
 (`eta-einvoicing`, branch `worktree-eta-einvoicing`) and the shared `WORKLOG.md`, `sql/README.md`, `sql/tests/README.md` and
-`documentation/plans/checklist.md` have uncommitted edits in the main checkout. **When this branch is merged, move the entry below into
+`documentation/plans/checklist.md` have uncommitted edits in the main checkout. **Merged 3 Nov 2026: the entries and register rows below were copied into
 `WORKLOG.md` (newest first) and add the register rows at the bottom of this file to the two READMEs and the checklist.**
 Plan: [`../plans/ETA_EINVOICING_PLAN.md`](../plans/ETA_EINVOICING_PLAN.md), section 14.
 

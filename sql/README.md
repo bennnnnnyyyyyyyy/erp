@@ -42,6 +42,8 @@ Log every run in
 | `033_inventory_transfers.sql` | transfers between warehouses with approval, in-transit state, batches carried across, two new ledger kinds | Run via CLI 2026-11-02 (project ggoerp); test 029 passes |
 | `034_inventory_hardening.sql` | transfers refuse a conditioned item sent to a warehouse with no condition; revokes the anonymous execute grant on `inv_stock_moves_cost()` | Run via CLI 2026-11-02 (project ggoerp); test 029 passes (including the new storage-condition cases) |
 | `035_batch_receipt_storage_rule.sql` | batch receipts follow the same storage rule: a conditioned item is refused in a warehouse with no condition (replaces 026's "no check when either side is unset") | Run via CLI 2026-11-02 (project ggoerp, Ben's approval); test 022 passes (new case S2a2) |
+| `036_einvoicing_tax_data.sql` | e-invoicing tax master data: tax profile with ETA mode (simulated by default; production refused), branches, tax rates, ETA subtype and unit tables, customer tax identity, item ETA codes (module `einvoicing`, off by default) | Written, dry-run tested 2026-11-03 (rolled back); **NOT applied** |
+| `037_credit_debit_notes.sql` | credit and debit notes with approval; a credit never exceeds what was invoiced; an invoice with active notes cannot be voided | Written, dry-run tested 2026-11-03 (rolled back); **NOT applied** |
 
 Run order: 001 to 035. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
 
