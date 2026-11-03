@@ -5,6 +5,10 @@
   are moved over. New code can use Tailwind utilities (bg-background, text-muted-foreground, border-border, rounded-lg ...).
   Dark mode: the `dark` class on <html> (set by lib/theme.tsx: light, dark, or follow the system).
 */
+/* Layer order, lowest first. styles.css puts its plain element styles (button, input, label) in `base`, so a component's own
+   utility classes (Button's outline, ghost, destructive variants) win over them. Before this, the unlayered `button {}` rule beat
+   every utility and each Button was drawn as a filled primary button, whatever its variant. */
+@layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 

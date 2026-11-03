@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -101,7 +102,7 @@ export function TransfersList() {
                 <option value="submitted">{tr('Waiting for approval')}</option>
                 <option value="dispatched">{tr('In transit')}</option>
               </select>
-              {canCreate && <button onClick={() => navigate('/inventory/transfers/new')}>{tr('New transfer')}</button>}
+              {canCreate && <Button type="submit" onClick={() => navigate('/inventory/transfers/new')}>{tr('New transfer')}</Button>}
             </>
           }
         />
@@ -164,12 +165,12 @@ export function NewTransfer() {
           <div className="form-row" key={i}>
             <label>{tr('Item')}<select required value={l.itemId} onChange={(e) => setLine(i, { itemId: e.target.value })}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}</select></label>
             <label>{tr('Quantity')}<input required type="number" min="0.001" step="0.001" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />{l.itemId && <span className="muted small">{tr('Available here:')} {available(l.itemId)}</span>}</label>
-            {lines.length > 1 && <button type="button" className="secondary" onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>{tr('Remove')}</button>}
+            {lines.length > 1 && <Button variant="outline" type="button" onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>{tr('Remove')}</Button>}
           </div>
         ))}
-        <div><button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</button></div>
+        <div><Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</Button></div>
         <label>{tr('Reason')}<input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder={tr('Restock the branch, move to the cold room…')} /></label>
-        <div className="form-actions"><button type="submit" disabled={busy || same}>{busy ? tr('Submitting…') : tr('Submit transfer')}</button></div>
+        <div className="form-actions"><Button type="submit" disabled={busy || same}>{busy ? tr('Submitting…') : tr('Submit transfer')}</Button></div>
       </form>
     </section>
   );
@@ -220,12 +221,16 @@ export function TransferPage() {
         <StatusPill status={t.status} />
       </div>
       <Steps status={t.status} />
-      <p className="muted">
-        {cat.warehouseName(t.fromWarehouseId)} → {cat.warehouseName(t.toWarehouseId)}. {trf('Requested by {who} on {date}. Reason: {reason}.', { who: who(t.requesterId), date: formatDateTime(t.createdAt, session.org), reason: t.reason || tr('none given') })}
-        {t.decidedBy && <> {trf('Approved or decided by {who}', { who: who(t.decidedBy) })}{t.decisionComment ? `: "${t.decisionComment}"` : ''}.</>}
-        {t.dispatchedBy && <> {tr('Dispatched by')} {who(t.dispatchedBy)}.</>}
-        {t.receivedBy && <> {tr('Received by')} {who(t.receivedBy)}.</>}
-      </p>
+      <dl className="facts">
+        <div><dt>{tr('From warehouse')}</dt><dd>{cat.warehouseName(t.fromWarehouseId)}</dd></div>
+        <div><dt>{tr('To warehouse')}</dt><dd>{cat.warehouseName(t.toWarehouseId)}</dd></div>
+        <div><dt>{tr('Requested by')}</dt><dd>{who(t.requesterId)}</dd></div>
+        <div><dt>{tr('Requested')}</dt><dd>{formatDateTime(t.createdAt, session.org)}</dd></div>
+        <div><dt>{tr('Reason')}</dt><dd>{t.reason || <span className="muted">{tr('none given')}</span>}</dd></div>
+        {t.decidedBy && <div><dt>{tr('Decision by')}</dt><dd>{who(t.decidedBy)}{t.decisionComment ? <span className="muted"> · “{t.decisionComment}”</span> : ''}</dd></div>}
+        {t.dispatchedBy && <div><dt>{tr('Dispatched by')}</dt><dd>{who(t.dispatchedBy)}</dd></div>}
+        {t.receivedBy && <div><dt>{tr('Received by')}</dt><dd>{who(t.receivedBy)}</dd></div>}
+      </dl>
 
       <div className="table-wrap">
         <table>
@@ -266,8 +271,8 @@ export function TransferPage() {
           <strong>{tr('Manager decision')}</strong>
           <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
-            <button disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</button>
-            <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</button>
+            <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</Button>
+            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
           </div>
           {demoMode && <p className="hint muted small">{tr('Try approving a transfer you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
@@ -275,10 +280,10 @@ export function TransferPage() {
       {t.status === 'submitted' && !can('inventory.transfers.approve') && <p className="notice">{tr('Waiting for a manager to approve.')}{demoMode && tr(' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.')}</p>}
 
       <div className="form-actions">
-        {t.status === 'approved' && can('inventory.transfers.dispatch') && <button disabled={busy} onClick={() => act('dispatch', 'Dispatched. The stock left the source and is now in transit.')}>{tr('Dispatch')}</button>}
-        {t.status === 'dispatched' && can('inventory.transfers.receive') && <button disabled={busy} onClick={() => act('receive', 'Received. The stock is now in the destination warehouse.')}>{tr('Receive at destination')}</button>}
+        {t.status === 'approved' && can('inventory.transfers.dispatch') && <Button type="submit" disabled={busy} onClick={() => act('dispatch', 'Dispatched. The stock left the source and is now in transit.')}>{tr('Dispatch')}</Button>}
+        {t.status === 'dispatched' && can('inventory.transfers.receive') && <Button type="submit" disabled={busy} onClick={() => act('receive', 'Received. The stock is now in the destination warehouse.')}>{tr('Receive at destination')}</Button>}
         {open && (mine || can('inventory.transfers.approve')) && can('inventory.transfers.create') && (
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Transfer cancelled. The reserved stock was released.')}>{tr('Cancel transfer')}</button>
+          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Transfer cancelled. The reserved stock was released.')}>{tr('Cancel transfer')}</Button>
         )}
       </div>
       {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">{tr('Approved. Waiting for the source warehouse to dispatch it.')}</p>}

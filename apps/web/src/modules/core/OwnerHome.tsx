@@ -37,7 +37,7 @@ function Card({ to, title, subtitle, period, tone, children }: { to: string; tit
   return (
     <Link to={to} className="flex min-w-0 flex-col gap-3 break-words rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors hover:bg-accent">
       <span className="flex flex-col gap-0.5">
-        <span className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
+        <span className="flex items-center justify-between gap-2 text-base font-semibold tracking-tight text-foreground">
           {title}
           {tone && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -87,7 +87,7 @@ export function OwnerSummary() {
 
   return (
     <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label={tr('Business summary')}>
-      <Card to="/finance/overview" title={tr('Am I making or losing money?')} subtitle={tr('What the business earned after its costs')} period={last ? trf('{month}, and the last 12 months', { month: monthName(last.month) }) : tr('last 12 months')} tone={profitTone}>
+      <Card to="/finance/overview" title={tr('Profit and loss')} subtitle={tr('What the business earned after its costs')} period={last ? trf('{month}, and the last 12 months', { month: monthName(last.month) }) : tr('last 12 months')} tone={profitTone}>
         {active && last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
@@ -104,13 +104,13 @@ export function OwnerSummary() {
         ) : <span className="text-sm text-muted-foreground">{tr('Nothing to show yet. Once you invoice sales and record expenses, this shows whether the business is making money.')}</span>}
       </Card>
 
-      <Card to="/sales/invoices" title={tr('Money coming in and going out')} subtitle={tr('Who owes you and who you owe')} period={trf('all unpaid bills, as of {date}', { date: asOfDay })} tone={moneyTone}>
+      <Card to="/sales/invoices" title={tr('Receivables and payables')} subtitle={tr('Who owes you and who you owe')} period={trf('all unpaid bills, as of {date}', { date: asOfDay })} tone={moneyTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
         <span className="text-sm text-muted-foreground"><Rich text={s.overdueMinor > 0 ? trf('customers still owe you, of which **{late}** is more than 30 days late.', { late: money(s.overdueMinor) }) : tr('customers still owe you.')} /></span>
         <span className="text-sm"><Rich text={trf('You owe suppliers and for expenses: **{amount}**.', { amount: money(s.iOweMinor) })} /></span>
       </Card>
 
-      <Card to="/inventory/requests" title={tr('Waiting for your decision')} subtitle={tr('Stock requests a manager still has to approve')} period={trf('right now, {date}', { date: asOfDay })} tone={decisionTone}>
+      <Card to="/inventory/requests" title={tr('Pending approvals')} subtitle={tr('Stock requests a manager still has to approve')} period={trf('right now, {date}', { date: asOfDay })} tone={decisionTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{trf(s.decisions.submitted === 1 ? '{n} request' : '{n} requests', { n: s.decisions.submitted })}</span>
         <span className="text-sm text-muted-foreground">
           {s.decisions.submitted === 0 ? tr('Nothing is waiting for approval.') : (oldWait < 1 ? tr('The oldest has been waiting less than an hour.') : trf(oldWait === 1 ? 'The oldest has been waiting 1 hour.' : 'The oldest has been waiting {n} hours.', { n: oldWait }))}
@@ -118,7 +118,7 @@ export function OwnerSummary() {
         </span>
       </Card>
 
-      <Card to="/inventory/batches" title={tr('Stock and expiry')} subtitle={tr('What is on the shelves and what is about to expire')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
+      <Card to="/inventory/batches" title={tr('Inventory value and expiry')} subtitle={tr('What is on the shelves and what is about to expire')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
         <span className="text-sm text-muted-foreground">{tr('of stock on the shelves, at cost.')}</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
@@ -130,7 +130,7 @@ export function OwnerSummary() {
         </ul>
       </Card>
 
-      <Card to="/sales/invoices" title={tr('Best sellers')} subtitle={tr('The products that brought in the most sales')} period={tr('last 90 days')}>
+      <Card to="/sales/invoices" title={tr('Top products')} subtitle={tr('The products that brought in the most sales')} period={tr('last 90 days')}>
         {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">{tr('No sales yet.')}</span> : (
           <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
             {s.topProducts.map((p, i) => (
@@ -140,7 +140,7 @@ export function OwnerSummary() {
         )}
       </Card>
 
-      <Card to="/purchasing/suppliers" title={tr('Who you depend on')} subtitle={tr('The suppliers most of your purchases come from')} period={tr('last 12 months')} tone={supplierTone}>
+      <Card to="/purchasing/suppliers" title={tr('Supplier concentration')} subtitle={tr('The suppliers most of your purchases come from')} period={tr('last 12 months')} tone={supplierTone}>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
           {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{trf('{pct}% of purchases', { pct: p.sharePercent })}</b></li>)}
           {s.topSuppliers.length === 0 && <li className="text-muted-foreground">{tr('No purchases yet.')}</li>}

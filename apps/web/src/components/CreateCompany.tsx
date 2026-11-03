@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from './ui/button';
 import { supabase } from '../lib/supabase';
 
 import { tr } from '../lib/i18n';
@@ -70,9 +71,9 @@ export function CreateCompany({ onCreated, onCancel, first }: { onCreated: (orgI
           </label>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" disabled={busy || name.trim().length < 2}>{busy ? tr('Setting up…') : tr('Create my company')}</button>
-        {onCancel && <button type="button" className="secondary" onClick={onCancel}>{tr('Cancel')}</button>}
-        <button type="button" className="secondary" onClick={() => supabase.auth.signOut()}>{tr('Sign out')}</button>
+        <Button type="submit" disabled={busy || name.trim().length < 2}>{busy ? tr('Setting up…') : tr('Create my company')}</Button>
+        {onCancel && <Button variant="outline" type="button" onClick={onCancel}>{tr('Cancel')}</Button>}
+        <Button variant="outline" type="button" onClick={() => supabase.auth.signOut()}>{tr('Sign out')}</Button>
       </form>
     </main>
   );

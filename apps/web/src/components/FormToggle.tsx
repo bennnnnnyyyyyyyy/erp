@@ -24,14 +24,14 @@ export function FormToggle({ label, children, open: controlled, onOpenChange }: 
 }
 
 /** A button for something that cannot be undone (voiding). The first click asks, in place, without a browser dialog; the second does it. */
-export function ConfirmButton({ label, confirmLabel, question, onConfirm, disabled }: { label: string; confirmLabel: string; question: string; onConfirm: () => void; disabled?: boolean }) {
+export function ConfirmButton({ label, confirmLabel, question, onConfirm, disabled, size }: { label: string; confirmLabel: string; question: string; onConfirm: () => void; disabled?: boolean; size?: 'sm' }) {
   const [asking, setAsking] = useState(false);
-  if (!asking) return <Button variant="outline" disabled={disabled} onClick={() => setAsking(true)}>{label}</Button>;
+  if (!asking) return <Button variant="outline" size={size} disabled={disabled} onClick={() => setAsking(true)}>{label}</Button>;
   return (
     <div className="confirm-row" role="group" aria-label={question}>
       <span>{question}</span>
-      <Button variant="destructive" disabled={disabled} onClick={() => { setAsking(false); onConfirm(); }}>{confirmLabel}</Button>
-      <Button variant="ghost" onClick={() => setAsking(false)}>{tr('Cancel')}</Button>
+      <Button variant="destructive" size={size} disabled={disabled} onClick={() => { setAsking(false); onConfirm(); }}>{confirmLabel}</Button>
+      <Button variant="ghost" size={size} onClick={() => setAsking(false)}>{tr('Cancel')}</Button>
     </div>
   );
 }

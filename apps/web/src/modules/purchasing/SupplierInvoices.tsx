@@ -4,7 +4,7 @@ import { formatMoney } from '@erp/shared';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime, formatDay } from '../../lib/format';
 import { Pill } from '../trade/common';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
@@ -51,7 +51,7 @@ export function SupplierInvoices(){
         <label>{tr('Supplier invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>
-      {summary&&<><div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Received')}</th><th className="right">{tr('Already billed')}</th><th>{tr('Billed on this invoice')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td></tr>)}</tbody></table></div><button disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record supplier invoice')}</button></>}
+      {summary&&<><div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Received')}</th><th className="right">{tr('Already billed')}</th><th>{tr('Billed on this invoice')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td></tr>)}</tbody></table></div><Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record supplier invoice')}</Button></>}
     </FormToggle>}
     <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Supplier')}</th><th>{tr('Purchase order')}</th><th>{tr('Date recorded')}</th><th className="right">{tr('Amount')}</th></tr></thead><tbody>
       {invoices.data.map(i=><ClickRow key={i.id} to={`/purchasing/invoices/${i.id}`}><td><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{supplierName(i.supplierId)}</td><td><Link to={`/purchasing/orders/${i.orderId}`}><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??'—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></ClickRow>)}
@@ -97,7 +97,7 @@ export function SupplierInvoicePage() {
       <dl className="facts">
         <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>
         <div><dt>{tr('Purchase order')}</dt><dd><Link to={`/purchasing/orders/${inv.orderId}`}><code>{order?.number ?? '—'}</code></Link></dd></div>
-        <div><dt>{tr('Invoice date')}</dt><dd>{inv.invoiceDate}</dd></div>
+        <div><dt>{tr('Invoice date')}</dt><dd>{formatDay(inv.invoiceDate, session.org)}</dd></div>
         <div><dt>{tr('Date recorded')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
         <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
       </dl>

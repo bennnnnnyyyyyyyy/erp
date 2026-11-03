@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { formatMoney } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -48,7 +49,7 @@ export function PurchaseOrders() {
           rowKey={(o) => o.id}
           rowHref={(o) => `/purchasing/orders/${o.id}`}
           empty={tr('No purchase orders yet.')}
-          toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</button> : undefined}
+          toolbar={session.role !== 'viewer' ? <Button type="submit" onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</Button> : undefined}
         />
       ) : (
         <Loading />
@@ -114,10 +115,13 @@ export function PurchaseOrderPage() {
         <h1 className="mono">{o.number}</h1>
         <Pill status={o.status} label={tr(STATUS[o.status])} />
       </div>
-      <p className="muted">
-        {supplier?.name} ({supplier?.city}{tr(') · deliver to')} {cat.warehouseName(o.warehouseId)} {tr('· ordered')} {formatDateTime(o.createdAt, session.org)}
-        {o.receivedAt && <> {tr('· received')} {formatDateTime(o.receivedAt, session.org)}</>}
-      </p>
+      <dl className="facts">
+        <div><dt>{tr('Supplier')}</dt><dd>{supplier?.name}{supplier?.city ? <span className="muted"> · {supplier.city}</span> : ''}</dd></div>
+        <div><dt>{tr('Deliver to')}</dt><dd>{cat.warehouseName(o.warehouseId)}</dd></div>
+        <div><dt>{tr('Ordered')}</dt><dd>{formatDateTime(o.createdAt, session.org)}</dd></div>
+        {o.receivedAt && <div><dt>{tr('Received')}</dt><dd>{formatDateTime(o.receivedAt, session.org)}</dd></div>}
+        <div><dt>{tr('Total')}</dt><dd className="amount">{money(o.totalMinor, o.currency)}</dd></div>
+      </dl>
 
       <div className="table-wrap">
         <table>
@@ -145,8 +149,8 @@ export function PurchaseOrderPage() {
 
       {o.status === 'ordered' && session.role !== 'viewer' && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
-          <button disabled={busy} onClick={() => act('receive', 'Goods received. The quantities were added to stock and the ledger.')}>{tr('Receive goods')}</button>
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</button>
+          <Button type="submit" disabled={busy} onClick={() => act('receive', 'Goods received. The quantities were added to stock and the ledger.')}>{tr('Receive goods')}</Button>
+          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</Button>
         </div>
       )}
       {o.status === 'received' && (

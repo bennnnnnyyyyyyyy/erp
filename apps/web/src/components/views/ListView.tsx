@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { Button } from '../ui/button';
 import { ClickRow } from '../ClickRow';
 
 import { tr, trf } from '../../lib/i18n';
@@ -85,9 +86,9 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
         </span>
         <span className="spacer" />
         {toolbar}
-        <button className="secondary" onClick={exportCsv} disabled={shown.length === 0}>
+        <Button variant="outline" type="submit" onClick={exportCsv} disabled={shown.length === 0}>
           {tr('Export CSV')}
-        </button>
+        </Button>
       </div>
       <div className="table-wrap">
         <table>
@@ -108,12 +109,13 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
             {shown.map((r) => {
               const cells = (
                 <>
+                  {/* data-label: on a phone each row becomes a card and each cell shows its column name (styles.css). */}
                   {columns.map((c) => (
-                    <td key={c.key} className={c.align === 'right' ? 'right' : undefined}>
+                    <td key={c.key} data-label={c.label} className={c.align === 'right' ? 'right' : undefined}>
                       {c.render ? c.render(r) : c.value(r)}
                     </td>
                   ))}
-                  {actions && <td className="row-actions">{actions(r)}</td>}
+                  {actions && <td className="row-actions" data-label="">{actions(r)}</td>}
                 </>
               );
               return rowHref ? <ClickRow key={rowKey(r)} to={rowHref(r)}>{cells}</ClickRow> : <tr key={rowKey(r)}>{cells}</tr>;

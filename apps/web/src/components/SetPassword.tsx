@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from './ui/button';
 import { supabase } from '../lib/supabase';
 
 import { tr } from '../lib/i18n';
@@ -49,9 +50,9 @@ export function SetPassword({ invited = false, onDone }: { invited?: boolean; on
           />
         </label>
         {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? tr('Saving…') : tr('Save password')}
-        </button>
+        </Button>
       </form>
     </main>
   );

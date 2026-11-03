@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from './ui/button';
 import { authLinkError, googleSignInEnabled, supabase, supabaseConfigured } from '../lib/supabase';
 
 import { tr, trf } from '../lib/i18n';
@@ -72,9 +73,9 @@ export function SignIn() {
         )}
         {mode !== 'forgot' && googleSignInEnabled && (
           <>
-            <button type="button" className="secondary" onClick={signInWithGoogle}>
+            <Button variant="outline" type="button" onClick={signInWithGoogle}>
               {tr('Continue with Google')}
-            </button>
+            </Button>
             <div className="divider muted small">or</div>
           </>
         )}
@@ -104,17 +105,17 @@ export function SignIn() {
         )}
         {error && <p className="error" role="alert">{error}</p>}
         {notice && <p className="notice" role="status">{notice}</p>}
-        <button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {mode === 'sign-in' ? (busy ? tr('Signing in…') : tr('Sign in')) : mode === 'sign-up' ? (busy ? tr('Creating…') : tr('Create account')) : busy ? tr('Sending…') : tr('Send reset link')}
-        </button>
+        </Button>
         {mode === 'sign-in' && (
           <>
-            <button type="button" className="secondary" onClick={() => switchMode('sign-up')}>{tr('New here? Create an account')}</button>
-            <button type="button" className="secondary" onClick={() => switchMode('forgot')}>{tr('Forgot password?')}</button>
+            <Button variant="outline" type="button" onClick={() => switchMode('sign-up')}>{tr('New here? Create an account')}</Button>
+            <Button variant="outline" type="button" onClick={() => switchMode('forgot')}>{tr('Forgot password?')}</Button>
           </>
         )}
         {mode !== 'sign-in' && (
-          <button type="button" className="secondary" onClick={() => switchMode('sign-in')}>{tr('Back to sign in')}</button>
+          <Button variant="outline" type="button" onClick={() => switchMode('sign-in')}>{tr('Back to sign in')}</Button>
         )}
       </form>
     </main>

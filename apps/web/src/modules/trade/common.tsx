@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/ui/badge';
@@ -76,7 +77,7 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
           rows={parties.data}
           columns={columns}
           rowKey={(p) => p.id}
-          toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <button onClick={() => setAdding(true)}>{tr('Add')} {noun}</button> : undefined}
+          toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <Button type="submit" onClick={() => setAdding(true)}>{tr('Add')} {noun}</Button> : undefined}
         />
       ) : (
         <Loading />
@@ -91,7 +92,7 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
             </div>
             <label>{tr('Phone')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
             {error && <p className="error">{error}</p>}
-            <div className="form-actions"><button type="submit">{tr('Add')} {noun}</button></div>
+            <div className="form-actions"><Button type="submit">{tr('Add')} {noun}</Button></div>
           </form>
         </Modal>
       )}
@@ -183,10 +184,10 @@ export function NewOrderForm(props: {
           </div>
         ))}
         <div className="form-actions">
-          <button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>{tr('Add another item')}</button>
+          <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>{tr('Add another item')}</Button>
         </div>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</button></div>
+        <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
       </form>
     </section>
   );

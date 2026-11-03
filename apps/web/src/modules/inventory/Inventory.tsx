@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type FormEvent } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry } from '@erp/shared';
 import { Modal } from '../../components/Modal';
@@ -12,6 +13,7 @@ import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
+import { FormToggle } from '../../components/FormToggle';
 
 import { tr, trf } from '../../lib/i18n';
 // Inventory slice 1 screens. They call /v1/inventory/... : the real API in the real app, and the in-browser sample
@@ -100,7 +102,7 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
           </label>
         </div>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit">{tr('Add item')}</button></div>
+        <div className="form-actions"><Button type="submit">{tr('Add item')}</Button></div>
       </form>
     </Modal>
   );
@@ -132,7 +134,7 @@ function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; onDone: (
         </div>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit">{tr('Add warehouse')}</button></div>
+        <div className="form-actions"><Button type="submit">{tr('Add warehouse')}</Button></div>
       </form>
     </Modal>
   );
@@ -218,8 +220,8 @@ export function StockPage() {
                 <option value="all">{tr('All warehouses')}</option>
                 {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
-              {canAddWarehouse && <button className="secondary" onClick={() => setAddingWarehouse(true)}>{tr('Add warehouse')}</button>}
-              {canAdd && (cat.warehouses.data?.length ?? 0) > 0 && <button onClick={() => setAdding(true)}>{tr('Add item')}</button>}
+              {canAddWarehouse && <Button variant="outline" type="submit" onClick={() => setAddingWarehouse(true)}>{tr('Add warehouse')}</Button>}
+              {canAdd && (cat.warehouses.data?.length ?? 0) > 0 && <Button type="submit" onClick={() => setAdding(true)}>{tr('Add item')}</Button>}
             </>
           }
         />
@@ -304,7 +306,7 @@ export function ReorderLevelsPage() {
                     {canManage ? <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Off')} /> : (row.reorderLevel ?? tr('Off'))}
                   </td>
                   <td>{row.reorderLevel === null ? <span className="muted">{tr('Not monitored')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
-                  <td>{canManage && <button disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? tr('Saving…') : tr('Save')}</button>}</td>
+                  <td>{canManage && <Button type="submit" disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? tr('Saving…') : tr('Save')}</Button>}</td>
                 </tr>
               );
             })}
@@ -362,21 +364,20 @@ export function ApprovalPoliciesPage() {
       <p className="muted">{tr('When a stock request needs more than one manager to approve it.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canManage && (
-        <form className="form-card stack" onSubmit={save}>
-          <strong>{tr('Add or update a policy')}</strong>
+        <FormToggle label={tr('Add or update a policy')}><form className="stack" onSubmit={save}>
           <div className="form-row">
             <label>{tr('From total quantity')}<input required type="number" min="0" step="0.001" value={form.minTotalQty} onChange={(e) => setForm((f) => ({ ...f, minTotalQty: e.target.value }))} /></label>
             <label>{tr('Required approvals')}<select value={form.requiredApprovals} onChange={(e) => setForm((f) => ({ ...f, requiredApprovals: e.target.value }))}><option value="1">{tr('1 approval')}</option><option value="2">{tr('2 approvals')}</option><option value="3">{tr('3 approvals')}</option></select></label>
             <label>{tr('Warehouse')}<select value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('All warehouses')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
           </div>
-          <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Saving…') : tr('Save policy')}</button></div>
-        </form>
+          <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : tr('Save policy')}</Button></div>
+        </form></FormToggle>
       )}
       <div className="table-wrap">
         <table>
           <thead><tr><th>{tr('Threshold')}</th><th>{tr('Warehouse')}</th><th>{tr('Required')}</th>{canManage && <th />}</tr></thead>
           <tbody>
-            {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> {tr('units or more')}</td><td>{warehouseName(p.warehouseId)}</td><td>{trf(p.requiredApprovals === 1 ? '{n} approval' : '{n} approvals', { n: p.requiredApprovals })}</td>{canManage && <td><button className="secondary" onClick={() => remove(p.id)}>{tr('Remove')}</button></td>}</tr>)}
+            {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> {tr('units or more')}</td><td>{warehouseName(p.warehouseId)}</td><td>{trf(p.requiredApprovals === 1 ? '{n} approval' : '{n} approvals', { n: p.requiredApprovals })}</td>{canManage && <td><Button variant="outline" type="submit" onClick={() => remove(p.id)}>{tr('Remove')}</Button></td>}</tr>)}
             {policies.data.length === 0 && <tr><td colSpan={canManage ? 4 : 3} className="muted empty">{tr('No extra approval policies. One approval is enough for every request.')}</td></tr>}
           </tbody>
         </table>
@@ -437,21 +438,20 @@ export function AdjustmentsPage() {
       <h1>{tr('Stock adjustments')}</h1>
       <p className="muted">{tr('Record a stock count. A manager approves any difference.')}</p>
       {error && <p className="error notice">{error}</p>}
-      <form className="form-card stack" onSubmit={submit}>
-        <strong>{tr('New cycle count')}</strong>
+      <FormToggle label={tr('New cycle count')}><form className="stack" onSubmit={submit}>
         <div className="form-row">
           <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
           <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
           <label>{tr('Counted quantity')}<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">{tr('Book quantity:')} {expected}</span>}</label>
         </div>
         <label>{tr('Reason')}<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={tr('Physical count, damaged stock…')} /></label>
-        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit count')}</button></div>
-      </form>
+        <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit count')}</Button></div>
+      </form></FormToggle>
       <div className="table-wrap">
         <table>
           <thead><tr><th>{tr('Count')}</th><th>{tr('Item')}</th><th>{tr('Warehouse')}</th><th className="right">{tr('Book')}</th><th className="right">{tr('Counted')}</th><th className="right">{tr('Difference')}</th><th>{tr('Status')}</th><th /></tr></thead>
           <tbody>
-            {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><button onClick={() => act(a.id, 'approve')}>{tr('Approve')}</button> <button className="secondary" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <button className="secondary" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</button>}</td></tr>)}
+            {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><Button type="submit" onClick={() => act(a.id, 'approve')}>{tr('Approve')}</Button> <Button variant="outline" type="submit" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</Button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <Button variant="outline" type="submit" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</Button>}</td></tr>)}
             {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No stock counts yet.')}</td></tr>}
           </tbody>
         </table>
@@ -502,7 +502,7 @@ export function RequestsList() {
                 <option value="all">{tr('All requests')}</option>
                 <option value="submitted">{tr('Waiting for approval')}</option>
               </select>
-              {session.role !== 'viewer' && <button onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</button>}
+              {session.role !== 'viewer' && <Button type="submit" onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</Button>}
             </>
           }
         />
@@ -599,11 +599,11 @@ export function NewRequest() {
           </div>
         ))}
         <div className="form-actions">
-          <button type="button" className="secondary" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</button>
+          <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</Button>
         </div>
         {error && <p className="error">{error}</p>}
         <div className="form-actions">
-          <button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit for approval')}</button>
+          <Button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit for approval')}</Button>
         </div>
       </form>
     </section>
@@ -653,11 +653,15 @@ export function RequestPage() {
         <StatusPill status={r.status} />
       </div>
       <Steps status={r.status} />
-      <p className="muted">
-        {trf('Requested by {who} on {date} from {warehouse}. Reason: {reason}.', { who: who(r.requesterId), date: formatDateTime(r.createdAt, session.org), warehouse: cat.warehouseName(r.warehouseId), reason: r.reason || tr('none given') })}
-        {r.source && <> {tr('For sales order')} <Link to={`/sales/orders/${r.source.id}`}><code>{r.source.number}</code></Link>.</>}
-        {r.decidedBy && <> {tr('Decision by')} {who(r.decidedBy)}{r.decisionComment ? `: "${r.decisionComment}"` : ''}.</>}
-      </p>
+      {/* The key facts as a labelled block, like the invoice and payment pages (was one long sentence). */}
+      <dl className="facts">
+        <div><dt>{tr('Requested by')}</dt><dd>{who(r.requesterId)}</dd></div>
+        <div><dt>{tr('Requested')}</dt><dd>{formatDateTime(r.createdAt, session.org)}</dd></div>
+        <div><dt>{tr('Warehouse')}</dt><dd>{cat.warehouseName(r.warehouseId)}</dd></div>
+        <div><dt>{tr('Reason')}</dt><dd>{r.reason || <span className="muted">{tr('none given')}</span>}</dd></div>
+        {r.source && <div><dt>{tr('Sales order')}</dt><dd><Link to={`/sales/orders/${r.source.id}`}><code>{r.source.number}</code></Link></dd></div>}
+        {r.decidedBy && <div><dt>{tr('Decision by')}</dt><dd>{who(r.decidedBy)}{r.decisionComment ? <span className="muted"> · “{r.decisionComment}”</span> : ''}</dd></div>}
+      </dl>
 
       <div className="table-wrap">
         <table>
@@ -675,8 +679,8 @@ export function RequestPage() {
           <strong>{tr('Manager decision')}</strong>
           <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
-            <button disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>{tr('Approve')}</button>
-            <button className="secondary" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</button>
+            <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>{tr('Approve')}</Button>
+            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
           </div>
           {demoMode && <p className="hint muted small">{tr('Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
@@ -686,9 +690,9 @@ export function RequestPage() {
       {open && session.role !== 'viewer' && (
         <div className="form-actions">
           {r.status === 'approved' && (
-            <button disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>{tr('Issue stock')}</button>
+            <Button type="submit" disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>{tr('Issue stock')}</Button>
           )}
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Request cancelled. The reserved stock was released.')}>{tr('Cancel request')}</button>
+          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Request cancelled. The reserved stock was released.')}>{tr('Cancel request')}</Button>
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
 import { Modal } from '../../components/Modal';
@@ -56,7 +57,7 @@ function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose
         </div>
         <label>{tr('Details (optional)')}<input value={form.description} onChange={set('description')} /></label>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><button type="submit" disabled={busy}>{busy ? tr('Assigning…') : tr('Assign task')}</button></div>
+        <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Assigning…') : tr('Assign task')}</Button></div>
       </form>
     </Modal>
   );
@@ -116,15 +117,15 @@ export function TasksPage() {
                 <option value="mine">{tr('My tasks')}</option>
                 <option value="all">{tr('All tasks')}</option>
               </select>
-              {canCreate && <button onClick={() => setAdding(true)}>{tr('New task')}</button>}
+              {canCreate && <Button type="submit" onClick={() => setAdding(true)}>{tr('New task')}</Button>}
             </>
           }
           actions={(t) =>
             canAct(t) ? (
               <>
-                {t.status === 'open' && <button className="secondary" onClick={() => setStatus(t, 'in_progress')}>{tr('Acknowledge')}</button>}{' '}
-                <button onClick={() => setStatus(t, 'done')}>{tr('Done')}</button>{' '}
-                <button className="secondary" onClick={() => setStatus(t, 'cancelled')}>{tr('Cancel')}</button>
+                {t.status === 'open' && <Button variant="outline" type="submit" onClick={() => setStatus(t, 'in_progress')}>{tr('Acknowledge')}</Button>}{' '}
+                <Button type="submit" onClick={() => setStatus(t, 'done')}>{tr('Done')}</Button>{' '}
+                <Button variant="outline" type="submit" onClick={() => setStatus(t, 'cancelled')}>{tr('Cancel')}</Button>
               </>
             ) : null
           }
@@ -194,9 +195,9 @@ export function TaskPage() {
           <strong>{t.assigneeId === session.userId ? tr('Your task') : tr('Task actions')}</strong>
           <p className="hint muted small">{trf('Acknowledge tells {name} you have seen it and are on it. Complete when it is done.', { name: who(t.createdBy) })}</p>
           <div className="form-actions">
-            {t.status === 'open' && <button className="secondary" disabled={busy} onClick={() => act('in_progress', 'Acknowledged. The person who assigned it can see that you are on it.')}>{tr('Acknowledge')}</button>}
-            <button disabled={busy} onClick={() => act('done', 'Marked as done. The person who assigned it will be notified.')}>{tr('Complete')}</button>
-            <button className="secondary" disabled={busy} onClick={() => act('cancelled', 'Task cancelled.')}>{tr('Cancel task')}</button>
+            {t.status === 'open' && <Button variant="outline" type="submit" disabled={busy} onClick={() => act('in_progress', 'Acknowledged. The person who assigned it can see that you are on it.')}>{tr('Acknowledge')}</Button>}
+            <Button type="submit" disabled={busy} onClick={() => act('done', 'Marked as done. The person who assigned it will be notified.')}>{tr('Complete')}</Button>
+            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancelled', 'Task cancelled.')}>{tr('Cancel task')}</Button>
           </div>
         </div>
       )}

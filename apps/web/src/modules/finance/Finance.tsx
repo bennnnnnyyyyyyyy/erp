@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
 import { formatMoney } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
@@ -93,7 +94,7 @@ export function ExpensesPage() {
       <h2 className="related">{tr('Recorded expenses')} <span className="muted small">{trf('(total {amount})', { amount: money(total, currency) })}</span></h2>
       <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Category')}</th><th>{tr('Supplier')}</th><th>{tr('Note')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
         {expenses.data.map((e) => (
-          <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td className="nowrap">{e.date}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
+          <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td className="nowrap">{formatDay(e.date, session.org)}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
             <td><Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
         ))}
         {!expenses.data.length && <tr><td colSpan={7} className="muted empty">{tr('No expenses yet.')}</td></tr>}
@@ -193,7 +194,7 @@ export function PaymentsPage() {
       <h2 className="related">{tr('Payments')}</h2>
       <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Direction')}</th><th>{tr('For')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
         {payments.data.map((p) => (
-          <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td className="nowrap">{p.paidOn}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
+          <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td className="nowrap">{formatDay(p.paidOn, session.org)}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td>
             <td><Pill status={p.status === 'void' ? 'cancelled' : 'received'} label={p.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
         ))}

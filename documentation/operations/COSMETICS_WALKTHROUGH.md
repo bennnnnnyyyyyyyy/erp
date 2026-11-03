@@ -18,12 +18,12 @@ A factory in Egypt making shampoo, conditioner, lotions, hand cream, face wash, 
 **Click:** sign in as Chris, pick the cosmetics organization. You land on the home page.
 **Say:** "The owner doesn't want 30 menus. He wants six answers."
 **Walk the six cards, left to right** (each shows what it is and the period it covers):
-1. **Am I making or losing money?** Month by month. *As of 2 Nov: July to September were profitable; **October was a small loss** (sales about 1.13M EGP against about 592K cost of goods and 586K running costs). Use it:* "October is lower because the factory sold less sunscreen and winter items are not yet in season; the owner sees it the day it happens, not at year end." (The seasonal pattern is built into the sample; say "in this sample".)
-2. **Money coming in and going out.** What customers owe and what is late. *As of 2 Nov, the largest overdue balances: Maadi Care Centers (about 592K EGP overdue of 653K owed), Gulf Export Buyer (about 413K), Cairo Pharmacy Chain (about 291K), Nasr City Cosmetics (about 262K).*
-3. **Waiting for your decision.** Stock requests that need a manager. *As of 2 Nov: 2 waiting, 2 approved and not yet handed out.*
-4. **Stock and expiry.** Value on the shelf and what is about to expire.
-5. **Best sellers.** *As of 2 Nov, last 90 days: sunscreen (about 1.05M EGP), vitamin C serum (about 738K), night cream (about 463K), shampoo (about 393K), hair oil (about 378K).*
-6. **Who you depend on.** *As of 2 Nov: one packaging supplier, Delta Plastics, is by far the largest spend (about 2.4M EGP in 12 months, then about 0.75M and 0.70M).* "If that supplier fails, bottles stop and so does the factory."
+1. **Profit and loss** Month by month. *As of 2 Nov: July to September were profitable; **October was a small loss** (sales about 1.13M EGP against about 592K cost of goods and 586K running costs). Use it:* "October is lower because the factory sold less sunscreen and winter items are not yet in season; the owner sees it the day it happens, not at year end." (The seasonal pattern is built into the sample; say "in this sample".)
+2. **Receivables and payables.** What customers owe and what is late. *As of 2 Nov, the largest overdue balances: Maadi Care Centers (about 592K EGP overdue of 653K owed), Gulf Export Buyer (about 413K), Cairo Pharmacy Chain (about 291K), Nasr City Cosmetics (about 262K).*
+3. **Pending approvals.** Stock requests that need a manager. *As of 2 Nov: 2 waiting, 2 approved and not yet handed out.*
+4. **Inventory value and expiry.** Value on the shelf and what is about to expire.
+5. **Top products.** *As of 2 Nov, last 90 days: sunscreen (about 1.05M EGP), vitamin C serum (about 738K), night cream (about 463K), shampoo (about 393K), hair oil (about 378K).*
+6. **Supplier concentration.** *As of 2 Nov: one packaging supplier, Delta Plastics, is by far the largest spend (about 2.4M EGP in 12 months, then about 0.75M and 0.70M).* "If that supplier fails, bottles stop and so does the factory."
 **Click:** open **Profit overview** (first card) for 20 seconds: sales vs costs by month.
 **Notice:** every card has a title, a one-line meaning and a period. Say "overdue means unpaid after 30 days".
 
@@ -39,7 +39,7 @@ A factory in Egypt making shampoo, conditioner, lotions, hand cream, face wash, 
 ## Chapter 3: Expiry, forecast, alerts (3 min)
 **Click:** Inventory > **Batches and expiry**.
 **Say:** "In cosmetics, expired stock is money in the bin."
-*As of 2 Nov the sample deliberately contains:* **lip balm** (300 units) expiring in about 15 days, **hand cream** (180) in about 39, **sunscreen** (120) in about 77, **vitamin C serum** (40) that **already expired** on 20 Oct, and **clay face mask** (60) in **quarantine**. Point out: the system never issues an expired or quarantined batch, and the owner home counts them in "Stock and expiry".
+*As of 2 Nov the sample deliberately contains:* **lip balm** (300 units) expiring in about 15 days, **hand cream** (180) in about 39, **sunscreen** (120) in about 77, **vitamin C serum** (40) that **already expired** on 20 Oct, and **clay face mask** (60) in **quarantine**. Point out: the system never issues an expired or quarantined batch, and the owner home counts them in "Inventory value and expiry".
 **Click:** Inventory > **Stock forecast**: "from the factory's own history it says how many days each item will last, and says 'thin data' when it isn't sure."
 **Click:** **Alerts** > Rules and teams: "tell Purchasing when stock is low, tell Management when a batch is about to expire or a customer is more than 30 days late."
 

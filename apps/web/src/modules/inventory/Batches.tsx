@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
+import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
@@ -55,23 +57,13 @@ export function BatchesPage() {
       <p className="muted">{tr('Batches and expiry dates. The batch that expires first is always issued first.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
-      <h2 className="related">{tr('Expiring in the next 90 days')}</h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th>{tr('Batch')}</th><th className="right">{tr('Quantity')}</th><th>{tr('Expires')}</th><th>{tr('When')}</th><th>{tr('Status')}</th></tr></thead><tbody>
-        {expiry.data.map((e) => { const b = bucket(e.daysLeft); return (
-          <tr key={`${e.batchId}`}><td>{e.sku} · {e.name}</td><td><code>{e.batchNo}</code></td><td className="right">{e.qty}</td><td>{e.expiryDate}</td><td><Pill status={b.pill} label={e.daysLeft < 0 ? trf('Expired {n} days ago', { n: -e.daysLeft }) : trf('{n} days left', { n: e.daysLeft })} /></td><td>{e.status === 'quarantined' ? <Pill status="rejected" label={tr('Quarantined')} /> : ''}</td></tr>); })}
-        {!expiry.data.length && <tr><td colSpan={6} className="muted empty">{tr('Nothing expires in the next 90 days.')}</td></tr>}
-      </tbody></table></div>
-
       {canReceive && (
-        <div className="form-card stack">
-          <h2>{tr('Receive a batch')}</h2>
+        <FormToggle label={tr('Receive a batch')}>
           <div className="form-row">
             <label>{tr('Item')}<select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Choose…')}</option>{items.data.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
             <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
             <label>{tr('Batch number')}<input value={f.batchNo} onChange={(e) => setF({ ...f, batchNo: e.target.value })} /></label>
             <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
-          </div>
-          <div className="form-row">
             <label>{tr('Made on (optional)')}<input type="date" value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>
             <label>{tr('Expires on')}<input type="date" value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} /></label>
           </div>
@@ -79,13 +71,20 @@ export function BatchesPage() {
             await api('/v1/inventory/batches', { method: 'POST', body: JSON.stringify({ itemId: f.itemId, warehouseId: f.warehouseId, batchNo: f.batchNo, qty: Number(f.qty), mfgDate: f.mfg, expiryDate: f.exp }) });
             return trf('Batch {no} received.', { no: f.batchNo.trim() });
           }, () => { setF({ ...f, batchNo: '', qty: '', mfg: '', exp: '' }); reloadAll(); })}>{busy ? tr('Saving…') : tr('Receive batch')}</Button></div>
-        </div>
+        </FormToggle>
       )}
+
+      <h2 className="related">{tr('Expiring in the next 90 days')}</h2>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th>{tr('Batch')}</th><th className="right">{tr('Quantity')}</th><th>{tr('Expires')}</th><th>{tr('When')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+        {expiry.data.map((e) => { const b = bucket(e.daysLeft); return (
+          <tr key={`${e.batchId}`}><td>{e.sku} · {e.name}</td><td><code>{e.batchNo}</code></td><td className="right">{e.qty}</td><td>{formatDay(e.expiryDate, session.org)}</td><td><Pill status={b.pill} label={e.daysLeft < 0 ? trf('Expired {n} days ago', { n: -e.daysLeft }) : trf('{n} days left', { n: e.daysLeft })} /></td><td>{e.status === 'quarantined' ? <Pill status="rejected" label={tr('Quarantined')} /> : ''}</td></tr>); })}
+        {!expiry.data.length && <tr><td colSpan={6} className="muted empty">{tr('Nothing expires in the next 90 days.')}</td></tr>}
+      </tbody></table></div>
 
       <h2 className="related">{tr('All batches')}</h2>
       <div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th>{tr('Batch')}</th><th>{tr('Made')}</th><th>{tr('Expires')}</th><th>{tr('Stock')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
         {batches.data.map((b) => (
-          <tr key={b.id}><td>{item(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{b.mfgDate ?? '—'}</td><td>{b.expiryDate ?? '—'}</td>
+          <tr key={b.id}><td>{item(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{formatDay(b.mfgDate, session.org) || '—'}</td><td>{formatDay(b.expiryDate, session.org) || '—'}</td>
             <td>{b.stock.filter((s) => s.qty > 0).map((s) => `${s.qty} in ${wh(s.warehouseId)}`).join(', ') || '0'}</td>
             <td><Pill status={b.status === 'quarantined' ? 'rejected' : 'received'} label={b.status === 'quarantined' ? tr('Quarantined') : tr('Available')} /></td>
             <td>{canManage && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => {

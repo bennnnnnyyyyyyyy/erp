@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { ListView, type Column } from '../../components/views/ListView';
 import { notificationTarget, type AppNotification } from '../../components/NotificationBell';
@@ -46,7 +47,7 @@ export function NotificationsPage() {
           columns={columns}
           rowKey={(n) => n.id}
           empty={tr('Nothing yet.')}
-          toolbar={inbox.data.unread > 0 ? <button className="secondary" onClick={markAll}>{tr('Mark all read (')}{inbox.data.unread})</button> : undefined}
+          toolbar={inbox.data.unread > 0 ? <Button variant="outline" type="submit" onClick={markAll}>{tr('Mark all read (')}{inbox.data.unread})</Button> : undefined}
         />
       ) : (
         <Loading error={inbox.error} />
@@ -104,7 +105,7 @@ export function OutboxPage() {
           columns={columns}
           rowKey={(m) => m.id}
           empty={tr('No messages yet.')}
-          toolbar={<button onClick={run} disabled={busy}>{busy ? tr('Running…') : tr('Run delivery and reminders now')}</button>}
+          toolbar={<Button type="submit" onClick={run} disabled={busy}>{busy ? tr('Running…') : tr('Run delivery and reminders now')}</Button>}
         />
       ) : (
         <Loading error={outbox.error} />

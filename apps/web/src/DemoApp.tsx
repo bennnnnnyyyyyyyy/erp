@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Button } from './components/ui/button';
 import { defaultPermissionsFor, type ModuleStatus, type Role, type SessionInfo } from '@erp/shared';
 import { Shell } from './components/Shell';
 import { demoActor, demoApi } from './lib/demo';
@@ -61,9 +62,9 @@ export function DemoApp() {
             ))}
           </select>
         </label>
-        <button className="secondary" onClick={() => setRtl((v) => !v)} aria-pressed={rtl}>
+        <Button variant="outline" type="submit" onClick={() => setRtl((v) => !v)} aria-pressed={rtl}>
           {rtl ? 'LTR · English layout' : 'RTL · عربي layout'}
-        </button>
+        </Button>
       </div>
       <Shell key={role} onSwitchOrg={() => undefined} onSignOut={() => undefined} />
     </SessionContext.Provider>

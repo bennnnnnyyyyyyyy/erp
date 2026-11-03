@@ -11,6 +11,50 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (round 4) — Home cards get real names; lists become cards on phones; record pages on one facts layout (not deployed)
+
+**Objective.** Ben: the Home tiles have no clear titles ("wtf is money coming in and out, that has a name"), then the next polish round ([plan](../plans/2026-11-03-ui-polish-plan.md)). Built on rounds 2 and 3 (uncommitted in main).
+
+**Actions Completed.**
+- `core/OwnerHome.tsx`: card titles renamed to their business names (the plain subtitle under each stays): Profit and loss, Receivables and payables, Pending approvals, Inventory value and expiry, Top products, Supplier concentration; titles one size larger. Arabic replaced on the same dictionary lines. `DEMO_SCRIPT_2026-11-02.md` and `COSMETICS_WALKTHROUGH.md` use the new names.
+- Phones (≤720 px): every `ListView` list turns into cards: each row a card, each value labelled with its column (`data-label`), the first cell as the title; summary figures two per row. Hand-built tables still scroll sideways.
+- Record pages on the same labelled facts block as the invoice and payment pages (was one long sentence): stock request, stock transfer, purchase order (with total), sales order (with total).
+
+**Database / System Result.** None. Frontend and docs only. Local sample build (port 5199, stopped): request page, purchase order page, and the requests and stock lists framed at 390 px.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. Not seen: Home cards with live data (not in the sample build), the transfer page. Ben to check after deploy, and to rehearse the demo with the new card names.
+
+## 2026-11-03 (round 3) — UI polish: forms behind buttons everywhere, empty Profit overview, Settings sections, Users actions, one date format (not deployed)
+
+**Objective.** The visible items of rounds 2 and 3 in [`documentation/plans/2026-11-03-ui-polish-plan.md`](../plans/2026-11-03-ui-polish-plan.md). Built on top of round 2 (uncommitted in main at the time).
+
+**Actions Completed.**
+- Always-open create forms moved behind a button (`FormToggle`) at the top of their section: Batches ("Receive a batch"), Alerts ("Add a rule", now above the rules), Stock adjustments ("New cycle count"), Approval policies. Real `<form>`s kept inside, so Enter still submits.
+- Profit overview: with nothing invoiced or spent, an empty state with links to Customer invoices and Expenses instead of zero cards and an axis of zeros; "Made / Lost" and "{n} of {total}" now translated (were English pieces glued in code); load errors shown as errors.
+- Settings > General: two titled sections ("Your language", "Company"); the long hints cut to one line each; customer-facing text no longer mentions "machine draft covering N strings".
+- Users: Disable asks in place (`ConfirmButton`, no browser `window.confirm`); Enable and "New invite link" are real buttons; role and status shown as translated words (were raw lower-case codes); the confirm question wraps inside the row.
+- `components/ui/button.tsx`: ghost variant gets `bg-transparent` (found on screen: with no background of its own, the base `button` fill showed through, white on white).
+- `lib/format.ts` `formatDay`: calendar dates (payment day, expense date, invoice date, batch made/expiry) in the company's date format, without time-zone shifting; used on the money screens, record pages and Batches (they printed raw `2026-11-01`).
+- Arabic for the new strings (machine draft).
+
+**Database / System Result.** None. Frontend only. Local sample build (port 5199, stopped): Stock adjustments, Settings > General, Users (disable confirm opened and cancelled; nothing saved, sample data only).
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. Not seen: Batches, Alerts, Profit overview (not in the sample build); Ben to check after deploy.
+
+## 2026-11-03 (round 2) — UI polish round 2: button variants finally render, 72 buttons on the kit, empty states, aligned widths (not deployed)
+
+**Objective.** Round 2 of [`documentation/plans/2026-11-03-ui-polish-plan.md`](../plans/2026-11-03-ui-polish-plan.md): one component kit. Found the root cause of "every button looks the same": `styles.css` styled the `button` element outside any CSS layer, and unlayered CSS beats Tailwind's layered utilities, so every `Button` was drawn as a filled primary button whatever its variant (outline, ghost, destructive).
+
+**Actions Completed.**
+- `theme.css`: layer order declared (`theme, base, components, utilities`). `styles.css`: the plain element styles (button, input, select, textarea, label, fieldset) moved into `@layer base`; component variants now win. Verified in the built CSS (base before utilities) and on screen.
+- 72 plain raw `<button>`s converted to `Button` across 16 files by a script: no class → default; `className="secondary"` → `variant="outline"`; a missing `type` became `type="submit"` so forms behave exactly as before. 15 specialised buttons (menu items, sort headers, icon and link buttons) left as they were.
+- Empty lists: a quiet tray icon and more room above the sentence (`.empty`).
+- Forms and notices use the page's full width, so their edges line up with the tables under them.
+
+**Database / System Result.** None. Frontend only. Checked in the local sample build (`vite --mode demo`, port 5199, stopped afterwards): Stock on hand, Stock transfers, a request page, Stock adjustments, in dark and light mode.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. Not seen: sign-in, create-company and the org picker (converted, not in the sample build), Finance, Alerts and Settings with live data. Ben to check after deploy, especially that every form still submits.
+
 ## 2026-11-03 (latest) — UI polish round 1: plain intros, page rhythm, loading skeletons, honest Home cards, stock status (not deployed)
 
 **Objective.** Ben: "the ERP feels vibecoded, I need to polish everything". Looked at the live screens (read-only) and measured the web code; plan with the causes and four rounds: [`documentation/plans/2026-11-03-ui-polish-plan.md`](../plans/2026-11-03-ui-polish-plan.md). This entry is round 1.

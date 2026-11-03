@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
+import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
@@ -71,27 +72,8 @@ export function AlertsPage() {
       <p className="muted">{tr('Tell the right people when stock runs low, a batch expires or money is late.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
-      <h2 className="related">{tr('Rules')}</h2>
-      <p className="muted small">{tr('What you are told about, and who is told. Each rule is checked every five minutes against the current stock, batches and invoices.')}</p>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Rule')}</th><th>{tr('When')}</th><th>{tr('Who is told')}</th><th>{tr('Repeat after')}</th><th>{tr('Fired')}</th><th>{tr('State')}</th><th></th></tr></thead><tbody>
-        {rules.data.map((r) => (
-          <tr key={r.id}><td>{r.name}</td>
-            <td>{ruleText(r)}</td>
-            <td>{r.recipients.map(recipientLabel).join(', ')}</td><td>{r.repeatHours} h</td>
-            <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> {tr('· last')} {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
-            <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? tr('On') : tr('Off')} /></td>
-            <td>{canManage && <span className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/enabled`, { method: 'POST', body: JSON.stringify({ enabled: !r.enabled }) }); return `${r.name}: ${r.enabled ? 'off' : 'on'}.`; }, reloadAll)}>{r.enabled ? tr('Turn off') : tr('Turn on')}</Button>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>{tr('Send me a test')}</Button>
-              <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/retire`, { method: 'POST' }); return trf('{name} removed (kept in the history).', { name: r.name }); }, reloadAll)}>{tr('Remove')}</Button>
-            </span>}</td></tr>
-        ))}
-        {!rules.data.length && <tr><td colSpan={7} className="muted empty">{tr('No rules yet. Add one below.')}</td></tr>}
-      </tbody></table></div>
-
       {canManage && (
-        <div className="form-card stack">
-          <h2>{tr('Add a rule')}</h2>
+        <FormToggle label={tr('Add a rule')}>
           <div className="form-row">
             <label>{tr('Name')}<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={tr('e.g. Glycerin running low')} /></label>
             <label>{tr('Tell me when')}
@@ -117,8 +99,26 @@ export function AlertsPage() {
             await api('/v1/alerts/rules', { method: 'POST', body: JSON.stringify({ name: f.name, kind: f.kind, itemId: f.itemId, threshold: f.threshold === '' ? null : Number(f.threshold), repeatHours: Number(f.repeatHours) || 24, recipients: [parse(f.to)] }) });
             return trf('Rule "{name}" added.', { name: f.name.trim() });
           }, () => { setF({ ...f, name: '', threshold: '', to: '' }); reloadAll(); })}>{busy ? tr('Saving…') : tr('Add rule')}</Button></div>
-        </div>
+        </FormToggle>
       )}
+
+      <h2 className="related">{tr('Rules')}</h2>
+      <p className="muted small">{tr('What you are told about, and who is told. Each rule is checked every five minutes against the current stock, batches and invoices.')}</p>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Rule')}</th><th>{tr('When')}</th><th>{tr('Who is told')}</th><th>{tr('Repeat after')}</th><th>{tr('Fired')}</th><th>{tr('State')}</th><th></th></tr></thead><tbody>
+        {rules.data.map((r) => (
+          <tr key={r.id}><td>{r.name}</td>
+            <td>{ruleText(r)}</td>
+            <td>{r.recipients.map(recipientLabel).join(', ')}</td><td>{r.repeatHours} h</td>
+            <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> {tr('· last')} {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
+            <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? tr('On') : tr('Off')} /></td>
+            <td>{canManage && <span className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/enabled`, { method: 'POST', body: JSON.stringify({ enabled: !r.enabled }) }); return `${r.name}: ${r.enabled ? 'off' : 'on'}.`; }, reloadAll)}>{r.enabled ? tr('Turn off') : tr('Turn on')}</Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>{tr('Send me a test')}</Button>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/retire`, { method: 'POST' }); return trf('{name} removed (kept in the history).', { name: r.name }); }, reloadAll)}>{tr('Remove')}</Button>
+            </span>}</td></tr>
+        ))}
+        {!rules.data.length && <tr><td colSpan={7} className="muted empty">{tr('No rules yet.')}</td></tr>}
+      </tbody></table></div>
 
       <h2 className="related">{tr('Teams')}</h2>
       <p className="muted small">{tr('A team is a named group (Purchasing, Warehouse, Management) so a rule can say "tell Purchasing". Whoever buys stock belongs in Purchasing.')}</p>

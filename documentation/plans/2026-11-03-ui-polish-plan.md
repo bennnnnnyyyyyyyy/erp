@@ -28,14 +28,19 @@ Each round is frontend only unless stated, ends with typecheck, tests, a build, 
 - Stock on hand: status against the reorder level (Low / OK / —) instead of an always-full bar; "Low on stock" card instead of unit totals.
 - Earlier the same day (separate entries): lists before forms on the money screens, confirm before void, clickable rows, record pages.
 
-### Round 2: one component kit (next)
+### Round 2: one component kit (started 2026-11-03)
+- **Done:** the cause of identical buttons fixed (unlayered `button {}` beat every Button variant; element styles now in `@layer base`);
+  72 plain raw buttons moved to `Button` (15 specialised ones remain by design); empty-list state; forms and notices aligned to the page width.
+- Still to do in this round:
 - `PageHeader` (title, one line, actions on the end side, optional back link) on every page; the page's main action is the only filled button.
-- Replace the 87 raw `<button>`s with `Button` variants (primary, outline, ghost, destructive, link). Remove the global `button {}` style.
 - `Field` (label, control, hint, error) and `Select` / `Input` from the kit for the 38 selects and 67 inputs; required marks; inline errors.
 - `EmptyState` (what is empty, why it matters, the one action that fills it) for every list.
 - Move the remaining 22 hand-built tables onto `ListView` or a shared `DataTable` (same header, density, numeric alignment, sort, empty state).
 
 ### Round 3: screen by screen
+- **Done 2026-11-03:** forms behind a button on Batches, Alerts, Stock adjustments and Approval policies; Profit overview empty state;
+  Settings > General sections and short hints; Users actions (in-place confirm, real buttons, translated role and status); one
+  calendar-date format (`formatDay`). Still open below: request, transfer and order pages on the shared facts block, Users names.
 - Remaining always-open forms behind a button (Batches, Alerts, Transfers, Adjustments, Users invite already a modal).
 - Settings > General: cut the long help paragraphs; group into sections; save bar.
 - Users: names before emails (needs full names, a data step for Ben), role as a pill, "Disable" as a real button with confirm.
@@ -44,6 +49,8 @@ Each round is frontend only unless stated, ends with typecheck, tests, a build, 
 - Dates: one format everywhere (some lists show `2026-11-01`, others `01/11/2026 18:40`); follow the company's date format.
 
 ### Round 4: phone and Arabic
+- **Done 2026-11-03:** `ListView` lists as cards on phones; record pages (request, transfer, purchase and sales order) on the facts
+  block; Home card titles use business names. Still open: hand-built tables on phones, native Arabic review, keyboard pass.
 - Lists become cards under 720 px (number, status, one line), not sideways-scrolling tables.
 - A real Arabic pass by a native speaker of every screen (the texts are a machine draft); numbers and dates in Arabic mode.
 - Keyboard pass: focus order, visible focus on rows, skip link.

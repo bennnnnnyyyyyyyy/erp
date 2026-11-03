@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Button } from './ui/button';
 import type { MyInvitation } from '@erp/shared';
 import { supabase } from '../lib/supabase';
 import { CreateCompany } from './CreateCompany';
@@ -73,12 +74,12 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
                   <Rich text={trf('{who} invited you to join **{org}** as {role}.', { who: inv.invitedByName ?? tr('Someone'), org: inv.orgName, role: tr(inv.role) })} />
                 </p>
                 <div className="form-actions">
-                  <button disabled={busyId === inv.id} onClick={() => respond(inv, true)}>
+                  <Button type="submit" disabled={busyId === inv.id} onClick={() => respond(inv, true)}>
                     {tr('Accept')}
-                  </button>
-                  <button className="secondary" disabled={busyId === inv.id} onClick={() => respond(inv, false)}>
+                  </Button>
+                  <Button variant="outline" type="submit" disabled={busyId === inv.id} onClick={() => respond(inv, false)}>
                     {tr('Decline')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -88,16 +89,16 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
         {error && <p className="error">{error}</p>}
         {orgs.length === 0 && <p className="muted">{tr('Accept an invitation above, or set up your own company.')}</p>}
         {orgs.map((o) => (
-          <button key={o.id} onClick={() => onPick(o.id)}>
+          <Button type="submit" key={o.id} onClick={() => onPick(o.id)}>
             {o.name}
-          </button>
+          </Button>
         ))}
-        <button className="secondary" onClick={() => setCreating(true)}>
+        <Button variant="outline" type="submit" onClick={() => setCreating(true)}>
           {tr('Create a new company')}
-        </button>
-        <button className="secondary" onClick={() => supabase.auth.signOut()}>
+        </Button>
+        <Button variant="outline" type="submit" onClick={() => supabase.auth.signOut()}>
           {tr('Sign out')}
-        </button>
+        </Button>
       </div>
     </main>
   );

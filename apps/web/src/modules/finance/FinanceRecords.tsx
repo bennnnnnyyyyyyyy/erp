@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
@@ -43,7 +44,7 @@ export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'c
       <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
         {rows.map((p) => (
           <ClickRow key={p.id} to={`/finance/payments/${p.id}`}>
-            <td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td>{p.paidOn}</td><td>{tr(p.method)}</td>
+            <td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td>{formatDay(p.paidOn, session.org)}</td><td>{tr(p.method)}</td>
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td><td><PaymentStatus status={p.status} /></td>
           </ClickRow>
         ))}
@@ -107,7 +108,7 @@ export function PaymentPage() {
       {voiding.message && <p className={voiding.message.ok ? 'notice' : 'error notice'}>{voiding.message.text}</p>}
       <dl className="facts">
         <div><dt>{tr('Amount')}</dt><dd className="amount">{money(p.amountMinor, p.currency)}</dd></div>
-        <div><dt>{tr('Date')}</dt><dd>{p.paidOn}</dd></div>
+        <div><dt>{tr('Date')}</dt><dd>{formatDay(p.paidOn, session.org)}</dd></div>
         <div><dt>{tr('Method')}</dt><dd>{tr(p.method)}</dd></div>
         <div><dt>{tr('For')}</dt><dd>{target}</dd></div>
         {party && <div><dt>{p.direction === 'in' ? tr('Customer') : tr('Supplier')}</dt><dd>{party}</dd></div>}
@@ -146,7 +147,7 @@ export function ExpensePage() {
       {voiding.message && <p className={voiding.message.ok ? 'notice' : 'error notice'}>{voiding.message.text}</p>}
       <dl className="facts">
         <div><dt>{tr('Amount')}</dt><dd className="amount">{money(e.amountMinor, e.currency)}</dd></div>
-        <div><dt>{tr('Date')}</dt><dd>{e.date}</dd></div>
+        <div><dt>{tr('Date')}</dt><dd>{formatDay(e.date, session.org)}</dd></div>
         <div><dt>{tr('Category')}</dt><dd>{category}</dd></div>
         {supplier && <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>}
         {e.note && <div><dt>{tr('Note')}</dt><dd>{e.note}</dd></div>}

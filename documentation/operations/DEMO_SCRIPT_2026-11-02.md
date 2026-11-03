@@ -18,7 +18,7 @@ Three ideas to repeat all demo long: **1. know your numbers, 2. stop stock being
 
 | Money lever | What the app does | Where you show it |
 |---|---|---|
-| **Know if you are profitable** | Owner home page answers "Am I making or losing money?" with revenue minus cost of goods minus expenses, by month | Home, first card |
+| **Know if you are profitable** | The "Profit and loss" card on the owner home page shows revenue minus cost of goods minus expenses, by month | Home, first card |
 | **Never run out of a best-seller** | Forecast says how many days of stock are left per item, from the company's own sales history | Inventory > Stock forecast |
 | **Stop throwing away expired stock** | Batches with expiry dates; oldest-expiry goes out first; expiring stock is flagged; bad batches can be quarantined | Inventory > Batches and expiry |
 | **Stop stock walking out the door** | Stock can only leave through a request a *different* manager approves. The database itself refuses otherwise | Inventory > Stock requests |
@@ -32,7 +32,7 @@ Three ideas to repeat all demo long: **1. know your numbers, 2. stop stock being
 
 Use the **cosmetics demo organization**, signed in as the **owner** (Chris). Have a second window signed in as a **member** (Grant) for step 5. Keep the browser zoomed to 110 percent so the room can read it.
 
-1. **Home (1 min).** "This is what the owner sees in ten seconds." Point at the cards in order: *Am I making or losing money?*, *Money coming in and going out*, *Waiting for your decision*, *Stock and expiry*, *Best sellers, last 90 days*, *Who you depend on*. Read one real number off the screen, e.g. this month's profit. Say: "A factory owner doesn't want 30 menus; he wants these six answers."
+1. **Home (1 min).** "This is what the owner sees in ten seconds." Point at the cards in order: *Profit and loss*, *Receivables and payables*, *Pending approvals*, *Inventory value and expiry*, *Top products, last 90 days*, *Supplier concentration*. Read one real number off the screen, e.g. this month's profit. Say: "A factory owner doesn't want 30 menus; he wants these six answers."
 2. **Stock forecast (1 min).** Inventory > Stock forecast. "It predicts which item runs out and when, from the factory's own history. It says 'thin data' when it isn't sure, rather than guessing."
 3. **Batches and expiry (1 min).** Inventory > Batches and expiry. "In cosmetics, stock that expires is money in the bin. The oldest batch always goes first, and a suspicious batch can be quarantined so it can never be shipped."
 4. **Stock on hand and reorder levels (1 min).** Inventory > Stock on hand. "Live stock per warehouse."

@@ -30,6 +30,25 @@ export function formatDate(iso: string | null | undefined, org: OrgPrefs | null)
   }
 }
 
+/**
+ * A calendar date ("2026-11-01": an invoice date, an expiry date, a payment day) in the organization's date format. Unlike formatDate
+ * it never shifts by time zone: the date is the date, wherever the company is. Anything that is not YYYY-MM-DD is returned unchanged.
+ */
+export function formatDay(ymd: string | null | undefined, org: Pick<OrgPrefs, 'dateFormat'> | null): string {
+  if (!ymd) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return ymd;
+  const [, y, mo, d] = m;
+  switch (org?.dateFormat) {
+    case 'MM/DD/YYYY':
+      return `${mo}/${d}/${y}`;
+    case 'YYYY-MM-DD':
+      return `${y}-${mo}-${d}`;
+    default:
+      return `${d}/${mo}/${y}`;
+  }
+}
+
 export function formatDateTime(iso: string | null | undefined, org: OrgPrefs | null): string {
   if (!iso) return '';
   return `${formatDate(iso, org)} ${parts(iso, org?.timezone ?? 'UTC').time}`;

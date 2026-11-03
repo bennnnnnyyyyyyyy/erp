@@ -43,33 +43,40 @@ h1.mono { font-size: 1.45rem; letter-spacing: 0; }
 .form-toggle-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .form-toggle-head h2 { margin: 0; }
 .confirm-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); background: var(--danger-soft); border-radius: var(--radius); }
+/* Inside a table row the question wraps in a narrow box instead of widening the column and scrolling the table sideways. */
+td .confirm-row, .row-actions .confirm-row { white-space: normal; max-width: 19rem; text-align: start; font-size: 0.85rem; }
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
 .section-head h2 { margin-block-end: 0.5rem; }
 /* Record numbers never break across lines ("OUT-" / "0372"). */
 td code, td .nowrap { white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-/* ---- controls ---- */
-button {
-  font: inherit; font-weight: 500; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius);
-  padding: 0.5rem 0.95rem; background: var(--primary); color: var(--primary-foreground);
-  transition: background 0.12s, border-color 0.12s, transform 0.06s, box-shadow 0.12s;
-}
-button:hover:not(:disabled) { background: var(--primary-hover); }
-button:active:not(:disabled) { transform: translateY(1px); }
-button:disabled { opacity: 0.55; cursor: default; }
-button.secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-button.secondary:hover:not(:disabled) { background: var(--surface-2); border-color: var(--muted-foreground); }
+/* ---- controls ----
+   Plain element styles live in the `base` layer (order declared in theme.css), so the Button component's variants, which are
+   utility classes, are drawn as designed. Raw <button>s that remain (menu items, sort headers, icon buttons) style themselves
+   with their own classes below, which are unlayered and so still win over these. */
+@layer base {
+  button {
+    font: inherit; font-weight: 500; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius);
+    padding: 0.5rem 0.95rem; background: var(--primary); color: var(--primary-foreground);
+    transition: background 0.12s, border-color 0.12s, transform 0.06s, box-shadow 0.12s;
+  }
+  button:hover:not(:disabled) { background: var(--primary-hover); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.55; cursor: default; }
+  button.secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+  button.secondary:hover:not(:disabled) { background: var(--surface-2); border-color: var(--muted-foreground); }
 
-label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--muted-foreground); }
-input, select, textarea {
-  font: inherit; color: var(--text); width: 100%; margin-top: 0.3rem; padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface);
-  transition: border-color 0.12s, box-shadow 0.12s;
+  label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--muted-foreground); }
+  input, select, textarea {
+    font: inherit; color: var(--text); width: 100%; margin-top: 0.3rem; padding: 0.5rem 0.65rem;
+    border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface);
+    transition: border-color 0.12s, box-shadow 0.12s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+  textarea { resize: vertical; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
-textarea { resize: vertical; }
-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 
 /* ---- utilities ---- */
 .muted { color: var(--muted-foreground); }
@@ -206,7 +213,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* ---- forms and notices ---- */
 .form-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  padding: 1.25rem 1.35rem; max-width: 880px; margin-block: 1rem 1.5rem; box-shadow: var(--shadow-sm);
+  padding: 1.25rem 1.35rem; margin-block: 1rem 1.5rem; box-shadow: var(--shadow-sm);
 }
 .form-card h2 { font-size: 1.05rem; }
 /* Fields sit on a grid that fills the card and wraps on its own: two to four per row on a desktop, one on a phone. */
@@ -214,7 +221,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .form-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .notice {
   position: relative; background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
-  border-radius: var(--radius); padding: 0.85rem 1rem; max-width: 880px; margin-block: 1rem; overflow: hidden;
+  border-radius: var(--radius); padding: 0.85rem 1rem; margin-block: 1rem; overflow: hidden;
   padding-inline-start: 1.3rem;
 }
 .notice::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; width: 5px; background: var(--info); }
@@ -250,7 +257,13 @@ td input { margin-top: 0; }
 .th-sort { background: transparent; color: inherit; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .th-sort:hover:not(:disabled) { background: transparent; color: var(--text); }
 .row-actions { text-align: end; white-space: nowrap; }
-.empty { text-align: center; padding: 2.25rem; }
+/* An empty list: a quiet tray icon above the sentence, so "No transfers yet." reads as a designed state, not a leftover. */
+.empty { text-align: center; padding: 2.75rem 1.5rem; font-size: 0.92rem; }
+.empty::before {
+  content: ''; display: block; width: 40px; height: 40px; margin: 0 auto 0.75rem; border-radius: 12px;
+  background: var(--surface-2) center / 22px no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 13h5l1.5 3h5L16 13h5'/%3E%3Cpath d='M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5z'/%3E%3C/svg%3E");
+}
 .badge { display: inline-block; font-size: 0.7rem; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted-foreground); margin-top: 0.2rem; }
 
 /* ---- status pills (stock requests and members) ---- */
@@ -359,6 +372,32 @@ td input { margin-top: 0; }
 .form-row.three { grid-template-columns: 2fr 1fr 1fr; }
 .steps.wide { max-width: 760px; }
 @media (max-width: 720px) { .form-row.three { grid-template-columns: 1fr; } }
+/* Phones: every shared list (ListView) becomes a stack of cards instead of a table that scrolls sideways. Each cell shows its
+   column name (data-label) at the start and its value at the end; the first cell (the record's number or name) is the card's title.
+   Logical properties only, so it reads correctly in Arabic. Hand-built tables keep scrolling for now. */
+@media (max-width: 720px) {
+  .list-view .table-wrap { overflow: visible; background: none; border: 0; box-shadow: none; }
+  .list-view table, .list-view tbody, .list-view tr, .list-view td { display: block; width: 100%; }
+  .list-view thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .list-view tbody tr {
+    margin-block-end: 0.7rem; padding: 0.35rem 0.9rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  }
+  .list-view tbody td { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); text-align: end; }
+  .list-view tbody td:last-child { border-bottom: 0; }
+  .list-view tbody td::before { content: attr(data-label); flex: none; text-align: start; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); }
+  .list-view tbody td[data-label='']::before { content: none; }
+  .list-view tbody td:first-child { font-size: 1rem; font-weight: 600; padding-block: 0.55rem; }
+  .list-view tbody td.empty { display: block; text-align: center; border: 0; }
+  .list-view tbody td.empty::before { content: ''; }
+  .list-view tbody tr:has(td.empty) { box-shadow: none; }
+  .list-view tbody tr.row-link:hover { background: var(--surface); border-color: var(--primary); }
+  .list-toolbar .list-search { max-width: none; flex: 1 1 100%; }
+  /* Summary figures two to a row, so the list starts on the first screen. */
+  .stats { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .stat { padding: 0.75rem 0.85rem; }
+  .stat-value { font-size: 1.5rem; }
+}
 /* Phones: warehouse staff tap with a thumb, often in gloves. Every control at least 44 px tall (WCAG 2.5.5 target size);
    links inside table cells get the same height so the record number is easy to hit. */
 @media (max-width: 720px) {

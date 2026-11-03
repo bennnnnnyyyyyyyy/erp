@@ -1,5 +1,7 @@
 import { formatMoney } from '@erp/shared';
 import { Loading } from '../../components/Loading';
+import { buttonVariants } from '../../components/ui/button';
+import { Link } from '../../lib/router';
 import { formatWhole } from '../../lib/money';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/cn';
@@ -25,9 +27,8 @@ function compact(minor: number): string {
 
 export function ProfitOverviewPage() {
   const data = useLoad(() => api<Insights>('/v1/finance/insights'));
-  if (data.error) return <section className="page"><p className="error">{data.error}</p></section>;
   const s = data.data;
-  if (!s) return <section className="page"><Loading /></section>;
+  if (!s) return <section className="page"><Loading error={data.error} /></section>;
 
   const money = (n: number) => formatMoney({ amountMinor: n, currency: s.currency });
   const whole = (n: number) => formatWhole(n, s.currency);
@@ -48,6 +49,24 @@ export function ProfitOverviewPage() {
   const bar = Math.min(26, slot * 0.34);
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => nice * f);
 
+  // A company with nothing invoiced or spent yet: say what fills this page instead of four zero cards and an axis of zeros.
+  if (!months.some((m) => m.revenue !== 0 || m.cogs !== 0 || m.expenses !== 0)) {
+    return (
+      <section className="page wide">
+        <h1>{tr('Profit overview')}</h1>
+        <p className="muted">{tr('Sales against the cost of goods and running costs, month by month.')}</p>
+        <div className="form-card stack">
+          <h2>{tr('Nothing to show yet')}</h2>
+          <p className="muted m-0">{tr('This page fills in as soon as you invoice a sale or record an expense.')}</p>
+          <div className="form-actions">
+            <Link to="/sales/invoices" className={cn(buttonVariants({ variant: 'outline' }), 'no-underline')}>{tr('Customer invoices')}</Link>
+            <Link to="/finance" className={cn(buttonVariants({ variant: 'outline' }), 'no-underline')}>{tr('Expenses')}</Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="page wide">
       <h1>{tr('Profit overview')}</h1>
@@ -55,10 +74,10 @@ export function ProfitOverviewPage() {
 
       <div className="mt-5 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 17rem), 1fr))' }}>
         {[
-          { label: tr('Result, last 12 months'), value: `${net < 0 ? 'Lost ' : 'Made '}${whole(Math.abs(net))}`, tone: net < 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: trf('{pct}% of sales', { pct: margin.toFixed(1) }) },
+          { label: tr('Result, last 12 months'), value: trf(net < 0 ? 'Lost {amount}' : 'Made {amount}', { amount: whole(Math.abs(net)) }), tone: net < 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: trf('{pct}% of sales', { pct: margin.toFixed(1) }) },
           { label: tr('Sales, last 12 months'), value: whole(revenue), tone: '', note: tr('invoiced to customers') },
           { label: tr('Costs, last 12 months'), value: whole(costs), tone: '', note: trf('{cogs} of goods sold + {expenses} running costs', { cogs: whole(sum('cogs')), expenses: whole(sum('expenses')) }) },
-          { label: tr('Months in the red, last 12 months'), value: `${lossMonths} of ${months.length}`, tone: lossMonths > 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: trf('Best {best}, weakest {worst}', { best: monthLong(best.month), worst: monthLong(worst.month) }) },
+          { label: tr('Months in the red, last 12 months'), value: trf('{n} of {total}', { n: lossMonths, total: months.length }), tone: lossMonths > 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: trf('Best {best}, weakest {worst}', { best: monthLong(best.month), worst: monthLong(worst.month) }) },
         ].map((k) => (
           <div key={k.label} className="min-w-0 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
             <div className="text-sm font-medium text-muted-foreground">{k.label}</div>

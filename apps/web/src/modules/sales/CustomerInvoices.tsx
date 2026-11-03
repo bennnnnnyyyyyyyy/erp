@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Loading } from '../../components/Loading';
 import { billingFor, formatMoney, type BillingFlag } from '@erp/shared';
 import { api } from '../../lib/api';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime, formatDay } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Button } from '../../components/ui/button';
@@ -180,7 +180,7 @@ export function CustomerInvoicePage() {
       <dl className="facts">
         <div><dt>{tr('Customer')}</dt><dd>{customer}</dd></div>
         <div><dt>{tr('Sales order')}</dt><dd><Link to={`/sales/orders/${inv.orderId}`}><code>{order?.number ?? '—'}</code></Link></dd></div>
-        <div><dt>{tr('Invoice date')}</dt><dd>{inv.invoiceDate}</dd></div>
+        <div><dt>{tr('Invoice date')}</dt><dd>{formatDay(inv.invoiceDate, session.org)}</dd></div>
         <div><dt>{tr('Created')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
         <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
       </dl>

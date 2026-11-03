@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Button } from '../../../components/ui/button';
 import { Loading } from '../../../components/Loading';
 import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { demoMode } from '../../../lib/demo';
-import { arabicStringCount, useI18n, type Lang, tr, trf } from '../../../lib/i18n';
+import { useI18n, type Lang, tr } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 
@@ -72,6 +73,7 @@ export function GeneralSettings() {
       <h1>{tr('General')}</h1>
       <p className="muted">{tr('How your organization appears and the defaults every app uses.')}</p>
       <div className="form-card stack">
+        <h2>{tr('Your language')}</h2>
         <label>
           {t('My language')}
           <select
@@ -84,12 +86,11 @@ export function GeneralSettings() {
             <option value="en">{t('English (left to right)')}</option>
             <option value="ar">{t('Arabic (right to left)')}</option>
           </select>
-          <span className="hint muted">
-            {trf('Only for you, on this account. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {n} menu strings, the home page and most screens so far; it must be reviewed by a native speaker before customers rely on it.', { n: arabicStringCount })}
-          </span>
+          <span className="hint muted">{tr('Only for you, on every device you sign in on. The Arabic wording is still being reviewed.')}</span>
         </label>
       </div>
       <form className="form-card stack" onSubmit={save}>
+        <h2>{tr('Company')}</h2>
         <fieldset disabled={!canEdit || saving} className="stack">
           <label>
             {tr('Organization name')}
@@ -126,9 +127,9 @@ export function GeneralSettings() {
             {tr('Default language for the company')}
             <select value={form.language} onChange={(e) => set('language', e.target.value as OrgSettings['language'])}>
               <option value="en">{tr('English (left to right)')}</option>
-              <option value="ar">العربية: Arabic (right to left)</option>
+              <option value="ar">{tr('Arabic (right to left)')}</option>
             </select>
-            <span className="hint muted">{tr('The language people see until they choose their own under "My language" above. It is chosen when the company signs up and can be changed here. Arabic is a machine draft; a native speaker must review it before customers see it.')}</span>
+            <span className="hint muted">{tr('What everyone sees until they choose their own language.')}</span>
           </label>
           <label>
             {tr('Time zone')}
@@ -144,13 +145,13 @@ export function GeneralSettings() {
         {error && <p className="error">{error}</p>}
         {canEdit ? (
           <div className="form-actions">
-            <button type="submit" disabled={!dirty || saving}>
+            <Button type="submit" disabled={!dirty || saving}>
               {saving ? tr('Saving…') : tr('Save changes')}
-            </button>
+            </Button>
             {dirty && (
-              <button type="button" className="secondary" onClick={() => setForm(original)} disabled={saving}>
+              <Button variant="outline" type="button" onClick={() => setForm(original)} disabled={saving}>
                 {tr('Discard')}
-              </button>
+              </Button>
             )}
             {saved && !dirty && <span className="muted">{tr('Saved.')}</span>}
           </div>
@@ -163,7 +164,7 @@ export function GeneralSettings() {
           <h2>{tr('Getting-started guide')}</h2>
           <p className="muted small">{session.org?.showTutorial ? tr('A short tutorial for new companies, shown as the "Getting started" app. It is on for this company.') : tr('A short tutorial for new companies, shown as the "Getting started" app. It is off for this company.')}</p>
           <div>
-            <button type="button" className="secondary" onClick={async () => {
+            <Button variant="outline" type="button" onClick={async () => {
               setError(null);
               try {
                 await api('/v1/core/org/tutorial', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTutorial }) });
@@ -171,7 +172,7 @@ export function GeneralSettings() {
               } catch (err) {
                 setError((err as Error).message);
               }
-            }}>{session.org?.showTutorial ? tr('Hide the guide') : tr('Show the guide')}</button>
+            }}>{session.org?.showTutorial ? tr('Hide the guide') : tr('Show the guide')}</Button>
           </div>
         </div>
       )}

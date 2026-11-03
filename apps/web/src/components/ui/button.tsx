@@ -11,7 +11,8 @@ export const buttonVariants = cva(
         default: 'border-primary bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
         outline: 'border-input bg-card text-foreground shadow-xs hover:bg-accent',
         secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'border-transparent text-foreground hover:bg-accent',
+        // bg-transparent is needed: without a background of its own, the base `button` style (primary fill) shows through.
+        ghost: 'border-transparent bg-transparent text-foreground hover:bg-accent',
         destructive: 'border-destructive bg-destructive text-white shadow-xs hover:bg-destructive/90',
       },
       size: {

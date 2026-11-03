@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { formatMoney } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -55,7 +56,7 @@ export function SalesOrders() {
           rowKey={(o) => o.id}
           rowHref={(o) => `/sales/orders/${o.id}`}
           empty={tr('No sales orders yet.')}
-          toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/sales/orders/new')}>{tr('New sales order')}</button> : undefined}
+          toolbar={session.role !== 'viewer' ? <Button type="submit" onClick={() => navigate('/sales/orders/new')}>{tr('New sales order')}</Button> : undefined}
         />
       ) : (
         <Loading />
@@ -142,9 +143,12 @@ export function SalesOrderPage() {
         <h1 className="mono">{o.number}</h1>
         <Pill status={o.status} label={tr(STATUS[o.status])} />
       </div>
-      <p className="muted">
-        {customer?.name} ({customer?.city}{tr(') · ships from')} {cat.warehouseName(o.warehouseId)} {tr('· ordered')} {formatDateTime(o.createdAt, session.org)}
-      </p>
+      <dl className="facts">
+        <div><dt>{tr('Customer')}</dt><dd>{customer?.name}{customer?.city ? <span className="muted"> · {customer.city}</span> : ''}</dd></div>
+        <div><dt>{tr('Ships from')}</dt><dd>{cat.warehouseName(o.warehouseId)}</dd></div>
+        <div><dt>{tr('Ordered')}</dt><dd>{formatDateTime(o.createdAt, session.org)}</dd></div>
+        <div><dt>{tr('Total')}</dt><dd className="amount">{money(o.totalMinor, o.currency)}</dd></div>
+      </dl>
       <OrderSteps status={o.status} />
 
       <div className="table-wrap">
@@ -180,8 +184,8 @@ export function SalesOrderPage() {
 
       {o.status === 'open' && session.role !== 'viewer' && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
-          <button disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</button>
-          <button className="secondary" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</button>
+          <Button type="submit" disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</Button>
+          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</Button>
         </div>
       )}
 

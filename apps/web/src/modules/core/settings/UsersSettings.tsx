@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from '../../../components/ui/button';
 import { Loading } from '../../../components/Loading';
 import { ROLES, hasPermission, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
 import { ListView, type Column } from '../../../components/views/ListView';
@@ -8,6 +9,11 @@ import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 
 import { tr, trf } from '../../../lib/i18n';
+import { ConfirmButton } from '../../../components/FormToggle';
+
+// Shown words for the stored role and status codes ("member" was printed as is, in English, lower case).
+const ROLE_NAME: Record<Role, string> = { owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer' };
+const STATUS_NAME: Record<string, string> = { active: 'Active', invited: 'Invited', disabled: 'Disabled' };
 const ROLE_HELP: Record<Role, string> = {
   owner: 'Everything, including managing owners',
   admin: 'Everything except managing owners',
@@ -25,16 +31,16 @@ function InviteLinkBox({ email, link, onClose }: { email: string; link: string; 
       </p>
       <div className="copy-row">
         <input readOnly value={link} onFocus={(e) => e.target.select()} aria-label={tr('Invite link')} />
-        <button
+        <Button
           type="button"
           onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true))}
         >
           {copied ? tr('Copied') : tr('Copy')}
-        </button>
+        </Button>
       </div>
-      <button type="button" className="secondary" onClick={onClose}>
+      <Button variant="outline" type="button" onClick={onClose}>
         {tr('Done')}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -82,9 +88,9 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
       <p className="hint muted small">{tr(ROLE_HELP[role])}</p>
       {error && <p className="error">{error}</p>}
       <div className="form-actions">
-        <button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? tr('Inviting…') : tr('Invite')}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -124,8 +130,8 @@ export function UsersSettings() {
 
   const toggle = (m: Member) =>
     act(m, async () => {
+      // Disabling is confirmed in place by ConfirmButton (no browser pop-up); enabling needs no question.
       const action = m.status === 'disabled' ? 'enable' : 'disable';
-      if (action === 'disable' && !window.confirm(trf('Disable {email}? They will lose access to {org}.', { email: m.email, org: session.org?.name ?? '' }))) return;
       replace(await api<Member>(`/v1/core/members/${m.id}/${action}`, { method: 'POST' }));
     });
 
@@ -168,7 +174,7 @@ export function UsersSettings() {
       value: (m) => m.role,
       render: (m) => {
         const locked = !canManage || m.userId === session.userId || (!isOwner && m.role === 'owner');
-        if (locked) return <span className="capitalize">{m.role}</span>;
+        if (locked) return <span>{tr(ROLE_NAME[m.role])}</span>;
         return (
           <select
             value={m.role}
@@ -178,7 +184,7 @@ export function UsersSettings() {
           >
             {ROLES.filter((r) => r !== 'owner' || isOwner).map((r) => (
               <option key={r} value={r}>
-                {r}
+                {tr(ROLE_NAME[r])}
               </option>
             ))}
           </select>
@@ -189,7 +195,7 @@ export function UsersSettings() {
       key: 'status',
       label: tr('Status'),
       value: (m) => m.status,
-      render: (m) => <span className={`status status-${m.status}`}>{m.status}</span>,
+      render: (m) => <span className={`status status-${m.status}`}>{tr(STATUS_NAME[m.status] ?? m.status)}</span>,
     },
     { key: 'joined', label: tr('Added'), value: (m) => m.joinedAt, render: (m) => formatDate(m.joinedAt, session.org) },
     {
@@ -252,27 +258,27 @@ export function UsersSettings() {
           rowKey={(m) => m.id}
           toolbar={
             canManage && !inviting ? (
-              <button onClick={() => setInviting(true)}>{tr('Invite user')}</button>
+              <Button type="submit" onClick={() => setInviting(true)}>{tr('Invite user')}</Button>
             ) : canManage ? (
-              <button className="secondary" onClick={() => setInviting(false)}>
+              <Button variant="outline" type="submit" onClick={() => setInviting(false)}>
                 {tr('Cancel invite')}
-              </button>
+              </Button>
             ) : null
           }
           actions={
             canManage
               ? (m) =>
                   m.userId === session.userId || (!isOwner && m.role === 'owner') ? null : (
-                    <>
+                    <span className="inline-flex flex-wrap items-center justify-end gap-2">
                       {m.status === 'invited' && (
-                        <button className="link-btn" disabled={busyId === m.id} onClick={() => newLink(m)}>
+                        <Button variant="ghost" size="sm" disabled={busyId === m.id} onClick={() => newLink(m)}>
                           {tr('New invite link')}
-                        </button>
+                        </Button>
                       )}
-                      <button className="link-btn" disabled={busyId === m.id} onClick={() => toggle(m)}>
-                        {m.status === 'disabled' ? tr('Enable') : tr('Disable')}
-                      </button>
-                    </>
+                      {m.status === 'disabled'
+                        ? <Button variant="outline" size="sm" disabled={busyId === m.id} onClick={() => toggle(m)}>{tr('Enable')}</Button>
+                        : <ConfirmButton size="sm" label={tr('Disable')} confirmLabel={tr('Yes, disable')} question={trf('Disable {email}? They will lose access to {org}.', { email: m.name ?? m.email, org: session.org?.name ?? '' })} disabled={busyId === m.id} onConfirm={() => toggle(m)} />}
+                    </span>
                   )
               : undefined
           }
