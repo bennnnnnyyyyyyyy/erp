@@ -42,7 +42,7 @@ Everything I am waiting on, grouped by what it blocks. Tick items as you go. "Bl
 
 ## 5b. From the colleague audit (2 Nov)
 - [ ] **Watch the first run of the new SQL-tests workflow on GitHub** (`.github/workflows/sql-tests.yml`, runs on pushes and pull requests that touch `sql/`, or run it by hand from the Actions tab). It was written without being able to run it; tell me what fails and I will fix it. It does not block deployment.
-- [ ] **Decide the batch-receipt rule:** should receiving a batch of a conditioned item into a warehouse with no storage condition also be refused (as transfers now are)? Consistent, but changes day-to-day receiving.
+- [x] **Batch-receipt rule: approved and applied** (`sql/035`, 2 Nov): a conditioned item is now refused in a warehouse with no condition, as with transfers.
 - [ ] **A second Supabase project for staging?** `agents.md` says to rehearse migrations on staging first; there is only one project today. (Migration 034 was rehearsed in a rolled-back transaction instead.)
 - [ ] **`/v1/core/people` shows the part of an email before the `@` when a member has no name set.** Keep, or require names?
 

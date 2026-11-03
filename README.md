@@ -43,7 +43,7 @@ npm run dev:demo -w apps/web
 
 Open http://localhost:5173. The yellow bar lets you act as different people and flip the layout to right-to-left. A public copy runs at https://erp-demo-bas.pages.dev. Rebuild with `npm run build:demo`, deploy with `npx wrangler pages deploy apps/web/dist --project-name erp-demo --branch main`.
 
-**Run the real app** (needs a Supabase project with `sql/001` to `sql/034` applied in order, see [`sql/README.md`](sql/README.md)):
+**Run the real app** (needs a Supabase project with `sql/001` to `sql/035` applied in order, see [`sql/README.md`](sql/README.md)):
 
 1. Copy `.env.example` to `.env` at the repo root and fill in the Supabase URL and keys. Never commit `.env`.
 2. `npm run dev:api` and `npm run dev:web`, then open http://localhost:5173.

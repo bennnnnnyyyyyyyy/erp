@@ -8,7 +8,7 @@ declare
   u uuid := gen_random_uuid();  -- owner
   m uuid := gen_random_uuid();  -- member
   x uuid := gen_random_uuid();  -- other organization
-  o uuid; ob uuid; w uuid; wcold uuid; i uuid; plain uuid;
+  o uuid; ob uuid; w uuid; wcold uuid; wnone uuid; i uuid; plain uuid;
   cold uuid; amb uuid; ba uuid; bb uuid; bc uuid; rq uuid;
   n bigint; q numeric; ok boolean; s text;
 begin
@@ -24,6 +24,7 @@ begin
   set local role authenticated;
   w := public.inv_create_warehouse('MAIN', 'Main');
   wcold := public.inv_create_warehouse('COLD', 'Cold room');
+  wnone := public.inv_create_warehouse('NONE', 'No condition set');
   amb := public.inv_create_storage_condition('Ambient', 15, 25);
   cold := public.inv_create_storage_condition('Cold', 2, 8);
   perform public.inv_set_warehouse_storage(wcold, cold);
@@ -42,6 +43,8 @@ begin
   set local role authenticated;
   ok := false; begin perform public.inv_receive_batch(i, wcold, 1, 'X', null, current_date + 30); exception when others then ok := (sqlerrm = 'STORAGE_MISMATCH'); end;
   if not ok then raise exception 'FAIL S2a: storage mismatch accepted'; end if;
+  ok := false; begin perform public.inv_receive_batch(i, wnone, 1, 'Y', null, current_date + 30); exception when others then ok := (sqlerrm = 'STORAGE_MISMATCH'); end;
+  if not ok then raise exception 'FAIL S2a2: an item that needs a storage condition was received into a warehouse with no condition set'; end if;
   ok := false; begin perform public.inv_receive_batch(i, w, 1, 'OLD', null, current_date - 1); exception when others then ok := (sqlerrm = 'EXPIRED'); end;
   if not ok then raise exception 'FAIL S2b: already-expired batch accepted'; end if;
   ok := false; begin perform public.inv_receive_batch(plain, w, 1, 'N1', null, null); exception when others then ok := (sqlerrm = 'NOT_TRACKED'); end;

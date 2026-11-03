@@ -34,7 +34,7 @@ Run the whole file at once with nothing else in the editor.
 | `018_customer_invoices.sql` | delivered-only, no over-invoicing, price from order line, void, isolation, audit |
 | `019_item_cost.sql` | average cost, issue cost snapshot, cost hidden from members, owner/admin only |
 | `020_finance_expenses_payments.sql` | expenses, payments, no overpayment, void rules, owner/admin only, isolation |
-| `022_batches_expiry_storage.sql` | FEFO, quarantine, expiry, storage mismatch, batch total equals ledger, roles, isolation |
+| `022_batches_expiry_storage.sql` | FEFO, quarantine, expiry, storage mismatch (including a warehouse with no condition set, which needs 035), batch total equals ledger, roles, isolation |
 | `023_owner_insights.sql` | known-answer test for the owner numbers (revenue, cost, expenses, net, owed), roles, isolation |
 | `024_alert_rules.sql` | rules fire only for the right people (team, role, person), no repeat inside the interval, repeat after it, new items fire on their own, isolation |
 | `025_stock_forecast.sql` | known-answer forecast (usage per day, days of cover, run-out date), thin-history label, isolation |

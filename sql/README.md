@@ -40,9 +40,10 @@ Log every run in
 | `031_org_language.sql` | company language setting (owner and admin only, audited) | Run via CLI 2026-10-30; test 027 passes |
 | `032_signup.sql` | `core_create_organization` for sign-up (confirmed email, at most 3 owned companies), getting-started flag | Run via CLI 2026-10-30; test 028 passes |
 | `033_inventory_transfers.sql` | transfers between warehouses with approval, in-transit state, batches carried across, two new ledger kinds | Run via CLI 2026-11-02 (project ggoerp); test 029 passes |
-| `034_inventory_hardening.sql` | transfers refuse a conditioned item sent to a warehouse with no condition; revokes the anonymous execute grant on `inv_stock_moves_cost()` | **Written and dry-run tested (rolled back) 2026-11-02; NOT yet applied** |
+| `034_inventory_hardening.sql` | transfers refuse a conditioned item sent to a warehouse with no condition; revokes the anonymous execute grant on `inv_stock_moves_cost()` | Run via CLI 2026-11-02 (project ggoerp); test 029 passes (including the new storage-condition cases) |
+| `035_batch_receipt_storage_rule.sql` | batch receipts follow the same storage rule: a conditioned item is refused in a warehouse with no condition (replaces 026's "no check when either side is unset") | Run via CLI 2026-11-02 (project ggoerp, Ben's approval); test 022 passes (new case S2a2) |
 
-Run order: 001 to 034. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
+Run order: 001 to 035. Apply with `supabase db query --linked -f sql/NNN_name.sql` (project linked via `supabase link`). Run on a staging project first and record each run in the worklog.
 
 
 Tests: [`tests/`](tests/) holds scripts that prove the rules on a real database; each always rolls back. All recorded runs passed (latest: test 029 on 2026-11-02; its new storage-condition cases S6c to S6e **fail on a database that has only 033**, which is how the gap fixed by 034 was proven, and pass with 034). The deploy workflow runs typecheck, the TypeScript tests and the web build only. A separate, non-blocking workflow `.github/workflows/sql-tests.yml` (with `scripts/ci-sql-tests.sh`) was written on 2 Nov to run every migration and test on a throwaway local database; **it has not run on GitHub yet**. See `documentation/reviews/2026-11-02-colleague-audit-response.md`.
