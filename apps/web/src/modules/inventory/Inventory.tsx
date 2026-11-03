@@ -475,7 +475,12 @@ export function RequestsList() {
     { key: 'number', label: tr('Request'), value: (r) => r.number, render: (r) => <Link to={`/inventory/requests/${r.id}`}><code>{r.number}</code></Link> },
     { key: 'by', label: tr('Requested by'), value: (r) => who(r.requesterId) },
     { key: 'wh', label: tr('Warehouse'), value: (r) => cat.warehouseName(r.warehouseId) },
-    { key: 'items', label: tr('Items'), value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
+    // A request can carry 20+ lines (a production issue of raw materials). The list shows the first three and a count; the full list is
+    // still searched, exported and shown on hover, and the request's own page has every line.
+    { key: 'items', label: tr('Items'), value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', '), render: (r) => {
+      const all = r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`);
+      return <span title={all.join(', ')}>{all.slice(0, 3).join(', ')}{all.length > 3 && <span className="muted"> {trf('+ {count} more', { count: all.length - 3 })}</span>}</span>;
+    } },
     { key: 'status', label: tr('Status'), value: (r) => r.status, render: (r) => <StatusPill status={r.status} /> },
     { key: 'when', label: tr('Requested'), value: (r) => r.createdAt, render: (r) => <span className="nowrap">{formatDateTime(r.createdAt, session.org)}</span> },
   ];
@@ -509,10 +514,16 @@ export function RequestsList() {
   );
 }
 
-function defaultWarehouse(warehouses: { id: string }[], stock: StockRow[], lastKey: string): string {
+function defaultWarehouse(warehouses: { id: string }[], stock: StockRow[], requests: { warehouseId: string }[], lastKey: string): string {
   let last: string | null = null;
   try { last = localStorage.getItem(lastKey); } catch { /* storage blocked */ }
   if (last && warehouses.some((w) => w.id === last)) return last;
+  // The warehouse people request from most often (finished goods in a factory). Counting units instead picked the packaging store:
+  // thousands of bottles and caps outweigh a few hundred finished products.
+  const used = new Map<string, number>();
+  for (const r of requests) used.set(r.warehouseId, (used.get(r.warehouseId) ?? 0) + 1);
+  const busiest = warehouses.reduce<{ id: string; n: number } | null>((b, w) => ((used.get(w.id) ?? 0) > (b?.n ?? 0) ? { id: w.id, n: used.get(w.id) ?? 0 } : b), null);
+  if (busiest) return busiest.id;
   const held = new Map<string, number>();
   for (const s of stock) held.set(s.warehouseId, (held.get(s.warehouseId) ?? 0) + Math.max(0, s.available));
   let best = warehouses[0]?.id ?? '';
@@ -525,10 +536,11 @@ export function NewRequest() {
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
   const session = useSession();
   const [chosenWarehouse, setWarehouseId] = useState('');
-  // Until the person picks one: the warehouse they last requested from (this browser, this company), else the one holding the most
-  // available stock. The first in the list was often an empty side store (a cold room) and the request started wrong.
+  // Until the person picks one: the warehouse they last requested from (this browser, this company), else the one most requests come
+  // from, else the one holding the most stock. The first in the list was often a side store (a cold room) and the request started wrong.
+  const past = useLoad(() => api<DemoRequest[]>('/v1/inventory/requests').catch(() => [] as DemoRequest[]));
   const lastKey = `erp.request.warehouse.${session.org?.id ?? ''}`;
-  const warehouseId = chosenWarehouse || defaultWarehouse(cat.warehouses.data ?? [], stock.data ?? [], lastKey);
+  const warehouseId = chosenWarehouse || defaultWarehouse(cat.warehouses.data ?? [], stock.data ?? [], past.data ?? [], lastKey);
   const [reason, setReason] = useState('');
   const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
   const [error, setError] = useState<string | null>(null);
@@ -554,7 +566,7 @@ export function NewRequest() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  if (!cat.ready || !stock.data || !past.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
 
   return (
     <section className="page">

@@ -250,7 +250,8 @@ export function TourHost() {
         {i === 0 && c.screenNote ? <p className="mt-2 text-xs text-muted-foreground">{c.screenNote}</p> : null}
         {i === 0 && c.draftNote ? <p className="mt-1 text-xs text-muted-foreground">{c.draftNote}</p> : null}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <LanguageSwitch className="text-xs" />
+          {/* The language is offered on the first step only: repeated on every card it read as being asked again at each step. */}
+          {i === 0 ? <LanguageSwitch className="text-xs" /> : <span />}
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-10 px-3" disabled={i === 0} onClick={() => { direction.current = -1; setI(i - 1); }}><span aria-hidden="true">{backArrow}</span> {c.back}</Button>
             {last ? (

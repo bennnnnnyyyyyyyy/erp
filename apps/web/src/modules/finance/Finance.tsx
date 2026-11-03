@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatMoney } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
+import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { Link } from '../../lib/router';
@@ -57,8 +58,7 @@ export function ExpensesPage() {
       <p className="muted">{tr('Rent, salaries, utilities, transport: the costs of running the business that are not stock. They are taken off sales to show profit.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
-      <div className="form-card stack">
-        <h2>{tr('Record an expense')}</h2>
+      <FormToggle label={tr('Record an expense')}>
         <div className="form-row">
           <label>{tr('Date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label>{tr('Category')}
@@ -87,16 +87,15 @@ export function ExpensesPage() {
             return trf('Category "{name}" added.', { name: newCategory.trim() });
           }, () => { setNewCategory(''); categories.reload(); })}>{tr('Add category')}</Button>
         </div>
-      </div>
+      </FormToggle>
 
       <h2 className="related">{tr('Recorded expenses')} <span className="muted small">{trf('(total {amount})', { amount: money(total, currency) })}</span></h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Category')}</th><th>{tr('Supplier')}</th><th>{tr('Note')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Category')}</th><th>{tr('Supplier')}</th><th>{tr('Note')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
         {expenses.data.map((e) => (
-          <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td>{e.date}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
-            <td><Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} /></td>
-            <td>{e.status === 'recorded' && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/finance/expenses/${e.id}/void`, { method: 'POST' }); return trf('{number} voided.', { number: e.number }); }, () => expenses.reload())}>{tr('Void')}</Button>}</td></ClickRow>
+          <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td className="nowrap">{e.date}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
+            <td><Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
         ))}
-        {!expenses.data.length && <tr><td colSpan={8} className="muted empty">{tr('No expenses yet.')}</td></tr>}
+        {!expenses.data.length && <tr><td colSpan={7} className="muted empty">{tr('No expenses yet.')}</td></tr>}
       </tbody></table></div>
     </section>
   );
@@ -111,12 +110,24 @@ export function PaymentsPage() {
   const customers = useLoad(() => api<Named[]>('/v1/sales/customers'));
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers'));
   const { message, busy, run } = useNotice();
-  const [direction, setDirection] = useState<'in' | 'out'>('in');
-  const [target, setTarget] = useState('');
+  // "Record a payment →" on an invoice or expense page links here with ?for=c:<id> (customer invoice), s:<id> (supplier invoice) or
+  // e:<id> (expense): the form opens already pointing at it, with what is still owed as the amount.
+  const [preset] = useState(() => { const f = new URLSearchParams(window.location.search).get('for') ?? ''; return /^[cse]:[0-9a-f-]{36}$/i.test(f) ? f : ''; });
+  const [direction, setDirection] = useState<'in' | 'out'>(preset.startsWith('c:') || !preset ? 'in' : 'out');
+  const [target, setTarget] = useState(preset);
+  const [formOpen, setFormOpen] = useState(preset !== '');
   const [amount, setAmount] = useState('');
   const [paidOn, setPaidOn] = useState(today());
   const [method, setMethod] = useState('bank');
   const [note, setNote] = useState('');
+  useEffect(() => {
+    if (!preset || !payments.data || !customerInvoices.data || !supplierInvoices.data || !expenses.data) return;
+    const [kind, id] = preset.split(':');
+    const total = kind === 'c' ? customerInvoices.data.find((i) => i.id === id)?.totalMinor : kind === 's' ? supplierInvoices.data.find((i) => i.id === id)?.totalMinor : expenses.data.find((e) => e.id === id)?.amountMinor;
+    const key = kind === 'c' ? 'customerInvoiceId' : kind === 's' ? 'supplierInvoiceId' : 'expenseId';
+    const paidSoFar = payments.data.filter((p) => p.status === 'recorded' && p[key] === id).reduce((n, p) => n + p.amountMinor, 0);
+    if (total !== undefined && total - paidSoFar > 0) setAmount(((total - paidSoFar) / 100).toFixed(2));
+  }, [preset, payments.data, customerInvoices.data, supplierInvoices.data, expenses.data]);
 
   if (!payments.data || !customerInvoices.data || !supplierInvoices.data || !expenses.data || !customers.data || !suppliers.data) {
     return <section className="page"><p className="muted">{payments.error ?? tr('Loading…')}</p></section>;
@@ -146,8 +157,7 @@ export function PaymentsPage() {
       <p className="muted">{tr('Money received from customers and money paid to suppliers and for expenses. A payment can never be more than what is still owed.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
-      <div className="form-card stack">
-        <h2>{tr('Record a payment')}</h2>
+      <FormToggle label={tr('Record a payment')} open={formOpen} onOpenChange={setFormOpen}>
         <div className="form-row">
           <label>{tr('Direction')}
             <select value={direction} onChange={(e) => { setDirection(e.target.value as 'in' | 'out'); setTarget(''); }}>
@@ -177,17 +187,16 @@ export function PaymentsPage() {
           return trf('Payment {number} recorded.', { number: made.number });
         }, () => { setTarget(''); setAmount(''); setNote(''); payments.reload(); })}>{busy ? tr('Saving…') : tr('Record payment')}</Button>
         {chosen && toMinor(amount) > chosen.left && <span className="error small"> {trf('More than the {amount} still owed.', { amount: money(chosen.left, chosen.currency) })}</span>}</div>
-      </div>
+      </FormToggle>
 
       <h2 className="related">{tr('Payments')}</h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Direction')}</th><th>{tr('For')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Direction')}</th><th>{tr('For')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
         {payments.data.map((p) => (
-          <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td>{p.paidOn}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
+          <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td className="nowrap">{p.paidOn}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td>
-            <td><Pill status={p.status === 'void' ? 'cancelled' : 'received'} label={p.status === 'void' ? tr('Void') : tr('Recorded')} /></td>
-            <td>{p.status === 'recorded' && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/finance/payments/${p.id}/void`, { method: 'POST' }); return trf('{number} voided.', { number: p.number }); }, () => payments.reload())}>{tr('Void')}</Button>}</td></ClickRow>
+            <td><Pill status={p.status === 'void' ? 'cancelled' : 'received'} label={p.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
         ))}
-        {!payments.data.length && <tr><td colSpan={8} className="muted empty">{tr('No payments yet.')}</td></tr>}
+        {!payments.data.length && <tr><td colSpan={7} className="muted empty">{tr('No payments yet.')}</td></tr>}
       </tbody></table></div>
     </section>
   );

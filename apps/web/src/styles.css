@@ -36,6 +36,17 @@ h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; line-height:
 h2 { font-size: 1rem; font-weight: 600; margin: 0; }
 a { color: var(--primary); text-underline-offset: 2px; }
 code, .mono { font-family: var(--mono); font-size: 0.85em; }
+/* A record's number as the page title (PAY-0443, SO-0326): full heading size, not 85% of the body text. */
+h1.mono { font-size: 1.45rem; letter-spacing: 0; }
+/* FormToggle and ConfirmButton (components/FormToggle.tsx) */
+.form-toggle { margin: 0.75rem 0 0.25rem; }
+.form-toggle-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.form-toggle-head h2 { margin: 0; }
+.confirm-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); background: var(--danger-soft); border-radius: var(--radius); }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
+.section-head h2 { margin-block-end: 0.5rem; }
+/* Record numbers never break across lines ("OUT-" / "0372"). */
+td code, td .nowrap { white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ---- controls ---- */

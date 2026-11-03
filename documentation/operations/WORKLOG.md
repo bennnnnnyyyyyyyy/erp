@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (late night) — Usability pass from a live look: tour language once, lists before forms, confirm before void (not deployed)
+
+**Objective.** Ben: the UI is hard to use, and the tour "asks for the language at every step". Looked at the live site in Chrome (read-only, owner, Demo Cosmetics Factory): every tour card carried the English/Arabic buttons; Payments, Expenses and both invoice screens opened with a large form and the list half a screen down; Customer invoices listed every order ("Fully invoiced" hundreds of times) above the invoices; one-click Void sat on every list row next to the now-clickable row; request numbers wrapped ("OUT-" / "0372"); one request row could list 20+ items; record titles (PAY-0443) were body-text size; New request defaulted to the Packaging store.
+
+**Actions Completed.**
+- `modules/help/TourHost.tsx`: the language switch shows on the first tour step only.
+- `components/FormToggle.tsx` (new): `FormToggle` keeps a create form closed behind a button; `ConfirmButton` asks in place ("Void this payment? It can not be undone." / "Yes, void it" / Cancel), no browser dialog.
+- `finance/Finance.tsx`: Expenses and Payments open with the list; the form opens from "Record an expense" / "Record a payment". Payments accepts `?for=c:<id>|s:<id>|e:<id>`: the form opens on that invoice or expense with what is still owed filled in ("Record a payment →" on a record's page links there). The per-row Void buttons are gone; voiding is on the record's page, behind the confirm.
+- `sales/CustomerInvoices.tsx`, `purchasing/SupplierInvoices.tsx`: form behind a button; invoices first; the billing table shows only orders still to invoice / bill, with "Show all N orders". Customer invoice page: Void behind the confirm. `finance/FinanceRecords.tsx`: same for payments and expenses.
+- `inventory/Inventory.tsx`: requests list shows the first three items and "+ N more" (full list in search, CSV and the hover title). New request defaults to the last warehouse used here, else the one most requests come from, else the one holding the most stock (units counted the packaging store first).
+- `styles.css`: `h1.mono` full heading size; record numbers in tables do not wrap; styles for the form toggle, confirm row and section heads.
+- Arabic for the new strings in `lib/i18nScreens.ts` (machine draft).
+
+**Database / System Result.** None. Frontend only; no SQL, data or settings. In the browser only the tour was started and closed and pages were opened; the RTL check set `dir` on the page in memory, not the saved language. Nothing deployed.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. The changed screens were not seen after the change: Ben to check after deploy. Not addressed yet: list caps without pagination (audit #10), "(sample)" names and user full names (data).
+
 ## 2026-11-03 (night) — Every invoice, payment and expense opens; clickable rows; tour always offered; audit fixes #3, #11, #12 (not deployed)
 
 **Objective.** Ben: clicking an invoice or a payment did nothing, and the tour could not be found. Customer invoices, supplier invoices, payments and expenses had no page of their own, and every table row turned grey on hover, so a row looked clickable and was not. The tour button only appeared where an owner had switched it on (off in the demo companies).

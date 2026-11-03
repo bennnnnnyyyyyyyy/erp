@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { RecordHistory } from '../../components/RecordHistory';
-import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/FormToggle';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
 import { Link, useParam } from '../../lib/router';
@@ -49,7 +49,7 @@ export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'c
         {!rows.length && <tr><td colSpan={5} className="muted empty">{payments.data ? tr('No payments recorded yet.') : tr('Loading…')}</td></tr>}
       </tbody></table></div>
       {left > 0 && hasPermission(session.permissions, 'finance.entries.manage') && (
-        <p className="small"><Link to="/finance/payments">{tr('Record a payment →')}</Link></p>
+        <p className="small"><Link to={`/finance/payments?for=${field === 'customerInvoiceId' ? 'c' : field === 'supplierInvoiceId' ? 's' : 'e'}:${id}`}>{tr('Record a payment →')}</Link></p>
       )}
     </>
   );
@@ -113,7 +113,7 @@ export function PaymentPage() {
         {p.note && <div><dt>{tr('Note')}</dt><dd>{p.note}</dd></div>}
       </dl>
       {p.status === 'void' && <p className="muted">{tr('This payment was voided. It no longer counts towards what has been paid.')}</p>}
-      {canVoid && <div className="form-actions"><Button variant="outline" disabled={voiding.busy} onClick={() => voiding.run(p.number)}>{tr('Void payment')}</Button></div>}
+      {canVoid && <div className="form-actions"><ConfirmButton label={tr('Void payment')} confirmLabel={tr('Yes, void it')} question={tr('Void this payment? It can not be undone.')} disabled={voiding.busy} onConfirm={() => voiding.run(p.number)} /></div>}
       <RecordHistory key={p.id} id={p.id} />
     </section>
   );
@@ -150,7 +150,7 @@ export function ExpensePage() {
         {supplier && <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>}
         {e.note && <div><dt>{tr('Note')}</dt><dd>{e.note}</dd></div>}
       </dl>
-      {canVoid && <div className="form-actions"><Button variant="outline" disabled={voiding.busy} onClick={() => voiding.run(e.number)}>{tr('Void expense')}</Button></div>}
+      {canVoid && <div className="form-actions"><ConfirmButton label={tr('Void expense')} confirmLabel={tr('Yes, void it')} question={tr('Void this expense? It can not be undone.')} disabled={voiding.busy} onConfirm={() => voiding.run(e.number)} /></div>}
       {e.status === 'recorded' && <PaymentsAgainst field="expenseId" id={e.id} totalMinor={e.amountMinor} currency={e.currency} />}
       <RecordHistory key={e.id} id={e.id} />
     </section>

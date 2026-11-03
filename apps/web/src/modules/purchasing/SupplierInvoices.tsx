@@ -6,6 +6,8 @@ import { useSession } from '../../session';
 import { formatDateTime } from '../../lib/format';
 import { Pill } from '../trade/common';
 import { ClickRow } from '../../components/ClickRow';
+import { FormToggle } from '../../components/FormToggle';
+import { Button } from '../../components/ui/button';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
@@ -25,6 +27,7 @@ export function SupplierInvoices(){
   const session=useSession();
   const [orderId,setOrderId]=useState('');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
   const [quantities,setQuantities]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [message,setMessage]=useState<{ok:boolean;text:string}|null>(null);
+  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(false);
   const summary=summaries.data?.find(o=>o.orderId===orderId);
   const summaryRows=summaries.data??[];
   const supplierName=(id:string)=>suppliers.data?.find(s=>s.id===id)?.name??id;
@@ -35,26 +38,32 @@ export function SupplierInvoices(){
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
   if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
+  const toBill=billingRows.filter(r=>r.billed<r.received);
+  const shownBilling=showAll?billingRows:toBill;
   return <section className="page">
     <h1>{tr('Supplier invoices')}</h1><p className="muted">{tr('Record supplier bills against received purchase orders and track billed quantities.')}</p>
     {message&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
-    {session.role!=='viewer'&&<div className="form-card stack">
-      <h2>{tr('Record an invoice')}</h2>
+    {session.role!=='viewer'&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
         <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
         <label>{tr('Supplier invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>
       {summary&&<><div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Received')}</th><th className="right">{tr('Already billed')}</th><th>{tr('Billed on this invoice')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td></tr>)}</tbody></table></div><button disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record supplier invoice')}</button></>}
-    </div>}
-    <h2 className="related">{tr('Received orders and billing progress')}</h2>
-    <div className="table-wrap"><table><thead><tr><th>{tr('Purchase order')}</th><th>{tr('Supplier')}</th><th>{tr('Received value')}</th><th>{tr('Billed value')}</th><th>{tr('Remaining')}</th><th>{tr('Status')}</th></tr></thead><tbody>
-      {summaryRows.map(o=>{const received=o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0);const billed=o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0);return <ClickRow key={o.orderId} to={`/purchasing/orders/${o.orderId}`}><td><Link to={`/purchasing/orders/${o.orderId}`}><code>{o.number}</code></Link></td><td>{supplierName(o.supplierId)}</td><td>{money(received,o.currency)}</td><td>{money(billed,o.currency)}</td><td>{money(received-billed,o.currency)}</td><td><Pill status={billed===0?'ordered':billed>=received?'received':'submitted'} label={billed===0?tr('Not billed'):billed>=received?tr('Fully billed'):tr('Part billed')} /></td></ClickRow>})}
-      {!summaries.data.length&&<tr><td colSpan={6} className="muted empty">{tr('No received purchase orders to bill yet.')}</td></tr>}
-    </tbody></table></div>
+    </FormToggle>}
     <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Supplier')}</th><th>{tr('Purchase order')}</th><th>{tr('Date recorded')}</th><th className="right">{tr('Amount')}</th></tr></thead><tbody>
-      {invoices.data.map(i=><ClickRow key={i.id} to={`/purchasing/invoices/${i.id}`}><td><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{supplierName(i.supplierId)}</td><td><Link to={`/purchasing/orders/${i.orderId}`}><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??'—'}</code></Link></td><td>{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></ClickRow>)}
+      {invoices.data.map(i=><ClickRow key={i.id} to={`/purchasing/invoices/${i.id}`}><td><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{supplierName(i.supplierId)}</td><td><Link to={`/purchasing/orders/${i.orderId}`}><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??'—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></ClickRow>)}
       {!invoices.data.length&&<tr><td colSpan={5} className="muted empty">{tr('No supplier invoices recorded yet.')}</td></tr>}
+    </tbody></table></div>
+    {/* Billing progress: only orders not yet fully billed, unless the person asks for all (most received orders are fully billed). */}
+    <div className="section-head">
+      <h2 className="related">{showAll?tr('Received orders and billing progress'):tr('Received orders still to bill')} <span className="muted small">({shownBilling.length})</span></h2>
+      {billingRows.length>toBill.length&&<Button variant="ghost" size="sm" onClick={()=>setShowAll(!showAll)}>{showAll?tr('Only orders that need attention'):trf('Show all {count} orders',{count:billingRows.length})}</Button>}
+    </div>
+    <div className="table-wrap"><table><thead><tr><th>{tr('Purchase order')}</th><th>{tr('Supplier')}</th><th className="right">{tr('Received value')}</th><th className="right">{tr('Billed value')}</th><th className="right">{tr('Remaining')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+      {shownBilling.map(({o,received,billed})=><ClickRow key={o.orderId} to={`/purchasing/orders/${o.orderId}`}><td><Link to={`/purchasing/orders/${o.orderId}`}><code>{o.number}</code></Link></td><td>{supplierName(o.supplierId)}</td><td className="right">{money(received,o.currency)}</td><td className="right">{money(billed,o.currency)}</td><td className="right">{money(received-billed,o.currency)}</td><td><Pill status={billed===0?'ordered':billed>=received?'received':'submitted'} label={billed===0?tr('Not billed'):billed>=received?tr('Fully billed'):tr('Part billed')} /></td></ClickRow>)}
+      {!shownBilling.length&&<tr><td colSpan={6} className="muted empty">{summaries.data.length?tr('Every received order is fully billed.'):tr('No received purchase orders to bill yet.')}</td></tr>}
     </tbody></table></div>
   </section>;
 }

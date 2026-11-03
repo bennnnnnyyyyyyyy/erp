@@ -650,6 +650,18 @@ export const SCREENS_AR: Record<string, string> = {
   "Void invoice": "إبطال الفاتورة",
   "← Supplier invoices": "→ فواتير الموردين",
   "Unknown customer": "عميل غير معروف",
+  // Confirm-before-void, folded billing tables, long request lists
+  "Yes, void it": "نعم، أبطِلها",
+  "Void this payment? It can not be undone.": "إبطال هذه الدفعة؟ لا يمكن التراجع عن ذلك.",
+  "Void this expense? It can not be undone.": "إبطال هذا المصروف؟ لا يمكن التراجع عن ذلك.",
+  "Void this invoice? It can not be undone; its quantity can then be invoiced again.": "إبطال هذه الفاتورة؟ لا يمكن التراجع عن ذلك، ويمكن بعدها فوترة كميتها مرة أخرى.",
+  "+ {count} more": "و{count} أخرى",
+  "Orders still to invoice": "أوامر لم تُفوتر بعد",
+  "Only orders that need attention": "الأوامر التي تحتاج إلى متابعة فقط",
+  "Show all {count} orders": "عرض كل الأوامر ({count})",
+  "Every order is fully invoiced.": "كل الأوامر مفوترة بالكامل.",
+  "Received orders still to bill": "أوامر مستلمة لم تُفوتر بعد",
+  "Every received order is fully billed.": "كل الأوامر المستلمة مفوترة بالكامل.",
   // SalesDemo
   "New order": "أمر جديد",
   "Approved, ready to ship": "معتمد وجاهز للشحن",

@@ -6,6 +6,7 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Button } from '../../components/ui/button';
 import { ClickRow } from '../../components/ClickRow';
+import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
@@ -40,6 +41,8 @@ export function CustomerInvoices() {
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
 
   const invoicedByLine = useMemo(() => {
     const m = new Map<string, number>();
@@ -67,11 +70,15 @@ export function CustomerInvoices() {
     } catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
 
-  async function voidInvoice(id: string) {
-    setBusy(true); setMessage(null);
-    try { await api(`/v1/sales/invoices/${id}/void`, { method: 'POST' }); setMessage({ ok: true, text: tr('Invoice voided. Its quantity can be invoiced again.') }); invoices.reload(); }
-    catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
-  }
+  // Billing status per order, worst line first. The table shows only orders that need something (not fully invoiced, or invoiced more
+  // than delivered) unless the person asks for all: with hundreds of finished orders the screen was a wall of "Fully invoiced".
+  const billingRows = rows.map(({ o, billing }) => {
+    const sum = (k: 'ordered' | 'delivered' | 'invoiced') => billing.reduce((n, b) => n + b[k], 0);
+    const worst = billing.find((b) => b.flag === 'over_invoiced') ?? billing.find((b) => b.flag === 'under_invoiced') ?? billing.find((b) => b.flag === 'not_delivered') ?? billing[0];
+    return { o, sum, flag: worst?.flag ?? 'not_delivered' as BillingFlag };
+  });
+  const attention = billingRows.filter((r) => r.flag !== 'ok');
+  const shownBilling = showAll ? billingRows : attention;
 
   return (
     <section className="page wide">
@@ -80,8 +87,7 @@ export function CustomerInvoices() {
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       {canManage && (
-        <div className="form-card stack">
-          <h2>{tr('Create an invoice')}</h2>
+        <FormToggle label={tr('Create an invoice')} open={formOpen} onOpenChange={setFormOpen}>
           <div className="form-row">
             <label>{tr('Delivered sales order')}
               <select value={orderId} onChange={(e) => { setOrderId(e.target.value); setQty({}); }}>
@@ -102,28 +108,30 @@ export function CustomerInvoices() {
               <Button disabled={busy || !Object.values(qty).some((v) => Number(v) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
             </>
           )}
-        </div>
+        </FormToggle>
       )}
 
-      <h2 className="related">{tr('Ordered, delivered and invoiced')}</h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Order')}</th><th>{tr('Customer')}</th><th className="right">{tr('Ordered')}</th><th className="right">{tr('Delivered')}</th><th className="right">{tr('Invoiced')}</th><th>{tr('Status')}</th></tr></thead><tbody>
-        {rows.map(({ o, billing }) => {
-          const sum = (k: 'ordered' | 'delivered' | 'invoiced') => billing.reduce((n, b) => n + b[k], 0);
-          const worst = billing.find((b) => b.flag === 'over_invoiced') ?? billing.find((b) => b.flag === 'under_invoiced') ?? billing.find((b) => b.flag === 'not_delivered') ?? billing[0];
-          const f = worst ? FLAG[worst.flag] : FLAG.not_delivered;
-          return <ClickRow key={o.id} to={`/sales/orders/${o.id}`}><td><Link to={`/sales/orders/${o.id}`}><code>{o.number}</code></Link></td><td>{customer(o.customerId)}</td><td className="right">{sum('ordered')}</td><td className="right">{sum('delivered')}</td><td className="right">{sum('invoiced')}</td><td><Pill status={f.pill} label={tr(f.label)} /></td></ClickRow>;
-        })}
-        {!rows.length && <tr><td colSpan={6} className="muted empty">{tr('No sales orders yet.')}</td></tr>}
+      <h2 className="related">{tr('Invoices')}</h2>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Customer')}</th><th>{tr('Order')}</th><th>{tr('Created')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+        {invoices.data.map((i) => (
+          <ClickRow key={i.id} to={`/sales/invoices/${i.id}`}><td><Link to={`/sales/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{customer(i.customerId)}</td><td><Link to={`/sales/orders/${i.orderId}`}><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
+            <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? tr('Void') : tr('Issued')} /></td></ClickRow>
+        ))}
+        {!invoices.data.length && <tr><td colSpan={6} className="muted empty">{tr('No invoices yet.')}</td></tr>}
       </tbody></table></div>
 
-      <h2 className="related">{tr('Invoices')}</h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Customer')}</th><th>{tr('Order')}</th><th>{tr('Created')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
-        {invoices.data.map((i) => (
-          <ClickRow key={i.id} to={`/sales/invoices/${i.id}`}><td><Link to={`/sales/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{customer(i.customerId)}</td><td><Link to={`/sales/orders/${i.orderId}`}><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></Link></td><td>{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
-            <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? tr('Void') : tr('Issued')} /></td>
-            <td>{canManage && i.status === 'issued' && <Button variant="outline" size="sm" disabled={busy} onClick={() => voidInvoice(i.id)}>{tr('Void')}</Button>}</td></ClickRow>
-        ))}
-        {!invoices.data.length && <tr><td colSpan={7} className="muted empty">{tr('No invoices yet.')}</td></tr>}
+      <div className="section-head">
+        <h2 className="related">{showAll ? tr('Ordered, delivered and invoiced') : tr('Orders still to invoice')} <span className="muted small">({shownBilling.length})</span></h2>
+        {billingRows.length > attention.length && (
+          <Button variant="ghost" size="sm" onClick={() => setShowAll(!showAll)}>{showAll ? tr('Only orders that need attention') : trf('Show all {count} orders', { count: billingRows.length })}</Button>
+        )}
+      </div>
+      <div className="table-wrap"><table><thead><tr><th>{tr('Order')}</th><th>{tr('Customer')}</th><th className="right">{tr('Ordered')}</th><th className="right">{tr('Delivered')}</th><th className="right">{tr('Invoiced')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+        {shownBilling.map(({ o, sum, flag }) => {
+          const f = FLAG[flag];
+          return <ClickRow key={o.id} to={`/sales/orders/${o.id}`}><td><Link to={`/sales/orders/${o.id}`}><code>{o.number}</code></Link></td><td>{customer(o.customerId)}</td><td className="right">{sum('ordered')}</td><td className="right">{sum('delivered')}</td><td className="right">{sum('invoiced')}</td><td><Pill status={f.pill} label={tr(f.label)} /></td></ClickRow>;
+        })}
+        {!shownBilling.length && <tr><td colSpan={6} className="muted empty">{rows.length ? tr('Every order is fully invoiced.') : tr('No sales orders yet.')}</td></tr>}
       </tbody></table></div>
     </section>
   );
@@ -187,7 +195,7 @@ export function CustomerInvoicePage() {
       </table></div>
 
       {inv.status === 'void' && <p className="muted">{tr('This invoice was voided. Its quantity can be invoiced again.')}</p>}
-      {canManage && inv.status === 'issued' && <div className="form-actions" style={{ marginBlockStart: '1rem' }}><Button variant="outline" disabled={busy} onClick={voidIt}>{tr('Void invoice')}</Button></div>}
+      {canManage && inv.status === 'issued' && <div className="form-actions" style={{ marginBlockStart: '1rem' }}><ConfirmButton label={tr('Void invoice')} confirmLabel={tr('Yes, void it')} question={tr('Void this invoice? It can not be undone; its quantity can then be invoiced again.')} disabled={busy} onConfirm={voidIt} /></div>}
       {inv.status === 'issued' && <PaymentsAgainst field="customerInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />}
       <RecordHistory key={inv.id} id={inv.id} />
     </section>
