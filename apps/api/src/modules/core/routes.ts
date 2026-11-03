@@ -30,12 +30,25 @@ async function savedLanguage(c: Context<AppEnv>): Promise<{ language: 'en' | 'ar
   }
 }
 
+// The person's own display name, from the same database function every screen uses (core_org_people, sql/016 and 025), so a name
+// changed in the database shows in the top bar at the next page load, without signing in again (the sign-in token's copy is stale
+// until then). Not essential: on any error the session loads without it.
+async function ownName(c: Context<AppEnv>): Promise<string | null> {
+  try {
+    const people = await callRpc<{ user_id: string; name: string }[]>(userDb(c), 'core_org_people', {});
+    return people.find((p) => p.user_id === c.var.user.id)?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 coreRoutes.get('/session', async (c) => {
   const { user, tenant } = c.var;
-  const saved = await savedLanguage(c);
+  const [saved, name] = await Promise.all([savedLanguage(c), ownName(c)]);
   const session: SessionInfo = {
     userId: user.id,
     email: user.email,
+    name,
     org: {
       id: tenant.orgId,
       name: tenant.orgName,

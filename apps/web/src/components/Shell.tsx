@@ -13,10 +13,11 @@ import { useSession } from '../session';
 import { FirstRunLanguage } from './LanguageChooser';
 import { NotificationBell } from './NotificationBell';
 
-function initials(email: string): string {
-  const name = email.split('@')[0] ?? '';
-  const bits = name.split(/[._-]+/).filter(Boolean);
-  return ((bits[0]?.[0] ?? '') + (bits[1]?.[0] ?? '')).toUpperCase() || name.slice(0, 2).toUpperCase();
+/** Two letters for the avatar: from the person's name when there is one ("Chris Johnson" -> CJ), else from the email. */
+function initials(email: string, name?: string | null): string {
+  const source = name?.trim() || (email.split('@')[0] ?? '');
+  const bits = source.split(/[\s._-]+/).filter(Boolean);
+  return ((bits[0]?.[0] ?? '') + (bits[1]?.[0] ?? '')).toUpperCase() || source.slice(0, 2).toUpperCase();
 }
 
 function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
@@ -39,13 +40,14 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
   return (
     <div className="user-menu" ref={ref}>
-      <button className="avatar" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
-        {initials(session.email)}
+      <button className="avatar" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={session.name ?? session.email}>
+        {initials(session.email, session.name)}
       </button>
       {open && (
         <div className="menu" role="menu">
           <div className="menu-head">
-            <div>{session.email}</div>
+            {session.name && <div className="font-semibold"><bdi>{session.name}</bdi></div>}
+            <div className={session.name ? 'muted small' : undefined}>{session.email}</div>
             <div className="muted small">
               <bdi>{session.org?.name}</bdi> · {session.role ? t(session.role) : ''}
             </div>

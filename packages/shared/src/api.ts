@@ -15,6 +15,8 @@ export type Role = 'owner' | 'admin' | 'member' | 'viewer';
 export type SessionInfo = {
   userId: string;
   email: string;
+  /** The person's display name, read from the database on every session load (same source as every screen), or null if none is set. */
+  name?: string | null;
   org: {
     id: string;
     name: string;

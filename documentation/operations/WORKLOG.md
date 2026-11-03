@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (after final) — Top-bar menu shows the person's name (not deployed)
+
+**Objective.** The previous entry said a signed-in person would see their new name in the top-bar menu only after signing in again. Checked: the menu never showed a name at all (email only, initials from the email). Ben: "clean off the small catch".
+
+**Actions Completed.** `GET /v1/core/session` returns `name`, read on every session load from `core_org_people` (same database source as every screen, so no new sign-in is needed); `packages/shared` `SessionInfo.name`; `components/Shell.tsx` menu shows the name above the email and the avatar initials come from the name (CJ for Chris Johnson), with the email as fallback.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run lint`, `npm run typecheck`, `npm test` and the smoke test pass. Needs the Worker and Pages deploy (push) to show live.
+
 ## 2026-11-03 (final) — Full names set on the four demo accounts (live data change, Ben's request)
 
 **Objective.** Audit finding 8: people showed as email prefixes (`grant.holden.wiz`). Ben gave the names: "chris johnson, joseph brown, grant holden, ben arthur".
