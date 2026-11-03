@@ -6,6 +6,7 @@ import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
 import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
+import { TourHost } from '../modules/help/TourHost';
 import { useSession } from '../session';
 import { NotificationBell } from './NotificationBell';
 
@@ -93,6 +94,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
 
   return (
     <div className={route ? 'shell with-sidebar' : 'shell'}>
+      <TourHost />
       <header className="topbar">
         {route && (
           <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')}>

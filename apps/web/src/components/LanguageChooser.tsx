@@ -16,8 +16,8 @@ export function LanguageChooser() {
         <span lang="ar" dir="rtl">اختر لغتك</span>
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        <span lang="en" dir="ltr" className="block">The tutorial will be shown in the language you pick. You can change it any time.</span>
-        <span lang="ar" dir="rtl" className="mt-1 block">سيُعرض الدليل باللغة التي تختارها. يمكنك تغييرها في أي وقت.</span>
+        <span lang="en" dir="ltr" className="block">The tutorial and the tour will be shown in the language you pick. You can change it any time.</span>
+        <span lang="ar" dir="rtl" className="mt-1 block">سيُعرض الدليل والجولة باللغة التي تختارها. يمكنك تغييرها في أي وقت.</span>
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <Button variant="outline" className="h-12 text-base" lang="en" dir="ltr" onClick={() => setPersonalLang('en')}>English</Button>

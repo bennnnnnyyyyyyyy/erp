@@ -62,7 +62,9 @@ export function Home({ apps }: { apps: AppDef[] }) {
         {session.org?.name} · {today(timeZone)}
       </p>
 
-      <OwnerSummary />
+      <div data-tour="home-summary">
+        <OwnerSummary />
+      </div>
 
       {!hasBusinessApps && canManageApps && (
         <p className="notice">

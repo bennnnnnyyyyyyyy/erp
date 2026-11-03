@@ -9,6 +9,7 @@ import { useI18n } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
 import { tutorialContent } from './helpContent';
+import { TourButton } from './TourHost';
 
 // The getting-started tutorial. It exists only in companies that have the flag `show_tutorial` (sql/032): companies that signed up through
 // the app, and any company an owner or admin switches it on for (Settings > General; the cosmetics sample company has it on). The local demo
@@ -98,7 +99,10 @@ export function GettingStartedPage() {
     <section className="page">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="m-0">{c.title}</h1>
-        <LanguageSwitch />
+        <div className="flex flex-wrap items-center gap-2">
+          <TourButton />
+          <LanguageSwitch />
+        </div>
       </div>
       <p className="muted">{c.intro(session.org?.name ?? (lang === 'ar' ? 'شركتك' : 'your company'))}</p>
       {c.draftNote ? <p className="muted small" role="note">{c.draftNote}</p> : null}

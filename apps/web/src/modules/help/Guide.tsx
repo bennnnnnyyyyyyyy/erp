@@ -8,6 +8,7 @@ import { useSession } from '../../session';
 import { SUITE_ORDER, visibleApps } from '../registry';
 import { Step } from './GettingStarted';
 import { guideContent } from './helpContent';
+import { TourButton } from './TourHost';
 
 // The guide: where things are, a five-step path through what the system does, and what is not ready yet. Unlike the getting-started
 // tutorial (new companies only), the guide is shown in every organization, including the sample companies. The list of apps is live:
@@ -36,7 +37,10 @@ export function GuidePage() {
     <section className="page">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="m-0">{c.title}</h1>
-        <LanguageSwitch />
+        <div className="flex flex-wrap items-center gap-2">
+          <TourButton />
+          <LanguageSwitch />
+        </div>
       </div>
       <p className="muted">{c.intro}</p>
       {c.draftNote ? <p className="muted small" role="note">{c.draftNote}</p> : null}

@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (late night) — Guided tour version 1 (English and Arabic), not deployed
+
+**Objective.** Ben: the tutorial and Arabic were not good enough; build the real walk-through.
+
+**Actions Completed.** `apps/web/src/modules/help/TourHost.tsx` (overlay mounted once in the Shell), `tourSteps.ts` (7 steps on real screens, who sees which, tooltip placement), `tourContent.ts` (English and Arabic words, Arabic is a machine draft and says so on the first step). Buttons on Getting started and the Guide. Rules: language is asked first if none is chosen; steps the role or modules do not allow are skipped; a missing element is skipped after 4 s; Escape and leaving by hand end it; language switch keeps the step; a hardened locator keeps re-resolving the highlighted element every 250 ms.
+
+**Checked in Chrome (local demo build, no temporary patch needed).** Chooser first; Arabic tour end to end across 5 steps (the demo owner has no finance module so the home step is skipped); English tour left-to-right; mid-tour language switch keeps step 2 and flips direction; Escape closes; clicking a link ends it; a 390px frame has every tooltip inside the overlay with 8px margin and no sideways overflow. Bugs found and fixed in the process: the highlight measured the old page during a screen change (now re-resolved continuously); the tour closed itself by comparing the browser URL with React's lagging path (now both use React's); the tooltip covered the highlighted form (side placement added); the tooltip spilled 6 px off the edge on a phone because a right-to-left page puts the scrollbar on the left (now positioned relative to the overlay's own box).
+
+**Database / System Result.** None. Typecheck clean; web tests 32 (new: step visibility per role, tooltip placement incl. both edges and phone width, language parity).
+
+**Safety Status.** Uncommitted, not deployed. Checked only in the local demo build, not in a signed-in real company; the home step (needs the finance module) and the audit and alerts steps were not seen on real data. Arabic needs a native reviewer. Progress is per browser, not on the account.
+
+## 2026-11-03 (late) — Tutorial moved from the cosmetics company to the empty company; live verification findings
+
+**Objective.** Ben: the demo runs on the live (cosmetics) company, so the tutorial belongs in the empty company, not there.
+
+**Actions Completed.** Tutorial switched OFF for Demo Cosmetics Factory and ON for Test Organization (0 warehouses, 0 items, Ben is owner), each through the audited function `core_set_tutorial` as ben@prime-ad.com, 14:31 UTC; both audit rows verified. The company name was NOT touched: Ben confirmed he renamed it himself (`organization.updated` by chris's login, 14:23 UTC, removed "(sample data)").
+
+**Verification findings recorded the same evening (read-only).** Ten SQL tests (001, 002, 013, 016, 018, 022, 029, 030, 031, 032) passed rolled back on the live project. The sign-in scripts (real-login-check, concurrency-check) were not run: no credentials in the environment, and the concurrency check writes data. Ben's pushes today deployed Worker `e1cb6fc6-ee48-41a4-bf14-8add5bc29b5d` and Pages `36072048` (commit c5dc432, 14:21 UTC); yesterday's last deploy was Worker `d529d2d7-9df7-4bb1-ae7e-bfd3cf35a1d5` / Pages `118a85a7` (7b9fff5). The ETA module is on for 0 companies.
+
+**Safety Status.** Two `settings` flags changed, both audited; nothing else.
+
 ## 2026-11-03 (night) — Migrations 036 and 037 applied to the live project
 
 **Objective.** Ben: "run them" (the e-invoicing tax data and credit/debit notes migrations, held until after the demo until he said otherwise).

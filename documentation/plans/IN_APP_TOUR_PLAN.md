@@ -1,7 +1,7 @@
 # In-app guided tour (English and Arabic)
 
 **Module:** core (help), no new module key · **Status:** `[📝 Draft / RFC]`. **Plan only.** The tour is not built. What exists today is described in section 2.
-**Owner:** Ben Arthur · **Not for the Wednesday 4 Nov demo:** build after it.
+**Owner:** Ben Arthur · **Version 1 built 3 Nov 2026** (uncommitted, not deployed); screens in section 4 are the built steps.
 **Depends on:** language selection (section 3, built 3 Nov 2026), the Getting-started tutorial and the Guide.
 
 ## 1. Goal
@@ -12,7 +12,7 @@ A new person is walked through the real app, one screen at a time: a short highl
 
 - **Guide** (every company) and **Getting started** tutorial (companies that signed up through the app): pages that describe the app and link to the real screens. Both now read their text from `apps/web/src/modules/help/helpContent.ts`, in English and Arabic.
 - **Language selection:** the tutorial first shows a bilingual chooser (English / العربية) and shows nothing else until the person picks; the choice is saved on the person's **account** (`sql/038`, `/v1/core/me/language`; follows them to another browser) and also kept in the browser (`erp.lang`, `apps/web/src/lib/i18n.tsx`) so it applies before sign-in finishes; it can be changed with the switch on the tutorial and Guide pages or in Settings > General. Sets `lang` and `dir` on the page, so layout flips for Arabic.
-- **Not built:** any overlay, highlight, step-by-step walk across screens, progress memory, or a "replay" button.
+- **Built (version 1, 3 Nov 2026, not deployed):** the tour. A "Take the tour" button on the Getting-started page and on the Guide opens it; it asks for a language first if none is chosen; walks up to 7 real screens (home, new request, requests, ledger, audit log, alerts, Guide) with a highlight and a tooltip; skips steps the person's permissions or modules do not allow; skips a step whose element never appears; Back, Next, Finish, Skip, Escape; language switch inside it keeps the step; leaving by hand ends it; the button reads "Take the tour again" afterwards (per browser). Files: `apps/web/src/modules/help/{TourHost.tsx,tourSteps.ts,tourContent.ts}`. **Not built:** progress saved on the account, automatic start for new people (it is offered, never forced), sample companies' own setting, translated screens (they stay English).
 - **Arabic coverage, stated honestly:** shell menus (16 strings), the tutorial and the Guide. Everything else is English. All Arabic is a machine draft awaiting a native reviewer.
 
 ## 3. How language drives the tour
