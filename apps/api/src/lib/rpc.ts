@@ -21,12 +21,18 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   OWNER_ONLY: { status: 403, message: 'Only an owner can invite, change or disable an owner', code: 'not_allowed' },
   LAST_OWNER: { status: 403, message: 'An organization needs at least one owner', code: 'not_allowed' },
   ALREADY_MEMBER: { status: 409, message: 'This person is already a member (re-enable them if they are disabled)', code: 'already_member' },
+  IN_USE: { status: 409, message: 'That is still in use', code: 'in_use' },
+  NOTE_EXCEEDS_INVOICE: { status: 409, message: 'A credit note cannot credit more than was invoiced', code: 'note_exceeds_invoice' },
+  PRODUCTION_NOT_READY: { status: 409, message: 'Production mode needs stored ETA credentials and a real signer, which are not set up', code: 'production_not_ready' },
+  ACTIVE_NOTES: { status: 409, message: 'Credit or debit notes still refer to this invoice: cancel or reject them first', code: 'active_notes' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */
 export async function callRpc<T>(client: SupabaseClient, fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await client.rpc(fn, args);
   if (error) {
+    // A unique index refused a duplicate (for example two branches with the same code): a plain 409, not a server error.
+    if (error.code === '23505') throw new HttpError(409, 'That already exists', 'duplicate');
     const reason = REASONS[error.message.trim()];
     // The database puts the specifics (for example "30 available, 80 requested") in `details`.
     if (reason) throw new HttpError(reason.status, error.details ? `${reason.message}: ${error.details}` : reason.message, reason.code);

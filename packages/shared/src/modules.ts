@@ -101,8 +101,14 @@ export const MODULES: readonly ModuleManifest[] = [
   },
   {
     key: 'sales', name: 'Sales', description: 'Customer orders fulfilled through approved warehouse stock requests.', core: false,
-    dependsOn: ['inventory'], permissions: ['sales.customers.read','sales.customers.manage','sales.orders.read','sales.orders.create','sales.orders.fulfill','sales.orders.manage','sales.invoices.read','sales.invoices.manage'],
-    memberGrants: ['sales.orders.create','sales.orders.fulfill'], suite: 'Sales & Purchasing',
+    dependsOn: ['inventory'], permissions: ['sales.customers.read','sales.customers.manage','sales.orders.read','sales.orders.create','sales.orders.fulfill','sales.orders.manage','sales.invoices.read','sales.invoices.manage','sales.notes.read','sales.notes.create','sales.notes.approve'],
+    memberGrants: ['sales.orders.create','sales.orders.fulfill','sales.notes.create'], suite: 'Sales & Purchasing',
+  },
+  {
+    // documentation/plans/ETA_EINVOICING_PLAN.md. Off until an organization switches it on (it is not part of the default apps).
+    // Tax settings are read by everyone and changed by owner/admin only. Sending to ETA (later slices) gets its own keys.
+    key: 'einvoicing', name: 'E-invoicing (Egypt)', description: 'Tax settings, branches, tax rates and ETA codes, for sending invoices to the Egyptian Tax Authority.', core: false,
+    dependsOn: ['sales', 'inventory'], permissions: ['einvoicing.settings.read', 'einvoicing.settings.manage'], suite: 'Finance',
   },
   {
     // Owner/admin only on purpose: neither key ends in ".read", so members and viewers never get them by default.

@@ -4,3 +4,4 @@ export * from './permissions';
 export * from './money';
 export * from './core';
 export * from './billing';
+export * from './modules/einvoicing';

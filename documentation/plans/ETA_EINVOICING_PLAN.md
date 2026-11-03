@@ -1,7 +1,7 @@
 # Egypt ETA E-Invoicing Plan (B2B invoices, credit notes, debit notes)
 
 **Module key:** `einvoicing` (new; depends on `sales`, plus tax data added to `core` settings and `inventory` items)
-**Status:** `[📝 Draft / RFC]`. **Plan only.** Nothing is built. Needs Ben's approval before slice A starts.
+**Status:** `[🔨 In progress, not deployed]`. Ben said "work on eta through the night" on 2 Nov 2026, which started slice A and the offline-testable part of slices B and C, in the git worktree `eta-einvoicing` (branch `worktree-eta-einvoicing`). **Nothing is applied to the live database and nothing is deployed.** See section 14 for exactly what exists and what does not.
 **Owner:** Ben Arthur · **Reviewers:** management, plus a person who knows Egyptian tax (VAT, table tax, withholding) to check section 7
 **Research:** official Egyptian eInvoicing SDK, https://sdk.invoicing.eta.gov.eg, read on 2 Nov 2026 (see section 12 for exactly which pages). No third-party SDK was used for any rule.
 **Depends on modules:** core, inventory, sales (customer invoices, `sql/022`), messaging (outbox, `sql/007`)
@@ -191,3 +191,44 @@ SQL: isolation for every table (including credentials), note rules (total limit,
 5. How is a GS1 item code verified at submission, and does the company need a GS1 Egypt membership?
 6. Does ETA require a printed or QR representation for B2B invoices that we must produce, beyond the PDF printout API? (Not found on the pages read.)
 
+## 14. Progress (night of 2 to 3 Nov 2026): what exists, what was learned, what does not
+
+**Built and tested (all in the worktree, nothing deployed, nothing applied to the live database):**
+
+| Part | Where | Verified how |
+|---|---|---|
+| Canonical serializer, SHA-256 digest, exact-number-text JSON | `packages/shared/src/modules/einvoicing/{serialize,rawjson,decimal}.ts` | **Byte-for-byte equal to the SDK's own sample** (`one-doc.json` to `one-doc-serialized.json.txt`); also own cases for array prefixes and number text |
+| Line and document arithmetic | `calc.ts` | **Reproduces both lines and every total of the SDK sample document** (e.g. line total 2969.89, invoice total 5191.50) |
+| Document builder (invoice, credit, debit; v1.0 and v0.9) and mapping from our invoice | `build.ts`, `fromInvoice.ts` | Unit tests; signed text equals sent text |
+| Pre-flight validation and note rules | `validate.ts` | Unit tests |
+| Signer interface and a test stub | `signer.ts` | Unit tests; no real signing exists |
+| ETA HTTP client (login with token cache, submit, status, cancel, reject, document type) | `apps/api/src/lib/eta/client.ts` | 16 tests against a **fake** network; **never run against ETA** |
+| Callback key check and notification parsing | `apps/api/src/lib/eta/callback.ts` | Unit tests; **the route and storage are not built** |
+| Slice A1 migration: tax profile, branches, tax rates, ETA code tables, customer tax identity, item codes | `sql/036_einvoicing_tax_data.sql`, `sql/tests/030_einvoicing_tax_data.sql` | **Dry run on the live project (rolled back): ALL TESTS PASSED**; live database confirmed unchanged afterwards |
+| Slice A2 migration: credit and debit notes with approval | `sql/037_credit_debit_notes.sql`, `sql/tests/031_credit_debit_notes.sql` | **Dry run (rolled back): ALL TESTS PASSED**; two deliberate breakages (remove the credit cap, remove the self-approval check) each made the test fail |
+| API routes: `/v1/einvoicing/*` (settings, codes, readiness, profile, branches, rates, customer tax, item codes) and `/v1/sales/notes*` | `apps/api/src/modules/einvoicing/routes.ts`, `sales/notes.ts` | 24 route and permission tests; no live call |
+| Module and permissions: `einvoicing` (off by default), `sales.notes.{read,create,approve}` | `packages/shared/src/modules.ts` | Tests |
+
+**What is not built:** screens (none: no Settings page, no note screens, nothing to browse); encrypted credential storage (decision 6.2 is open); the callback route and event table; the submission queue and cron polling; real signing; Get Document Details (per-document error messages); finance integration; amount-based approval policy for notes; foreign-currency invoices; e-invoice status on the invoice. **The two migrations are written and dry-run tested, not applied: applying needs Ben's yes.**
+
+**Corrections to this plan's earlier reading, found by comparing with ETA's own working examples (the SDK Postman collection and `one-doc.json`):**
+1. **Field casing in working examples differs from the field tables.** Examples use `internalID` (table: `internalId`), `branchID` (table: `branchId`), `documentType` `"I"` / `"C"` / `"D"` upper case (table: `i`), and `signatureType` (table: `type`) inside `signatures`. The builder follows the **working examples**; property names are upper-cased in the signed text anyway, but the JSON we send must be accepted, so confirm on PreProd. The `references` array sits between `proformaInvoiceNumber` and `payment`.
+2. **Rounding:** the sample rounds every amount to **2 decimals** and its sums add up exactly when each amount is rounded first and then summed (e.g. taxable fees 817.42 is the sum of the rounded fee amounts). The engine therefore defaults to **2 places** (matching our 2-decimal minor units) and takes up to 5 as a setting. ETA's tolerance when our amounts differ from its own recomputation is **not published**: test on PreProd.
+3. **Equations, now confirmed on the sample:** VAT (T1) base = T2 amount + net total + taxable fees (T5 to T12, which include the fixed stamp T6) + value difference + the fixed table tax (T3); table tax (T2) base is the same without T2; withholding (T4) = rate times (net total minus items discount); line total = net total + T1 + T2 + T3 + taxable fees + non-taxable fees (T13 to T20) − items discount − T4. The SDK page repeats terms in these formulas; this reading is the one that reproduces the sample to the cent.
+4. **Tax subtypes:** the sample document uses dummy subtypes (`"subType": "T1"`); the real list (`TaxSubtypes.json`, 56 pairs) is loaded as a reference table and enforced when a rate is saved.
+5. **Unit codes:** 143 usable codes from `UnitTypes.json`; the SDK lists `ST` twice ("Ton (short, 2000 lb)" and "Sheet"); the first is kept. Ask ETA which is meant before anyone sells by the sheet.
+6. **Partial credit notes:** the SDK says a note's lines must equal the referenced invoices' lines with only quantities and amounts changed, and also that a line quantity must exceed 0. Whether a note may leave an original item out is therefore **Unverified**; the validator warns and does not block.
+7. **Callback URL is per company.** ETA is given one base URL and one pre-shared key at registration. In this multi-tenant app the path must carry the company (for example `/webhooks/eta/<company id>/notifications/documents`) and the key is stored per company (hashed or encrypted), which depends on decision 6.2.
+8. **Get Submission** returns `uuid` (not `submissionUUID`) and a `documentSummary` with status and total but **no validation error text**; the errors come from Get Document Details, which is not built.
+
+**Honest limits of what is built:** approved credit notes do **not** yet reduce "owed", receivables or revenue in finance and owner insights (those functions are in sql/024, 027, 028, 030 and need their own change and tests); approval of a note needs one owner or admin who is not the requester (the policy table is quantity-based); the ETA client, the callback parser and the builder are tested against the documentation and the SDK samples only, not against ETA.
+
+**Transport and modes (added 3 Nov 2026 on Ben's instruction).** All ETA calls go through one interface, `EtaTransport` (`apps/api/src/lib/eta/transport.ts`), with two implementations: `SimulatedTransport` (`simulated.ts`; answers like the documented ETA API, sends nothing, no network, scenarios *accepted*, *rejected*, *pending*, plus the 10-minute duplicate rule and the cancel and reject state rules) and `EtaClient` (`client.ts`, the real one for PreProd and production). Each company has a mode, **simulated (default) | preprod | production**, saved on `tax_profiles.eta_mode` (`sql/036`, audited as `einvoicing.profile.mode_changed`). `transportFor()` picks the transport and never falls back silently:
+- **simulated:** always allowed, needs nothing.
+- **preprod:** refused without the company's credentials.
+- **production:** refused unless credentials **and** a signer whose `kind` is `real` are configured (the stub signer never qualifies). In the database, `eta_save_profile` refuses `production` outright (`PRODUCTION_NOT_READY`) until credential storage and a real signer exist; a later migration lifts that and must test the rule.
+- **Contract tests:** one suite (`apps/api/test/eta_transport.contract.ts`) asserts only what holds for both implementations. It runs against the simulator always. It runs against ETA PreProd only when `ETA_PREPROD_CLIENT_ID` and `ETA_PREPROD_CLIENT_SECRET` are set (optionally `ETA_PREPROD_REG_NUMBER`, `ETA_PREPROD_BRANCH_ID`); otherwise it is **reported as skipped** (7 tests), not dropped. A deliberate break of the simulator was caught by the contract. The PreProd run has never happened.
+- **Simulated sends:** the result has `simulated: true`; every id starts with `SIMULATED-`; `toSendRecord()` (shared) stores **no** real ETA reference (uuid, long id and submission id are null, the stand-in's own id is kept as `simulationId`) and the record carries the badge text **"SIMULATED, not sent to ETA"** (`SIMULATED_BADGE`, i18n key `einvoicing.simulatedBadge`, Arabic text still to be written). A real send refuses a `SIMULATED-` id (`SIMULATED_ID_IN_REAL_MODE`). **Slice D must add to `eta_documents` a check that a simulated row has null ETA reference columns and a real row has none of `SIMULATED-` ids**, and the invoice screen must show the badge from the stored record; no screen exists yet, so the badge is not visible anywhere today.
+- **"The existing fake, kept":** the fake-network tests of `EtaClient` (`eta_client.test.ts`) are kept as they are; they test the HTTP details of the real client. The simulator is a new class at the transport level, not a fake `fetch`.
+
+**Next steps, in order:** (1) Ben approves applying `sql/036` and `sql/037` (after the Wednesday demo); (2) decide 6.2 (credential storage) and the signing option; (3) ETA PreProd access, then run a version 0.9 invoice through the client by hand; (4) screens for settings and notes; (5) finance integration for notes; (6) callback route, submission queue and polling; (7) real signing.

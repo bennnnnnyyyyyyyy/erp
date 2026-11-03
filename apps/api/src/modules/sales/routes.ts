@@ -7,6 +7,7 @@ import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 import { billingFor } from './billing';
+import { registerNoteRoutes } from './notes';
 
 export const salesRoutes=new Hono<AppEnv>();
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,3 +53,5 @@ salesRoutes.post('/orders/:id/invoices',requirePermission('sales.invoices.manage
 });
 salesRoutes.post('/invoices/:id/void',requirePermission('sales.invoices.manage'),async c=>{const id=idParam(c);await callRpc(userDb(c),'sal_void_invoice',{p_invoice_id:id});return ok(c,{id,status:'void'});});
 salesRoutes.post('/orders/:id/cancel',requirePermission('sales.orders.manage'),async c=>{const id=idParam(c);await callRpc(userDb(c),'sal_cancel_order',{p_order_id:id});return ok(c,await one(c,id));});
+// ---- credit and debit notes with approval (sql/037); see ./notes.ts
+registerNoteRoutes(salesRoutes);
