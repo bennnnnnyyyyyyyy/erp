@@ -5,6 +5,7 @@ import type { SessionInfo } from '@erp/shared';
 import { api, getActiveOrgId, setActiveOrgId } from './lib/api';
 import { arrivedFromInvite, arrivedToSetPassword, supabase } from './lib/supabase';
 import { SessionContext } from './session';
+import { reloadMode, sessionKey } from './lib/sessionKey';
 import { SignIn } from './components/SignIn';
 import {useI18n, tr } from './lib/i18n';
 import { SetPassword } from './components/SetPassword';
@@ -29,16 +30,25 @@ export function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // Reload the session only when the signed-in person or the company changes, or a screen asks (sessionTick); never on a token
+  // renewal or the tab regaining focus, which are new `auth` objects for the same person (see lib/sessionKey.ts).
+  const loadKey = sessionKey(auth?.user.id, orgId);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   useEffect(() => {
-    setSession(null);
-    if (!auth || !orgId) return;
+    const mode = reloadMode(loadedFor, loadKey);
+    if (mode !== 'refresh') setSession(null);
+    if (mode === 'none') return;
     api<SessionInfo>('/v1/core/session')
-      .then(setSession)
+      .then((s) => {
+        setSession(s);
+        setLoadedFor(loadKey);
+      })
       .catch((e: Error) => {
         setError(e.message);
         chooseOrg(null);
       });
-  }, [auth, orgId, sessionTick]);
+    // loadedFor is read here, not a reason to reload: leaving it out of the dependencies is deliberate.
+  }, [loadKey, sessionTick]);
 
   function chooseOrg(id: string | null) {
     if (id) setError(null);
