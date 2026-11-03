@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (night) — Migrations 036 and 037 applied to the live project
+
+**Objective.** Ben: "run them" (the e-invoicing tax data and credit/debit notes migrations, held until after the demo until he said otherwise).
+
+**Actions Completed.** `sql/036_einvoicing_tax_data.sql` then `sql/037_credit_debit_notes.sql` applied by CLI to project ggoerp; tests 030 and 031 run on the live project afterwards.
+
+**Database / System Result.** Both tests ended "ALL TESTS PASSED (everything rolled back)". Verified: 8 new business tables all with row level security, 56 ETA tax subtypes, 143 unit codes, 0 tax profiles, 0 notes, helper function not callable by users. The `einvoicing` module is switched on for **0** organizations, so nothing changes for any user, and the app code that uses these tables is not deployed. Earlier entries that say "not applied" for 036/037 are superseded by this one.
+
+**Safety Status.** Schema only; no data changed. Production mode of ETA is still refused in the database (`PRODUCTION_NOT_READY`).
+
+## 2026-11-03 (evening) — Language saved on the account, tutorial on for the cosmetics company, browser check
+
+**Objective.** Ben: save the language on the account, make the tutorial active for the cosmetics company too, and check it in Chrome.
+
+**Actions Completed.**
+- `sql/038_user_language.sql` + `sql/tests/032_user_language.sql`: table `user_preferences` (one row per person, no org_id on purpose because a person's language is the same in every company they belong to; own-row read only; no direct writes) and function `core_set_my_language(text)` (null clears). Dry run: ALL TESTS PASSED; weakening the read policy made the test fail. **Then applied by CLI the same evening on Ben's instruction ("run sql via cli"):** verification rls_on true, users_can_set true, anon_can_set false; test 032 passed on the live project; table empty, one policy.
+- API: `/v1/core/session` returns `userLanguage` (tolerates the table not existing yet, so deploying before the migration cannot break sign-in); `POST /v1/core/me/language`. Web: the i18n provider saves every change to the account, applies the account language on sign-in (the account wins), and saves a browser-only choice once (`planAccountSync`, unit tested). Demo build unaffected.
+- **Production data change, Ben's explicit request:** the tutorial was switched ON for "Demo Cosmetics Factory (sample data)" (id d16359e1-c8f1-408d-9ae2-1db8244ab9d4) by calling the audited function `core_set_tutorial(true)` as ben@prime-ad.com (admin there). Verified: `show_tutorial` is true and the audit log has "Getting-started tutorial shown" by that user. Nothing else changed. Until the new web build is deployed, that company shows the old English tutorial.
+- Chrome check (local demo build with a temporary patch to show the tutorial, reverted and diff-checked): the chooser appears first in both languages; choosing Arabic gives right-to-left layout, Arabic text, left-pointing arrows, a right-to-left progress bar; the Guide follows; the choice survives a reload; English switches back to left-to-right; a 390px-wide frame in Arabic has no sideways overflow. Two defects found and fixed: the active language in the switch was not distinguishable in dark mode (now a check mark, bold and a ring); a Latin company name scrambled the Arabic intro (now isolated). The window-resize tool did not narrow the viewport, so the phone check used a 390px frame.
+
+**Database / System Result.** Production: one setting changed (tutorial on for the cosmetics company), audited. No migration applied. Typecheck clean; tests: shared 31, API 114 + 7 skipped, web 16.
+
+**Safety Status.** Not committed, not deployed. The account-saving path is covered by SQL, API-source and pure-logic tests but has **not been exercised end to end** (needs 038 applied and the new web build deployed). The signed-in tutorial page itself was checked only in the local demo build, not on erp-live.pages.dev. Arabic remains a machine draft.
 ## 2026-11-03 — Language selection first, then a tutorial in the chosen language (tour planned, not built)
 
 **Objective.** Ben: "arabic is still not implemented, so implement language selection first then allow that selection to influence the tutorial after the person chooses", and plan the in-app tour.

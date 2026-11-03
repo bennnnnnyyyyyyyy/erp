@@ -11,7 +11,7 @@ A new person is walked through the real app, one screen at a time: a short highl
 ## 2. What exists today (3 Nov 2026)
 
 - **Guide** (every company) and **Getting started** tutorial (companies that signed up through the app): pages that describe the app and link to the real screens. Both now read their text from `apps/web/src/modules/help/helpContent.ts`, in English and Arabic.
-- **Language selection:** the tutorial first shows a bilingual chooser (English / العربية) and shows nothing else until the person picks; the choice is kept per browser (`erp.lang`, `apps/web/src/lib/i18n.tsx`) and can be changed with the switch on the tutorial and Guide pages or in Settings > General. Sets `lang` and `dir` on the page, so layout flips for Arabic.
+- **Language selection:** the tutorial first shows a bilingual chooser (English / العربية) and shows nothing else until the person picks; the choice is saved on the person's **account** (`sql/038`, `/v1/core/me/language`; follows them to another browser) and also kept in the browser (`erp.lang`, `apps/web/src/lib/i18n.tsx`) so it applies before sign-in finishes; it can be changed with the switch on the tutorial and Guide pages or in Settings > General. Sets `lang` and `dir` on the page, so layout flips for Arabic.
 - **Not built:** any overlay, highlight, step-by-step walk across screens, progress memory, or a "replay" button.
 - **Arabic coverage, stated honestly:** shell menus (16 strings), the tutorial and the Guide. Everything else is English. All Arabic is a machine draft awaiting a native reviewer.
 
@@ -53,7 +53,7 @@ Pure tests: content parity between languages, step skipping by permission, "neve
 
 ## 7. Open questions for Ben
 
-1. Should the language choice be saved on the person's account (so it follows them to another browser), not only in this browser? It needs a small database change and a function; the browser-only version works today.
+1. ~~Save the language on the account?~~ **Decided yes (3 Nov 2026):** built as `sql/038` (one row per person, own-row read only, written only by `core_set_my_language`). **Applied to the live database 3 Nov 2026**; the web build that uses it is not deployed yet.
 2. Should the tour start automatically for a new person, or only when they press "Take the tour"? (Recommended: offer it once, never force it.)
 3. Which Arabic reviewer, and which terms for approval, ledger, batch and expiry should be fixed first?
 4. Should the sample companies offer the tour (as an optional button), or never?
@@ -63,4 +63,4 @@ Pure tests: content parity between languages, step skipping by permission, "neve
 1. Language selection and tutorial text in both languages (done, 3 Nov; not yet checked in a browser).
 2. Native review of the Arabic.
 3. The tour component and its first 4 steps, then the rest.
-4. Server-side language preference, if question 1 is yes.
+4. ~~Server-side language preference~~ built 3 Nov 2026 (not applied).
