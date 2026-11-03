@@ -47,9 +47,9 @@ export function LanguageSwitch({ className }: { className?: string }) {
           lang={o.value}
           aria-pressed={lang === o.value}
           onClick={() => setPersonalLang(o.value)}
-          className={cn('px-3 py-1.5', lang === o.value ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground hover:bg-accent')}
+          className={cn('px-3 py-1.5', lang === o.value ? 'bg-accent font-semibold text-foreground ring-2 ring-inset ring-primary' : 'bg-card text-muted-foreground hover:bg-accent')}
         >
-          {o.label}
+          {lang === o.value ? '✓ ' : ''}{o.label}
         </button>
       ))}
     </div>

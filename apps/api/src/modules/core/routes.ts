@@ -1,9 +1,10 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { SessionInfo } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { userDb } from '../../lib/db.user';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
+import { invalid, jsonBody } from '../../lib/body';
 import { requirePermission } from '../../middleware/tenant';
 import { memberRoutes } from './memberRoutes';
 import { moduleRoutes } from './moduleRoutes';
@@ -15,7 +16,20 @@ coreRoutes.route('/org', orgRoutes);
 coreRoutes.route('/members', memberRoutes);
 coreRoutes.route('/modules', moduleRoutes);
 
-coreRoutes.get('/session', (c) => {
+// The person's own saved language (sql/038). A display preference, not essential: if it cannot be read (for example the migration is not
+// applied yet) the session still loads and the person simply follows the company default.
+async function savedLanguage(c: Context<AppEnv>): Promise<'en' | 'ar' | null> {
+  try {
+    const { data, error } = await userDb(c).from('user_preferences').select('language').eq('user_id', c.var.user.id).maybeSingle();
+    if (error) return null;
+    const l = (data as { language: string | null } | null)?.language;
+    return l === 'ar' || l === 'en' ? l : null;
+  } catch {
+    return null;
+  }
+}
+
+coreRoutes.get('/session', async (c) => {
   const { user, tenant } = c.var;
   const session: SessionInfo = {
     userId: user.id,
@@ -33,8 +47,19 @@ coreRoutes.get('/session', (c) => {
     role: tenant.role,
     permissions: tenant.permissions,
     modules: tenant.modules,
+    userLanguage: await savedLanguage(c),
   };
   return ok(c, session);
+});
+
+// Save (or clear, with null) the signed-in person's own language. Any signed-in member may do this for themselves only; the database
+// function uses the caller's own identity, so there is no way to set another person's language.
+coreRoutes.post('/me/language', async (c) => {
+  const body = await jsonBody(c);
+  const language = body.language;
+  if (language !== null && language !== 'en' && language !== 'ar') invalid('Language must be en, ar or null');
+  await callRpc<void>(userDb(c), 'core_set_my_language', { p_language: language });
+  return ok(c, { language });
 });
 
 // Names only (no email, role or sign-in data), for any member, so every screen can show who did what.

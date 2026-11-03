@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { api } from '../lib/api';
 import { demoMode } from '../lib/demo';
 import { useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
@@ -59,13 +60,23 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
 export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
   const session = useSession();
-  const { t, setOrgLang } = useI18n();
+  const { t, setOrgLang, syncAccountLang, setAccountSaver } = useI18n();
   const { dark, toggle } = useTheme();
   // The company language (Settings > General) is only the default. A person's own choice (Settings > General > My language) wins.
   const orgLanguage = session.org?.language;
   useEffect(() => {
     if (!demoMode && orgLanguage) setOrgLang(orgLanguage);
   }, [orgLanguage, setOrgLang]);
+  // The person's own language is saved on their account (sql/038): saves go to the API, and what the account holds is applied on sign-in.
+  useEffect(() => {
+    if (demoMode) return;
+    setAccountSaver((l) => api('/v1/core/me/language', { method: 'POST', body: JSON.stringify({ language: l }) }).then(() => undefined));
+    return () => setAccountSaver(null);
+  }, [setAccountSaver]);
+  const userLanguage = session.userLanguage ?? null;
+  useEffect(() => {
+    if (!demoMode) syncAccountLang(userLanguage);
+  }, [session.userId, userLanguage, syncAccountLang]);
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);

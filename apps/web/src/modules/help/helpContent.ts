@@ -82,7 +82,8 @@ const TUTORIAL_EN: TutorialContent = {
 
 const TUTORIAL_AR: TutorialContent = {
   title: 'البدء',
-  intro: (org) => `دليل قصير لإدارة ${org} في هذا النظام، بالترتيب الذي تعتمده معظم الشركات عند الإعداد. لا يغيّر شيء هنا أي بيانات من تلقاء نفسه: كل خطوة تفتح الشاشة الحقيقية.`,
+  // U+2068 / U+2069 isolate the company name, which is usually Latin script, so it cannot reorder the Arabic sentence around it.
+  intro: (org) => `دليل قصير لإدارة \u2068${org}\u2069 في هذا النظام، بالترتيب الذي تعتمده معظم الشركات عند الإعداد. لا يغيّر شيء هنا أي بيانات من تلقاء نفسه: كل خطوة تفتح الشاشة الحقيقية.`,
   yourSetup: 'إعدادك',
   doneOf: (f, t) => `${f} من ${t} مكتملة`,
   progressLabel: 'تقدّم الإعداد',

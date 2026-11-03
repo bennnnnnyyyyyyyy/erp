@@ -10,8 +10,9 @@ import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
 import { tutorialContent } from './helpContent';
 
-// The getting-started tutorial. It exists only in companies that signed up through the app (flag `show_tutorial`, sql/032): the sample
-// companies never have it. The checklist is live (it looks at what the company has created so far); the steps describe screens that
+// The getting-started tutorial. It exists only in companies that have the flag `show_tutorial` (sql/032): companies that signed up through
+// the app, and any company an owner or admin switches it on for (Settings > General; the cosmetics sample company has it on). The local demo
+// build never has it. The checklist is live (it looks at what the company has created so far); the steps describe screens that
 // exist today, and the last section says plainly what is not ready yet. Owners and admins can hide it (and bring it back in
 // Settings > General).
 //

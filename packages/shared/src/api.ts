@@ -16,6 +16,8 @@ export type SessionInfo = {
   userId: string;
   email: string;
   org: { id: string; name: string; slug: string; defaultCurrency: string; timezone: string; dateFormat: string; language: 'en' | 'ar'; showTutorial: boolean } | null;
+  /** The person's own saved language (sql/038), or null to follow the company default. Same in every company they belong to. */
+  userLanguage: 'en' | 'ar' | null;
   role: Role | null;
   permissions: string[];
   modules: string[];

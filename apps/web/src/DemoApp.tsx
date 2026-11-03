@@ -35,6 +35,7 @@ export function DemoApp() {
         userId: ACTOR_BY_ROLE[role],
         email: `${(ACTOR_NAMES[ACTOR_BY_ROLE[role]] ?? 'demo user').toLowerCase().replace(/[^a-z]+/g, '.')}@demo.example`,
         org: { id: 'demo-org', name: 'Demo Trading Co.', slug: 'demo-trading', defaultCurrency: 'EGP', timezone: 'Africa/Cairo', dateFormat: 'DD/MM/YYYY', language: 'en', showTutorial: false },
+        userLanguage: null,
         role,
         permissions: defaultPermissionsFor(role),
         modules,
