@@ -84,7 +84,7 @@ export function GeneralSettings() {
             <option value="ar">{t('Arabic (right to left)')}</option>
           </select>
           <span className="hint muted">
-            Only for you, on this browser. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {arabicStringCount} menu strings so far; the rest of the app stays in English until it is translated and reviewed by a native speaker.
+            Only for you, on this browser. Nothing is forced: pick a language, or follow the company default. Arabic is a machine draft covering {arabicStringCount} menu strings, the Getting-started tutorial and the Guide so far; the rest of the app stays in English until it is translated and reviewed by a native speaker.
           </span>
         </label>
       </div>

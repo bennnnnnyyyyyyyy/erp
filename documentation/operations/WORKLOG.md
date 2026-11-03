@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 — Language selection first, then a tutorial in the chosen language (tour planned, not built)
+
+**Objective.** Ben: "arabic is still not implemented, so implement language selection first then allow that selection to influence the tutorial after the person chooses", and plan the in-app tour.
+
+**Actions Completed.**
+- `apps/web/src/components/LanguageChooser.tsx`: a bilingual first-choice card (English / العربية, each with its own `lang` and `dir`) and a small `LanguageSwitch`. The Getting-started tutorial now shows only the chooser until the person picks (`personalLang` null), then shows the tutorial in that language and direction; the switch on the tutorial and the Guide changes it without leaving the page.
+- `apps/web/src/modules/help/helpContent.ts`: all words of the tutorial (9 steps, 7-item checklist, not-ready list) and the Guide (5 steps, 6-item not-ready list) in English and Arabic; `components/Rich.tsx` renders `**bold**` safely (no HTML injected). `GettingStarted.tsx` and `Guide.tsx` read from it; the step arrow flips in Arabic. The "Arabic covers menus only" statements were corrected (menus, tutorial and Guide). The Arabic is a **machine draft** and says so on screen.
+- `documentation/plans/IN_APP_TOUR_PLAN.md`: the tour plan (language-first, 7 steps on real screens, permission-based skipping, open questions). **The tour itself is not built.**
+- `apps/web` gained a `test` script and 13 content-parity tests (same structure in both languages, no empty text, Arabic really Arabic, same bold and numbers per step).
+
+**Database / System Result.** None. No API or SQL change. Web typecheck clean, production build succeeds, tests: shared 31, API 110 (+7 skipped), web 13.
+
+**Safety Status.** Not deployed, not committed, **not checked in a browser** (needs Ben's OK to use Chrome). The tutorial exists only in companies that signed up through the app, and the sample and demo companies are unchanged unless a person picks Arabic on the Guide, so the Wednesday demo is not affected. The language choice is per browser (not on the account). Arabic needs a native reviewer before customers rely on it.
 ## 2026-11-03 (later) — One EtaTransport, simulated by default, production refused (Ben's instruction)
 
 **Objective.** Put every ETA call behind one `EtaTransport` interface with a Simulated and a Real implementation; per-company mode
