@@ -24,13 +24,13 @@ export type TourContent = {
 
 const EN: TourContent = {
   steps: {
-    home: { title: 'Start here', body: 'The home page says, in plain words, whether the business is making or losing money, what is owed, what is waiting for a decision and what is about to expire. Each card shows what it covers and for which period.' },
-    'new-request': { title: 'Ask for stock', body: 'A staff member asks for stock to leave a warehouse. The quantity is set aside (reserved) at once, but nothing leaves yet.' },
-    approve: { title: 'A different person approves', body: 'A manager approves or rejects. Whoever asked cannot approve their own request: the database refuses it, not only the screen. Only after approval can the stock be handed out.' },
-    ledger: { title: 'Every movement is recorded', body: 'The ledger lists every stock movement, newest first. Entries are only ever added, never edited or deleted, and an outgoing movement always points to an approved request.' },
-    audit: { title: 'Who did what, and when', body: 'Every approval and every stock movement is written to this log in the same step, and nobody can change or remove it.' },
-    alerts: { title: 'Let the system watch for you', body: 'Alerts tell the right people when stock is low, a batch is about to expire, an invoice is late or the month is losing money: one message per person, not one per item.' },
-    guide: { title: 'Where to read more', body: 'The Guide lists every app you can use and what is not ready yet. You can take this tour again from the Guide or from the Getting started page.' },
+    home: { title: 'Management dashboard', body: 'Profit and loss, receivables and payables, pending approvals and inventory value with expiry, each with the period it covers. Every card opens the underlying list.' },
+    'new-request': { title: 'Stock request', body: 'A user raises a request to issue goods from a warehouse. The quantity is reserved immediately; nothing is issued until approval.' },
+    approve: { title: 'Segregation of duties', body: 'A manager approves or rejects the request. The requester cannot approve their own request: this is enforced by the database, not only the screen. Goods are issued only after approval.' },
+    ledger: { title: 'Stock ledger', body: 'Every stock movement, newest first. Entries are append-only, never edited or deleted, and every goods issue references an approved request.' },
+    audit: { title: 'Audit trail', body: 'Every approval and stock movement is written to the audit log in the same transaction. Entries cannot be changed or removed.' },
+    alerts: { title: 'Alert rules', body: 'Rules notify the assigned users or teams of low stock, batches nearing expiry, overdue invoices and month-to-date losses, with one consolidated message per person.' },
+    guide: { title: 'User guide', body: 'The Guide lists the modules available to you and known limitations. The tour can be restarted from Home, the Guide or Getting started.' },
   },
   tour: 'Tour',
   take: 'Take the tour',
@@ -48,13 +48,13 @@ const EN: TourContent = {
 
 const AR: TourContent = {
   steps: {
-    home: { title: 'ابدأ من هنا', body: 'تعرض الصفحة الرئيسية بلغة بسيطة هل يربح العمل أم يخسر، وما المبالغ المستحقة، وما ينتظر قرارًا، وما يوشك على الانتهاء. وتوضح كل بطاقة ما تغطيه والفترة الزمنية.' },
-    'new-request': { title: 'اطلب مخزونًا', body: 'يطلب أحد الموظفين خروج بضاعة من المخزن. تُحجز الكمية فورًا، لكن لا شيء يخرج بعد.' },
-    approve: { title: 'يوافق شخص آخر', body: 'يوافق المدير على الطلب أو يرفضه. ولا يستطيع مقدّم الطلب الموافقة على طلبه: فقاعدة البيانات تمنع ذلك، وليس الشاشة فقط. ولا تُسلَّم البضاعة إلا بعد الموافقة.' },
-    ledger: { title: 'كل حركة مسجّلة', body: 'يعرض السجل كل حركة مخزون، الأحدث أولًا. تُضاف السجلات ولا تُعدَّل ولا تُحذف، وكل حركة خروج مرتبطة دائمًا بطلب تمت الموافقة عليه.' },
-    audit: { title: 'من فعل ماذا ومتى', body: 'تُكتب كل موافقة وكل حركة مخزون في هذا السجل في الخطوة نفسها، ولا يستطيع أحد تغييرها أو حذفها.' },
-    alerts: { title: 'دع النظام يراقب عنك', body: 'تُبلِّغ التنبيهات الأشخاص المناسبين عند انخفاض المخزون، أو قرب انتهاء صلاحية دفعة، أو تأخر فاتورة، أو خسارة الشهر: رسالة واحدة لكل شخص وليست رسالة لكل صنف.' },
-    guide: { title: 'للمزيد', body: 'يعرض دليل الاستخدام كل التطبيقات المتاحة لك وما ليس جاهزًا بعد. ويمكنك إعادة هذه الجولة من دليل الاستخدام أو من صفحة البدء.' },
+    home: { title: 'لوحة الإدارة', body: 'الأرباح والخسائر، والذمم المدينة والدائنة، والموافقات المعلّقة، وقيمة المخزون مع الصلاحية، مع الفترة التي تغطيها كل بطاقة. تفتح كل بطاقة القائمة المرتبطة بها.' },
+    'new-request': { title: 'طلب مخزون', body: 'ينشئ المستخدم طلبًا لصرف بضائع من مستودع. تُحجز الكمية فورًا، ولا يُصرف شيء قبل الاعتماد.' },
+    approve: { title: 'فصل المهام', body: 'يعتمد المدير الطلب أو يرفضه. ولا يستطيع مقدّم الطلب اعتماد طلبه: تفرض قاعدة البيانات ذلك، وليس الشاشة فقط. ولا تُصرف البضائع إلا بعد الاعتماد.' },
+    ledger: { title: 'سجل المخزون', body: 'كل حركة مخزون، الأحدث أولًا. القيود إضافة فقط، لا تُعدَّل ولا تُحذف، وكل عملية صرف ترتبط بطلب معتمد.' },
+    audit: { title: 'سجل التدقيق', body: 'تُكتب كل موافقة وحركة مخزون في سجل التدقيق ضمن المعاملة نفسها. لا يمكن تغيير القيود أو حذفها.' },
+    alerts: { title: 'قواعد التنبيه', body: 'تُبلغ القواعد المستخدمين أو الفرق المحددة بانخفاض المخزون، والتشغيلات القريبة من انتهاء الصلاحية، والفواتير المتأخرة، وخسائر الشهر الجاري، برسالة مجمّعة واحدة لكل شخص.' },
+    guide: { title: 'دليل المستخدم', body: 'يعرض الدليل الوحدات المتاحة لك والقيود المعروفة. يمكن إعادة الجولة من الصفحة الرئيسية أو الدليل أو صفحة البدء.' },
   },
   tour: 'جولة',
   take: 'ابدأ الجولة',

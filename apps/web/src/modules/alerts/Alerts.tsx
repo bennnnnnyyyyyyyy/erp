@@ -20,13 +20,13 @@ type Item = { id: string; sku: string; name: string };
 type Kind = 'stock_below' | 'expiry_within' | 'receivable_overdue' | 'profit_negative' | 'forecast_stockout';
 
 const KIND: Record<Kind, { label: string; hint: string; unit?: string }> = {
-  stock_below: { label: 'Stock is running low', hint: 'Leave the number empty to use each item\'s own reorder level.', unit: 'units or fewer available' },
-  expiry_within: { label: 'A batch is about to expire', hint: 'Also tells you about batches that already expired.', unit: 'days before expiry' },
-  receivable_overdue: { label: 'A customer invoice is late', hint: 'Counted from the invoice date.', unit: 'days after the invoice date' },
-  profit_negative: { label: 'The month is losing money', hint: 'Sales minus cost of goods minus expenses, this month so far.' },
-  forecast_stockout: { label: 'An item will run out soon (forecast)', hint: 'Uses the Stock forecast: the message says how many days are left and how reliable the guess is. Items nobody used in 90 days are ignored.', unit: 'days of stock left, or fewer' },
+  stock_below: { label: 'Stock below reorder level', hint: 'Leave blank to use each item\'s reorder level.', unit: 'units or fewer available' },
+  expiry_within: { label: 'Batch nearing expiry', hint: 'Includes batches that have already expired.', unit: 'days before expiry' },
+  receivable_overdue: { label: 'Customer invoice overdue', hint: 'Counted from the invoice date.', unit: 'days after the invoice date' },
+  profit_negative: { label: 'Month-to-date net loss', hint: 'Revenue less COGS and operating expenses, month to date.' },
+  forecast_stockout: { label: 'Forecast stock-out', hint: 'Based on the stock forecast: reports days of cover and forecast confidence. Items with no usage in 90 days are excluded.', unit: 'days of stock left, or fewer' },
 };
-const ROLE_LABEL: Record<string, string> = { owner: 'All owners', admin: 'All admins', member: 'All staff', viewer: 'All viewers' };
+const ROLE_LABEL: Record<string, string> = { owner: 'All owners', admin: 'All admins', member: 'All members', viewer: 'All viewers' };
 
 export function AlertsPage() {
   const session = useSession();
@@ -69,14 +69,14 @@ export function AlertsPage() {
   return (
     <section className="page wide">
       <h1>{tr('Alerts')}</h1>
-      <p className="muted">{tr('Tell the right people when stock runs low, a batch expires or money is late.')}</p>
+      <p className="muted">{tr('Alerts for low stock, expiring batches and overdue receivables.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
       {canManage && (
         <FormToggle label={tr('Add a rule')}>
           <div className="form-row">
             <label>{tr('Name')}<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={tr('e.g. Glycerin running low')} /></label>
-            <label>{tr('Tell me when')}
+            <label>{tr('Trigger')}
               <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Kind, threshold: '' })}>
                 {(Object.keys(KIND) as Kind[]).map((k) => <option key={k} value={k}>{tr(KIND[k].label)}</option>)}
               </select>
@@ -90,10 +90,10 @@ export function AlertsPage() {
           </div>
           <p className="muted small">{tr(KIND[f.kind].hint)}</p>
           <div className="form-row">
-            <label>{tr('Who is told')}
+            <label>{tr('Recipients')}
               <select value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })}><option value="">{tr('Choose…')}</option>{recipientOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
             </label>
-            <label>{tr('Repeat after (hours)')}<input inputMode="numeric" value={f.repeatHours} onChange={(e) => setF({ ...f, repeatHours: e.target.value })} /></label>
+            <label>{tr('Repeat interval (hours)')}<input inputMode="numeric" value={f.repeatHours} onChange={(e) => setF({ ...f, repeatHours: e.target.value })} /></label>
           </div>
           <div><Button disabled={busy || !f.name.trim() || !f.to || (needsNumber && f.threshold === '')} onClick={() => run(async () => {
             await api('/v1/alerts/rules', { method: 'POST', body: JSON.stringify({ name: f.name, kind: f.kind, itemId: f.itemId, threshold: f.threshold === '' ? null : Number(f.threshold), repeatHours: Number(f.repeatHours) || 24, recipients: [parse(f.to)] }) });
@@ -103,8 +103,8 @@ export function AlertsPage() {
       )}
 
       <h2 className="related">{tr('Rules')}</h2>
-      <p className="muted small">{tr('What you are told about, and who is told. Each rule is checked every five minutes against the current stock, batches and invoices.')}</p>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Rule')}</th><th>{tr('When')}</th><th>{tr('Who is told')}</th><th>{tr('Repeat after')}</th><th>{tr('Fired')}</th><th>{tr('State')}</th><th></th></tr></thead><tbody>
+      <p className="muted small">{tr('Each rule is evaluated every five minutes against current stock, batches and invoices.')}</p>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Rule')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Recipients')}</th><th scope="col">{tr('Repeat interval')}</th><th scope="col">{tr('Times triggered')}</th><th scope="col">{tr('State')}</th><th scope="col"></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
             <td>{ruleText(r)}</td>
@@ -113,7 +113,7 @@ export function AlertsPage() {
             <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? tr('On') : tr('Off')} /></td>
             <td>{canManage && <span className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/enabled`, { method: 'POST', body: JSON.stringify({ enabled: !r.enabled }) }); return `${r.name}: ${r.enabled ? 'off' : 'on'}.`; }, reloadAll)}>{r.enabled ? tr('Turn off') : tr('Turn on')}</Button>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>{tr('Send me a test')}</Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/test`, { method: 'POST' }); return 'A test message was sent to you (see Messages).'; }, () => undefined)}>{tr('Send test')}</Button>
               <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/alerts/rules/${r.id}/retire`, { method: 'POST' }); return trf('{name} removed (kept in the history).', { name: r.name }); }, reloadAll)}>{tr('Remove')}</Button>
             </span>}</td></tr>
         ))}
@@ -121,7 +121,7 @@ export function AlertsPage() {
       </tbody></table></div>
 
       <h2 className="related">{tr('Teams')}</h2>
-      <p className="muted small">{tr('A team is a named group (Purchasing, Warehouse, Management) so a rule can say "tell Purchasing". Whoever buys stock belongs in Purchasing.')}</p>
+      <p className="muted small">{tr('Teams group recipients (for example Purchasing, Warehouse, Management) so a rule can notify a whole team.')}</p>
       {teams.data.length === 0 && canManage && <Button variant="outline" disabled={busy} onClick={() => run(async () => { await api('/v1/alerts/defaults', { method: 'POST' }); return 'Purchasing, Warehouse and Management teams created.'; }, reloadAll)}>{tr('Create the standard teams')}</Button>}
       {teams.data.map((t) => (
         <div key={t.id} className="form-card stack">

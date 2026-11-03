@@ -50,6 +50,10 @@ td .confirm-row, .row-actions .confirm-row { white-space: normal; max-width: 19r
 /* Record numbers never break across lines ("OUT-" / "0372"). */
 td code, td .nowrap { white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* Skip link: off screen until a keyboard user tabs to it, then shown at the top start corner. */
+.skip-link { position: absolute; inset-block-start: -100px; inset-inline-start: 0.75rem; z-index: 100; padding: 0.55rem 0.9rem; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-weight: 600; text-decoration: none; }
+.skip-link:focus { inset-block-start: 0.5rem; }
+main.content:focus { outline: none; }
 
 /* ---- controls ----
    Plain element styles live in the `base` layer (order declared in theme.css), so the Button component's variants, which are
@@ -372,26 +376,26 @@ td input { margin-top: 0; }
 .form-row.three { grid-template-columns: 2fr 1fr 1fr; }
 .steps.wide { max-width: 760px; }
 @media (max-width: 720px) { .form-row.three { grid-template-columns: 1fr; } }
-/* Phones: every shared list (ListView) becomes a stack of cards instead of a table that scrolls sideways. Each cell shows its
+/* Phones: every table becomes a stack of cards instead of scrolling sideways. Each cell shows its
    column name (data-label) at the start and its value at the end; the first cell (the record's number or name) is the card's title.
-   Logical properties only, so it reads correctly in Arabic. Hand-built tables keep scrolling for now. */
+   Labels come from ListView, or from components/TableLabels.tsx for the other tables. Logical properties only (RTL-safe). */
 @media (max-width: 720px) {
-  .list-view .table-wrap { overflow: visible; background: none; border: 0; box-shadow: none; }
-  .list-view table, .list-view tbody, .list-view tr, .list-view td { display: block; width: 100%; }
-  .list-view thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .list-view tbody tr {
+  .table-wrap { overflow: visible; background: none; border: 0; box-shadow: none; }
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .table-wrap tbody tr {
     margin-block-end: 0.7rem; padding: 0.35rem 0.9rem; background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
   }
-  .list-view tbody td { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); text-align: end; }
-  .list-view tbody td:last-child { border-bottom: 0; }
-  .list-view tbody td::before { content: attr(data-label); flex: none; text-align: start; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); }
-  .list-view tbody td[data-label='']::before { content: none; }
-  .list-view tbody td:first-child { font-size: 1rem; font-weight: 600; padding-block: 0.55rem; }
-  .list-view tbody td.empty { display: block; text-align: center; border: 0; }
-  .list-view tbody td.empty::before { content: ''; }
-  .list-view tbody tr:has(td.empty) { box-shadow: none; }
-  .list-view tbody tr.row-link:hover { background: var(--surface); border-color: var(--primary); }
+  .table-wrap tbody td { display: flow-root; padding: 0.4rem 0; border-bottom: 1px solid var(--border); text-align: end; }
+  .table-wrap tbody td:last-child { border-bottom: 0; }
+  .table-wrap tbody td::before { content: attr(data-label); float: inline-start; margin-inline-end: 1rem; text-align: start; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); }
+  .table-wrap tbody td[data-label='']::before { content: none; }
+  .table-wrap tbody td:first-child { font-size: 1rem; font-weight: 600; padding-block: 0.55rem; }
+  .table-wrap tbody td.empty { display: block; text-align: center; border: 0; }
+  .table-wrap tbody td.empty::before { content: ''; }
+  .table-wrap tbody tr:has(td.empty) { box-shadow: none; }
+  .table-wrap tbody tr.row-link:hover { background: var(--surface); border-color: var(--primary); }
   .list-toolbar .list-search { max-width: none; flex: 1 1 100%; }
   /* Summary figures two to a row, so the list starts on the first screen. */
   .stats { grid-template-columns: 1fr 1fr; gap: 0.6rem; }

@@ -209,7 +209,7 @@ export function UsersSettings() {
   return (
     <section className="page">
       <h1>{tr('Users')}</h1>
-      <p className="muted">{trf('Who can sign in to {org}, and what they can do.', { org: session.org?.name ?? '' })}</p>
+      <p className="muted">{trf('Users of {org} and their roles.', { org: session.org?.name ?? '' })}</p>
 
       {link && <InviteLinkBox email={link.email} link={link.link} onClose={() => setLink(null)} />}
       {inviting && !link && (
@@ -234,7 +234,7 @@ export function UsersSettings() {
 
       {canManage && (invitations.data?.length ?? 0) > 0 && (
         <div className="form-card stack">
-          <strong>{tr('Waiting to accept')}</strong>
+          <strong>{tr('Pending invitations')}</strong>
           {invitations.data?.map((i) => (
             <div key={i.id} className="copy-row">
               <span>

@@ -58,7 +58,7 @@ const INVENTORY_APP: AppDef = {
   key: 'inventory',
   module: 'inventory',
   name: 'Inventory',
-  description: demoMode ? 'Stock, requests, approvals and the ledger (demo data)' : 'Stock, requests, approvals and the ledger',
+  description: demoMode ? 'Stock, requests, approvals and the ledger (demo data)' : 'Stock, requests, approvals, transfers and the stock ledger',
   suite: 'Warehouse',
   basePath: '/inventory',
   pages: [
@@ -82,7 +82,7 @@ const PURCHASING_APP: AppDef = {
   key: 'purchasing',
   module: 'purchasing',
   name: 'Purchasing',
-  description: demoMode ? 'Suppliers and purchase orders; receiving adds stock (demo data)' : 'Suppliers, purchase orders and receiving goods into stock',
+  description: demoMode ? 'Suppliers and purchase orders; receiving adds stock (demo data)' : 'Suppliers, purchase orders, goods receipt and purchase invoices',
   suite: 'Sales & Purchasing',
   basePath: '/purchasing',
   pages: [
@@ -91,8 +91,8 @@ const PURCHASING_APP: AppDef = {
     { path: '/orders/new', label: 'New purchase order', component: NewPurchaseOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Purchase order', component: PurchaseOrderPage, nav: false, parent: '' },
     { path: '/suppliers', label: 'Suppliers', component: Suppliers },
-    { path: '/invoices', label: 'Supplier invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
-    { path: '/invoices/:id', label: 'Supplier invoice', permission: 'purchasing.invoices.read', component: SupplierInvoicePage, nav: false, parent: '/invoices' },
+    { path: '/invoices', label: 'Purchase invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
+    { path: '/invoices/:id', label: 'Purchase invoice', permission: 'purchasing.invoices.read', component: SupplierInvoicePage, nav: false, parent: '/invoices' },
   ],
 };
 
@@ -113,14 +113,14 @@ const DEMO_SALES_APP: AppDef = {
 };
 
 const SALES_APP: AppDef = {
-  key: 'sales', module: 'sales', name: 'Sales', description: 'Customer orders fulfilled through approved warehouse stock requests',
+  key: 'sales', module: 'sales', name: 'Sales', description: 'Sales orders, invoicing and customers',
   suite: 'Sales & Purchasing', basePath: '/sales', pages: [
     { path: '', label: 'Sales orders', permission: 'sales.orders.read', component: SalesOrders },
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
-    { path: '/invoices', label: 'Customer invoices', permission: 'sales.invoices.read', component: CustomerInvoices },
-    { path: '/invoices/:id', label: 'Customer invoice', permission: 'sales.invoices.read', component: CustomerInvoicePage, nav: false, parent: '/invoices' },
+    { path: '/invoices', label: 'Sales invoices', permission: 'sales.invoices.read', component: CustomerInvoices },
+    { path: '/invoices/:id', label: 'Sales invoice', permission: 'sales.invoices.read', component: CustomerInvoicePage, nav: false, parent: '/invoices' },
   ],
 };
 
@@ -129,7 +129,7 @@ const TASKS_APP: AppDef = {
   key: 'tasks',
   module: 'tasks',
   name: 'Tasks',
-  description: 'Assign work with a due time and follow it up',
+  description: 'Task assignment, due dates and follow-up',
   suite: 'Warehouse',
   basePath: '/tasks',
   pages: [
@@ -142,7 +142,7 @@ const MESSAGING_APP: AppDef = {
   key: 'messaging',
   module: 'messaging',
   name: 'Messages',
-  description: 'Notifications, and delivery status for managers',
+  description: 'Notifications and message delivery status',
   suite: 'Warehouse',
   basePath: '/messaging',
   pages: [
@@ -159,27 +159,27 @@ export const APPS: AppDef[] = [
   ...(demoMode ? [DEMO_SALES_APP] : [SALES_APP]),
   // Real API only (no sample-data version). Owner and admin only.
   ...(demoMode ? [] : [{
-    key: 'finance', module: 'finance', name: 'Finance', description: 'Expenses and payments: money in, money out',
+    key: 'finance', module: 'finance', name: 'Finance', description: 'Expenses, payments and profit and loss',
     suite: 'Finance', basePath: '/finance', pages: [
       { path: '', label: 'Expenses', permission: 'finance.reports.view', component: ExpensesPage },
       { path: '/expenses/:id', label: 'Expense', permission: 'finance.reports.view', component: ExpensePage, nav: false, parent: '' },
-      { path: '/overview', label: 'Profit overview', permission: 'finance.reports.view', component: ProfitOverviewPage },
+      { path: '/overview', label: 'Profit and loss', permission: 'finance.reports.view', component: ProfitOverviewPage },
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
     ],
   } satisfies AppDef]),
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.
   ...(demoMode ? [] : [{
-    key: 'start', module: 'core', name: 'Getting started', description: 'A short guide to setting up and running your company',
+    key: 'start', module: 'core', name: 'Getting started', description: 'Setup checklist for a new company',
     suite: 'Core', basePath: '/start', visible: (s: SessionInfo) => s.org?.showTutorial === true, pages: [
       { path: '', label: 'Tutorial', component: GettingStartedPage },
     ],
   } satisfies AppDef]),
   // Alert rules and teams (sql/028). Real API only. Owner and admin only.
   ...(demoMode ? [] : [{
-    key: 'alerts', module: 'alerts', name: 'Alerts', description: 'Tell the right people when stock runs low, a batch expires or money is late',
+    key: 'alerts', module: 'alerts', name: 'Alerts', description: 'Alerts for low stock, expiring batches and overdue receivables',
     suite: 'Warehouse', basePath: '/alerts', pages: [
-      { path: '', label: 'Rules and teams', permission: 'alerts.rules.view', component: AlertsPage },
+      { path: '', label: 'Alert rules', permission: 'alerts.rules.view', component: AlertsPage },
     ],
   } satisfies AppDef]),
   // The guide: shown in every organization, including the sample companies (unlike the getting-started tutorial).
@@ -187,7 +187,7 @@ export const APPS: AppDef[] = [
     key: 'guide',
     module: 'core',
     name: 'Guide',
-    description: 'How to find your way around, a five-step tour, and what is not ready yet',
+    description: 'User guide and guided tour',
     suite: 'Core',
     basePath: '/guide',
     pages: [{ path: '', label: 'Guide', component: GuidePage }],

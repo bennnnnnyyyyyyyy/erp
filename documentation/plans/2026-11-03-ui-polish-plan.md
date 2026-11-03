@@ -55,6 +55,12 @@ Each round is frontend only unless stated, ends with typecheck, tests, a build, 
 - A real Arabic pass by a native speaker of every screen (the texts are a machine draft); numbers and dates in Arabic mode.
 - Keyboard pass: focus order, visible focus on rows, skip link.
 
+### Round 5: ERP terminology and finishing (done 2026-11-03)
+- 145 texts moved from everyday wording to standard ERP terms (English and Arabic), Guide and tour included; every table a card on
+  phones (`TableLabels`); skip link; `scope="col"` on all table headers. See the WORKLOG.
+- Left on purpose: a shared `PageHeader` / `Field` component refactor (the pages already look consistent after rounds 1 to 3; the
+  refactor is internal and touches all 48 pages) and the native Arabic review (needs a person).
+
 ### Not in these rounds
 - Pagination of long lists (API change, touches every list; separate plan).
 - Bundle splitting (750 kB single file), a second theme, branding per customer.

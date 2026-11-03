@@ -35,7 +35,7 @@ export function SupplierInvoices(){
   const itemName=(id:string)=>{const i=items.data?.find(v=>v.id===id);return i?`${i.sku} · ${i.name}`:id};
   async function submit(){
     if(!summary)return;setBusy(true);setMessage(null);
-    try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId])}))})});setMessage({ok:true,text:tr('Supplier invoice recorded.')});setOrderId('');setNumber('');setQuantities({});summaries.reload();invoices.reload();}
+    try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId])}))})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});summaries.reload();invoices.reload();}
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
   if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading /></section>;
@@ -43,26 +43,26 @@ export function SupplierInvoices(){
   const toBill=billingRows.filter(r=>r.billed<r.received);
   const shownBilling=showAll?billingRows:toBill;
   return <section className="page">
-    <h1>{tr('Supplier invoices')}</h1><p className="muted">{tr('Record supplier bills against received purchase orders and track billed quantities.')}</p>
+    <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Supplier invoices matched against received purchase orders.')}</p>
     {message&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
     {session.role!=='viewer'&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
         <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
-        <label>{tr('Supplier invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
+        <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>
-      {summary&&<><div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Received')}</th><th className="right">{tr('Already billed')}</th><th>{tr('Billed on this invoice')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td></tr>)}</tbody></table></div><Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record supplier invoice')}</Button></>}
+      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td></tr>)}</tbody></table></div><Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button></>}
     </FormToggle>}
-    <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Supplier')}</th><th>{tr('Purchase order')}</th><th>{tr('Date recorded')}</th><th className="right">{tr('Amount')}</th></tr></thead><tbody>
+    <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Purchase order')}</th><th scope="col">{tr('Date recorded')}</th><th scope="col" className="right">{tr('Amount')}</th></tr></thead><tbody>
       {invoices.data.map(i=><ClickRow key={i.id} to={`/purchasing/invoices/${i.id}`}><td><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{supplierName(i.supplierId)}</td><td><Link to={`/purchasing/orders/${i.orderId}`}><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??'—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></ClickRow>)}
-      {!invoices.data.length&&<tr><td colSpan={5} className="muted empty">{tr('No supplier invoices recorded yet.')}</td></tr>}
+      {!invoices.data.length&&<tr><td colSpan={5} className="muted empty">{tr('No purchase invoices yet.')}</td></tr>}
     </tbody></table></div>
     {/* Billing progress: only orders not yet fully billed, unless the person asks for all (most received orders are fully billed). */}
     <div className="section-head">
-      <h2 className="related">{showAll?tr('Received orders and billing progress'):tr('Received orders still to bill')} <span className="muted small">({shownBilling.length})</span></h2>
+      <h2 className="related">{showAll?tr('Received orders and billing progress'):tr('Received orders to bill')} <span className="muted small">({shownBilling.length})</span></h2>
       {billingRows.length>toBill.length&&<Button variant="ghost" size="sm" onClick={()=>setShowAll(!showAll)}>{showAll?tr('Only orders that need attention'):trf('Show all {count} orders',{count:billingRows.length})}</Button>}
     </div>
-    <div className="table-wrap"><table><thead><tr><th>{tr('Purchase order')}</th><th>{tr('Supplier')}</th><th className="right">{tr('Received value')}</th><th className="right">{tr('Billed value')}</th><th className="right">{tr('Remaining')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+    <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Purchase order')}</th><th scope="col">{tr('Supplier')}</th><th scope="col" className="right">{tr('Received value')}</th><th scope="col" className="right">{tr('Billed value')}</th><th scope="col" className="right">{tr('Unbilled')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
       {shownBilling.map(({o,received,billed})=><ClickRow key={o.orderId} to={`/purchasing/orders/${o.orderId}`}><td><Link to={`/purchasing/orders/${o.orderId}`}><code>{o.number}</code></Link></td><td>{supplierName(o.supplierId)}</td><td className="right">{money(received,o.currency)}</td><td className="right">{money(billed,o.currency)}</td><td className="right">{money(received-billed,o.currency)}</td><td><Pill status={billed===0?'ordered':billed>=received?'received':'submitted'} label={billed===0?tr('Not billed'):billed>=received?tr('Fully billed'):tr('Part billed')} /></td></ClickRow>)}
       {!shownBilling.length&&<tr><td colSpan={6} className="muted empty">{summaries.data.length?tr('Every received order is fully billed.'):tr('No received purchase orders to bill yet.')}</td></tr>}
     </tbody></table></div>
@@ -81,7 +81,7 @@ export function SupplierInvoicePage() {
   if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
   if (!invoices.data || !summaries.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoices.data.find((i) => i.id === id);
-  if (!inv) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Supplier invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
+  if (!inv) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
   const order = summaries.data.find((o) => o.orderId === inv.orderId);
   const supplier = suppliers.data.find((s) => s.id === inv.supplierId)?.name ?? '—';
   const itemOf = (orderLineId: string) => {
@@ -92,7 +92,7 @@ export function SupplierInvoicePage() {
 
   return (
     <section className="page">
-      <Link to="/purchasing/invoices" className="back-link">{tr('← Supplier invoices')}</Link>
+      <Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link>
       <div className="page-head"><h1 className="mono">{inv.number}</h1></div>
       <dl className="facts">
         <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>
@@ -102,7 +102,7 @@ export function SupplierInvoicePage() {
         <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
       </dl>
       <div className="table-wrap"><table>
-        <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th><th className="right">{tr('Unit cost')}</th><th className="right">{tr('Line total')}</th></tr></thead>
+        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{tr('Line total')}</th></tr></thead>
         <tbody>
           {inv.lines.map((l) => (
             <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.qty * l.unitCostMinor, inv.currency)}</td></tr>

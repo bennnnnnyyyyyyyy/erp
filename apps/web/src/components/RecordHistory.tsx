@@ -23,7 +23,7 @@ export function RecordHistory({ id }: { id: string }) {
       <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('User')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
           <tbody>
             {rows.map((e) => (
               <tr key={e.id}>

@@ -40,8 +40,8 @@ export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'c
   const left = totalMinor - paid;
   return (
     <>
-      <h2 className="related">{tr('Payments')} <span className="muted small">{left > 0 ? trf('{paid} paid · {left} still owed', { paid: money(paid, currency), left: money(left, currency) }) : paid > 0 ? tr('Paid in full') : ''}</span></h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+      <h2 className="related">{tr('Payments')} <span className="muted small">{left > 0 ? trf('{paid} paid · {left} outstanding', { paid: money(paid, currency), left: money(left, currency) }) : paid > 0 ? tr('Paid in full') : ''}</span></h2>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Method')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {rows.map((p) => (
           <ClickRow key={p.id} to={`/finance/payments/${p.id}`}>
             <td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td>{formatDay(p.paidOn, session.org)}</td><td>{tr(p.method)}</td>
@@ -90,9 +90,9 @@ export function PaymentPage() {
   const si = p.supplierInvoiceId ? supplierInvoices.data?.find((i) => i.id === p.supplierInvoiceId) : undefined;
   const ex = p.expenseId ? expenses.data?.find((e) => e.id === p.expenseId) : undefined;
   const target = p.customerInvoiceId
-    ? <Link to={`/sales/invoices/${p.customerInvoiceId}`}><code>{ci?.number ?? tr('Customer invoice')}</code></Link>
+    ? <Link to={`/sales/invoices/${p.customerInvoiceId}`}><code>{ci?.number ?? tr('Sales invoice')}</code></Link>
     : p.supplierInvoiceId
-      ? <Link to={`/purchasing/invoices/${p.supplierInvoiceId}`}><code>{si?.number ?? tr('Supplier invoice')}</code></Link>
+      ? <Link to={`/purchasing/invoices/${p.supplierInvoiceId}`}><code>{si?.number ?? tr('Purchase invoice')}</code></Link>
       : p.expenseId ? <Link to={`/finance/expenses/${p.expenseId}`}><code>{ex?.number ?? tr('Expense')}</code></Link> : '—';
   const party = ci ? name(customers.data, ci.customerId) : si ? name(suppliers.data, si.supplierId) : ex?.supplierId ? name(suppliers.data, ex.supplierId) : '';
   const canVoid = p.status === 'recorded' && hasPermission(session.permissions, 'finance.entries.manage');
@@ -102,7 +102,7 @@ export function PaymentPage() {
       <Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link>
       <div className="page-head">
         <h1 className="mono">{p.number}</h1>
-        <Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Money received') : tr('Money paid out')} />
+        <Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Customer receipt') : tr('Payment to supplier or expense')} />
         <PaymentStatus status={p.status} />
       </div>
       {voiding.message && <p className={voiding.message.ok ? 'notice' : 'error notice'}>{voiding.message.text}</p>}

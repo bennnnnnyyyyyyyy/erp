@@ -38,7 +38,7 @@ export function NotificationsPage() {
   return (
     <section className="page">
       <h1>{tr('Notifications')}</h1>
-      <p className="muted">{tr('Messages sent to you. Opening one takes you to the request or task; deciding still happens there.')}</p>
+      <p className="muted">{tr('Your notifications. Each one opens the related request or task.')}</p>
       {markError && <p className="error notice">{markError}</p>}
       {inbox.data ? (
         <ListView
@@ -90,13 +90,13 @@ export function OutboxPage() {
     { key: 'subject', label: tr('Message'), value: (m) => m.subject, render: (m) => (<>{m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>) },
     { key: 'channel', label: tr('Channel'), value: (m) => m.channel },
     { key: 'status', label: tr('Status'), value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{m.status}</span> },
-    { key: 'attempts', label: tr('Tries'), value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
+    { key: 'attempts', label: tr('Attempts'), value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
   ];
 
   return (
     <section className="page wide">
       <h1>{tr('Message outbox')}</h1>
-      <p className="muted">{tr('Every message the system sent, and whether it arrived.')}</p>
+      <p className="muted">{tr('Outgoing messages and their delivery status.')}</p>
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
       {outbox.data ? (
         <ListView

@@ -57,7 +57,7 @@ export function ExpensesPage() {
   return (
     <section className="page wide">
       <h1>{tr('Expenses')}</h1>
-      <p className="muted">{tr('Running costs that are not stock, such as rent, salaries and transport.')}</p>
+      <p className="muted">{tr('Operating expenses such as rent, salaries, utilities and transport.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       <FormToggle label={tr('Record an expense')}>
@@ -92,7 +92,7 @@ export function ExpensesPage() {
       </FormToggle>
 
       <h2 className="related">{tr('Recorded expenses')} <span className="muted small">{trf('(total {amount})', { amount: money(total, currency) })}</span></h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Category')}</th><th>{tr('Supplier')}</th><th>{tr('Note')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Category')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Note')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {expenses.data.map((e) => (
           <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td className="nowrap">{formatDay(e.date, session.org)}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
             <td><Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
@@ -142,13 +142,13 @@ export function PaymentsPage() {
   const targets = direction === 'in'
     ? customerInvoices.data.filter((i) => i.status === 'issued').map((i) => ({ value: `c:${i.id}`, label: `${i.number} · ${name(customers.data, i.customerId)}`, left: i.totalMinor - paid('customerInvoiceId', i.id), currency: i.currency }))
     : [
-        ...supplierInvoices.data.map((i) => ({ value: `s:${i.id}`, label: `${trf('Supplier invoice {number}', { number: i.number })} · ${name(suppliers.data, i.supplierId)}`, left: i.totalMinor - paid('supplierInvoiceId', i.id), currency: i.currency })),
+        ...supplierInvoices.data.map((i) => ({ value: `s:${i.id}`, label: `${trf('Purchase invoice {number}', { number: i.number })} · ${name(suppliers.data, i.supplierId)}`, left: i.totalMinor - paid('supplierInvoiceId', i.id), currency: i.currency })),
         ...expenses.data.filter((e) => e.status === 'recorded').map((e) => ({ value: `e:${e.id}`, label: trf('Expense {number}', { number: e.number }), left: e.amountMinor - paid('expenseId', e.id), currency: e.currency })),
       ];
   const open = targets.filter((t) => t.left > 0);
   const chosen = open.find((t) => t.value === target);
   const label = (p: Payment) => p.customerInvoiceId ? customerInvoices.data?.find((i) => i.id === p.customerInvoiceId)?.number ?? 'Invoice'
-    : p.supplierInvoiceId ? trf('Supplier invoice {number}', { number: supplierInvoices.data?.find((i) => i.id === p.supplierInvoiceId)?.number ?? '' })
+    : p.supplierInvoiceId ? trf('Purchase invoice {number}', { number: supplierInvoices.data?.find((i) => i.id === p.supplierInvoiceId)?.number ?? '' })
     : trf('Expense {number}', { number: expenses.data?.find((e) => e.id === p.expenseId)?.number ?? '' });
   const targetPath = (p: Payment) => p.customerInvoiceId ? `/sales/invoices/${p.customerInvoiceId}` : p.supplierInvoiceId ? `/purchasing/invoices/${p.supplierInvoiceId}` : `/finance/expenses/${p.expenseId}`;
   const currency = session.org?.defaultCurrency ?? 'EGP';
@@ -156,21 +156,21 @@ export function PaymentsPage() {
   return (
     <section className="page wide">
       <h1>{tr('Payments')}</h1>
-      <p className="muted">{tr('Money in from customers, and money out to suppliers and for expenses.')}</p>
+      <p className="muted">{tr('Customer receipts, and payments to suppliers and for expenses.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       <FormToggle label={tr('Record a payment')} open={formOpen} onOpenChange={setFormOpen}>
         <div className="form-row">
-          <label>{tr('Direction')}
+          <label>{tr('Payment type')}
             <select value={direction} onChange={(e) => { setDirection(e.target.value as 'in' | 'out'); setTarget(''); }}>
-              <option value="in">{tr('Money received from a customer')}</option>
-              <option value="out">{tr('Money paid out')}</option>
+              <option value="in">{tr('Customer receipt')}</option>
+              <option value="out">{tr('Payment to supplier or expense')}</option>
             </select>
           </label>
           <label>{tr('For')}
             <select value={target} onChange={(e) => { setTarget(e.target.value); const t = open.find((x) => x.value === e.target.value); if (t) setAmount((t.left / 100).toFixed(2)); }}>
               <option value="">{tr('Choose…')}</option>
-              {open.map((t) => <option key={t.value} value={t.value}>{t.label} {tr('· owed')} {money(t.left, t.currency)}</option>)}
+              {open.map((t) => <option key={t.value} value={t.value}>{t.label} {tr('· outstanding')} {money(t.left, t.currency)}</option>)}
             </select>
           </label>
           <label>{tr('Amount')}<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
@@ -188,11 +188,11 @@ export function PaymentsPage() {
           }) });
           return trf('Payment {number} recorded.', { number: made.number });
         }, () => { setTarget(''); setAmount(''); setNote(''); payments.reload(); })}>{busy ? tr('Saving…') : tr('Record payment')}</Button>
-        {chosen && toMinor(amount) > chosen.left && <span className="error small"> {trf('More than the {amount} still owed.', { amount: money(chosen.left, chosen.currency) })}</span>}</div>
+        {chosen && toMinor(amount) > chosen.left && <span className="error small"> {trf('Exceeds the outstanding balance of {amount}.', { amount: money(chosen.left, chosen.currency) })}</span>}</div>
       </FormToggle>
 
       <h2 className="related">{tr('Payments')}</h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Direction')}</th><th>{tr('For')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Payment type')}</th><th scope="col">{tr('For')}</th><th scope="col">{tr('Method')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {payments.data.map((p) => (
           <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td className="nowrap">{formatDay(p.paidOn, session.org)}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td>

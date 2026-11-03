@@ -35,7 +35,7 @@ export function AuditLog() {
     },
     {
       key: 'who',
-      label: tr('Who'),
+      label: tr('User'),
       value: (e) => {
         if (!e.actor_user_id) return 'System';
         const name = who(e.actor_user_id);
@@ -50,7 +50,7 @@ export function AuditLog() {
   return (
     <section className="page">
       <h1>{tr('Audit log')}</h1>
-      <p className="muted">{trf('Every change made in {org}, newest first. Entries can\'t be edited or deleted.', { org: session.org?.name ?? '' })}</p>
+      <p className="muted">{trf('Append-only record of every change in {org}, newest first. Entries cannot be edited or deleted.', { org: session.org?.name ?? '' })}</p>
       {entries.error && <p className="error">{entries.error}</p>}
       {entries.data ? (
         <ListView title={tr('Audit log')} rows={entries.data} columns={columns} rowKey={(e) => String(e.id)} empty={tr('No activity yet.')} />

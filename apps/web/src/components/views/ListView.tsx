@@ -102,7 +102,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
                   </button>
                 </th>
               ))}
-              {actions && <th aria-label={tr('Actions')} />}
+              {actions && <th scope="col" aria-label={tr('Actions')} />}
             </tr>
           </thead>
           <tbody>

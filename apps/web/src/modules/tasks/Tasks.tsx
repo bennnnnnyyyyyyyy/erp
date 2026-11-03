@@ -20,7 +20,7 @@ type Task = {
   status: 'open' | 'in_progress' | 'done' | 'cancelled'; completedAt: string | null; createdAt: string;
 };
 
-const STATUS_LABEL: Record<Task['status'], string> = { open: 'To do', in_progress: 'Acknowledged', done: 'Done', cancelled: 'Cancelled' };
+const STATUS_LABEL: Record<Task['status'], string> = { open: 'Open', in_progress: 'Acknowledged', done: 'Done', cancelled: 'Cancelled' };
 
 function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose: () => void; onDone: () => void }) {
   const choices = members.filter((m) => m.status !== 'disabled');
@@ -45,7 +45,7 @@ function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose
   return (
     <Modal title={tr('New task')} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
-        <label>{tr('What needs doing')}<input required value={form.title} onChange={set('title')} placeholder={tr('Count aisle 4')} /></label>
+        <label>{tr('Task')}<input required value={form.title} onChange={set('title')} placeholder={tr('Count aisle 4')} /></label>
         <div className="form-row">
           <label>
             {tr('For')}
@@ -101,7 +101,7 @@ export function TasksPage() {
   return (
     <section className="page">
       <h1>{tr('Tasks')}</h1>
-      <p className="muted">{tr('Work assigned to people, with a due time and reminders.')}</p>
+      <p className="muted">{tr('Assigned tasks with due dates, reminders and escalation.')}</p>
       {error && <p className="error notice">{error}</p>}
       {tasks.data && members.data ? (
         <ListView
@@ -205,7 +205,7 @@ export function TaskPage() {
       <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('User')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}>

@@ -47,7 +47,7 @@ export function SalesOrders() {
   return (
     <section className="page">
       <h1>{tr('Sales orders')}</h1>
-      <p className="muted">{tr('What customers have ordered. Shipping goes through a stock request that a manager approves.')}</p>
+      <p className="muted">{tr('Customer orders. Goods are issued through a manager-approved stock request.')}</p>
       {orders.data && customers.data && cat.ready ? (
         <ListView
           title={tr('Sales orders')}
@@ -69,7 +69,7 @@ export function NewSalesOrder() {
   return (
     <NewOrderForm
       title={tr('New sales order')}
-      intro={tr('Record what a customer ordered. Stock is not touched until you request it from the warehouse.')}
+      intro={tr('Stock is reserved only when a stock request is raised for the order.')}
       partyLabel="Customer"
       partyEndpoint="/v1/sales/customers"
       orderEndpoint="/v1/sales/orders"
@@ -84,7 +84,7 @@ export function NewSalesOrder() {
 }
 
 const STEPS: { key: SOStatus[]; label: string }[] = [
-  { key: ['open'], label: 'Order taken' },
+  { key: ['open'], label: 'Order placed' },
   { key: ['stock_requested'], label: 'Stock requested' },
   { key: ['approved'], label: 'Approved' },
   { key: ['delivered'], label: 'Delivered' },
@@ -154,7 +154,7 @@ export function SalesOrderPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th><th className="right">{tr('Unit price')}</th><th className="right">{tr('Line total')}</th></tr>
+            <tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit price')}</th><th scope="col" className="right">{tr('Line total')}</th></tr>
           </thead>
           <tbody>
             {o.lines.map((l, i) => (
@@ -192,7 +192,7 @@ export function SalesOrderPage() {
       <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('When')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}><td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td><td><code>{a.action}</code></td><td>{a.summary}</td></tr>

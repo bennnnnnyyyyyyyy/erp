@@ -76,11 +76,11 @@ export function TransfersList() {
   return (
     <section className="page wide">
       <h1>{tr('Stock transfers')}</h1>
-      <p className="muted">{tr('Move stock between warehouses, with a manager approving first.')}</p>
+      <p className="muted">{tr('Inter-warehouse transfers, approved before dispatch.')}</p>
       {transit.data && transit.data.length > 0 && (
         <div className="form-card stack">
           <strong>{tr('In transit now')}</strong>
-          <p className="muted small">{tr('Dispatched and not yet received. This stock belongs to no warehouse, so nobody can sell it meanwhile.')}</p>
+          <p className="muted small">{tr('Dispatched, not yet received. Stock in transit is not available in any warehouse.')}</p>
           <ul className="plain-list">
             {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {r.uom} {trf(r.transfers === 1 ? 'in {n} transfer' : 'in {n} transfers', { n: r.transfers })}</li>)}
           </ul>
@@ -152,7 +152,7 @@ export function NewTransfer() {
     <section className="page">
       <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
       <h1>{tr('New transfer')}</h1>
-      <p className="muted">{tr('The stock is held at the source until a manager approves.')}</p>
+      <p className="muted">{tr('Quantities are reserved at the source warehouse until approval.')}</p>
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
@@ -234,7 +234,7 @@ export function TransferPage() {
 
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th></tr></thead>
           <tbody>{t.lines.map((l, i) => <tr key={i}><td>{cat.itemName(l.itemId)}</td><td className="right">{l.qty}</td></tr>)}</tbody>
         </table>
       </div>
@@ -245,7 +245,7 @@ export function TransferPage() {
           <p className="muted small">{tr('The first batches to expire go first. The destination receives the same batches with the same expiry dates.')}</p>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>{tr('Item')}</th><th>{tr('Batch')}</th><th>{tr('Expires')}</th><th className="right">{tr('Quantity')}</th></tr></thead>
+              <thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Batch')}</th><th scope="col">{tr('Expires')}</th><th scope="col" className="right">{tr('Quantity')}</th></tr></thead>
               <tbody>{t.batches.map((b) => <tr key={b.batchId}><td>{cat.itemName(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{b.expiryDate ?? tr('No expiry')}</td><td className="right">{b.qty}</td></tr>)}</tbody>
             </table>
           </div>
@@ -257,7 +257,7 @@ export function TransferPage() {
           <h2 className="related">{tr('Approvals')}</h2>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>{tr('Who')}</th><th>{tr('Decision')}</th><th>{tr('Via')}</th><th>{tr('When')}</th><th>{tr('Comment')}</th></tr></thead>
+              <thead><tr><th scope="col">{tr('User')}</th><th scope="col">{tr('Decision')}</th><th scope="col">{tr('Via')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Comment')}</th></tr></thead>
               <tbody>{t.approvals.map((a, i) => <tr key={i}><td>{who(a.approverId)}</td><td>{a.decision}</td><td>{a.channel}</td><td className="nowrap">{formatDateTime(a.decidedAt, session.org)}</td><td>{a.comment ?? ''}</td></tr>)}</tbody>
             </table>
           </div>
@@ -286,14 +286,14 @@ export function TransferPage() {
           <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Transfer cancelled. The reserved stock was released.')}>{tr('Cancel transfer')}</Button>
         )}
       </div>
-      {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">{tr('Approved. Waiting for the source warehouse to dispatch it.')}</p>}
-      {t.status === 'dispatched' && !can('inventory.transfers.receive') && <p className="notice">{tr('In transit. Waiting for the destination warehouse to receive it.')}</p>}
+      {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">{tr('Approved. Awaiting dispatch from the source warehouse.')}</p>}
+      {t.status === 'dispatched' && !can('inventory.transfers.receive') && <p className="notice">{tr('In transit. Awaiting receipt at the destination warehouse.')}</p>}
 
       <h2 className="related">{tr('History')}</h2>
       <p className="muted small">{tr('Written by the system in the same step as each change.')}</p>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('User')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}>

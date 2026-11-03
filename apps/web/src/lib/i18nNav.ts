@@ -1,7 +1,6 @@
 // Arabic for the navigation layer: suite headings, app names and descriptions, page labels, the greeting and role names. The English text is
 // the key (see i18n.tsx); a missing entry shows English. MACHINE DRAFT: a native speaker must review these, and the company's own terms
 // (for example "ledger", "batch", "approval policy") should be agreed first.
-
 export const NAV_AR: Record<string, string> = {
   // suites
   Warehouse: 'المستودع',
@@ -22,18 +21,18 @@ export const NAV_AR: Record<string, string> = {
   Apps: 'التطبيقات',
 
   // app descriptions (the "(demo data)" variants are the local demo build only)
-  'Stock, requests, approvals and the ledger': 'المخزون والطلبات والموافقات وسجل الحركات',
+  'Stock, requests, approvals, transfers and the stock ledger': 'المخزون والطلبات والموافقات والتحويلات وسجل المخزون',
   'Stock, requests, approvals and the ledger (demo data)': 'المخزون والطلبات والموافقات وسجل الحركات (بيانات تجريبية)',
-  'Suppliers, purchase orders and receiving goods into stock': 'الموردون وأوامر الشراء واستلام البضاعة في المخزون',
+  'Suppliers, purchase orders, goods receipt and purchase invoices': 'الموردون وأوامر الشراء واستلام البضائع وفواتير المشتريات',
   'Suppliers and purchase orders; receiving adds stock (demo data)': 'الموردون وأوامر الشراء؛ والاستلام يزيد المخزون (بيانات تجريبية)',
   'Customers and sales orders that raise stock requests (demo data)': 'العملاء وأوامر البيع التي تنشئ طلبات مخزون (بيانات تجريبية)',
-  'Customer orders fulfilled through approved warehouse stock requests': 'طلبات العملاء تُنفَّذ عبر طلبات مخزون معتمدة من المستودع',
-  'Assign work with a due time and follow it up': 'أسند العمل بموعد استحقاق وتابعه',
-  'Notifications, and delivery status for managers': 'الإشعارات وحالة التسليم للمديرين',
-  'Expenses and payments: money in, money out': 'المصروفات والمدفوعات: ما يدخل وما يخرج',
-  'A short guide to setting up and running your company': 'دليل قصير لإعداد شركتك وإدارتها',
-  'Tell the right people when stock runs low, a batch expires or money is late': 'أبلغ الأشخاص المناسبين عند انخفاض المخزون أو انتهاء صلاحية دفعة أو تأخر الأموال',
-  'How to find your way around, a five-step tour, and what is not ready yet': 'كيف تجد طريقك، ومسار من خمس خطوات، وما ليس جاهزًا بعد',
+  'Sales orders, invoicing and customers': 'أوامر البيع والفوترة والعملاء',
+  'Task assignment, due dates and follow-up': 'إسناد المهام ومواعيد الاستحقاق والمتابعة',
+  'Notifications and message delivery status': 'الإشعارات وحالة تسليم الرسائل',
+  'Expenses, payments and profit and loss': 'المصروفات والمدفوعات والأرباح والخسائر',
+  'Setup checklist for a new company': 'قائمة إعداد شركة جديدة',
+  'Alerts for low stock, expiring batches and overdue receivables': 'تنبيهات انخفاض المخزون وانتهاء صلاحية التشغيلات والمستحقات المتأخرة',
+  'User guide and guided tour': 'دليل المستخدم والجولة الإرشادية',
   'Organization, users, apps and audit log': 'المؤسسة والمستخدمون والتطبيقات وسجل التدقيق',
 
   // pages
@@ -54,25 +53,25 @@ export const NAV_AR: Record<string, string> = {
   'New purchase order': 'أمر شراء جديد',
   'Purchase order': 'أمر شراء',
   Suppliers: 'الموردون',
-  'Supplier invoices': 'فواتير الموردين',
-  'Supplier invoice': 'فاتورة مورد',
+  'Purchase invoices': 'فواتير المشتريات',
+  'Purchase invoice': 'فاتورة مشتريات',
   'Sales orders': 'أوامر البيع',
   'New sales order': 'أمر بيع جديد',
   'Sales order': 'أمر بيع',
   Customers: 'العملاء',
-  'Customer invoices': 'فواتير العملاء',
-  'Customer invoice': 'فاتورة عميل',
+  'Sales invoices': 'فواتير المبيعات',
+  'Sales invoice': 'فاتورة مبيعات',
   Task: 'مهمة',
   Notifications: 'الإشعارات',
   'Connect WhatsApp': 'ربط واتساب',
   'Message outbox': 'صندوق الرسائل الصادرة',
   Expenses: 'المصروفات',
   Expense: 'مصروف',
-  'Profit overview': 'نظرة على الأرباح',
+  'Profit and loss': 'الأرباح والخسائر',
   Payments: 'المدفوعات',
   Payment: 'دفعة',
   Tutorial: 'الدليل التعليمي',
-  'Rules and teams': 'القواعد والفرق',
+  'Alert rules': 'قواعد التنبيه',
   General: 'عام',
   Users: 'المستخدمون',
   'Audit log': 'سجل التدقيق',

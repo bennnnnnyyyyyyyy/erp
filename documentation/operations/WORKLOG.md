@@ -11,6 +11,32 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (after round 5) — System-wide audit; last browser pop-up and untranslated strings fixed (not deployed)
+
+**Objective.** Ben: after the polish rounds, "a system wide audit of everything". Report: [`documentation/plans/2026-11-03-system-audit.md`](../plans/2026-11-03-system-audit.md) (13 findings: 3 P1, 7 P2, 3 P3).
+
+**Actions Completed.**
+- Read-only audit of the API (128 routes, guards, secret-key client), the database (54 tables in 39 migrations against the table rules, 33 SQL tests), secrets in git, dependencies (`npm audit`), CI runs, live `/health`, error handling, CORS, the web app (translations, pop-ups, bundle).
+- Fixed on the way: `core/settings/AppsSettings.tsx` (in-place confirm instead of `window.confirm`; shared `Button`; module names, suites and descriptions through `tr()`); Arabic for "Sign out", "{n} items", "Yes, switch off".
+
+**Database / System Result.** None changed. Read-only: `gh run list`, `npm audit`, `GET /health` on the live Worker.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. Main P1s for Ben: list caps make the money screens' balances wrong for older records (finding 1); 7 business tables lack named isolation tests (finding 2); the e-invoicing module state conflicts between this WORKLOG and the audit log (finding 3).
+
+## 2026-11-03 (round 5) — ERP terminology across the app; every table a card on phones; skip link and header scopes (not deployed)
+
+**Objective.** Ben: "fix all plain language across the app, this is an ERP", then finish the polish rounds ([plan](../plans/2026-11-03-ui-polish-plan.md)).
+
+**Actions Completed.**
+- Terminology: 145 texts renamed to standard ERP wording by a script that changes the screens (`tr`/`trf`/`t` calls, lookup-table literals, nav labels in `modules/registry.tsx`) and the Arabic dictionaries together (`lib/i18nScreens.ts`, `lib/i18nNav.ts`), stopping if a text is not found. Examples: Customer/Supplier invoices → Sales/Purchase invoices; Profit overview → Profit and loss; Made/Lost → Net profit/Net loss; running costs → operating expenses; cost of what you sold → COGS; who owes you → accounts receivable; still owed → outstanding; Money received from a customer → Customer receipt; Used per day / Runs out / How sure / Supplier takes / Already ordered → Avg. daily usage / Stock-out date / Confidence / Lead time / On order; Waiting for goods → Awaiting receipt; Tell me when / Who is told / Fired → Trigger / Recipients / Times triggered; All good / Keep an eye on this / Needs action → On track / Watch / Action required; 41 page intros and hints rewritten (for example "Goods are issued only against an approved request", "issued first-expiry, first-out (FEFO)", "Not statutory financial statements"). App descriptions in the launcher rewritten.
+- `modules/help/helpContent.ts` (Guide) and `modules/help/tourContent.ts` (tour): the same terms in English and Arabic; tour steps retitled (Management dashboard, Stock request, Segregation of duties, Stock ledger, Audit trail, Alert rules, User guide).
+- Phones: `components/TableLabels.tsx` labels the cells of every hand-built table from its header, so all tables (not only `ListView`) become cards under 720 px; cell content stays on one line with the label floated to the start.
+- Keyboard and screen readers: "Skip to content" link in the shell (`main#main`); `scope="col"` added to 163 table headers.
+
+**Database / System Result.** None. Frontend and docs only. Local sample build (port 5199, stopped): Purchase orders (desktop), Approval policies, Stock requests and a purchase order at 390 px.
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 30, api 117, web 42) and `vite build` pass. The Arabic for the new terms is a machine draft (accounting terms especially need a native reviewer). The demo script and walkthrough were not rewritten for the new screen names beyond the Home cards (round 4): Ben to rehearse with Sales invoices / Purchase invoices / Profit and loss.
+
 ## 2026-11-03 (round 4) — Home cards get real names; lists become cards on phones; record pages on one facts layout (not deployed)
 
 **Objective.** Ben: the Home tiles have no clear titles ("wtf is money coming in and out, that has a name"), then the next polish round ([plan](../plans/2026-11-03-ui-polish-plan.md)). Built on rounds 2 and 3 (uncommitted in main).

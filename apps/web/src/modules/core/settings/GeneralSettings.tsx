@@ -71,7 +71,7 @@ export function GeneralSettings() {
   return (
     <section className="page">
       <h1>{tr('General')}</h1>
-      <p className="muted">{tr('How your organization appears and the defaults every app uses.')}</p>
+      <p className="muted">{tr('Company profile and system-wide defaults.')}</p>
       <div className="form-card stack">
         <h2>{tr('Your language')}</h2>
         <label>

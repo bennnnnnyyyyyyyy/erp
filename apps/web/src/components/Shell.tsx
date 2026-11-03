@@ -7,6 +7,7 @@ import { useTheme } from '../lib/theme';
 import { resolveRoute, visibleApps } from '../modules/registry';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
+import { TableLabels } from './TableLabels';
 import { useSession } from '../session';
 import { FirstRunLanguage } from './LanguageChooser';
 import { NotificationBell } from './NotificationBell';
@@ -96,7 +97,10 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   return (
     <div className={route ? 'shell with-sidebar' : 'shell'}>
       <TourHost />
+      <TableLabels />
       {!demoMode && ready && !asked && <FirstRunLanguage />}
+      {/* Keyboard users jump past the top bar and the sidebar straight to the page (visible only when focused). */}
+      <a href="#main" className="skip-link">{t('Skip to content')}</a>
       <header className="topbar">
         {route && (
           <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')}>
@@ -133,7 +137,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         </nav>
       )}
 
-      <main className="content">
+      <main className="content" id="main" tabIndex={-1}>
         {atHome ? (
           <Home apps={apps} />
         ) : Page ? (

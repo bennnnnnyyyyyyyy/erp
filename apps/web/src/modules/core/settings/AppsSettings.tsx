@@ -5,6 +5,8 @@ import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 
 import { tr, trf } from '../../../lib/i18n';
+import { ConfirmButton } from '../../../components/FormToggle';
+import { Button } from '../../../components/ui/button';
 // Switch modules on or off for the organization. Data is kept when a module is switched off.
 export function AppsSettings() {
   const session = useSession();
@@ -14,8 +16,8 @@ export function AppsSettings() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Switching off is confirmed in place (ConfirmButton), not with a browser pop-up.
   async function toggle(m: ModuleStatus) {
-    if (m.enabled && !window.confirm(trf('Switch off {name}? Its data is kept, but nobody can open it until it\'s switched back on.', { name: tr(m.name) }))) return;
     setBusy(m.key);
     setError(null);
     try {
@@ -32,7 +34,7 @@ export function AppsSettings() {
   return (
     <section className="page">
       <h1>{tr('Apps')}</h1>
-      <p className="muted">{trf('Choose which apps {org} uses. Switching one off hides it but keeps its data.', { org: session.org?.name ?? '' })}</p>
+      <p className="muted">{trf('Modules enabled for {org}. Disabling a module hides it but keeps its data.', { org: session.org?.name ?? '' })}</p>
       {error && <p className="error">{error}</p>}
       {modules.error && <p className="error">{modules.error}</p>}
       <div className="app-list">
@@ -40,17 +42,17 @@ export function AppsSettings() {
           <div key={m.key} className="app-row">
             <div>
               <div className="app-name">
-                {m.name} <span className="muted small">· {m.suite}</span>
+                {tr(m.name)} <span className="muted small">· {tr(m.suite)}</span>
               </div>
-              <div className="muted small">{m.description}</div>
+              <div className="muted small">{tr(m.description)}</div>
             </div>
             <span className="spacer" />
             {m.core ? (
               <span className="muted small">{tr('Always on')}</span>
             ) : canEdit ? (
-              <button className={m.enabled ? 'secondary' : undefined} disabled={busy === m.key} onClick={() => toggle(m)}>
-                {busy === m.key ? tr('Working…') : m.enabled ? tr('Switch off') : tr('Switch on')}
-              </button>
+              m.enabled
+                ? <ConfirmButton label={busy === m.key ? tr('Working…') : tr('Switch off')} confirmLabel={tr('Yes, switch off')} question={trf('Switch off {name}? Its data is kept, but nobody can open it until it\'s switched back on.', { name: tr(m.name) })} disabled={busy === m.key} onConfirm={() => toggle(m)} />
+                : <Button disabled={busy === m.key} onClick={() => toggle(m)}>{busy === m.key ? tr('Working…') : tr('Switch on')}</Button>
             ) : (
               <span className="muted small">{m.enabled ? tr('On') : tr('Off')}</span>
             )}

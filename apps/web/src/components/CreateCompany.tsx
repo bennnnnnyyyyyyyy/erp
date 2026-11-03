@@ -46,7 +46,7 @@ export function CreateCompany({ onCreated, onCancel, first }: { onCreated: (orgI
     <main className="center">
       <form className="card stack" onSubmit={submit}>
         <h1>{first ? tr('Set up your company') : tr('Create another company')}</h1>
-        <p className="muted small">{tr('Takes a minute. You become the owner, and every app is switched on. You can change all of this later in Settings.')}</p>
+        <p className="muted small">{tr('You become the owner and every module is enabled. All of this can be changed later in Settings.')}</p>
         <label>
           {tr('Company name')}
           <input required minLength={2} maxLength={120} autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('e.g. Nile Cosmetics')} />

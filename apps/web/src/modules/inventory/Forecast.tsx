@@ -27,11 +27,11 @@ export function ForecastPage() {
   return (
     <section className="page wide">
       <h1>{tr('Stock forecast')}</h1>
-      <p className="muted">{tr('When each item is likely to run out, based on the last 90 days.')}</p>
+      <p className="muted">{tr('Projected stock-out dates from the last 90 days of usage.')}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {[
-          { label: tr('Running out within 14 days'), value: String(soon), tone: soon > 0 ? 'text-destructive-foreground' : 'text-success-foreground' },
-          { label: tr('Worth ordering now'), value: String(toOrder.length), tone: toOrder.length > 0 ? 'text-warning-foreground' : 'text-success-foreground' },
+          { label: tr('Stock-out within 14 days'), value: String(soon), tone: soon > 0 ? 'text-destructive-foreground' : 'text-success-foreground' },
+          { label: tr('Reorder suggested'), value: String(toOrder.length), tone: toOrder.length > 0 ? 'text-warning-foreground' : 'text-success-foreground' },
           { label: tr('Items with a forecast'), value: `${used.length} of ${rows.length}`, tone: '' },
         ].map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-card p-5 shadow-xs">
@@ -41,14 +41,14 @@ export function ForecastPage() {
         ))}
       </div>
 
-      <div className="table-wrap mt-5"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Available')}</th><th className="right">{tr('Used per day')}</th><th>{tr('Runs out')}</th><th>{tr('How sure')}</th><th className="right">{tr('Supplier takes')}</th><th className="right">{tr('Already ordered')}</th><th className="right">{tr('Order now')}</th></tr></thead><tbody>
+      <div className="table-wrap mt-5"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Avg. daily usage')}</th><th scope="col">{tr('Stock-out date')}</th><th scope="col">{tr('Confidence')}</th><th scope="col" className="right">{tr('Lead time')}</th><th scope="col" className="right">{tr('On order')}</th><th scope="col" className="right">{tr('Order now')}</th></tr></thead><tbody>
         {rows.map((r) => (
           <tr key={r.itemId}>
             <td>{r.sku} · {r.name}</td>
             <td className="right">{fmt(r.available)} {r.uom}</td>
             <td className="right">{r.confidence === 'none' ? '—' : fmt(r.dailyRate)}</td>
-            <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={trf('{n} days', { n: r.daysOfCover ?? '' })} /> <span className="muted small">{r.runsOutOn}</span></> : <span className="muted">{tr('no use in 90 days')}</span>}</td>
-            <td>{r.confidence === 'good' ? <Pill status="received" label={tr('Solid history')} /> : r.confidence === 'thin' ? <span title={trf('{issues} issue(s) over {days} days', { issues: r.issuesCount, days: r.historyDays })}><Pill status="submitted" label={tr('Thin: a guess')} /></span> : ''}</td>
+            <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={trf('{n} days', { n: r.daysOfCover ?? '' })} /> <span className="muted small">{r.runsOutOn}</span></> : <span className="muted">{tr('no usage in 90 days')}</span>}</td>
+            <td>{r.confidence === 'good' ? <Pill status="received" label={tr('High')} /> : r.confidence === 'thin' ? <span title={trf('{issues} issue(s) over {days} days', { issues: r.issuesCount, days: r.historyDays })}><Pill status="submitted" label={tr('Low (limited history)')} /></span> : ''}</td>
             <td className="right">{r.confidence === 'none' ? '' : trf('{n} days', { n: r.leadDays })}</td>
             <td className="right">{r.onOrder > 0 ? fmt(r.onOrder) : ''}</td>
             <td className="right">{r.suggestedOrder ? <b>{fmt(r.suggestedOrder)}</b> : ''}</td>

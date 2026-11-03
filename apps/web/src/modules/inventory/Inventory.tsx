@@ -183,7 +183,7 @@ export function StockPage() {
   return (
     <section className="page">
       <h1>{tr('Stock on hand')}</h1>
-      <p className="muted">{tr('What each warehouse holds, and how much of it is free to use.')}</p>
+      <p className="muted">{tr('On-hand, reserved and available quantities by warehouse.')}</p>
       {cat.ready && stock.data && (
         <div className="stats">
           <div className="stat" style={{ '--i': 0 } as CSSProperties}>
@@ -199,12 +199,12 @@ export function StockPage() {
           <div className="stat" style={{ '--i': 2 } as CSSProperties}>
             <div className="stat-label">{tr('Reserved')}</div>
             <div className="stat-value">{reservedItems}</div>
-            <div className="stat-note">{tr('items held for open requests')}</div>
+            <div className="stat-note">{tr('items with reserved stock')}</div>
           </div>
           <Link to="/inventory/requests" className={waiting > 0 ? 'stat warn' : 'stat'} style={{ '--i': 3, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
             <div className="stat-label">{tr('Waiting for approval')}</div>
             <div className="stat-value">{waiting}</div>
-            <div className="stat-note">{waiting > 0 ? tr('a manager needs to decide') : tr('nothing pending')}</div>
+            <div className="stat-note">{waiting > 0 ? tr('awaiting manager approval') : tr('nothing pending')}</div>
           </Link>
         </div>
       )}
@@ -288,12 +288,12 @@ export function ReorderLevelsPage() {
   return (
     <section className="page">
       <h1>{tr('Reorder levels')}</h1>
-      <p className="muted">{tr('The lowest stock you want of each item before it is reordered.')}</p>
+      <p className="muted">{tr('Minimum available quantity per item before reordering.')}</p>
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error notice">{error}</p>}
       <div className="table-wrap">
         <table>
-          <thead><tr><th>SKU</th><th>{tr('Item')}</th><th className="right">{tr('Available')}</th><th className="right">{tr('Reorder level')}</th><th>{tr('Status')}</th><th /></tr></thead>
+          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col">{tr('Status')}</th><th scope="col" /></tr></thead>
           <tbody>
             {rows.map((row) => {
               const value = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
@@ -361,7 +361,7 @@ export function ApprovalPoliciesPage() {
   return (
     <section className="page">
       <h1>{tr('Approval policies')}</h1>
-      <p className="muted">{tr('When a stock request needs more than one manager to approve it.')}</p>
+      <p className="muted">{tr('Thresholds above which a stock request needs more than one approval.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canManage && (
         <FormToggle label={tr('Add or update a policy')}><form className="stack" onSubmit={save}>
@@ -375,7 +375,7 @@ export function ApprovalPoliciesPage() {
       )}
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('Threshold')}</th><th>{tr('Warehouse')}</th><th>{tr('Required')}</th>{canManage && <th />}</tr></thead>
+          <thead><tr><th scope="col">{tr('Threshold')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col">{tr('Required')}</th>{canManage && <th scope="col" />}</tr></thead>
           <tbody>
             {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> {tr('units or more')}</td><td>{warehouseName(p.warehouseId)}</td><td>{trf(p.requiredApprovals === 1 ? '{n} approval' : '{n} approvals', { n: p.requiredApprovals })}</td>{canManage && <td><Button variant="outline" type="submit" onClick={() => remove(p.id)}>{tr('Remove')}</Button></td>}</tr>)}
             {policies.data.length === 0 && <tr><td colSpan={canManage ? 4 : 3} className="muted empty">{tr('No extra approval policies. One approval is enough for every request.')}</td></tr>}
@@ -436,20 +436,20 @@ export function AdjustmentsPage() {
   return (
     <section className="page">
       <h1>{tr('Stock adjustments')}</h1>
-      <p className="muted">{tr('Record a stock count. A manager approves any difference.')}</p>
+      <p className="muted">{tr('Cycle counts. A manager approves any variance before it is posted.')}</p>
       {error && <p className="error notice">{error}</p>}
       <FormToggle label={tr('New cycle count')}><form className="stack" onSubmit={submit}>
         <div className="form-row">
           <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
           <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-          <label>{tr('Counted quantity')}<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">{tr('Book quantity:')} {expected}</span>}</label>
+          <label>{tr('Counted quantity')}<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">{tr('System quantity:')} {expected}</span>}</label>
         </div>
         <label>{tr('Reason')}<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={tr('Physical count, damaged stock…')} /></label>
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit count')}</Button></div>
       </form></FormToggle>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('Count')}</th><th>{tr('Item')}</th><th>{tr('Warehouse')}</th><th className="right">{tr('Book')}</th><th className="right">{tr('Counted')}</th><th className="right">{tr('Difference')}</th><th>{tr('Status')}</th><th /></tr></thead>
+          <thead><tr><th scope="col">{tr('Count')}</th><th scope="col">{tr('Item')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col" className="right">{tr('Book')}</th><th scope="col" className="right">{tr('Counted')}</th><th scope="col" className="right">{tr('Difference')}</th><th scope="col">{tr('Status')}</th><th scope="col" /></tr></thead>
           <tbody>
             {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><Button type="submit" onClick={() => act(a.id, 'approve')}>{tr('Approve')}</Button> <Button variant="outline" type="submit" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</Button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <Button variant="outline" type="submit" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</Button>}</td></tr>)}
             {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No stock counts yet.')}</td></tr>}
@@ -487,7 +487,7 @@ export function RequestsList() {
   return (
     <section className="page">
       <h1>{tr('Stock requests')}</h1>
-      <p className="muted">{tr('Stock only leaves the warehouse through an approved request.')}</p>
+      <p className="muted">{tr('Goods are issued only against an approved request.')}</p>
       {requests.data && cat.ready ? (
         <ListView
           title={tr('Stock requests')}
@@ -571,11 +571,11 @@ export function NewRequest() {
     <section className="page">
       <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
       <h1>{tr('New stock request')}</h1>
-      <p className="muted">{tr('The stock is held for you while a manager decides.')}</p>
+      <p className="muted">{tr('Requested quantities are reserved until a manager decides.')}</p>
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
           <label>
-            {tr('Take stock from')}
+            {tr('Issue from warehouse')}
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
@@ -665,7 +665,7 @@ export function RequestPage() {
 
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th></tr></thead>
           <tbody>
             {r.lines.map((l, i) => <tr key={i}><td>{cat.itemName(l.itemId)}</td><td className="right">{l.qty}</td></tr>)}
           </tbody>
@@ -700,7 +700,7 @@ export function RequestPage() {
       <p className="muted small">{tr('Written by the system in the same step as each change.')}</p>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('When')}</th><th>{tr('Who')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('User')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}>

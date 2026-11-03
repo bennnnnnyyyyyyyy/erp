@@ -22,8 +22,8 @@ Three ideas to repeat all demo long: **1. know your numbers, 2. stop stock being
 | **Never run out of a best-seller** | Forecast says how many days of stock are left per item, from the company's own sales history | Inventory > Stock forecast |
 | **Stop throwing away expired stock** | Batches with expiry dates; oldest-expiry goes out first; expiring stock is flagged; bad batches can be quarantined | Inventory > Batches and expiry |
 | **Stop stock walking out the door** | Stock can only leave through a request a *different* manager approves. The database itself refuses otherwise | Inventory > Stock requests |
-| **Get paid faster** | Customer invoices, payments, and "who owes me" with overdue alerts | Sales > Customer invoices, Finance |
-| **Pay only for what you received** | Supplier invoices are matched against goods received | Purchasing > Supplier invoices |
+| **Get paid faster** | Sales invoices, payments, and "who owes me" with overdue alerts | Sales > Sales invoices, Finance |
+| **Pay only for what you received** | Purchase invoices are matched against goods received | Purchasing > Purchase invoices |
 | **Know who to blame, and who to trust** | Audit log: who did what, when, can't be edited or deleted | Settings > Audit log |
 
 **Careful with money claims.** You have no customer results yet. Say "this helps find and prevent..." not "this saves X%". If asked for a number, say: "I'll measure it in the pilot; here is how we'd measure it" (section 5).
@@ -42,8 +42,8 @@ Use the **cosmetics demo organization**, signed in as the **owner** (Chris). Hav
    - Approve the member's request as the owner, then issue it.
 6. **Transfers (2 min).** Inventory > Stock transfers > New transfer: move a few units between two warehouses. Show it needs approval, then dispatch (it shows under "In transit now": stock that belongs to no warehouse), then receive. "Batches and expiry dates travel with the goods."
 7. **Audit log (1 min).** Settings > Audit log. Show the rows your demo just created. "Every approval and every stock movement is recorded in the same step. Nobody can edit or delete these."
-8. **Money side (1 min).** Sales > Customer invoices, then Finance > Profit overview. "Invoices, payments, expenses. This is where the profit number on the home page comes from."
-9. **Alerts (1 min, optional).** Alerts > Rules and teams. "The right person is told when stock is low, a batch is about to expire, or a customer is late paying."
+8. **Money side (1 min).** Sales > Sales invoices, then Finance > Profit and loss. "Invoices, payments, expenses. This is where the profit number on the home page comes from."
+9. **Alerts (1 min, optional).** Alerts > Alert rules. "The right person is told when stock is low, a batch is about to expire, or a customer is late paying."
 10. **Getting started tutorial and tour (optional, only if checked live).** These are **not** in the cosmetics company: the tutorial and the guided tour are switched on only in the empty company "Test Organization" (the tour is a per-company switch in Settings > General). Show them only if you have signed in there and checked, after the latest push, that the language prompt, the tutorial and "Take the tour" work. Say: "A new customer starts with an empty company and is walked through it, in English or Arabic."
 
 **Close (30 seconds):** "In one place the owner sees profit, risks and decisions, and the warehouse can't move stock without the right approval. The next step is a pilot with one real company to measure the savings."

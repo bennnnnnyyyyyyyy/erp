@@ -24,7 +24,7 @@ A factory in Egypt making shampoo, conditioner, lotions, hand cream, face wash, 
 4. **Inventory value and expiry.** Value on the shelf and what is about to expire.
 5. **Top products.** *As of 2 Nov, last 90 days: sunscreen (about 1.05M EGP), vitamin C serum (about 738K), night cream (about 463K), shampoo (about 393K), hair oil (about 378K).*
 6. **Supplier concentration.** *As of 2 Nov: one packaging supplier, Delta Plastics, is by far the largest spend (about 2.4M EGP in 12 months, then about 0.75M and 0.70M).* "If that supplier fails, bottles stop and so does the factory."
-**Click:** open **Profit overview** (first card) for 20 seconds: sales vs costs by month.
+**Click:** open **Profit and loss** (first card) for 20 seconds: sales vs costs by month.
 **Notice:** every card has a title, a one-line meaning and a period. Say "overdue means unpaid after 30 days".
 
 ## Chapter 2: The warehouse asks, the manager approves (4 min)
@@ -41,7 +41,7 @@ A factory in Egypt making shampoo, conditioner, lotions, hand cream, face wash, 
 **Say:** "In cosmetics, expired stock is money in the bin."
 *As of 2 Nov the sample deliberately contains:* **lip balm** (300 units) expiring in about 15 days, **hand cream** (180) in about 39, **sunscreen** (120) in about 77, **vitamin C serum** (40) that **already expired** on 20 Oct, and **clay face mask** (60) in **quarantine**. Point out: the system never issues an expired or quarantined batch, and the owner home counts them in "Inventory value and expiry".
 **Click:** Inventory > **Stock forecast**: "from the factory's own history it says how many days each item will last, and says 'thin data' when it isn't sure."
-**Click:** **Alerts** > Rules and teams: "tell Purchasing when stock is low, tell Management when a batch is about to expire or a customer is more than 30 days late."
+**Click:** **Alerts** > Alert rules: "tell Purchasing when stock is low, tell Management when a batch is about to expire or a customer is more than 30 days late."
 
 ## Chapter 4: Moving stock between warehouses (2 min, optional)
 **Click:** Inventory > **Stock transfers** > New transfer: move a small quantity of a finished product from Finished goods to another warehouse. Show it waits for approval, then **Dispatch** (it appears under "In transit now": stock that belongs to no warehouse, so nobody can sell it), then **Receive**. "Batches and expiry dates travel with the goods."

@@ -83,7 +83,7 @@ export function CustomerInvoices() {
 
   return (
     <section className="page wide">
-      <h1>{tr('Customer invoices')}</h1>
+      <h1>{tr('Sales invoices')}</h1>
       <p className="muted">{tr('Invoice delivered sales orders. A wrong invoice is voided, not edited.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
@@ -100,7 +100,7 @@ export function CustomerInvoices() {
           </div>
           {chosen && (
             <>
-              <div className="table-wrap"><table><thead><tr><th>{tr('Item')}</th><th className="right">{tr('Delivered')}</th><th className="right">{tr('Already invoiced')}</th><th>{tr('Invoice now')}</th></tr></thead><tbody>
+              <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Delivered')}</th><th scope="col" className="right">{tr('Already invoiced')}</th><th scope="col">{tr('Quantity to invoice')}</th></tr></thead><tbody>
                 {chosen.billing.map((b) => (
                   <tr key={b.orderLineId}><td>{item(b.itemId)}</td><td className="right">{b.delivered}</td><td className="right">{b.invoiced}</td>
                     <td><input type="number" min="0" max={b.delivered - b.invoiced} step="0.001" aria-label={trf('Quantity to invoice for {item}', { item: item(b.itemId) })} value={qty[b.orderLineId] ?? ''} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
@@ -113,7 +113,7 @@ export function CustomerInvoices() {
       )}
 
       <h2 className="related">{tr('Invoices')}</h2>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Customer')}</th><th>{tr('Order')}</th><th>{tr('Created')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Customer')}</th><th scope="col">{tr('Order')}</th><th scope="col">{tr('Created')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {invoices.data.map((i) => (
           <ClickRow key={i.id} to={`/sales/invoices/${i.id}`}><td><Link to={`/sales/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{customer(i.customerId)}</td><td><Link to={`/sales/orders/${i.orderId}`}><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
             <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? tr('Void') : tr('Issued')} /></td></ClickRow>
@@ -122,12 +122,12 @@ export function CustomerInvoices() {
       </tbody></table></div>
 
       <div className="section-head">
-        <h2 className="related">{showAll ? tr('Ordered, delivered and invoiced') : tr('Orders still to invoice')} <span className="muted small">({shownBilling.length})</span></h2>
+        <h2 className="related">{showAll ? tr('Billing status') : tr('Orders to invoice')} <span className="muted small">({shownBilling.length})</span></h2>
         {billingRows.length > attention.length && (
           <Button variant="ghost" size="sm" onClick={() => setShowAll(!showAll)}>{showAll ? tr('Only orders that need attention') : trf('Show all {count} orders', { count: billingRows.length })}</Button>
         )}
       </div>
-      <div className="table-wrap"><table><thead><tr><th>{tr('Order')}</th><th>{tr('Customer')}</th><th className="right">{tr('Ordered')}</th><th className="right">{tr('Delivered')}</th><th className="right">{tr('Invoiced')}</th><th>{tr('Status')}</th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Order')}</th><th scope="col">{tr('Customer')}</th><th scope="col" className="right">{tr('Ordered')}</th><th scope="col" className="right">{tr('Delivered')}</th><th scope="col" className="right">{tr('Invoiced')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {shownBilling.map(({ o, sum, flag }) => {
           const f = FLAG[flag];
           return <ClickRow key={o.id} to={`/sales/orders/${o.id}`}><td><Link to={`/sales/orders/${o.id}`}><code>{o.number}</code></Link></td><td>{customer(o.customerId)}</td><td className="right">{sum('ordered')}</td><td className="right">{sum('delivered')}</td><td className="right">{sum('invoiced')}</td><td><Pill status={f.pill} label={tr(f.label)} /></td></ClickRow>;
@@ -152,7 +152,7 @@ export function CustomerInvoicePage() {
   if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
   if (!invoices.data || !orders.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoices.data.find((i) => i.id === id);
-  if (!inv) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Customer invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
+  if (!inv) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
 
   const order = orders.data.find((o) => o.id === inv.orderId);
   const customer = customers.data.find((c) => c.id === inv.customerId)?.name ?? tr('Unknown customer');
@@ -171,7 +171,7 @@ export function CustomerInvoicePage() {
 
   return (
     <section className="page">
-      <Link to="/sales/invoices" className="back-link">{tr('← Customer invoices')}</Link>
+      <Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link>
       <div className="page-head">
         <h1 className="mono">{inv.number}</h1>
         <Pill status={inv.status === 'void' ? 'cancelled' : 'received'} label={inv.status === 'void' ? tr('Void') : tr('Issued')} />
@@ -186,7 +186,7 @@ export function CustomerInvoicePage() {
       </dl>
 
       <div className="table-wrap"><table>
-        <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th><th className="right">{tr('Unit price')}</th><th className="right">{tr('Line total')}</th></tr></thead>
+        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit price')}</th><th scope="col" className="right">{tr('Line total')}</th></tr></thead>
         <tbody>
           {inv.lines.map((l) => (
             <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitPriceMinor, inv.currency)}</td><td className="right">{money(Math.round(l.qty * l.unitPriceMinor), inv.currency)}</td></tr>

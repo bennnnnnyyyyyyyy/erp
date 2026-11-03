@@ -15,7 +15,7 @@ import { tr } from '../../lib/i18n';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
 
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
-const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Waiting for goods', received: 'Received', cancelled: 'Cancelled' };
+const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Awaiting receipt', received: 'Received', cancelled: 'Cancelled' };
 
 export function Suppliers() {
   return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" />;
@@ -40,7 +40,7 @@ export function PurchaseOrders() {
   return (
     <section className="page">
       <h1>{tr('Purchase orders')}</h1>
-      <p className="muted">{tr('Goods you have ordered from suppliers. Receiving an order puts the goods into stock.')}</p>
+      <p className="muted">{tr('Purchase orders to suppliers. Goods receipt posts the quantities to stock.')}</p>
       {orders.data && suppliers.data && cat.ready ? (
         <ListView
           title={tr('Purchase orders')}
@@ -62,7 +62,7 @@ export function NewPurchaseOrder() {
   return (
     <NewOrderForm
       title={tr('New purchase order')}
-      intro={tr('Order goods from a supplier. Nothing changes in stock until the goods arrive and you receive the order.')}
+      intro={tr('Stock is updated only when goods are received against the order.')}
       partyLabel="Supplier"
       partyEndpoint="/v1/purchasing/suppliers"
       orderEndpoint="/v1/purchasing/orders"
@@ -126,7 +126,7 @@ export function PurchaseOrderPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th><th className="right">{tr('Unit cost')}</th><th className="right">{tr('Line total')}</th></tr>
+            <tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{tr('Line total')}</th></tr>
           </thead>
           <tbody>
             {o.lines.map((l, i) => (
@@ -160,7 +160,7 @@ export function PurchaseOrderPage() {
       <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>{tr('When')}</th><th>{tr('Action')}</th><th>{tr('Details')}</th></tr></thead>
+          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
           <tbody>
             {history.map((a) => (
               <tr key={a.id}><td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td><td><code>{a.action}</code></td><td>{a.summary}</td></tr>
