@@ -52,6 +52,7 @@ export function SalesOrders() {
           rows={orders.data}
           columns={columns}
           rowKey={(o) => o.id}
+          rowHref={(o) => `/sales/orders/${o.id}`}
           empty={tr('No sales orders yet.')}
           toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/sales/orders/new')}>{tr('New sales order')}</button> : undefined}
         />

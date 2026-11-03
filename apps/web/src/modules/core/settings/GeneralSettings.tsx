@@ -174,23 +174,6 @@ export function GeneralSettings() {
           </div>
         </div>
       )}
-      {canEdit && !demoMode && (
-        <div className="form-card stack">
-          <h2>{tr('Guided tour')}</h2>
-          <p className="muted small">{session.org?.showTour ? tr('A step-by-step tour that walks people through the real screens, in English or Arabic. It is on for this company: a "Take the tour" button appears on the Guide and Getting-started pages.') : tr('A step-by-step tour that walks people through the real screens, in English or Arabic. It is off for this company; when it is on, a "Take the tour" button appears on the Guide and Getting-started pages.')}</p>
-          <div>
-            <button type="button" className="secondary" onClick={async () => {
-              setError(null);
-              try {
-                await api('/v1/core/org/tour', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTour }) });
-                reloadSession();
-              } catch (err) {
-                setError((err as Error).message);
-              }
-            }}>{session.org?.showTour ? tr('Switch the tour off') : tr('Switch the tour on')}</button>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

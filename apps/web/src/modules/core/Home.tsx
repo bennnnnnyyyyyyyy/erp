@@ -5,6 +5,7 @@ import {useI18n, tr } from '../../lib/i18n';
 import { useSession } from '../../session';
 import { SUITE_ORDER, type AppDef } from '../registry';
 import { OwnerSummary } from './OwnerHome';
+import { TourButton } from '../help/TourHost';
 
 function greeting(timeZone: string): string {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
@@ -38,6 +39,43 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M10.3 20a1.9 1.9 0 003.4 0" />
     </svg>
   ),
+  purchasing: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M3 4h2l2.2 10.2a1.5 1.5 0 001.5 1.2h8.6a1.5 1.5 0 001.5-1.1L21 8H6.2" />
+      <circle cx="9.5" cy="19.5" r="1.3" />
+      <circle cx="17" cy="19.5" r="1.3" />
+    </svg>
+  ),
+  sales: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 17l5-5 4 4 7-7" />
+      <path d="M15 9h5v5" />
+    </svg>
+  ),
+  finance: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M3 10h18M7 15h3" />
+    </svg>
+  ),
+  alerts: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M12 3l9.5 17h-19L12 3z" />
+      <path d="M12 10v4.5M12 17.3v.2" />
+    </svg>
+  ),
+  guide: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5v-15z" />
+      <path d="M4 20.5A2.5 2.5 0 006.5 23H20v-5" />
+    </svg>
+  ),
+  start: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 8.5l5.5 3.5-5.5 3.5v-7z" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 24 24" {...stroke}>
       <circle cx="12" cy="12" r="3" />
@@ -60,10 +98,15 @@ export function Home({ apps }: { apps: AppDef[] }) {
 
   return (
     <section className="home">
-      <h1>{t(greeting(timeZone))}</h1>
-      <p className="muted">
-        <bdi>{session.org?.name}</bdi> · {today(timeZone, lang)}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1>{t(greeting(timeZone))}</h1>
+          <p className="muted">
+            <bdi>{session.org?.name}</bdi> · {today(timeZone, lang)}
+          </p>
+        </div>
+        <TourButton />
+      </div>
 
       <div data-tour="home-summary">
         <OwnerSummary />

@@ -11,13 +11,14 @@ import { GuidePage } from './help/Guide';
 import { NewTransfer, TransferPage, TransfersList } from './inventory/Transfers';
 import { AdjustmentsPage, ApprovalPoliciesPage, LedgerPage, NewRequest, ReorderLevelsPage, RequestPage, RequestsList, StockPage } from './inventory/Inventory';
 import { NewPurchaseOrder, PurchaseOrderPage, PurchaseOrders, Suppliers } from './purchasing/PurchasingDemo';
-import { SupplierInvoices } from './purchasing/SupplierInvoices';
+import { SupplierInvoicePage, SupplierInvoices } from './purchasing/SupplierInvoices';
 import { NotificationsPage, OutboxPage } from './messaging/Messaging';
 import { ConnectPhonePage } from './messaging/ConnectPhone';
 import { TaskPage, TasksPage } from './tasks/Tasks';
 import { Customers, NewSalesOrder, SalesOrderPage, SalesOrders } from './sales/SalesDemo';
-import { CustomerInvoices } from './sales/CustomerInvoices';
+import { CustomerInvoicePage, CustomerInvoices } from './sales/CustomerInvoices';
 import { ExpensesPage, PaymentsPage } from './finance/Finance';
+import { ExpensePage, PaymentPage } from './finance/FinanceRecords';
 import { AlertsPage } from './alerts/Alerts';
 import { GettingStartedPage } from './help/GettingStarted';
 import { ProfitOverviewPage } from './finance/ProfitOverview';
@@ -91,6 +92,7 @@ const PURCHASING_APP: AppDef = {
     { path: '/orders/:id', label: 'Purchase order', component: PurchaseOrderPage, nav: false, parent: '' },
     { path: '/suppliers', label: 'Suppliers', component: Suppliers },
     { path: '/invoices', label: 'Supplier invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
+    { path: '/invoices/:id', label: 'Supplier invoice', permission: 'purchasing.invoices.read', component: SupplierInvoicePage, nav: false, parent: '/invoices' },
   ],
 };
 
@@ -118,6 +120,7 @@ const SALES_APP: AppDef = {
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
     { path: '/invoices', label: 'Customer invoices', permission: 'sales.invoices.read', component: CustomerInvoices },
+    { path: '/invoices/:id', label: 'Customer invoice', permission: 'sales.invoices.read', component: CustomerInvoicePage, nav: false, parent: '/invoices' },
   ],
 };
 
@@ -159,8 +162,10 @@ export const APPS: AppDef[] = [
     key: 'finance', module: 'finance', name: 'Finance', description: 'Expenses and payments: money in, money out',
     suite: 'Finance', basePath: '/finance', pages: [
       { path: '', label: 'Expenses', permission: 'finance.reports.view', component: ExpensesPage },
+      { path: '/expenses/:id', label: 'Expense', permission: 'finance.reports.view', component: ExpensePage, nav: false, parent: '' },
       { path: '/overview', label: 'Profit overview', permission: 'finance.reports.view', component: ProfitOverviewPage },
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
+      { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
     ],
   } satisfies AppDef]),
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { ClickRow } from '../ClickRow';
 
 import { tr, trf } from '../../lib/i18n';
 // The shared List view every module uses for a table of records: quick search, column sort and
@@ -24,6 +25,8 @@ type Props<T> = {
   empty?: string;
   toolbar?: ReactNode;
   actions?: (row: T) => ReactNode;
+  /** Where clicking the row goes. Rows without it do not react to the pointer. */
+  rowHref?: (row: T) => string;
 };
 
 function csvCell(v: string | number | null): string {
@@ -31,7 +34,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, actions }: Props<T>) {
+export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, actions, rowHref }: Props<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
 
@@ -91,7 +94,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
           <thead>
             <tr>
               {columns.map((c) => (
-                <th key={c.key} className={c.align === 'right' ? 'right' : undefined}>
+                <th key={c.key} scope="col" className={c.align === 'right' ? 'right' : undefined}>
                   <button className="th-sort" onClick={() => toggleSort(c.key)}>
                     {c.label}
                     {sort?.key === c.key ? (sort.dir === 1 ? ' ↑' : ' ↓') : ''}
@@ -102,16 +105,19 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
             </tr>
           </thead>
           <tbody>
-            {shown.map((r) => (
-              <tr key={rowKey(r)}>
-                {columns.map((c) => (
-                  <td key={c.key} className={c.align === 'right' ? 'right' : undefined}>
-                    {c.render ? c.render(r) : c.value(r)}
-                  </td>
-                ))}
-                {actions && <td className="row-actions">{actions(r)}</td>}
-              </tr>
-            ))}
+            {shown.map((r) => {
+              const cells = (
+                <>
+                  {columns.map((c) => (
+                    <td key={c.key} className={c.align === 'right' ? 'right' : undefined}>
+                      {c.render ? c.render(r) : c.value(r)}
+                    </td>
+                  ))}
+                  {actions && <td className="row-actions">{actions(r)}</td>}
+                </>
+              );
+              return rowHref ? <ClickRow key={rowKey(r)} to={rowHref(r)}>{cells}</ClickRow> : <tr key={rowKey(r)}>{cells}</tr>;
+            })}
             {shown.length === 0 && (
               <tr>
                 <td colSpan={columns.length + (actions ? 1 : 0)} className="muted empty">

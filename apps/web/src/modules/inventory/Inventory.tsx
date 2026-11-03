@@ -490,6 +490,7 @@ export function RequestsList() {
           rows={rows}
           columns={columns}
           rowKey={(r) => r.id}
+          rowHref={(r) => `/inventory/requests/${r.id}`}
           empty={tr('No requests yet.')}
           toolbar={
             <>
@@ -508,12 +509,26 @@ export function RequestsList() {
   );
 }
 
+function defaultWarehouse(warehouses: { id: string }[], stock: StockRow[], lastKey: string): string {
+  let last: string | null = null;
+  try { last = localStorage.getItem(lastKey); } catch { /* storage blocked */ }
+  if (last && warehouses.some((w) => w.id === last)) return last;
+  const held = new Map<string, number>();
+  for (const s of stock) held.set(s.warehouseId, (held.get(s.warehouseId) ?? 0) + Math.max(0, s.available));
+  let best = warehouses[0]?.id ?? '';
+  for (const w of warehouses) if ((held.get(w.id) ?? 0) > (held.get(best) ?? 0)) best = w.id;
+  return best;
+}
+
 export function NewRequest() {
   const cat = useCatalog();
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
+  const session = useSession();
   const [chosenWarehouse, setWarehouseId] = useState('');
-  // The first warehouse until the person picks one (ids are not fixed in a real organization).
-  const warehouseId = chosenWarehouse || cat.warehouses.data?.[0]?.id || '';
+  // Until the person picks one: the warehouse they last requested from (this browser, this company), else the one holding the most
+  // available stock. The first in the list was often an empty side store (a cold room) and the request started wrong.
+  const lastKey = `erp.request.warehouse.${session.org?.id ?? ''}`;
+  const warehouseId = chosenWarehouse || defaultWarehouse(cat.warehouses.data ?? [], stock.data ?? [], lastKey);
   const [reason, setReason] = useState('');
   const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
   const [error, setError] = useState<string | null>(null);
@@ -531,6 +546,7 @@ export function NewRequest() {
         method: 'POST',
         body: JSON.stringify({ warehouseId, reason, lines: lines.filter((l) => l.itemId).map((l) => ({ itemId: l.itemId, qty: Number(l.qty) })) }),
       });
+      try { localStorage.setItem(lastKey, warehouseId); } catch { /* storage blocked: next time falls back to the fullest warehouse */ }
       navigate(`/inventory/requests/${r.id}`);
     } catch (err) {
       setError((err as Error).message);

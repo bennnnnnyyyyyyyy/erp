@@ -45,6 +45,7 @@ export function PurchaseOrders() {
           rows={orders.data}
           columns={columns}
           rowKey={(o) => o.id}
+          rowHref={(o) => `/purchasing/orders/${o.id}`}
           empty={tr('No purchase orders yet.')}
           toolbar={session.role !== 'viewer' ? <button onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</button> : undefined}
         />

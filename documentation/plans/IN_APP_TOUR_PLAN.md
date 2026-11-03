@@ -40,6 +40,8 @@ Each step needs a permission or module; a step the person cannot use is skipped,
 
 Demo and sample companies: the tour is **off** unless switched on, so a demo is never interrupted.
 
+**Changed 2026-11-03 (night):** the per-company switch is no longer read. "Take the tour" is offered in every company, on Home, Guide and Getting started. It still never starts by itself, so a demo is not interrupted; with the switch off by default nobody found it. The Settings card was removed; the `show_tour` column and `/v1/core/org/tour` route remain, unused. See the WORKLOG entry of that date.
+
 ## 5. Approach
 
 - A small component written for this product (no tour library: licences and weight are not worth it for seven steps): a step list, a target selector per step (`data-tour="..."` attributes on the real buttons), a tooltip anchored with logical placement, focus management and Escape to close. Keyboard and screen-reader friendly (focus moves to the tooltip, `aria-live` announces the step).

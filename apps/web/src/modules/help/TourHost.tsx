@@ -34,10 +34,9 @@ function tourDone(): boolean {
 }
 
 export function TourButton({ className }: { className?: string }) {
-  const session = useSession();
   const { lang } = useI18n();
-  // The tour is offered only in companies where an owner or admin has switched it on (Settings > General).
-  if (!session.org?.showTour) return null;
+  // The tour is offered in every company (2026-11-03): an off-by-default switch meant nobody ever found it. The org's show_tour
+  // setting is no longer read; steps the person's role cannot use are still left out (stepsFor).
   const c = tourContent(lang);
   return (
     <Button variant="outline" className={className} onClick={startTour}>
@@ -67,7 +66,6 @@ export function TourHost() {
   const session = useSession();
   const { lang, asked } = useI18n();
   const path = usePath();
-  const tourOn = session.org?.showTour === true;
   const steps = useMemo(() => stepsFor(session), [session]);
   const [active, setActive] = useState(false);
   const [i, setI] = useState(0);
@@ -102,7 +100,6 @@ export function TourHost() {
 
   useEffect(() => {
     const on = () => {
-      if (!tourOn) return;
       direction.current = 1;
       located.current = null;
       setI(0);
@@ -110,7 +107,7 @@ export function TourHost() {
     };
     window.addEventListener(START, on);
     return () => window.removeEventListener(START, on);
-  }, [tourOn]);
+  }, []);
 
   useEffect(() => {
     if (!active) return;
@@ -212,7 +209,7 @@ export function TourHost() {
     if (active && asked) tipRef.current?.focus({ preventScroll: true });
   }, [active, asked, i, box === null]);
 
-  if (!active || !tourOn) return null;
+  if (!active) return null;
 
   // First, a language. Nothing of the tour is shown until the person has been asked (English, Arabic or the company default).
   if (!asked) return <TourLanguageDialog onCancel={() => close()} />;

@@ -91,6 +91,7 @@ export function TransfersList() {
           rows={rows}
           columns={columns}
           rowKey={(t) => t.id}
+          rowHref={(t) => `/inventory/transfers/${t.id}`}
           empty={tr('No transfers yet.')}
           toolbar={
             <>

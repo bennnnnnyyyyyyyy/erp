@@ -74,14 +74,16 @@ coreRoutes.get('/people', async (c) => {
 
 coreRoutes.get('/audit',requirePermission('core.audit.read'), async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 50) || 50, 200);
-  const { data, error } = await userDb(c)
+  // Optional: only the entries about one record (a detail page's History). Ignored unless it is a uuid.
+  const entity = c.req.query('entity') ?? '';
+  let q = userDb(c)
     .from('audit_log')
     .select('id, occurred_at, actor_user_id, action, entity_type, entity_id, summary')
-    .eq('org_id', c.var.tenant.orgId)
-    // `id` is the insertion order. Several entries from one database function share the same timestamp,
-    // so ordering by time alone would shuffle them.
-    .order('id', { ascending: false })
-    .limit(limit);
+    .eq('org_id', c.var.tenant.orgId);
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entity)) q = q.eq('entity_id', entity);
+  // `id` is the insertion order. Several entries from one database function share the same timestamp,
+  // so ordering by time alone would shuffle them.
+  const { data, error } = await q.order('id', { ascending: false }).limit(limit);
   if (error) throw error;
   return ok(c, data);
 });

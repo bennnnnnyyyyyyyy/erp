@@ -9,7 +9,7 @@ import { tr, trf } from '../../../lib/i18n';
 import { usePeople } from '../../../lib/people';
 
 /** 'organization.tutorial_changed' becomes 'Organization: tutorial changed'. The raw key stays in the tooltip and the CSV. */
-function readableAction(key: string): string {
+export function readableAction(key: string): string {
   const [area, ...rest] = key.replace(/_/g, ' ').split('.');
   const text = [area, rest.join(' ')].filter(Boolean);
   const first = text[0] ? text[0].charAt(0).toUpperCase() + text[0].slice(1) : key;

@@ -145,6 +145,12 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .page-head h1 { margin: 0; }
 .back-link { display: inline-block; margin-bottom: 0.6rem; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
 .back-link:hover { text-decoration: underline; }
+/* Key facts of one record (invoice, payment, expense): label above value, in a grid that wraps on narrow screens. */
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.9rem 1.5rem; margin: 0.75rem 0 1.25rem; padding: 1rem 1.1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.facts > div { min-width: 0; }
+.facts dt { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); }
+.facts dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+.facts dd.amount { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .related { margin-block-start: 2rem; margin-block-end: 0.25rem; }
 
 /* ---- home ---- */
@@ -205,7 +211,11 @@ th, td { padding: 0.62rem 0.9rem; text-align: start; border-bottom: 1px solid va
 thead th { background: var(--surface-2); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); border-bottom-color: var(--border-strong); }
 tbody tr { transition: background 0.1s; }
 tbody tr:last-child td { border-bottom: 0; }
-tbody tr:hover { background: var(--surface-2); }
+/* Only rows that open something react to the pointer: a hover on a dead row reads as "click me" and then does nothing. */
+tbody tr.row-link { cursor: pointer; }
+tbody tr.row-link:hover { background: var(--surface-2); }
+tbody tr.row-link:hover a { text-decoration: underline; }
+tbody tr.row-link:focus-within { background: var(--surface-2); }
 th.right, td.right { text-align: end; font-variant-numeric: tabular-nums; }
 td.right { font-family: var(--mono); font-size: 0.9rem; }
 td select { width: auto; margin-top: 0; padding: 0.3rem 0.5rem; text-transform: capitalize; }
@@ -322,6 +332,13 @@ td input { margin-top: 0; }
 .form-row.three { grid-template-columns: 2fr 1fr 1fr; }
 .steps.wide { max-width: 760px; }
 @media (max-width: 720px) { .form-row.three { grid-template-columns: 1fr; } }
+/* Phones: warehouse staff tap with a thumb, often in gloves. Every control at least 44 px tall (WCAG 2.5.5 target size);
+   links inside table cells get the same height so the record number is easy to hit. */
+@media (max-width: 720px) {
+  button, input:not([type='checkbox']):not([type='radio']), select, textarea { min-height: 44px; }
+  td a { display: inline-flex; align-items: center; min-height: 44px; }
+  .back-link { min-height: 44px; display: inline-flex; align-items: center; }
+}
 
 /* slice 2: notification bell, task and outbox statuses */
 .bell { position: relative; }

@@ -11,6 +11,24 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (night) — Every invoice, payment and expense opens; clickable rows; tour always offered; audit fixes #3, #11, #12 (not deployed)
+
+**Objective.** Ben: clicking an invoice or a payment did nothing, and the tour could not be found. Customer invoices, supplier invoices, payments and expenses had no page of their own, and every table row turned grey on hover, so a row looked clickable and was not. The tour button only appeared where an owner had switched it on (off in the demo companies).
+
+**Actions Completed.**
+- New pages (frontend only, built from the list endpoints the screens already call): `/sales/invoices/:id` (`modules/sales/CustomerInvoices.tsx`), `/purchasing/invoices/:id` (`modules/purchasing/SupplierInvoices.tsx`), `/finance/payments/:id` and `/finance/expenses/:id` (`modules/finance/FinanceRecords.tsx`). Each shows the key facts, the lines (invoices), links to the order / invoice / expense it belongs to, the payments against it with paid and still owed (finance permission only), a Void button where the list already had one (same database function), and the record's History from the audit log. Routes in `modules/registry.tsx`.
+- `components/ClickRow.tsx`: a table row that opens its record when clicked anywhere, except on a link, button or input inside it, or while selecting text; Ctrl/Cmd-click opens a new tab. The number in the row stays a real link (keyboard, screen reader, middle-click). Used on invoices, payments, expenses, billing tables; `ListView` gained `rowHref`, used on sales orders, purchase orders, stock requests, transfers and tasks.
+- `styles.css`: only rows that open something get the hover and pointer (`tr.row-link`); new `.facts` block for record pages; on phones (≤720 px) controls and in-table links are at least 44 px tall (audit #11).
+- `components/RecordHistory.tsx` + `apps/api/src/modules/core/routes.ts`: `GET /v1/core/audit` accepts an optional `entity=<uuid>` filter (read-only, same permission and RLS). The page also filters on its side, so it works with the old API, limited to the latest 200 entries.
+- Tour: `modules/help/TourHost.tsx` no longer reads `org.showTour`; "Take the tour" shows on Home, Guide and Getting started in every company. The switch was removed from Settings > General (`GeneralSettings.tsx`); the API route and column stay, unused.
+- Audit #3: New request defaults to the warehouse last requested from (this browser, this company), else the one holding the most available stock (`inventory/Inventory.tsx`).
+- Audit #12: icons for the Purchasing, Sales, Finance, Alerts, Guide and Getting-started tiles (`core/Home.tsx`). Audit #11: `scope="col"` on `ListView` headers.
+- Arabic: page labels in `lib/i18nNav.ts`, new strings in `lib/i18nScreens.ts` (machine draft, needs a native read). Back arrows in Arabic now point right ("→ أوامر البيع") and "go on" arrows left: the English "←" at the start of a right-to-left line pointed into the text.
+
+**Database / System Result.** None. No SQL, no data, no settings. Nothing deployed. The `entity` filter needs a Worker deploy to take effect; the pages work without it.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass at the root (shared 30, api 117, web 42); `vite build` succeeds. Not seen in a browser: Ben to check the URLs in the hand-off on desktop, a phone and in Arabic. Detail pages find the record in the list endpoint (newest 200 invoices, 250 supplier invoices, 300 payments and expenses); an older record shows "not found" until a by-id endpoint is added. Still Ben's decisions: OUT-0372, e-invoicing on in the demo company, "(sample)" names, full names for users (audit #7), empty transfers.
+
 ## 2026-11-03 (evening) — UI audit of the live demo path, and four low-risk fixes (not deployed)
 
 **Objective.** Audit the demo path in a browser (read-only, signed in as the owner) before a management demo, and fix the low-risk findings. Report: [`documentation/plans/2026-11-04-ui-audit.md`](../plans/2026-11-04-ui-audit.md). Merged by hand, uncommitted, with the Arabic work below.

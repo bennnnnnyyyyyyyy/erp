@@ -107,6 +107,7 @@ export function TasksPage() {
           rows={rows}
           columns={columns}
           rowKey={(t) => t.id}
+          rowHref={(t) => `/tasks/${t.id}`}
           empty={view === 'mine' ? tr('Nothing assigned to you.') : tr('No tasks yet.')}
           toolbar={
             <>

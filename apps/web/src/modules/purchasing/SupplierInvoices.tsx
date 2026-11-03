@@ -5,12 +5,16 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { formatDateTime } from '../../lib/format';
 import { Pill } from '../trade/common';
+import { ClickRow } from '../../components/ClickRow';
+import { RecordHistory } from '../../components/RecordHistory';
+import { Link, useParam } from '../../lib/router';
+import { PaymentsAgainst } from '../finance/FinanceRecords';
 
 import { tr, trf } from '../../lib/i18n';
 type Summary = { orderId:string;number:string;supplierId:string;currency:string;lines:{orderLineId:string;itemId:string;receivedQty:number;billedQty:number;unitCostMinor:number}[] };
 type Supplier = {id:string;name:string};
 type Item = {id:string;sku:string;name:string};
-type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;currency:string;createdAt:string;totalMinor:number};
+type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;currency:string;createdAt:string;totalMinor:number;lines:{orderLineId:string;qty:number;unitCostMinor:number}[]};
 const money=(amountMinor:number,currency:string)=>formatMoney({amountMinor,currency});
 
 export function SupplierInvoices(){
@@ -45,12 +49,59 @@ export function SupplierInvoices(){
     </div>}
     <h2 className="related">{tr('Received orders and billing progress')}</h2>
     <div className="table-wrap"><table><thead><tr><th>{tr('Purchase order')}</th><th>{tr('Supplier')}</th><th>{tr('Received value')}</th><th>{tr('Billed value')}</th><th>{tr('Remaining')}</th><th>{tr('Status')}</th></tr></thead><tbody>
-      {summaryRows.map(o=>{const received=o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0);const billed=o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0);return <tr key={o.orderId}><td><code>{o.number}</code></td><td>{supplierName(o.supplierId)}</td><td>{money(received,o.currency)}</td><td>{money(billed,o.currency)}</td><td>{money(received-billed,o.currency)}</td><td><Pill status={billed===0?'ordered':billed>=received?'received':'submitted'} label={billed===0?tr('Not billed'):billed>=received?tr('Fully billed'):tr('Part billed')} /></td></tr>})}
+      {summaryRows.map(o=>{const received=o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0);const billed=o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0);return <ClickRow key={o.orderId} to={`/purchasing/orders/${o.orderId}`}><td><Link to={`/purchasing/orders/${o.orderId}`}><code>{o.number}</code></Link></td><td>{supplierName(o.supplierId)}</td><td>{money(received,o.currency)}</td><td>{money(billed,o.currency)}</td><td>{money(received-billed,o.currency)}</td><td><Pill status={billed===0?'ordered':billed>=received?'received':'submitted'} label={billed===0?tr('Not billed'):billed>=received?tr('Fully billed'):tr('Part billed')} /></td></ClickRow>})}
       {!summaries.data.length&&<tr><td colSpan={6} className="muted empty">{tr('No received purchase orders to bill yet.')}</td></tr>}
     </tbody></table></div>
     <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th>{tr('Invoice')}</th><th>{tr('Supplier')}</th><th>{tr('Purchase order')}</th><th>{tr('Date recorded')}</th><th className="right">{tr('Amount')}</th></tr></thead><tbody>
-      {invoices.data.map(i=><tr key={i.id}><td><code>{i.number}</code></td><td>{supplierName(i.supplierId)}</td><td><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??i.orderId}</code></td><td>{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></tr>)}
+      {invoices.data.map(i=><ClickRow key={i.id} to={`/purchasing/invoices/${i.id}`}><td><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{supplierName(i.supplierId)}</td><td><Link to={`/purchasing/orders/${i.orderId}`}><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??'—'}</code></Link></td><td>{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></ClickRow>)}
       {!invoices.data.length&&<tr><td colSpan={5} className="muted empty">{tr('No supplier invoices recorded yet.')}</td></tr>}
     </tbody></table></div>
   </section>;
+}
+
+/** One supplier invoice: supplier, purchase order, the billed lines and total, payments made against it, and its history. */
+export function SupplierInvoicePage() {
+  const id = useParam('id');
+  const session = useSession();
+  const invoices = useLoad(() => api<Invoice[]>('/v1/purchasing/supplier-invoices'));
+  const summaries = useLoad(() => api<Summary[]>('/v1/purchasing/billing-summary'));
+  const suppliers = useLoad(() => api<Supplier[]>('/v1/purchasing/suppliers'));
+  const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
+
+  if (invoices.error) return <section className="page"><p className="error">{invoices.error}</p></section>;
+  if (!invoices.data || !summaries.data || !suppliers.data || !items.data) return <section className="page"><p className="muted">{tr('Loading…')}</p></section>;
+  const inv = invoices.data.find((i) => i.id === id);
+  if (!inv) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Supplier invoices')}</Link><p className="muted">{tr('This invoice was not found.')}</p></section>;
+  const order = summaries.data.find((o) => o.orderId === inv.orderId);
+  const supplier = suppliers.data.find((s) => s.id === inv.supplierId)?.name ?? '—';
+  const itemOf = (orderLineId: string) => {
+    const itemId = order?.lines.find((l) => l.orderLineId === orderLineId)?.itemId;
+    const i = items.data?.find((v) => v.id === itemId);
+    return i ? `${i.sku} · ${i.name}` : '—';
+  };
+
+  return (
+    <section className="page">
+      <Link to="/purchasing/invoices" className="back-link">{tr('← Supplier invoices')}</Link>
+      <div className="page-head"><h1 className="mono">{inv.number}</h1></div>
+      <dl className="facts">
+        <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>
+        <div><dt>{tr('Purchase order')}</dt><dd><Link to={`/purchasing/orders/${inv.orderId}`}><code>{order?.number ?? '—'}</code></Link></dd></div>
+        <div><dt>{tr('Invoice date')}</dt><dd>{inv.invoiceDate}</dd></div>
+        <div><dt>{tr('Date recorded')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
+        <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
+      </dl>
+      <div className="table-wrap"><table>
+        <thead><tr><th>{tr('Item')}</th><th className="right">{tr('Quantity')}</th><th className="right">{tr('Unit cost')}</th><th className="right">{tr('Line total')}</th></tr></thead>
+        <tbody>
+          {inv.lines.map((l) => (
+            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.qty * l.unitCostMinor, inv.currency)}</td></tr>
+          ))}
+          <tr><td colSpan={3} className="right"><strong>{tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
+        </tbody>
+      </table></div>
+      <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />
+      <RecordHistory key={inv.id} id={inv.id} />
+    </section>
+  );
 }

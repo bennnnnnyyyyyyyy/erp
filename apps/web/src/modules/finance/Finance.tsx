@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { formatMoney } from '@erp/shared';
+import { ClickRow } from '../../components/ClickRow';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
+import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill, toMinor } from '../trade/common';
@@ -90,9 +92,9 @@ export function ExpensesPage() {
       <h2 className="related">{tr('Recorded expenses')} <span className="muted small">{trf('(total {amount})', { amount: money(total, currency) })}</span></h2>
       <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Category')}</th><th>{tr('Supplier')}</th><th>{tr('Note')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
         {expenses.data.map((e) => (
-          <tr key={e.id}><td><code>{e.number}</code></td><td>{e.date}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
+          <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td>{e.date}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
             <td><Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} /></td>
-            <td>{e.status === 'recorded' && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/finance/expenses/${e.id}/void`, { method: 'POST' }); return trf('{number} voided.', { number: e.number }); }, () => expenses.reload())}>{tr('Void')}</Button>}</td></tr>
+            <td>{e.status === 'recorded' && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/finance/expenses/${e.id}/void`, { method: 'POST' }); return trf('{number} voided.', { number: e.number }); }, () => expenses.reload())}>{tr('Void')}</Button>}</td></ClickRow>
         ))}
         {!expenses.data.length && <tr><td colSpan={8} className="muted empty">{tr('No expenses yet.')}</td></tr>}
       </tbody></table></div>
@@ -135,6 +137,7 @@ export function PaymentsPage() {
   const label = (p: Payment) => p.customerInvoiceId ? customerInvoices.data?.find((i) => i.id === p.customerInvoiceId)?.number ?? 'Invoice'
     : p.supplierInvoiceId ? trf('Supplier invoice {number}', { number: supplierInvoices.data?.find((i) => i.id === p.supplierInvoiceId)?.number ?? '' })
     : trf('Expense {number}', { number: expenses.data?.find((e) => e.id === p.expenseId)?.number ?? '' });
+  const targetPath = (p: Payment) => p.customerInvoiceId ? `/sales/invoices/${p.customerInvoiceId}` : p.supplierInvoiceId ? `/purchasing/invoices/${p.supplierInvoiceId}` : `/finance/expenses/${p.expenseId}`;
   const currency = session.org?.defaultCurrency ?? 'EGP';
 
   return (
@@ -179,10 +182,10 @@ export function PaymentsPage() {
       <h2 className="related">{tr('Payments')}</h2>
       <div className="table-wrap"><table><thead><tr><th>{tr('No.')}</th><th>{tr('Date')}</th><th>{tr('Direction')}</th><th>{tr('For')}</th><th>{tr('Method')}</th><th className="right">{tr('Amount')}</th><th>{tr('Status')}</th><th></th></tr></thead><tbody>
         {payments.data.map((p) => (
-          <tr key={p.id}><td><code>{p.number}</code></td><td>{p.paidOn}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td>{label(p)}</td><td>{p.method}</td>
+          <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td>{p.paidOn}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td>
             <td><Pill status={p.status === 'void' ? 'cancelled' : 'received'} label={p.status === 'void' ? tr('Void') : tr('Recorded')} /></td>
-            <td>{p.status === 'recorded' && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/finance/payments/${p.id}/void`, { method: 'POST' }); return trf('{number} voided.', { number: p.number }); }, () => payments.reload())}>{tr('Void')}</Button>}</td></tr>
+            <td>{p.status === 'recorded' && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/finance/payments/${p.id}/void`, { method: 'POST' }); return trf('{number} voided.', { number: p.number }); }, () => payments.reload())}>{tr('Void')}</Button>}</td></ClickRow>
         ))}
         {!payments.data.length && <tr><td colSpan={8} className="muted empty">{tr('No payments yet.')}</td></tr>}
       </tbody></table></div>
