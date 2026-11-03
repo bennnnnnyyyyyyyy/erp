@@ -29,16 +29,24 @@ export function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // Reload the session only when WHO is signed in or WHICH company changes, or a screen asks for it (sessionTick). Supabase also fires
+  // auth events when it renews the token and when the tab regains focus; each one is a new `auth` object for the same person. Keying
+  // this on `auth` itself blanked the whole app and reloaded every list on each of those events (the "refresh every few seconds").
+  const authUserId = auth?.user.id ?? null;
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   useEffect(() => {
-    setSession(null);
-    if (!auth || !orgId) return;
+    if (!authUserId || !orgId) { setSession(null); return; }
+    const key = `${authUserId}:${orgId}`;
+    // Same person and company: refresh in place (no blank screen). Someone else or another company: clear first.
+    if (loadedFor !== key) setSession(null);
     api<SessionInfo>('/v1/core/session')
-      .then(setSession)
+      .then((s) => { setSession(s); setLoadedFor(key); })
       .catch((e: Error) => {
         setError(e.message);
         chooseOrg(null);
       });
-  }, [auth, orgId, sessionTick]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadedFor is read, not a trigger
+  }, [authUserId, orgId, sessionTick]);
 
   function chooseOrg(id: string | null) {
     if (id) setError(null);

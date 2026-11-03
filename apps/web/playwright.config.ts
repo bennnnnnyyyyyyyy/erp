@@ -5,8 +5,10 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.e2e.ts',
-  timeout: 120_000,
+  timeout: 240_000,
   retries: process.env.CI ? 1 : 0,
+  // The sample build runs on Vite's dev server (unbundled); four browsers at once overload it and pages time out. Two locally, one in CI.
+  workers: process.env.CI ? 1 : 2,
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: { baseURL: 'http://localhost:5199', trace: 'retain-on-failure' },
   projects: [

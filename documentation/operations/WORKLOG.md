@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-03 (night) — No more refresh every few seconds; Odoo-style top bar with icons; tour waits for data (not deployed)
+
+**Objective.** Ben: "app has a stupid refresh every 5 seconds, stuff lag before they load inside tutorial, make sure all data loads before going into anything, the apps have menus, i want icons, icons for apps and change the sidebar to a topbar, same as odoo".
+
+**Actions Completed.**
+- The refresh: `App.tsx` reloaded the session (and blanked the whole app, so every list reloaded) on every Supabase auth event: each token renewal and each time the tab regained focus produced a new `auth` object for the same person. Now it reloads only when the signed-in user or the company changes (or a screen asks), and a same-person reload keeps the screen.
+- Odoo-style top bar (`components/AppMenu.tsx`, `components/Shell.tsx`, `styles.css`): apps grid, the current app's icon and name, its menu across the bar; Inventory's pages grouped into Operations / Reporting / Configuration dropdowns (`MENU_GROUPS` in `modules/registry.tsx`); the active page underlined; company and account at the end. No sidebar on a desktop; on a phone the menu button opens a drawer with the same entries and group headings.
+- Icons: `components/icons.tsx` (drawn here, line style) for every app and every menu page (chosen by the page path, so new pages get one); Home uses the same app icons.
+- Loading: every screen's code is fetched in the background once the browser is idle after sign-in (`preloadScreens`, production builds only); the tour waits until a step's screen has finished loading (no skeleton) before highlighting, shows "Loading this screen…" meanwhile, and waits up to 15 s (was 4).
+- Smoke test: finds pages through the new menu; 2 workers locally, 1 in CI (the dev server timed out with four browsers at once). Arabic for Operations, Reporting, Configuration, Menu, All apps.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run lint`, `npm run typecheck`, `npm test`, `vite build` and the smoke test (every page on desktop and phone, plus RTL) pass. A production build of the sample was checked: all 29 screen files are fetched while idle on Home. Seen locally: Inventory and Settings menus, the Operations dropdown, the phone bar. Needs the Pages deploy (push) to show live.
+
 ## 2026-11-03 (after final) — Top-bar menu shows the person's name (not deployed)
 
 **Objective.** The previous entry said a signed-in person would see their new name in the top-bar menu only after signing in again. Checked: the menu never showed a name at all (email only, initials from the email). Ben: "clean off the small catch".
