@@ -7,7 +7,132 @@ import { useI18n, type Lang } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
 import { onboardingContent, readProgress, STEP_KEYS, writeProgress, type OnboardingContent } from './onboardingContent';
+import {
+  canFillSample,
+  FILL_STAGES,
+  fillApproval,
+  fillCompany,
+  fillCustomers,
+  fillEverything,
+  fillItems,
+  fillStorage,
+  fillSuppliers,
+  fillWarehouses,
+  type FillStage,
+  type OnProgress,
+  type Report,
+} from './sampleFill';
 import { startTour } from './TourHost';
+
+/** "Fill with sample data" is shown only to the accounts named in the build setting DEMO_AUTOFILL_EMAILS (the demo presenter). */
+function useCanFill(): boolean {
+  const session = useSession();
+  return canFillSample(session.email, import.meta.env.VITE_DEMO_AUTOFILL_EMAILS as string | undefined);
+}
+
+/** Runs one fill and shows its progress, result and any rows that failed. */
+function FillButton({ c, run, onFilled, onNext }: { c: OnboardingContent; run: (onProgress: OnProgress) => Promise<Report>; onFilled?: () => void; onNext?: () => void }) {
+  if (!useCanFill()) return null;
+  return <FillButtonInner c={c} run={run} onFilled={onFilled} onNext={onNext} />;
+}
+
+function FillButtonInner({ c, run, onFilled, onNext }: { c: OnboardingContent; run: (onProgress: OnProgress) => Promise<Report>; onFilled?: () => void; onNext?: () => void }) {
+  const [state, setState] = useState<{ busy: boolean; done: number; total: number; report: Report | null; error: string | null }>({
+    busy: false,
+    done: 0,
+    total: 0,
+    report: null,
+    error: null,
+  });
+  const go = async () => {
+    setState({ busy: true, done: 0, total: 0, report: null, error: null });
+    try {
+      const report = await run((done, total) => setState((s) => ({ ...s, done, total })));
+      setState((s) => ({ ...s, busy: false, report }));
+      onFilled?.();
+    } catch (e) {
+      setState((s) => ({ ...s, busy: false, error: (e as Error).message }));
+    }
+  };
+  return (
+    <div className="mb-4 rounded-lg border border-dashed border-primary/50 p-3">
+      <Button type="button" variant="secondary" onClick={go} disabled={state.busy}>
+        {state.busy ? c.fill.working(state.done, state.total || 1) : c.fill.one}
+      </Button>
+      {state.report ? <p className="m-0 mt-2 text-sm">{c.fill.result(state.report.added, state.report.skipped)}</p> : null}
+      <FillFailures c={c} failed={state.report?.failed ?? []} error={state.error} />
+      {state.report && onNext ? (
+        <Button type="button" className="mt-3" onClick={onNext}>
+          {c.next}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function FillFailures({ c, failed, error }: { c: OnboardingContent; failed: string[]; error: string | null }) {
+  if (!error && failed.length === 0) return null;
+  return (
+    <div className="error mt-2 text-sm" role="alert">
+      {c.fill.failed}
+      <ul className="m-0 list-disc ps-5">
+        {error ? <li>{error}</li> : null}
+        {failed.map((f) => (
+          <li key={f}>{f}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** The whole sample company in one go (everything except language and team), stage by stage. */
+function FillEverything({ c, onFilled }: { c: OnboardingContent; onFilled: () => void }) {
+  const session = useSession();
+  const reload = useReloadSession();
+  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<{ stage: FillStage; done: number; total: number } | null>(null);
+  const [reports, setReports] = useState<Partial<Record<FillStage, Report>>>({});
+  const [error, setError] = useState<string | null>(null);
+  const org = session.org;
+  if (!org) return null;
+  const go = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const out = await fillEverything(api, org, (s, done, total) => setStage({ stage: s, done, total }));
+      setReports(out);
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
+  };
+  const finished = Object.keys(reports).length > 0;
+  return (
+    <div className="mt-5 rounded-lg border border-dashed border-primary/50 p-4">
+      <p className="m-0 text-sm text-muted-foreground">{c.fill.allHint}</p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Button type="button" variant="secondary" onClick={go} disabled={busy || finished}>
+          {busy && stage ? `${c.fill.stages[stage.stage]}: ${c.fill.working(stage.done, stage.total || 1)}` : c.fill.all}
+        </Button>
+        {finished ? <Button onClick={onFilled}>{c.fill.continueTeam}</Button> : null}
+      </div>
+      {finished ? (
+        <ul className="m-0 mt-3 list-none p-0 text-sm">
+          {FILL_STAGES.map((s) => {
+            const r = reports[s];
+            return r ? (
+              <li key={s}>
+                ✓ {c.fill.stages[s]}: {c.fill.result(r.added, r.skipped)}
+              </li>
+            ) : null;
+          })}
+        </ul>
+      ) : null}
+      <FillFailures c={c} failed={FILL_STAGES.flatMap((s) => reports[s]?.failed ?? [])} error={error} />
+    </div>
+  );
+}
 
 // First-run setup wizard (documentation/plans/ONBOARDING_WIZARD_PLAN.md). It walks a new owner through welcome, language, company
 // details, first warehouse, items, team and approvals, then offers the tour. It only calls API routes that already exist, so it needs no
@@ -78,11 +203,14 @@ export function OnboardingPage() {
           <h1 className="m-0 text-xl font-semibold">{s.title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
           <div className="mt-5">
-            {key === 'welcome' && <WelcomeStep c={c} onStart={() => go(1)} onLater={leave} />}
+            {key === 'welcome' && <WelcomeStep c={c} onStart={() => go(1)} onLater={leave} onFilledAll={() => go(STEP_KEYS.indexOf('team'))} />}
             {key === 'language' && <LanguageStep c={c} onDone={() => go(step + 1)} />}
             {key === 'company' && <CompanyStep c={c} onDone={() => go(step + 1)} />}
+            {key === 'storage' && <StorageStep c={c} onDone={() => go(step + 1)} />}
             {key === 'warehouse' && <WarehouseStep c={c} onDone={() => go(step + 1)} />}
             {key === 'items' && <ItemsStep c={c} onDone={() => go(step + 1)} />}
+            {key === 'suppliers' && <PartyStep c={c} kind="suppliers" onDone={() => go(step + 1)} />}
+            {key === 'customers' && <PartyStep c={c} kind="customers" onDone={() => go(step + 1)} />}
             {key === 'team' && <TeamStep c={c} onDone={() => go(step + 1)} />}
             {key === 'approval' && <ApprovalStep c={c} onDone={() => go(step + 1)} />}
             {key === 'done' && <DoneStep c={c} orgId={orgId} />}
@@ -110,7 +238,8 @@ export function OnboardingPage() {
   );
 }
 
-function WelcomeStep({ c, onStart, onLater }: { c: OnboardingContent; onStart: () => void; onLater: () => void }) {
+function WelcomeStep({ c, onStart, onLater, onFilledAll }: { c: OnboardingContent; onStart: () => void; onLater: () => void; onFilledAll: () => void }) {
+  const canFill = useCanFill();
   return (
     <>
       <ol className="m-0 list-decimal ps-5 text-sm leading-relaxed">
@@ -124,6 +253,7 @@ function WelcomeStep({ c, onStart, onLater }: { c: OnboardingContent; onStart: (
           {c.welcome.later}
         </Button>
       </div>
+      {canFill ? <FillEverything c={c} onFilled={onFilledAll} /> : null}
     </>
   );
 }
@@ -233,6 +363,8 @@ function CompanyStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }
   };
   const zones = TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];
   return (
+    <>
+    {org ? <FillButton c={c} run={() => fillCompany(api, org)} onFilled={reload} onNext={onDone} /> : null}
     <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
         <Field label={c.company.name}>
@@ -270,6 +402,7 @@ function CompanyStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }
         <Saver c={c} busy={busy} error={error} disabled={name.trim().length < 2} />
       </div>
     </form>
+    </>
   );
 }
 
@@ -288,6 +421,15 @@ function WarehouseStep({ c, onDone }: { c: OnboardingContent; onDone: () => void
     });
   };
   return (
+    <>
+    <FillButton
+      c={c}
+      run={async (p) => {
+        const s = await fillStorage(api);
+        return (await fillWarehouses(api, s.ids, p)).report;
+      }}
+      onNext={onDone}
+    />
     <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
       {existing && existing.length > 0 ? <p className="m-0 text-sm sm:col-span-2">{c.warehouse.existing(existing.length)}</p> : null}
       <Field label={c.warehouse.code} hint={c.warehouse.codeHint}>
@@ -300,6 +442,7 @@ function WarehouseStep({ c, onDone }: { c: OnboardingContent; onDone: () => void
         <Saver c={c} busy={busy} error={error} disabled={!WAREHOUSE_CODE.test(code.trim()) || name.trim().length === 0} />
       </div>
     </form>
+    </>
   );
 }
 
@@ -332,6 +475,16 @@ function ItemsStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) 
   };
   const needsWarehouse = !warehouseId && filled.some((r) => Number(r.qty) > 0);
   return (
+    <>
+    <FillButton
+      c={c}
+      run={async (p) => {
+        const s = await fillStorage(api);
+        const w = await fillWarehouses(api, s.ids);
+        return fillItems(api, w.ids, s.ids, p);
+      }}
+      onNext={onDone}
+    />
     <form onSubmit={submit}>
       {items && items.length > 0 ? <p className="m-0 mb-3 text-sm">{c.items.existing(items.length)}</p> : null}
       <div className="flex flex-col gap-3">
@@ -360,6 +513,7 @@ function ItemsStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) 
       {needsWarehouse ? <p className="m-0 mt-2 text-sm text-muted-foreground">{c.items.needWarehouse}</p> : null}
       <Saver c={c} busy={busy} error={error} disabled={filled.length === 0 || needsWarehouse} />
     </form>
+    </>
   );
 }
 
@@ -453,6 +607,11 @@ function ApprovalStep({ c, onDone }: { c: OnboardingContent; onDone: () => void 
   return (
     <>
       <p className="m-0 rounded-lg bg-muted p-3 text-sm">{c.approval.always}</p>
+      {can ? (
+        <div className="mt-4">
+          <FillButton c={c} run={() => fillApproval(api)} onNext={onDone} />
+        </div>
+      ) : null}
       {!can ? (
         <p className="m-0 mt-3 text-sm text-muted-foreground">{c.notAllowed}</p>
       ) : (
@@ -475,6 +634,120 @@ function ApprovalStep({ c, onDone }: { c: OnboardingContent; onDone: () => void 
           </div>
         </form>
       )}
+    </>
+  );
+}
+
+function StorageStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
+  const session = useSession();
+  const can = hasPermission(session.permissions, 'inventory.batches.manage');
+  const existing = useList('/v1/inventory/storage-conditions', hasPermission(session.permissions, 'inventory.batches.read'), 0);
+  const [name, setName] = useState('');
+  const [min, setMin] = useState('');
+  const [max, setMax] = useState('');
+  const { busy, error, run } = useSave(onDone);
+  if (!can) return <p className="m-0 text-sm text-muted-foreground">{c.notAllowed}</p>;
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    run(async () => {
+      await api('/v1/inventory/storage-conditions', {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim(), minTempC: min === '' ? null : Number(min), maxTempC: max === '' ? null : Number(max) }),
+      });
+    });
+  };
+  return (
+    <>
+      <FillButton c={c} run={async (p) => (await fillStorage(api, p)).report} onNext={onDone} />
+      <form onSubmit={submit} className="grid gap-4 sm:grid-cols-3">
+        {existing && existing.length > 0 ? <p className="m-0 text-sm sm:col-span-3">{c.storage.existing(existing.length)}</p> : null}
+        <Field label={c.storage.name}>
+          <input className={inputClass} required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label={c.storage.min}>
+          <input className={inputClass} type="number" step="any" value={min} onChange={(e) => setMin(e.target.value)} />
+        </Field>
+        <Field label={c.storage.max}>
+          <input className={inputClass} type="number" step="any" value={max} onChange={(e) => setMax(e.target.value)} />
+        </Field>
+        <div className="sm:col-span-3">
+          <Saver c={c} busy={busy} error={error} disabled={name.trim().length === 0} />
+        </div>
+      </form>
+    </>
+  );
+}
+
+function PartyStep({ c, kind, onDone }: { c: OnboardingContent; kind: 'suppliers' | 'customers'; onDone: () => void }) {
+  const session = useSession();
+  const path = kind === 'suppliers' ? '/v1/purchasing/suppliers' : '/v1/sales/customers';
+  const can = hasPermission(session.permissions, kind === 'suppliers' ? 'purchasing.suppliers.manage' : 'sales.customers.manage');
+  const readable = hasPermission(session.permissions, kind === 'suppliers' ? 'purchasing.suppliers.read' : 'sales.customers.read');
+  const [version, setVersion] = useState(0);
+  const existing = useList(path, readable, version);
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [city, setCity] = useState('');
+  const [added, setAdded] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!can) return <p className="m-0 text-sm text-muted-foreground">{c.notAllowed}</p>;
+  const add = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api(path, { method: 'POST', body: JSON.stringify({ name: name.trim(), contact: contact.trim(), city: city.trim() }) });
+      setAdded((a) => [...a, name.trim()]);
+      setName('');
+      setContact('');
+      setCity('');
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setBusy(false);
+  };
+  return (
+    <>
+      <FillButton
+        c={c}
+        run={(p) => (kind === 'suppliers' ? fillSuppliers(api, p) : fillCustomers(api, p))}
+        onFilled={() => setVersion((v) => v + 1)}
+        onNext={onDone}
+      />
+      <form onSubmit={add} className="grid gap-4 sm:grid-cols-3">
+        {existing && existing.length > 0 ? <p className="m-0 text-sm sm:col-span-3">{c.party.existing(existing.length)}</p> : null}
+        <Field label={c.party.name}>
+          <input className={inputClass} required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label={c.party.contact}>
+          <input className={inputClass} maxLength={200} value={contact} onChange={(e) => setContact(e.target.value)} />
+        </Field>
+        <Field label={c.party.city}>
+          <input className={inputClass} maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} />
+        </Field>
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-3">
+          <Button type="submit" variant="outline" disabled={busy || name.trim().length === 0}>
+            {busy ? c.saving : c.party.add}
+          </Button>
+          <Button type="button" onClick={onDone}>
+            {c.next}
+          </Button>
+        </div>
+        {error ? (
+          <p className="error m-0 sm:col-span-3" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {added.length > 0 ? (
+          <ul className="m-0 list-disc ps-5 text-sm sm:col-span-3">
+            {added.map((x) => (
+              <li key={x}>{c.party.added(x)}</li>
+            ))}
+          </ul>
+        ) : null}
+      </form>
     </>
   );
 }

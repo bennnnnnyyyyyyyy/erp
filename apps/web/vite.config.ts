@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
       // Show "Continue with Google" only once the provider is set up in Supabase Auth.
       'import.meta.env.VITE_AUTH_GOOGLE_ENABLED': JSON.stringify(env.AUTH_GOOGLE_ENABLED ?? ''),
       // Sample-data demo (npm run dev:demo): no API, database or sign-in. Off in every other mode.
+      // Accounts that see "Fill with sample data" in the setup wizard (comma-separated). Empty = nobody. Never set in the demo build.
+      'import.meta.env.VITE_DEMO_AUTOFILL_EMAILS': JSON.stringify(env.DEMO_AUTOFILL_EMAILS ?? ''),
       'import.meta.env.VITE_DEMO_MODE': JSON.stringify(mode === 'demo' ? 'true' : ''),
       // Shows the "Demo environment: sample data only" bar. On in the sample-data build, and in a real build
       // when it is made for a demo (set DEMO_ENVIRONMENT=true for that build only).

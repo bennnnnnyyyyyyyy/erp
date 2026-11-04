@@ -86,6 +86,9 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           VITE_API_BASE_URL: ${{ env.API_URL }}
+          # Who sees "Fill with sample data" in the setup wizard (ONBOARDING_WIZARD_PLAN.md Part B): the demo presenter's account only.
+          # A repository variable DEMO_AUTOFILL_EMAILS (comma-separated) overrides it; set it to a blank space to switch the button off.
+          DEMO_AUTOFILL_EMAILS: ${{ vars.DEMO_AUTOFILL_EMAILS || 'chris.johnson.wiz@gmail.com' }}
 
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
