@@ -291,6 +291,8 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
   if (!sku || !name) invalid('SKU and name are required');
   const opening = Number(body.openingQty ?? 0);
   if (!Number.isFinite(opening) || opening < 0) invalid('Opening stock must be zero or more');
+  const cost = body.unitCostMinor === undefined || body.unitCostMinor === null ? null : Number(body.unitCostMinor);
+  if (cost !== null && (!Number.isInteger(cost) || cost < 0)) invalid('unitCostMinor must be a whole number of minor units, zero or more');
   const id = await callRpc<string>(userDb(c), 'inv_create_item', {
     p_sku: sku,
     p_name: name,
@@ -299,6 +301,8 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
     p_opening_qty: opening,
     p_warehouse_id: text(body.warehouseId) || null,
   });
+  // Optional average cost in the same request (efficiency audit 2026-11-04, F4): the existing audited function, owners and admins only.
+  if (cost !== null && cost > 0) await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
   return ok(
     c,
     toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }),

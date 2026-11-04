@@ -26,24 +26,23 @@ export const requireTenant = createMiddleware<AppEnv>(async (c, next) => {
   if (!orgId) throw new HttpError(400, 'Choose an organization first', 'org_required');
 
   const client = userDb(c);
-  const { data: membership, error } = await client
-    .from('memberships')
-    .select('role, organizations!inner(id, name, slug, default_currency, timezone, settings, deleted_at)')
-    .eq('org_id', orgId)
-    .eq('user_id', c.var.user.id)
-    .is('disabled_at', null)
-    .maybeSingle<MembershipRow>();
+  // Both reads run at the same time (efficiency audit 2026-11-04, F2): one database round trip instead of two on every request.
+  // The module list is only used once the membership check below has passed, and row level security already limits it to members.
+  const [{ data: membership, error }, { data: enabled, error: modErr }] = await Promise.all([
+    client
+      .from('memberships')
+      .select('role, organizations!inner(id, name, slug, default_currency, timezone, settings, deleted_at)')
+      .eq('org_id', orgId)
+      .eq('user_id', c.var.user.id)
+      .is('disabled_at', null)
+      .maybeSingle<MembershipRow>(),
+    client.from('org_modules').select('module_key').eq('org_id', orgId).is('disabled_at', null),
+  ]);
   if (error) throw error;
   const org = membership?.organizations;
   if (!membership || !org || org.deleted_at) {
     throw new HttpError(403, "You aren't a member of this organization", 'not_a_member');
   }
-
-  const { data: enabled, error: modErr } = await client
-    .from('org_modules')
-    .select('module_key')
-    .eq('org_id', orgId)
-    .is('disabled_at', null);
   if (modErr) throw modErr;
 
   const modules = new Set(MODULES.filter((m) => m.core).map((m) => m.key));

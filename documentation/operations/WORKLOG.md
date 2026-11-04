@@ -11,6 +11,49 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-04 (evening) — Efficiency audit and fixes F1–F4; "Explore more" on every wizard step (branch `worktree-onboarding-wizard`, not merged)
+
+**Objective.** Ben: "saving takes so long, do an efficiency audit". Then: "each step of the tutorial should have an explore more as well … work on fixing tutorial/demo".
+
+**Actions Completed.**
+- **Audit:** [`2026-11-04-efficiency-audit.md`](../plans/2026-11-04-efficiency-audit.md). Read-only measurements on live as Chris:
+  - a write takes about 260 ms, of which about 68 ms is the network;
+  - the rest is three sequential database calls of about 60 ms each, because the database is in **eu-west-1** and the Worker runs near the user;
+  - the wizard saved about 87 requests one after another (about 20–25 s).
+- **Fixes:**
+  - F1: Smart Placement in `apps/api/wrangler.toml`.
+  - F2: the tenant middleware's two reads now run in parallel (`apps/api/src/middleware/tenant.ts`).
+  - F3: the wizard saves 4 rows at a time (`sampleFill.ts`; the audit chain stays serialised by the per-company advisory lock in `sql/003`).
+  - F4: `POST /v1/inventory/items` takes `unitCostMinor` (calls the existing `inv_set_item_cost`).
+- **Explore more** on all 11 steps (English and Arabic), opening the related screen in a new tab.
+
+**Database / System Result.** None. No migration; nothing deployed.
+
+**Safety Status.**
+- typecheck, `biome ci` and `npm test` (web 63) pass; `wrangler deploy --dry-run` passes.
+- The web build could not run at the end (the machine was out of memory); it passed earlier today, and CI builds before deploying.
+- Not measured live yet: re-measure after merge with the audit's method.
+
+## 2026-11-04 — Two "Gulf Global Outsourcing" test companies soft-deleted (live data change, Ben's request)
+
+**Objective.** Ben: "delete the test company I made Gulf Global Outsourcing".
+
+**Actions Completed.**
+- A first script refused because it found **two** active companies with that name; nothing changed.
+- A read-only listing on ggoerp showed both were made today with no items:
+  - `fa4fbf01-…` (owner ben@prime-ad.com, 1 warehouse, 10 audit rows);
+  - `874a8b52-…` (owner chris.johnson.wiz@gmail.com, 5 warehouses, 21 audit rows).
+- Ben then said "run it yourself". Both were soft-deleted by id in one transaction (`organizations.deleted_at = now()`), each with an audit row `organization.deleted`.
+
+**Database / System Result.**
+- Both rows now have `deleted_at` 2026-11-04 16:26:24 UTC (verified by query). Nothing erased: their data and audit logs stay.
+- They no longer appear in the company picker, and the API refuses them (`is_org_member` and the tenant check ignore deleted companies).
+- Each owner gets a sign-up slot back, because the 3-company limit counts only active companies.
+
+**Safety Status.**
+- Targeted by id and name only; no other company touched.
+- Undo: `update public.organizations set deleted_at = null where id = '<id>';`
+
 ## 2026-11-04 — First-run setup wizard, on branch `worktree-onboarding-wizard` (not merged, not deployed)
 
 **Objective.** Ben: the tutorial "needs to welcome me into the app, ask me the language, name of company, and stuff". Keep the sample companies as they are; Ben will create a new company to use it. Built on a branch because of tonight's demo freeze on `main` (Ben chose the worktree).

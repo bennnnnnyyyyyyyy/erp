@@ -70,6 +70,10 @@ Every step can be skipped, and there are Back and "Leave setup" buttons. A step 
 
 **Change, same day (Ben: "auto fill live in the website, no animations"):** the per-step "Fill with sample data" now puts the sample straight into the form on screen. Every list step (storage conditions, warehouses, items with stock, cost and storage, suppliers, customers) is an editable table. Nothing saves until Save, which saves whatever rows are on screen, sample or typed, with a progress count. "Fill everything" on the welcome step still saves everything in one go, for rehearsals.
 
+**Explore more (Ben, same day):** every step ends with "Explore more: <screen>". It links to the real screen behind what the step sets up and opens in a new tab, so the wizard stays put. The links: Guide, Settings General, Batches and expiry (storage), Stock on hand (warehouses and items), Suppliers, Customers, Users, Approval policies, Home.
+
+**Speed (same day):** list steps save 4 rows at a time and items send their cost in the same request. See [`2026-11-04-efficiency-audit.md`](2026-11-04-efficiency-audit.md).
+
 **Files:**
 - `modules/help/sampleCompany.ts`: the data. It copies 5 warehouses, 2 conditions, 19 items, 12 suppliers and 10 customers from the seed.
 - `modules/help/sampleFill.ts`: the fill logic. It skips anything that already exists, saves row by row with progress, and lists failures.
