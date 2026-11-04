@@ -48,6 +48,7 @@ const ExpensePage = lazyNamed(() => import('./finance/FinanceRecords'), 'Expense
 const PaymentPage = lazyNamed(() => import('./finance/FinanceRecords'), 'PaymentPage');
 const AlertsPage = lazyNamed(() => import('./alerts/Alerts'), 'AlertsPage');
 const GettingStartedPage = lazyNamed(() => import('./help/GettingStarted'), 'GettingStartedPage');
+const OnboardingPage = lazyNamed(() => import('./help/Onboarding'), 'OnboardingPage');
 const ProfitOverviewPage = lazyNamed(() => import('./finance/ProfitOverview'), 'ProfitOverviewPage');
 
 
@@ -204,6 +205,7 @@ export const APPS: AppDef[] = [
     key: 'start', module: 'core', name: 'Getting started', description: 'Setup checklist for a new company',
     suite: 'Core', basePath: '/start', visible: (s: SessionInfo) => s.org?.showTutorial === true, pages: [
       { path: '', label: 'Tutorial', component: GettingStartedPage },
+      { path: '/setup', label: 'Set up your company', component: OnboardingPage, nav: false, parent: '' },
     ],
   } satisfies AppDef]),
   // Alert rules and teams (sql/028). Real API only. Owner and admin only.

@@ -1,6 +1,8 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { hasPermission } from '@erp/shared';
-import { Link } from '../../lib/router';
+import { api } from '../../lib/api';
+import { Link, navigate } from '../../lib/router';
+import { readProgress, shouldAutoStart } from '../help/onboardingContent';
 import {useI18n, tr } from '../../lib/i18n';
 import { useSession } from '../../session';
 import { SUITE_ORDER, type AppDef } from '../registry';
@@ -84,6 +86,28 @@ const ICONS: Record<string, ReactNode> = {
   ),
 };
 
+// First run: in a brand-new company (tutorial flag on, no warehouse yet), someone who can manage the company is taken to the setup wizard
+// once. "Not now" or "Leave setup" stops it for this browser session; finishing it stops it for good (onboardingContent.ts).
+function useFirstRunSetup(orgId: string | null, showTutorial: boolean, canManage: boolean) {
+  useEffect(() => {
+    if (!orgId || !showTutorial || !canManage) return;
+    const dismissed = sessionStorage.getItem(`erp.onboarding.dismissed.${orgId}`) === '1';
+    const progress = readProgress(orgId);
+    if (progress.done || dismissed) return;
+    let live = true;
+    api<unknown[]>('/v1/inventory/warehouses')
+      .then((rows) => {
+        if (live && shouldAutoStart({ showTutorial, canManage, warehouses: Array.isArray(rows) ? rows.length : null, progress, dismissed })) {
+          navigate('/start/setup');
+        }
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [orgId, showTutorial, canManage]);
+}
+
 // The home screen: a greeting, then one tile per app the user can open, grouped by suite.
 export function Home({ apps }: { apps: AppDef[] }) {
   const { t, lang } = useI18n();
@@ -94,6 +118,7 @@ export function Home({ apps }: { apps: AppDef[] }) {
   );
   const hasBusinessApps = apps.some((a) => a.module !== 'core');
   const canManageApps = hasPermission(session.permissions, 'core.org.manage');
+  useFirstRunSetup(session.org?.id ?? null, session.org?.showTutorial === true, canManageApps && hasPermission(session.permissions, 'inventory.items.read'));
   let tileIndex = 0;
 
   return (
