@@ -41,7 +41,6 @@
       "Edit(./sql/031_*.sql)",
       "Edit(./sql/032_*.sql)",
       "Edit(./documentation/architecture/decisions/**)",
-      "Edit(./documentation/research/**)",
       "Edit(./documentation/reviews/**)",
       "Edit(./.agents/**)",
       "Edit(./skills-lock.json)",
