@@ -306,6 +306,15 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
   );
 });
 
+// Set an item's average cost by hand (sql/023 `inv_set_item_cost`: owners and admins only, audited, logged in inv_cost_log). The route
+// check is the early rejection; the database allows only owners and admins. Used by Settings-free flows such as the setup wizard.
+inventoryRoutes.put('/items/:id/cost', requirePermission('inventory.items.manage'), async (c) => {
+  const unitCostMinor = Number((await jsonBody(c)).unitCostMinor);
+  if (!Number.isInteger(unitCostMinor) || unitCostMinor < 0) invalid('unitCostMinor must be a whole number of minor units, zero or more');
+  await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: idParam(c), p_unit_cost_minor: unitCostMinor });
+  return ok(c, { id: idParam(c), unitCostMinor });
+});
+
 inventoryRoutes.post('/items/:id/reorder-level', requirePermission('inventory.reorder.manage'), async (c) => {
   const id = idParam(c);
   const body = await jsonBody(c);

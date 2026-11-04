@@ -4,8 +4,9 @@ import type { Lang } from '../../lib/i18n';
 // here, never in the component, and onboarding.test.ts fails if the two languages drift apart. The Arabic is a first draft awaiting
 // review by a native speaker.
 
-export type StepKey = 'welcome' | 'language' | 'company' | 'warehouse' | 'items' | 'team' | 'approval' | 'done';
-export const STEP_KEYS: StepKey[] = ['welcome', 'language', 'company', 'warehouse', 'items', 'team', 'approval', 'done'];
+export type StepKey = 'welcome' | 'language' | 'company' | 'storage' | 'warehouse' | 'items' | 'suppliers' | 'customers' | 'team' | 'approval' | 'done';
+export const STEP_KEYS: StepKey[] = ['welcome', 'language', 'company', 'storage', 'warehouse', 'items', 'suppliers', 'customers', 'team', 'approval', 'done'];
+export type FillStageKey = 'company' | 'storage' | 'warehouses' | 'items' | 'suppliers' | 'customers' | 'approval';
 
 export type OnboardingContent = {
   stepOf: (n: number, total: number) => string;
@@ -26,6 +27,18 @@ export type OnboardingContent = {
   team: { email: string; fullName: string; role: string; roles: Record<'admin' | 'member' | 'viewer', string>; invite: string; invited: (email: string) => string; existing: (n: number) => string };
   approval: { always: string; minQty: string; minQtyHint: string; approvers: string; existing: (n: number) => string };
   done: { tour: string; home: string; checklist: string };
+  storage: { name: string; min: string; max: string; existing: (n: number) => string };
+  party: { name: string; contact: string; city: string; add: string; added: (name: string) => string; existing: (n: number) => string };
+  fill: {
+    one: string;
+    all: string;
+    allHint: string;
+    working: (done: number, total: number) => string;
+    result: (added: number, skipped: number) => string;
+    failed: string;
+    stages: Record<FillStageKey, string>;
+    continueTeam: string;
+  };
 };
 
 const EN: OnboardingContent = {
@@ -42,6 +55,9 @@ const EN: OnboardingContent = {
     welcome: { title: 'Welcome', body: 'This app runs your warehouse, buying and selling, with a manager approval on every outgoing stock movement and a history nobody can change. A few short steps set up your company; every step can be skipped and changed later.' },
     language: { title: 'Your language', body: 'Choose the language you want to use. The layout turns right to left for Arabic.' },
     company: { title: 'Your company', body: 'These appear on your documents and decide how money, dates and times are shown.' },
+    storage: { title: 'Storage conditions', body: 'Some goods must stay cool. A storage condition (for example a cold room at 2 to 8 °C) stops cold items being put in a warm warehouse.' },
+    suppliers: { title: 'Your suppliers', body: 'The companies you buy from. Purchase orders and supplier invoices use them.' },
+    customers: { title: 'Your customers', body: 'The companies you sell to. Sales orders and invoices use them.' },
     warehouse: { title: 'Your first warehouse', body: 'Stock always sits in a warehouse. Add the main one now; you can add more later.' },
     items: { title: 'Your items', body: 'Add a few of the items you stock, with the quantity you have today. You can add the rest later.' },
     team: { title: 'Your team', body: 'Invite the people who will work with you. A manager (admin) approves; a member requests and receives.' },
@@ -51,7 +67,7 @@ const EN: OnboardingContent = {
   welcome: {
     start: 'Start setup',
     later: 'Not now',
-    points: ['Choose your language', 'Check your company details', 'Add a warehouse and some items', 'Invite your team', 'Set how approvals work'],
+    points: ['Choose your language', 'Check your company details', 'Add your warehouses and items', 'Add your suppliers and customers', 'Invite your team', 'Set how approvals work'],
   },
   language: {
     personal: 'My language',
@@ -91,6 +107,18 @@ const EN: OnboardingContent = {
     existing: (n) => `You already have ${n} approval rule(s). Add another, or continue.`,
   },
   done: { tour: 'Take the tour', home: 'Go to the home page', checklist: 'Open the setup checklist' },
+  storage: { name: 'Name', min: 'Lowest °C', max: 'Highest °C', existing: (n) => `You already have ${n} storage condition(s).` },
+  party: { name: 'Name', contact: 'Contact', city: 'City', add: 'Add', added: (name) => `Added ${name}`, existing: (n) => `You already have ${n}.` },
+  fill: {
+    one: 'Fill with sample data',
+    all: 'Fill everything with sample data',
+    allHint: 'Adds the cosmetics sample company in one go: warehouses, items with stock and costs, suppliers, customers and an approval rule. Your company name, language and team stay as you set them.',
+    working: (done, total) => `Saving ${done} of ${total}…`,
+    result: (added, skipped) => `Added ${added}; ${skipped} already there.`,
+    failed: 'Could not add:',
+    stages: { company: 'Company settings', storage: 'Storage conditions', warehouses: 'Warehouses', items: 'Items', suppliers: 'Suppliers', customers: 'Customers', approval: 'Approval rule' },
+    continueTeam: 'Continue: invite your team',
+  },
 };
 
 const AR: OnboardingContent = {
@@ -107,6 +135,9 @@ const AR: OnboardingContent = {
     welcome: { title: 'مرحبًا بك', body: 'يدير هذا التطبيق مستودعك ومشترياتك ومبيعاتك، مع موافقة مدير على كل حركة مخزون صادرة وسجل لا يمكن لأحد تغييره. بضع خطوات قصيرة تُعدّ شركتك؛ ويمكن تخطي كل خطوة وتغييرها لاحقًا.' },
     language: { title: 'لغتك', body: 'اختر اللغة التي تريد استخدامها. يتحول اتجاه الصفحة من اليمين إلى اليسار مع العربية.' },
     company: { title: 'شركتك', body: 'تظهر هذه البيانات على مستنداتك وتحدد طريقة عرض المبالغ والتواريخ والأوقات.' },
+    storage: { title: 'ظروف التخزين', body: 'بعض البضائع يجب أن تبقى باردة. تمنع ظروف التخزين (مثل غرفة تبريد من 2 إلى 8 درجات) وضع الأصناف المبرّدة في مستودع دافئ.' },
+    suppliers: { title: 'مورّدوك', body: 'الشركات التي تشتري منها. تستخدمها أوامر الشراء وفواتير المورّدين.' },
+    customers: { title: 'عملاؤك', body: 'الشركات التي تبيع لها. تستخدمها أوامر البيع والفواتير.' },
     warehouse: { title: 'مستودعك الأول', body: 'يوجد المخزون دائمًا في مستودع. أضف المستودع الرئيسي الآن، ويمكنك إضافة غيره لاحقًا.' },
     items: { title: 'أصنافك', body: 'أضف بعض الأصناف التي تخزّنها مع الكمية الموجودة لديك اليوم. يمكنك إضافة الباقي لاحقًا.' },
     team: { title: 'فريقك', body: 'ادعُ الأشخاص الذين سيعملون معك. المدير يوافق، والعضو يطلب ويستلم.' },
@@ -116,7 +147,7 @@ const AR: OnboardingContent = {
   welcome: {
     start: 'ابدأ الإعداد',
     later: 'ليس الآن',
-    points: ['اختر لغتك', 'راجع بيانات شركتك', 'أضف مستودعًا وبعض الأصناف', 'ادعُ فريقك', 'حدّد طريقة عمل الموافقات'],
+    points: ['اختر لغتك', 'راجع بيانات شركتك', 'أضف مستودعاتك وأصنافك', 'أضف مورّديك وعملاءك', 'ادعُ فريقك', 'حدّد طريقة عمل الموافقات'],
   },
   language: {
     personal: 'لغتي',
@@ -156,6 +187,18 @@ const AR: OnboardingContent = {
     existing: (n) => `لديك بالفعل ${n} قاعدة موافقة. أضف قاعدة أخرى أو تابع.`,
   },
   done: { tour: 'خذ الجولة', home: 'انتقل إلى الصفحة الرئيسية', checklist: 'افتح قائمة الإعداد' },
+  storage: { name: 'الاسم', min: 'أدنى درجة °م', max: 'أعلى درجة °م', existing: (n) => `لديك بالفعل ${n} من ظروف التخزين.` },
+  party: { name: 'الاسم', contact: 'جهة الاتصال', city: 'المدينة', add: 'إضافة', added: (name) => `تمت إضافة ${name}`, existing: (n) => `لديك بالفعل ${n}.` },
+  fill: {
+    one: 'املأ ببيانات تجريبية',
+    all: 'املأ كل شيء ببيانات تجريبية',
+    allHint: 'يضيف شركة مستحضرات التجميل التجريبية دفعة واحدة: المستودعات، والأصناف مع مخزونها وتكلفتها، والمورّدين، والعملاء، وقاعدة موافقة. يبقى اسم شركتك ولغتك وفريقك كما حددتها.',
+    working: (done, total) => `جارٍ حفظ ${done} من ${total}…`,
+    result: (added, skipped) => `أُضيف ${added}؛ و${skipped} موجود بالفعل.`,
+    failed: 'تعذرت إضافة:',
+    stages: { company: 'إعدادات الشركة', storage: 'ظروف التخزين', warehouses: 'المستودعات', items: 'الأصناف', suppliers: 'المورّدون', customers: 'العملاء', approval: 'قاعدة الموافقة' },
+    continueTeam: 'تابع: ادعُ فريقك',
+  },
 };
 
 export const onboardingContent = (lang: Lang): OnboardingContent => (lang === 'ar' ? AR : EN);

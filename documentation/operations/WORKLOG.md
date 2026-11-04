@@ -34,6 +34,20 @@ run or deployed.
 - Not seen in a browser: it needs the real API, so the check comes after merge, in a new company.
 - Not merged. Merge after the demo, with `thursday-ui-topbar`.
 
+**Addendum, same day: demo autofill (plan Part B).**
+- **What Ben asked for:** one-click "Fill with sample data" with Demo Cosmetics Factory's master data, for the Chris account only, in any new company Chris creates.
+- **What was built:**
+  - A visible "Fill everything" button on the welcome step, plus a fill button on every step.
+  - New steps: Storage conditions, Suppliers, Customers.
+  - The team step is manual only.
+  - The fill sets currency, time zone and date format, never the company name.
+  - Data copied from `sql/seed/004`: 5 warehouses with conditions, 19 items with opening stock, cost and the cold condition where needed, 12 suppliers, 10 customers, and one approval rule.
+  - Fills skip anything that already exists, so running one twice duplicates nothing.
+  - **One API addition:** `PUT /v1/inventory/items/:id/cost`, which calls the existing audited `inv_set_item_cost` (owner or admin). No migration.
+- **Who sees the buttons:** `DEMO_AUTOFILL_EMAILS` on the production build in `ci-deploy.yml` (default Chris, overridable by a repository variable). Not set on the PR or test build, so tests and other people never see the buttons.
+- **D4 note:** names keep "(sample)" to match the cosmetics company. Ben can ask to drop the suffix in both.
+- **Checks:** typecheck, `biome ci` and `npm test` (web 61) pass; `vite build` passes with the setting, and the email is present only in the wizard chunk. Not run in a browser.
+
 ## 2026-11-03 (after final) — Top-bar menu shows the person's name (not deployed)
 
 **Objective.** The previous entry said a signed-in person would see their new name in the top-bar menu only after signing in again. Checked: the menu never showed a name at all (email only, initials from the email). Ben: "clean off the small catch".
