@@ -48,11 +48,6 @@ Run the whole file at once with nothing else in the editor.
 | `033_org_tour.sql` | the tour switch is off by default, owner/admin only, audited, a no-op writes no audit row, leaves the tutorial flag alone, never affects another company, no anonymous use (needs 039) |
 | `021_security_audit_fixes.sql` | existing accounts must accept an invitation, invitations isolated, member role rules and audit in the database, sign-in link refused across organizations, no user-claimed 'whatsapp' channel, per-org delivery closed to users |
 | `034_isolation_gaps.sql` | System audit finding 2: the 7 business tables no test named yet (warehouses, counters, request lines, suppliers, storage conditions, team members, rule recipients): org B sees none of org A's rows and cannot write to them directly |
-| `035_lock_date.sql` | S1: owner only, no future date, audit, dated rows on or before the lock refused (create and void), removal reopens, isolation (needs 040) |
-| `036_due_dates.sql` | S2: due date from customer terms, company default or 0; who may set terms; due before invoice refused; overdue alert counts from the due date; isolation (needs 041) |
-| `037_stock_counts.sql` | S3: snapshot, uncounted lines block submit, starter/submitter cannot approve, counted − snapshot applied after a receipt during the count, ledger guard, reserved stock protected, rejection, cancel, isolation (needs 042) |
-| `038_customer_returns.sql` | S4: no stock move before approval, requester cannot approve, return at the original issue cost, average cost recomputed and logged, limit = delivered − returned or waiting, rejection, append-only, isolation (needs 043) |
-| `039_item_units.sql` | S5a: owner/admin only, base unit refused, case-insensitive conversion, unknown unit refused, removal keeps history, audit, isolation (needs 044) |
 
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 

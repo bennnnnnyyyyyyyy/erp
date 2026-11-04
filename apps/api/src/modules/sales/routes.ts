@@ -104,41 +104,22 @@ async function one(c: Context<AppEnv>, id: string) {
 salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('sal_customers')
-    .select('id,name,contact,city,phone,payment_terms_days')
+    .select('id,name,contact,city,phone')
     .eq('org_id', orgOf(c))
     .is('deleted_at', null)
     .order('name');
   if (error) throw error;
   return ok(
     c,
-    (
-      (data ?? []) as {
-        id: string;
-        name: string;
-        contact: string | null;
-        city: string | null;
-        phone: string | null;
-        payment_terms_days: number | null;
-      }[]
-    ).map((x) => ({
+    (data ?? []).map((x: { id: string; name: string; contact: string | null; city: string | null; phone: string | null }) => ({
       id: x.id,
       kind: 'customer',
       name: x.name,
       contact: x.contact ?? '',
       city: x.city ?? '',
       phone: x.phone ?? '',
-      /** null = the company default (sql/041). */
-      paymentTermsDays: x.payment_terms_days,
     })),
   );
-});
-// A customer's payment terms in days, or null for the company default (sql/041). The database allows owners and admins.
-salesRoutes.put('/customers/:id/terms', requirePermission('sales.customers.manage'), async (c) => {
-  const days = (await jsonBody(c)).days;
-  if (days !== null && (typeof days !== 'number' || !Number.isInteger(days) || days < 0 || days > 365))
-    invalid('days must be a whole number from 0 to 365, or null');
-  await callRpc<void>(userDb(c), 'sal_set_customer_terms', { p_customer_id: idParam(c), p_days: days });
-  return ok(c, { id: idParam(c), paymentTermsDays: days });
 });
 salesRoutes.get('/orders', requirePermission('sales.orders.read'), async (c) => ok(c, await loadOrders(c)));
 salesRoutes.get('/orders/:id', requirePermission('sales.orders.read'), async (c) => ok(c, await one(c, idParam(c))));
@@ -187,7 +168,6 @@ type InvoiceRow = {
   order_id: string;
   customer_id: string;
   invoice_date: string;
-  due_date: string;
   currency: string;
   status: string;
   created_at: string;
@@ -195,7 +175,7 @@ type InvoiceRow = {
 salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('sal_invoices')
-    .select('id,number,order_id,customer_id,invoice_date,due_date,currency,status,created_at')
+    .select('id,number,order_id,customer_id,invoice_date,currency,status,created_at')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
     .limit(200);
@@ -226,7 +206,6 @@ salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c)
         orderId: r.order_id,
         customerId: r.customer_id,
         invoiceDate: r.invoice_date,
-        dueDate: r.due_date,
         currency: r.currency,
         status: r.status,
         lines,
@@ -241,7 +220,7 @@ salesRoutes.get('/invoices/:id', requirePermission('sales.invoices.read'), async
   const id = idParam(c);
   const { data: r, error } = await userDb(c)
     .from('sal_invoices')
-    .select('id,number,order_id,customer_id,invoice_date,due_date,currency,status,created_at')
+    .select('id,number,order_id,customer_id,invoice_date,currency,status,created_at')
     .eq('org_id', orgOf(c))
     .eq('id', id)
     .maybeSingle();
@@ -265,7 +244,6 @@ salesRoutes.get('/invoices/:id', requirePermission('sales.invoices.read'), async
     orderId: row.order_id,
     customerId: row.customer_id,
     invoiceDate: row.invoice_date,
-    dueDate: row.due_date,
     currency: row.currency,
     status: row.status,
     lines,

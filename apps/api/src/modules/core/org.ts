@@ -28,12 +28,8 @@ function toSettings(row: OrgRow): OrgSettings {
     timezone: row.timezone,
     dateFormat: DATE_FORMATS.includes(dateFormat as DateFormat) ? (dateFormat as DateFormat) : 'DD/MM/YYYY',
     language: row.settings?.language === 'ar' ? 'ar' : 'en',
-    lockDate: typeof row.settings?.lock_date === 'string' ? row.settings.lock_date : null,
-    defaultPaymentTermsDays: typeof row.settings?.default_payment_terms_days === 'number' ? row.settings.default_payment_terms_days : 0,
   };
 }
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function isTimeZone(tz: string): boolean {
   try {
@@ -108,22 +104,6 @@ orgRoutes.post('/tutorial', requirePermission('core.org.manage'), async (c) => {
   if (typeof show !== 'boolean') invalid('show must be true or false');
   await callRpc<boolean>(userDb(c), 'core_set_tutorial', { p_show: show });
   return ok(c, { show });
-});
-
-// Set or remove the closed-period lock date (sql/040). The database allows owners only; the route check is the early rejection.
-orgRoutes.put('/lock-date', requirePermission('core.org.manage'), async (c) => {
-  const date = (await jsonBody(c)).date;
-  if (date !== null && (typeof date !== 'string' || !ISO_DATE.test(date))) invalid('date must be YYYY-MM-DD or null');
-  const lockDate = await callRpc<string | null>(userDb(c), 'core_set_lock_date', { p_date: date });
-  return ok(c, { lockDate });
-});
-
-// Payment terms used when a customer or supplier has none (sql/041). Owners and admins.
-orgRoutes.put('/payment-terms', requirePermission('core.org.manage'), async (c) => {
-  const days = (await jsonBody(c)).days;
-  if (typeof days !== 'number' || !Number.isInteger(days) || days < 0 || days > 365) invalid('days must be a whole number from 0 to 365');
-  const saved = await callRpc<number>(userDb(c), 'core_set_default_payment_terms', { p_days: days });
-  return ok(c, { defaultPaymentTermsDays: saved });
 });
 
 // Switch the in-app guided tour on or off for this company (sql/039). Owners and admins only; off by default.

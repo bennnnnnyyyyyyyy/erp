@@ -19,10 +19,6 @@ export type OrgSettings = {
   timezone: string;
   dateFormat: DateFormat;
   language: Language;
-  /** Closed-period lock (sql/040): nothing dated on or before it can be created or voided. ISO date, or null when unset. */
-  lockDate?: string | null;
-  /** Payment terms used when a customer or supplier has none (sql/041). Days after the invoice date. */
-  defaultPaymentTermsDays?: number;
 };
 
 export type OrgSettingsUpdate = Partial<Pick<OrgSettings, 'name' | 'defaultCurrency' | 'timezone' | 'dateFormat'>>;

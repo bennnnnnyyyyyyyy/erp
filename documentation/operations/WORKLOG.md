@@ -11,49 +11,6 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-03 (night) — Superfix workflow slices S1–S5a written; ERPNext and Dolibarr teardowns; live "Supabase not working" checked (not run, not deployed)
-
-**Objective.** Ben: study ERPNext and Dolibarr properly (behaviour only, both GPL), including their UI. Then "do a superfix plan (workflow for now) and apply" ([`SUPERFIX_WORKFLOW_PLAN.md`](../plans/SUPERFIX_WORKFLOW_PLAN.md), approved with all defaults D1–D7). Also: "live app says supabase not working".
-
-**Actions Completed.**
-- **Teardowns:** `research/erpnext/TEARDOWN.md` and `research/dolibarr/TEARDOWN.md`, from the local source copies (17.0.0-dev and a 2026-10-28 commit), including a UI teardown read from source.
-  - `documentation/research/` is in `.gitignore` and denied to agent edits, so the files are **not in this checkout**. They sit in the worktree `.claude/worktrees/research-erpnext-dolibarr` (branch `worktree-research-erpnext-dolibarr`) and in the job folder. Ben copies them in himself.
-  - The research index row and the new **source** evidence tag are also left for Ben to paste.
-- **Migrations** (each rerun-safe, ending with read-only checks):
-  - `sql/040_lock_date.sql`: owner-only lock date, enforced by triggers on customer and supplier invoices, expenses and payments, for both create and void.
-  - `sql/041_payment_terms_due_dates.sql`: terms on customers, suppliers and the company. `due_date` added to both invoice tables, with a trigger and a backfill. `alr_run` is carried over from `sql/030` with three lines changed, so "overdue" counts from the due date; behaviour is unchanged while terms are 0 days.
-  - `sql/042_stock_counts.sql`: count sessions with an expected-quantity snapshot. Approval by someone other than the starter or submitter. Stock moves of counted − snapshot. The ledger guard and check now accept `count_id`.
-  - `sql/043_customer_returns.sql`: `sal_note_returns` and `sal_submit_return_note`. Approving the credit note posts `return_in` moves at the original issue cost, updates the average cost (logged as `customer_return`) and limits returns to delivered minus returned.
-  - `sql/044_item_units.sql`: extra units per item with factors, and the `inv_to_base_qty` conversion.
-- **SQL tests:** `sql/tests/035`–`039`, one per slice, each covering isolation and no anonymous use.
-- **API:**
-  - Settings: `PUT /v1/core/org/lock-date`, `PUT /v1/core/org/payment-terms`; `OrgSettings` gains `lockDate` and `defaultPaymentTermsDays`.
-  - Terms: `PUT /v1/sales/customers/:id/terms`, `PUT /v1/purchasing/suppliers/:id/terms`. Customer and supplier lists return `paymentTermsDays`; invoice reads return `dueDate`.
-  - `GET /v1/finance/open-items` adds `dueDate`, `daysOverdue` and `ageBucket` (new `finance/ageing.ts`, with tests).
-  - Counts: `/v1/inventory/counts…`. Units: `/v1/inventory/items/:id/units…`. Returns: `POST /v1/sales/invoices/:id/returns`.
-  - New reason codes in `lib/rpc.ts`.
-- **Tests and docs:** `einvoicing.test.ts` now expects 6 note routes (the returns route was added deliberately). `sql/README.md`, `sql/tests/README.md`, the checklist and the plan (§8, deviations) are updated.
-- **Settings:** `.claude/settings.json` gains `"worktree": {"bgIsolation": "none"}`, which Ben approved.
-
-**Database / System Result.**
-- **Nothing was run on any database.** Docker is not installed here, and live applies need Ben's go-ahead. Migrations 040–044 and tests 035–039 are unproven until run.
-- **"Supabase not working" on the live app was checked read-only from outside:**
-  - The live bundle contains the Supabase URL, so it is not a missing build setting.
-  - The project is up: auth and REST answer in about 0.3 s, and the live publishable key is accepted by auth settings.
-  - Anonymous table reads are refused (by design, `sql/004`).
-  - The API `/health` returns ok (production); CORS allows erp-live.pages.dev.
-  - `vite.config.ts` in the checkout matches the commit.
-  - **Not reproduced.** Needs the exact message, the URL and the browser console from Ben.
-
-**Safety Status.**
-- `npm run typecheck`, `npm run lint` (`biome ci`) and `npm test` pass at the root: shared 31, API 135 with 7 skipped, web 47. `biome format --write` touched only files changed in this entry.
-- No commit, no deploy, no live data or schema change.
-- **Next:**
-  1. Run 040–044 then tests 035–039 on a throwaway database (CI's SQL workflow on push), or dry-run on ggoerp with Ben's approval, then apply.
-  2. S5b and S6 (storage decision, ADR-0007).
-  3. Screens.
-- Known limits are listed in plan §8: per-item counts, one batch per return line, no WhatsApp approval for counts yet, and returns not reflected in forecast or monthly COGS.
-
 ## 2026-11-03 (after final) — Top-bar menu shows the person's name (not deployed)
 
 **Objective.** The previous entry said a signed-in person would see their new name in the top-bar menu only after signing in again. Checked: the menu never showed a name at all (email only, initials from the email). Ben: "clean off the small catch".

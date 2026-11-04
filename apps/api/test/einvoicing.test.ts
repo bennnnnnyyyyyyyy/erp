@@ -80,11 +80,9 @@ describe('e-invoicing and credit / debit note API', () => {
   it('puts a permission check on every note route and reaches notes only through database functions', () => {
     const declared = notesSource.match(/routes\.(get|post)\(/g) ?? [];
     const guarded = notesSource.match(/routes\.(get|post)\([^\n]*requirePermission\('sales\.notes\.(read|create|approve)'\)/g) ?? [];
-    // 6 = list, one, create, returns (sql/043), approve/reject (one loop), cancel
-    expect(declared.length).toBe(6);
+    expect(declared.length).toBe(5);
     expect(guarded.length).toBe(declared.length);
-    for (const fn of ['sal_submit_note', 'sal_submit_return_note', 'sal_decide_note', 'sal_cancel_note'])
-      expect(notesSource).toContain(`'${fn}'`);
+    for (const fn of ['sal_submit_note', 'sal_decide_note', 'sal_cancel_note']) expect(notesSource).toContain(`'${fn}'`);
     expect(notesSource).not.toMatch(/\.(insert|update|delete|upsert)\(/);
   });
 

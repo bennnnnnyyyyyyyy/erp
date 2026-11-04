@@ -6,7 +6,6 @@ import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
-import { type AgeBucket, ageBucket, daysOverdue, todayUtc } from './ageing';
 
 // Expenses and payments (sql/024). Owner/admin only: the permissions below are not granted to members, and the tables
 // return nothing to them anyway. Every change goes through a database function that checks, changes and audits in one step.
@@ -257,12 +256,7 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     totalMinor: number;
     paidMinor: number;
     leftMinor: number;
-    /** sql/041. Expenses are due on their date. */
-    dueDate: string;
-    daysOverdue: number;
-    ageBucket: AgeBucket;
   };
-  const today = todayUtc();
   const items: Item[] = [];
   const push = (
     kind: Item['kind'],
@@ -272,10 +266,8 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     partyId: string | null,
     currency: string,
     total: number,
-    dueDate: string,
   ) => {
     const done = paid.get(id) ?? 0;
-    const late = daysOverdue(dueDate, today);
     if (total - done > 0)
       items.push({
         value: `${prefix}:${id}`,
@@ -287,16 +279,13 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
         totalMinor: total,
         paidMinor: done,
         leftMinor: total - done,
-        dueDate,
-        daysOverdue: Math.max(0, late),
-        ageBucket: ageBucket(late),
       });
   };
   if (direction === 'in') {
-    const invoices = await fetchAll<{ id: string; number: string; customer_id: string; currency: string; due_date: string }>((from, to) =>
+    const invoices = await fetchAll<{ id: string; number: string; customer_id: string; currency: string }>((from, to) =>
       db()
         .from('sal_invoices')
-        .select('id, number, customer_id, currency, due_date')
+        .select('id, number, customer_id, currency')
         .eq('org_id', org)
         .eq('status', 'issued')
         .order('id')
@@ -313,15 +302,10 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     );
     const total = new Map<string, number>();
     for (const l of lines) total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_price_minor)));
-    for (const i of invoices) push('customer_invoice', 'c', i.id, i.number, i.customer_id, i.currency, total.get(i.id) ?? 0, i.due_date);
+    for (const i of invoices) push('customer_invoice', 'c', i.id, i.number, i.customer_id, i.currency, total.get(i.id) ?? 0);
   } else {
-    const invoices = await fetchAll<{ id: string; number: string; supplier_id: string; currency: string; due_date: string }>((from, to) =>
-      db()
-        .from('pur_supplier_invoices')
-        .select('id, number, supplier_id, currency, due_date')
-        .eq('org_id', org)
-        .order('id')
-        .range(from, to),
+    const invoices = await fetchAll<{ id: string; number: string; supplier_id: string; currency: string }>((from, to) =>
+      db().from('pur_supplier_invoices').select('id, number, supplier_id, currency').eq('org_id', org).order('id').range(from, to),
     );
     const lines = await fetchAll<{ invoice_id: string; qty: number; unit_cost_minor: number }>((from, to) =>
       db()
@@ -334,24 +318,18 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     );
     const total = new Map<string, number>();
     for (const l of lines) total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Number(l.qty) * Number(l.unit_cost_minor));
-    for (const i of invoices) push('supplier_invoice', 's', i.id, i.number, i.supplier_id, i.currency, total.get(i.id) ?? 0, i.due_date);
-    const expenses = await fetchAll<{
-      id: string;
-      number: string;
-      supplier_id: string | null;
-      currency: string;
-      amount_minor: number;
-      expense_date: string;
-    }>((from, to) =>
-      db()
-        .from('fin_expenses')
-        .select('id, number, supplier_id, currency, amount_minor, expense_date')
-        .eq('org_id', org)
-        .eq('status', 'recorded')
-        .order('id')
-        .range(from, to),
+    for (const i of invoices) push('supplier_invoice', 's', i.id, i.number, i.supplier_id, i.currency, total.get(i.id) ?? 0);
+    const expenses = await fetchAll<{ id: string; number: string; supplier_id: string | null; currency: string; amount_minor: number }>(
+      (from, to) =>
+        db()
+          .from('fin_expenses')
+          .select('id, number, supplier_id, currency, amount_minor')
+          .eq('org_id', org)
+          .eq('status', 'recorded')
+          .order('id')
+          .range(from, to),
     );
-    for (const e of expenses) push('expense', 'e', e.id, e.number, e.supplier_id, e.currency, Number(e.amount_minor), e.expense_date);
+    for (const e of expenses) push('expense', 'e', e.id, e.number, e.supplier_id, e.currency, Number(e.amount_minor));
   }
   items.sort((a, b) => b.number.localeCompare(a.number));
   return ok(c, items);

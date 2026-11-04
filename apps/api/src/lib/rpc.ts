@@ -36,15 +36,6 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
     message: 'Production mode needs stored ETA credentials and a real signer, which are not set up',
     code: 'production_not_ready',
   },
-  PERIOD_LOCKED: { status: 409, message: 'That date is in a locked period', code: 'period_locked' },
-  DUE_BEFORE_INVOICE: { status: 400, message: 'The due date cannot be before the invoice date', code: 'invalid_input' },
-  COUNT_INCOMPLETE: { status: 409, message: 'Every line of the count needs a counted quantity first', code: 'count_incomplete' },
-  RETURN_EXCEEDS_ISSUED: {
-    status: 409,
-    message: 'Cannot return more than was delivered and not yet returned',
-    code: 'return_exceeds_issued',
-  },
-  UNKNOWN_UNIT: { status: 400, message: 'That unit is not set up for this item', code: 'unknown_unit' },
   ACTIVE_NOTES: {
     status: 409,
     message: 'Credit or debit notes still refer to this invoice: cancel or reject them first',
