@@ -27,6 +27,8 @@ export type OnboardingContent = {
   team: { email: string; fullName: string; role: string; roles: Record<'admin' | 'member' | 'viewer', string>; invite: string; invited: (email: string) => string; existing: (n: number) => string };
   approval: { always: string; minQty: string; minQtyHint: string; approvers: string; existing: (n: number) => string };
   done: { tour: string; home: string; checklist: string };
+  /** "Explore more": each step links to the real screen it sets up (opens in a new tab, so the wizard stays where it is). */
+  explore: { label: string; hint: string; screens: Record<StepKey, string> };
   storage: { name: string; min: string; max: string; existing: (n: number) => string };
   party: { name: string; contact: string; city: string; add: string; added: (name: string) => string; existing: (n: number) => string };
   fill: {
@@ -108,6 +110,23 @@ const EN: OnboardingContent = {
     existing: (n) => `You already have ${n} approval rule(s). Add another, or continue.`,
   },
   done: { tour: 'Take the tour', home: 'Go to the home page', checklist: 'Open the setup checklist' },
+  explore: {
+    label: 'Explore more',
+    hint: 'opens in a new tab; setup stays here',
+    screens: {
+      welcome: 'The user guide',
+      language: 'Settings: General',
+      company: 'Settings: General',
+      storage: 'Inventory: Batches and expiry',
+      warehouse: 'Inventory: Stock on hand',
+      items: 'Inventory: Stock on hand',
+      suppliers: 'Purchasing: Suppliers',
+      customers: 'Sales: Customers',
+      team: 'Settings: Users',
+      approval: 'Inventory: Approval policies',
+      done: 'The home page',
+    },
+  },
   storage: { name: 'Name', min: 'Lowest °C', max: 'Highest °C', existing: (n) => `You already have ${n} storage condition(s).` },
   party: { name: 'Name', contact: 'Contact', city: 'City', add: 'Add', added: (name) => `Added ${name}`, existing: (n) => `You already have ${n}.` },
   fill: {
@@ -189,6 +208,23 @@ const AR: OnboardingContent = {
     existing: (n) => `لديك بالفعل ${n} قاعدة موافقة. أضف قاعدة أخرى أو تابع.`,
   },
   done: { tour: 'خذ الجولة', home: 'انتقل إلى الصفحة الرئيسية', checklist: 'افتح قائمة الإعداد' },
+  explore: {
+    label: 'استكشف المزيد',
+    hint: 'يُفتح في علامة تبويب جديدة؛ ويبقى الإعداد هنا',
+    screens: {
+      welcome: 'دليل الاستخدام',
+      language: 'الإعدادات: عام',
+      company: 'الإعدادات: عام',
+      storage: 'المخزون: الدفعات وتواريخ الانتهاء',
+      warehouse: 'المخزون: المخزون المتاح',
+      items: 'المخزون: المخزون المتاح',
+      suppliers: 'المشتريات: المورّدون',
+      customers: 'المبيعات: العملاء',
+      team: 'الإعدادات: المستخدمون',
+      approval: 'المخزون: سياسات الموافقة',
+      done: 'الصفحة الرئيسية',
+    },
+  },
   storage: { name: 'الاسم', min: 'أدنى درجة °م', max: 'أعلى درجة °م', existing: (n) => `لديك بالفعل ${n} من ظروف التخزين.` },
   party: { name: 'الاسم', contact: 'جهة الاتصال', city: 'المدينة', add: 'إضافة', added: (name) => `تمت إضافة ${name}`, existing: (n) => `لديك بالفعل ${n}.` },
   fill: {

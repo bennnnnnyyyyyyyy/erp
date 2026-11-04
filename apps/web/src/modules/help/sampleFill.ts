@@ -23,7 +23,6 @@ export type Report = { added: number; skipped: number; failed: string[] };
 export type OnProgress = (done: number, total: number) => void;
 
 const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
-const put = (body: unknown): RequestInit => ({ method: 'PUT', body: JSON.stringify(body) });
 const errText = (label: string, e: unknown) => `${label}: ${(e as Error)?.message ?? String(e)}`;
 const empty = (): Report => ({ added: 0, skipped: 0, failed: [] });
 const low = (s: string) => s.trim().toLowerCase();
@@ -57,26 +56,66 @@ export async function saveCompany(
   }
 }
 
-/** Storage conditions (matched by name). */
-export async function saveConditions(api: Api, rows: SampleCondition[] = SAMPLE_CONDITIONS, onProgress?: OnProgress): Promise<Report> {
+/** How many rows are saved at the same time (efficiency audit 2026-11-04, F3). Each row is still its own audited call; the database
+ * serialises the audit chain per company (advisory lock, sql/003), so this only removes waiting, never a check. */
+export const PARALLEL = 4;
+
+/** Runs `work` for every row, at most `limit` at once, counting progress up as rows finish. */
+export async function inPool<T>(rows: T[], limit: number, work: (row: T) => Promise<void>, onProgress?: OnProgress): Promise<void> {
+  let next = 0;
+  let done = 0;
+  const lane = async () => {
+    while (next < rows.length) {
+      const row = rows[next++] as T;
+      await work(row);
+      done++;
+      onProgress?.(done, rows.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, rows.length) }, lane));
+}
+
+/**
+ * Saves rows that are matched by a key (name or code): a row whose key already exists, or appears earlier in the same table, is skipped.
+ * The key is claimed before the save starts, so two identical rows saved at the same time cannot both be created.
+ */
+async function saveKeyed<T>(rows: T[], have: Set<string>, keyOf: (r: T) => string, save: (r: T, key: string) => Promise<void>, onProgress?: OnProgress): Promise<Report> {
   const report = empty();
-  const existing = await api<{ name: string }[]>('/v1/inventory/storage-conditions');
-  const have = new Set(existing.map((x) => low(x.name)));
-  for (const [i, c] of rows.entries()) {
-    if (have.has(low(c.name))) {
-      report.skipped++;
-    } else {
+  await inPool(
+    rows,
+    PARALLEL,
+    async (r) => {
+      const key = keyOf(r);
+      if (have.has(key)) {
+        report.skipped++;
+        return;
+      }
+      have.add(key);
       try {
-        await api('/v1/inventory/storage-conditions', post({ name: c.name.trim(), minTempC: c.minTempC, maxTempC: c.maxTempC }));
-        have.add(low(c.name));
+        await save(r, key);
         report.added++;
       } catch (e) {
-        report.failed.push(errText(c.name, e));
+        have.delete(key);
+        report.failed.push(errText(key, e));
       }
-    }
-    onProgress?.(i + 1, rows.length);
-  }
+    },
+    onProgress,
+  );
   return report;
+}
+
+/** Storage conditions (matched by name). */
+export async function saveConditions(api: Api, rows: SampleCondition[] = SAMPLE_CONDITIONS, onProgress?: OnProgress): Promise<Report> {
+  const existing = await api<{ name: string }[]>('/v1/inventory/storage-conditions');
+  return saveKeyed(
+    rows,
+    new Set(existing.map((x) => low(x.name))),
+    (c) => low(c.name),
+    async (c) => {
+      await api('/v1/inventory/storage-conditions', post({ name: c.name.trim(), minTempC: c.minTempC, maxTempC: c.maxTempC }));
+    },
+    onProgress,
+  );
 }
 
 async function conditionIds(api: Api): Promise<Map<string, string>> {
@@ -86,82 +125,66 @@ async function conditionIds(api: Api): Promise<Map<string, string>> {
 
 /** Warehouses (matched by code), each with its storage condition when one is named and exists. */
 export async function saveWarehouses(api: Api, rows: SampleWarehouse[] = SAMPLE_WAREHOUSES, onProgress?: OnProgress): Promise<Report> {
-  const report = empty();
-  const existing = await api<{ code: string }[]>('/v1/inventory/warehouses');
-  const have = new Set(existing.map((x) => x.code.toUpperCase()));
-  const conds = await conditionIds(api);
-  for (const [i, w] of rows.entries()) {
-    const code = w.code.trim().toUpperCase();
-    if (have.has(code)) {
-      report.skipped++;
-    } else {
-      try {
-        const made = await api<{ id: string }>('/v1/inventory/warehouses', post({ code, name: w.name.trim(), nameAr: w.nameAr.trim() }));
-        const cond = w.condition ? conds.get(low(w.condition)) : undefined;
-        if (cond) await api(`/v1/inventory/warehouses/${made.id}/storage`, post({ conditionId: cond }));
-        have.add(code);
-        report.added++;
-      } catch (e) {
-        report.failed.push(errText(code, e));
-      }
-    }
-    onProgress?.(i + 1, rows.length);
-  }
-  return report;
+  const [existing, conds] = await Promise.all([api<{ code: string }[]>('/v1/inventory/warehouses'), conditionIds(api)]);
+  return saveKeyed(
+    rows,
+    new Set(existing.map((x) => x.code.toUpperCase())),
+    (w) => w.code.trim().toUpperCase(),
+    async (w, code) => {
+      const made = await api<{ id: string }>('/v1/inventory/warehouses', post({ code, name: w.name.trim(), nameAr: w.nameAr.trim() }));
+      const cond = w.condition ? conds.get(low(w.condition)) : undefined;
+      if (cond) await api(`/v1/inventory/warehouses/${made.id}/storage`, post({ conditionId: cond }));
+    },
+    onProgress,
+  );
 }
 
 /** Items (matched by code) with opening stock in their warehouse, their average cost, and their storage condition. */
 export async function saveItems(api: Api, rows: SampleItem[] = SAMPLE_ITEMS, onProgress?: OnProgress): Promise<Report> {
-  const report = empty();
-  const existing = await api<{ sku: string }[]>('/v1/inventory/items');
-  const have = new Set(existing.map((x) => x.sku.toUpperCase()));
-  const whs = new Map((await api<{ id: string; code: string }[]>('/v1/inventory/warehouses')).map((w) => [w.code.toUpperCase(), w.id]));
-  const conds = await conditionIds(api);
-  for (const [i, it] of rows.entries()) {
-    const sku = it.sku.trim().toUpperCase();
-    if (have.has(sku)) {
-      report.skipped++;
-    } else {
+  const [existing, whList, conds] = await Promise.all([
+    api<{ sku: string }[]>('/v1/inventory/items'),
+    api<{ id: string; code: string }[]>('/v1/inventory/warehouses'),
+    conditionIds(api),
+  ]);
+  const whs = new Map(whList.map((w) => [w.code.toUpperCase(), w.id]));
+  return saveKeyed(
+    rows,
+    new Set(existing.map((x) => x.sku.toUpperCase())),
+    (it) => it.sku.trim().toUpperCase(),
+    async (it, sku) => {
       const warehouseId = whs.get(it.warehouse.trim().toUpperCase()) ?? null;
-      try {
-        const made = await api<{ id: string }>(
-          '/v1/inventory/items',
-          post({ sku, name: it.name.trim(), nameAr: it.nameAr.trim(), uom: it.uom.trim() || 'piece', openingQty: warehouseId ? it.openingQty : 0, warehouseId }),
-        );
-        if (it.costMinor > 0) await api(`/v1/inventory/items/${made.id}/cost`, put({ unitCostMinor: it.costMinor }));
-        const cond = it.condition ? conds.get(low(it.condition)) : undefined;
-        if (cond) await api(`/v1/inventory/items/${made.id}/batching`, post({ tracks: false, conditionId: cond }));
-        have.add(sku);
-        report.added++;
-      } catch (e) {
-        report.failed.push(errText(sku, e));
-      }
-    }
-    onProgress?.(i + 1, rows.length);
-  }
-  return report;
+      // The cost travels with the create request (efficiency audit F4): one request per item instead of two.
+      const made = await api<{ id: string }>(
+        '/v1/inventory/items',
+        post({
+          sku,
+          name: it.name.trim(),
+          nameAr: it.nameAr.trim(),
+          uom: it.uom.trim() || 'piece',
+          openingQty: warehouseId ? it.openingQty : 0,
+          warehouseId,
+          unitCostMinor: it.costMinor > 0 ? it.costMinor : undefined,
+        }),
+      );
+      const cond = it.condition ? conds.get(low(it.condition)) : undefined;
+      if (cond) await api(`/v1/inventory/items/${made.id}/batching`, post({ tracks: false, conditionId: cond }));
+    },
+    onProgress,
+  );
 }
 
 /** Suppliers or customers (matched by name). */
 export async function saveParties(api: Api, path: '/v1/purchasing/suppliers' | '/v1/sales/customers', rows: SampleParty[], onProgress?: OnProgress): Promise<Report> {
-  const report = empty();
   const existing = await api<{ name: string }[]>(path);
-  const have = new Set(existing.map((x) => low(x.name)));
-  for (const [i, p] of rows.entries()) {
-    if (have.has(low(p.name))) {
-      report.skipped++;
-    } else {
-      try {
-        await api(path, post({ name: p.name.trim(), contact: p.contact.trim(), city: p.city.trim() }));
-        have.add(low(p.name));
-        report.added++;
-      } catch (e) {
-        report.failed.push(errText(p.name, e));
-      }
-    }
-    onProgress?.(i + 1, rows.length);
-  }
-  return report;
+  return saveKeyed(
+    rows,
+    new Set(existing.map((x) => low(x.name))),
+    (p) => low(p.name),
+    async (p) => {
+      await api(path, post({ name: p.name.trim(), contact: p.contact.trim(), city: p.city.trim() }));
+    },
+    onProgress,
+  );
 }
 
 /** One company-wide approval rule (skipped if the same rule exists). */

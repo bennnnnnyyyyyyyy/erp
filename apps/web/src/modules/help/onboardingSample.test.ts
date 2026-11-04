@@ -83,7 +83,9 @@ describe('saving', () => {
     expect((await saveWarehouses(api)).added).toBe(5);
     expect(await saveItems(api)).toEqual({ added: SAMPLE_ITEMS.length, skipped: 0, failed: [] });
     expect(calls.filter((x) => x.startsWith('POST /v1/inventory/warehouses/') && x.endsWith('/storage'))).toHaveLength(5);
-    expect(calls.filter((x) => x.startsWith('PUT /v1/inventory/items/') && x.endsWith('/cost'))).toHaveLength(SAMPLE_ITEMS.length);
+    // The cost travels with the create request (one request per item), so there is no separate cost call.
+    expect(calls.filter((x) => x.endsWith('/cost'))).toHaveLength(0);
+    for (const it of SAMPLE_ITEMS) expect(lists['/v1/inventory/items']?.find((i) => i.sku === it.sku)?.unitCostMinor).toBe(it.costMinor);
     expect(calls.filter((x) => x.endsWith('/batching'))).toHaveLength(SAMPLE_ITEMS.filter((i) => i.condition).length);
     const coldWh = lists['/v1/inventory/warehouses']?.find((w) => w.code === 'COLD');
     expect(lists['/v1/inventory/items']?.find((i) => i.sku === 'R-ALO')?.warehouseId).toBe(coldWh?.id);
@@ -95,6 +97,27 @@ describe('saving', () => {
     await saveItems(api, [{ sku: 'x-1', name: 'Typed item', nameAr: '', uom: '', warehouse: 'MAIN', condition: '', openingQty: 5, costMinor: 1234 }]);
     expect(lists['/v1/inventory/warehouses']?.[0]).toMatchObject({ code: 'MAIN', name: 'Main store' });
     expect(lists['/v1/inventory/items']?.[0]).toMatchObject({ sku: 'X-1', uom: 'piece', openingQty: 5 });
+  });
+
+  it('saves at most 4 rows at once, and two identical rows in one table create only one', async () => {
+    const { api, lists } = fakeApi();
+    let inFlight = 0;
+    let peak = 0;
+    const slow = (async (path: string, init?: RequestInit) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      try {
+        return await api(path, init);
+      } finally {
+        inFlight--;
+      }
+    }) as Api;
+    const progress: number[] = [];
+    await saveWarehouses(slow, [...SAMPLE_WAREHOUSES, SAMPLE_WAREHOUSES[0] as (typeof SAMPLE_WAREHOUSES)[number]], (d) => progress.push(d));
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(lists['/v1/inventory/warehouses']).toHaveLength(SAMPLE_WAREHOUSES.length);
+    expect(progress.at(-1)).toBe(SAMPLE_WAREHOUSES.length + 1);
   });
 
   it('never duplicates: a second run adds nothing', async () => {

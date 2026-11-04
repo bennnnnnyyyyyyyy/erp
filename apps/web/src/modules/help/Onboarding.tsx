@@ -39,6 +39,21 @@ import { startTour } from './TourHost';
 // sample (sampleCompany.ts) straight into the form on screen, with no animation; the presenter can change anything, then saves.
 // Progress is kept in this browser per company (onboardingContent.ts); nothing here is a business record.
 
+/** Where each step's "Explore more" goes: the real screen behind what the step sets up. */
+const EXPLORE_ROUTES: Record<(typeof STEP_KEYS)[number], string> = {
+  welcome: '/guide',
+  language: '/settings',
+  company: '/settings',
+  storage: '/inventory/batches',
+  warehouse: '/inventory',
+  items: '/inventory',
+  suppliers: '/purchasing/suppliers',
+  customers: '/sales/customers',
+  team: '/settings/users',
+  approval: '/inventory/approval-policies',
+  done: '/',
+};
+
 const TIMEZONES = ['Africa/Cairo', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Muscat', 'Europe/London', 'UTC'];
 const CURRENCIES = ['EGP', 'SAR', 'AED', 'KWD', 'QAR', 'BHD', 'OMR', 'USD', 'EUR', 'GBP'];
 const inputClass = 'h-10 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm';
@@ -120,6 +135,12 @@ export function OnboardingPage() {
             {key === 'approval' && <ApprovalStep c={c} onDone={next} />}
             {key === 'done' && <DoneStep c={c} orgId={orgId} />}
           </div>
+          <p className="m-0 mt-5 border-t border-border pt-3 text-sm">
+            <a href={EXPLORE_ROUTES[key]} target="_blank" rel="noopener">
+              {c.explore.label}: {c.explore.screens[key]} {lang === 'ar' ? '↖' : '↗'}
+            </a>
+            <span className="ms-2 text-xs text-muted-foreground">({c.explore.hint})</span>
+          </p>
         </div>
         {key !== 'welcome' && key !== 'done' ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">

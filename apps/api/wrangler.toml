@@ -3,6 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Efficiency audit 2026-11-04 (documentation/plans/2026-11-04-efficiency-audit.md, F1): the database is in eu-west-1 and every request
+# makes several database calls, so run the Worker next to the database instead of next to the user. Cloudflare places it from observed
+# traffic (it takes a few minutes of use to take effect). To undo, delete these two lines.
+[placement]
+mode = "smart"
+
 # Non-secret settings only. SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are passed at deploy time with --var (public, but kept out of the repo). Secrets (SUPABASE_SECRET_KEY) go in
 # `wrangler secret put`, and in .dev.vars for local development.
 # These are the deployed (production) values: only the live web app may call the API. Local development overrides
