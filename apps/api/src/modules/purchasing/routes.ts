@@ -17,7 +17,14 @@ const idParam = (c: Context<AppEnv>) => {
   if (!UUID_RE.test(id)) throw new HttpError(404, 'Not found', 'not_found');
   return id;
 };
-type SupplierRow = { id: string; name: string; contact: string | null; city: string | null; phone: string | null };
+type SupplierRow = {
+  id: string;
+  name: string;
+  contact: string | null;
+  city: string | null;
+  phone: string | null;
+  payment_terms_days?: number | null;
+};
 type OrderRow = {
   id: string;
   number: string;
@@ -29,7 +36,15 @@ type OrderRow = {
   created_at: string;
   received_at: string | null;
 };
-const supplier = (s: SupplierRow) => ({ id: s.id, name: s.name, contact: s.contact ?? '', city: s.city ?? '', phone: s.phone ?? '' });
+const supplier = (s: SupplierRow) => ({
+  id: s.id,
+  name: s.name,
+  contact: s.contact ?? '',
+  city: s.city ?? '',
+  phone: s.phone ?? '',
+  /** null = the company default (sql/041). */
+  paymentTermsDays: s.payment_terms_days ?? null,
+});
 
 async function loadOrders(c: Context<AppEnv>, id?: string) {
   let query = userDb(c)
@@ -84,12 +99,20 @@ async function oneOrder(c: Context<AppEnv>, id: string) {
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('pur_suppliers')
-    .select('id, name, contact, city, phone')
+    .select('id, name, contact, city, phone, payment_terms_days')
     .eq('org_id', orgOf(c))
     .is('deleted_at', null)
     .order('name');
   if (error) throw error;
   return ok(c, ((data ?? []) as SupplierRow[]).map(supplier));
+});
+// A supplier's payment terms in days, or null for the company default (sql/041). The database allows owners and admins.
+purchasingRoutes.put('/suppliers/:id/terms', requirePermission('purchasing.suppliers.manage'), async (c) => {
+  const days = (await jsonBody(c)).days;
+  if (days !== null && (typeof days !== 'number' || !Number.isInteger(days) || days < 0 || days > 365))
+    invalid('days must be a whole number from 0 to 365, or null');
+  await callRpc<void>(userDb(c), 'pur_set_supplier_terms', { p_supplier_id: idParam(c), p_days: days });
+  return ok(c, { id: idParam(c), paymentTermsDays: days });
 });
 purchasingRoutes.get('/orders', requirePermission('purchasing.orders.read'), async (c) => ok(c, await loadOrders(c)));
 purchasingRoutes.get('/orders/:id', requirePermission('purchasing.orders.read'), async (c) => ok(c, await oneOrder(c, idParam(c))));
@@ -146,7 +169,7 @@ purchasingRoutes.post('/orders/:id/cancel', requirePermission('purchasing.orders
 purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoices.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,currency,created_at')
+    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
     .limit(250);
@@ -157,6 +180,7 @@ purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoice
     supplier_id: string;
     order_id: string;
     invoice_date: string;
+    due_date: string;
     currency: string;
     created_at: string;
   }[];
@@ -185,6 +209,7 @@ purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoice
         supplierId: i.supplier_id,
         orderId: i.order_id,
         invoiceDate: i.invoice_date,
+        dueDate: i.due_date,
         currency: i.currency,
         createdAt: i.created_at,
         lines,
@@ -199,7 +224,7 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
   const id = idParam(c);
   const { data: i, error } = await userDb(c)
     .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,currency,created_at')
+    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
     .eq('org_id', orgOf(c))
     .eq('id', id)
     .maybeSingle();
@@ -242,6 +267,7 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
     orderId: i.order_id,
     orderNumber: (order.data as { number: string } | null)?.number ?? null,
     invoiceDate: i.invoice_date,
+    dueDate: i.due_date,
     currency: i.currency,
     createdAt: i.created_at,
     lines,
@@ -316,7 +342,7 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
   });
   const { data, error } = await userDb(c)
     .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,currency,created_at')
+    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
     .eq('org_id', orgOf(c))
     .eq('id', id)
     .single();
@@ -329,6 +355,7 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
       supplierId: data.supplier_id,
       orderId: data.order_id,
       invoiceDate: data.invoice_date,
+      dueDate: data.due_date,
       currency: data.currency,
       createdAt: data.created_at,
     },

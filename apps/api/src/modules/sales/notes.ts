@@ -149,6 +149,45 @@ export function registerNoteRoutes(routes: Hono<AppEnv>): void {
     return ok(c, await oneNote(c, made.id), 201);
   });
 
+  // A credit note that also brings goods back into stock when it is approved (sql/043). Each line: invoiceLineId, qty (credited),
+  // returnQty (0..qty, back into stock), warehouseId, optional unitPriceMinor. Stock moves only on approval, at the original issue cost.
+  routes.post('/invoices/:id/returns', requirePermission('sales.notes.create'), async (c) => {
+    const invoiceId = idParam(c);
+    const body = await jsonBody(c);
+    if (!text(body.reason)) invalid('A reason is required');
+    const raw = Array.isArray(body.lines) ? body.lines : [];
+    const lines = raw.map((v) => {
+      const l = (v ?? {}) as Record<string, unknown>;
+      const price = l.unitPriceMinor === undefined || l.unitPriceMinor === null ? undefined : Number(l.unitPriceMinor);
+      return {
+        invoiceLineId: text(l.invoiceLineId),
+        qty: Number(l.qty),
+        unitPriceMinor: price,
+        returnQty: Number(l.returnQty ?? 0),
+        warehouseId: text(l.warehouseId),
+      };
+    });
+    const bad = (l: (typeof lines)[number]) =>
+      !UUID_RE.test(l.invoiceLineId) ||
+      !Number.isFinite(l.qty) ||
+      l.qty <= 0 ||
+      !Number.isFinite(l.returnQty) ||
+      l.returnQty < 0 ||
+      l.returnQty > l.qty ||
+      (l.returnQty > 0 && !UUID_RE.test(l.warehouseId)) ||
+      (l.unitPriceMinor !== undefined && (!Number.isInteger(l.unitPriceMinor) || l.unitPriceMinor < 0));
+    if (lines.length === 0 || lines.some(bad))
+      invalid(
+        'Each line needs an invoice line, a credited quantity above zero, a returned quantity up to it and a warehouse for returned goods',
+      );
+    const made = await callRpc<{ id: string; number: string }>(userDb(c), 'sal_submit_return_note', {
+      p_invoice_id: invoiceId,
+      p_reason: text(body.reason),
+      p_lines: lines.map((l) => ({ ...l, warehouseId: l.warehouseId || undefined })),
+    });
+    return ok(c, await oneNote(c, made.id), 201);
+  });
+
   for (const [action, decision] of [
     ['approve', 'approved'],
     ['reject', 'rejected'],
