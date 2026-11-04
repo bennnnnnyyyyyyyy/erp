@@ -23,7 +23,7 @@ export type OnboardingContent = {
   language: { personal: string; company: string; companyHint: string };
   company: { name: string; currency: string; timezone: string; dateFormat: string };
   warehouse: { code: string; codeHint: string; name: string; existing: (n: number) => string };
-  items: { sku: string; name: string; unit: string; opening: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
+  items: { sku: string; name: string; unit: string; opening: string; cost: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
   team: { email: string; fullName: string; role: string; roles: Record<'admin' | 'member' | 'viewer', string>; invite: string; invited: (email: string) => string; existing: (n: number) => string };
   approval: { always: string; minQty: string; minQtyHint: string; approvers: string; existing: (n: number) => string };
   done: { tour: string; home: string; checklist: string };
@@ -86,6 +86,7 @@ const EN: OnboardingContent = {
     name: 'Name',
     unit: 'Unit',
     opening: 'In stock now',
+    cost: 'Cost each',
     addRow: 'Add another item',
     existing: (n) => `You already have ${n} item(s). Add more, or continue.`,
     needWarehouse: 'Add a warehouse first (previous step) so the opening stock has somewhere to go.',
@@ -166,6 +167,7 @@ const AR: OnboardingContent = {
     name: 'الاسم',
     unit: 'الوحدة',
     opening: 'الموجود الآن',
+    cost: 'تكلفة الوحدة',
     addRow: 'أضف صنفًا آخر',
     existing: (n) => `لديك بالفعل ${n} صنف. أضف المزيد أو تابع.`,
     needWarehouse: 'أضف مستودعًا أولًا (الخطوة السابقة) ليكون للمخزون الافتتاحي مكان.',

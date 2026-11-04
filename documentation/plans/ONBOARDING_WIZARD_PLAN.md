@@ -68,6 +68,8 @@ Every step can be skipped, and there are Back and "Leave setup" buttons. A step 
 - **D5:** Ben names the company himself at sign-up. The fill never changes the name; it sets only currency, time zone and date format.
 - **Item costs:** option (a), the new route `PUT /v1/inventory/items/:id/cost` (API-only, calls the existing audited `inv_set_item_cost`).
 
+**Change, same day (Ben: "auto fill live in the website, no animations"):** the per-step "Fill with sample data" now puts the sample straight into the form on screen. Every list step (storage conditions, warehouses, items with stock, cost and storage, suppliers, customers) is an editable table. Nothing saves until Save, which saves whatever rows are on screen, sample or typed, with a progress count. "Fill everything" on the welcome step still saves everything in one go, for rehearsals.
+
 **Files:**
 - `modules/help/sampleCompany.ts`: the data. It copies 5 warehouses, 2 conditions, 19 items, 12 suppliers and 10 customers from the seed.
 - `modules/help/sampleFill.ts`: the fill logic. It skips anything that already exists, saves row by row with progress, and lists failures.

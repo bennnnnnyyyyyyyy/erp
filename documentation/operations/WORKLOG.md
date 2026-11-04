@@ -47,6 +47,7 @@ run or deployed.
 - **Who sees the buttons:** `DEMO_AUTOFILL_EMAILS` on the production build in `ci-deploy.yml` (default Chris, overridable by a repository variable). Not set on the PR or test build, so tests and other people never see the buttons.
 - **D4 note:** names keep "(sample)" to match the cosmetics company. Ben can ask to drop the suffix in both.
 - **Checks:** typecheck, `biome ci` and `npm test` (web 61) pass; `vite build` passes with the setting, and the email is present only in the wizard chunk. Not run in a browser.
+- **Then (Ben: "auto fill live in the website, no animations"):** each step's fill now puts the sample into the form on screen. List steps became editable tables, and Save stores the rows shown (sample or typed) through `saveConditions`, `saveWarehouses`, `saveItems`, `saveParties` and `saveApproval` in `sampleFill.ts`. Tests updated (web 62); typecheck, lint, tests and build pass.
 
 ## 2026-11-03 (after final) — Top-bar menu shows the person's name (not deployed)
 

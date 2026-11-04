@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_CONDITIONS, SAMPLE_CUSTOMERS, SAMPLE_ITEMS, SAMPLE_SUPPLIERS, SAMPLE_WAREHOUSES } from './sampleCompany';
-import { type Api, canFillSample, fillEverything, fillItems, fillStorage, fillWarehouses } from './sampleFill';
+import { type Api, canFillSample, fillEverything, saveConditions, saveItems, saveWarehouses } from './sampleFill';
 
 // The sample company must stay a faithful copy of Demo Cosmetics Factory's master data (sql/seed/004), so the demo's "switch to the
 // cosmetics company" shows the same business. The seed file is read as text.
@@ -17,13 +17,16 @@ describe('sample company matches the cosmetics seed', () => {
     }
   });
 
-  it('puts cold items only in the cold warehouse, and every item in a sample warehouse', () => {
+  it('puts cold items only in the cold warehouse, and every item in a sample warehouse with stock', () => {
     const codes = SAMPLE_WAREHOUSES.map((w) => w.code);
+    const condNames = SAMPLE_CONDITIONS.map((x) => x.name);
     for (const it of SAMPLE_ITEMS) {
       expect(codes).toContain(it.warehouse);
-      expect(it.cold).toBe(it.warehouse === 'COLD');
+      expect(it.condition === 'Cold room').toBe(it.warehouse === 'COLD');
+      if (it.condition) expect(condNames).toContain(it.condition);
       expect(it.openingQty).toBeGreaterThan(0);
     }
+    for (const w of SAMPLE_WAREHOUSES) expect(condNames).toContain(w.condition);
   });
 
   it('has the same warehouses, conditions, suppliers and customers', () => {
@@ -73,20 +76,25 @@ function fakeApi() {
   return { api, calls, lists };
 }
 
-describe('filling', () => {
+describe('saving', () => {
   it('creates conditions, warehouses with their condition, and items with stock, cost and the cold condition', async () => {
     const { api, calls, lists } = fakeApi();
-    const s = await fillStorage(api);
-    const w = await fillWarehouses(api, s.ids);
-    const r = await fillItems(api, w.ids, s.ids);
-    expect(s.report.added).toBe(2);
-    expect(w.report.added).toBe(5);
-    expect(r).toEqual({ added: SAMPLE_ITEMS.length, skipped: 0, failed: [] });
+    expect((await saveConditions(api)).added).toBe(2);
+    expect((await saveWarehouses(api)).added).toBe(5);
+    expect(await saveItems(api)).toEqual({ added: SAMPLE_ITEMS.length, skipped: 0, failed: [] });
     expect(calls.filter((x) => x.startsWith('POST /v1/inventory/warehouses/') && x.endsWith('/storage'))).toHaveLength(5);
     expect(calls.filter((x) => x.startsWith('PUT /v1/inventory/items/') && x.endsWith('/cost'))).toHaveLength(SAMPLE_ITEMS.length);
-    expect(calls.filter((x) => x.endsWith('/batching'))).toHaveLength(SAMPLE_ITEMS.filter((i) => i.cold).length);
-    const cold = lists['/v1/inventory/items']?.find((i) => i.sku === 'R-ALO');
-    expect(cold?.warehouseId).toBe(w.ids.COLD);
+    expect(calls.filter((x) => x.endsWith('/batching'))).toHaveLength(SAMPLE_ITEMS.filter((i) => i.condition).length);
+    const coldWh = lists['/v1/inventory/warehouses']?.find((w) => w.code === 'COLD');
+    expect(lists['/v1/inventory/items']?.find((i) => i.sku === 'R-ALO')?.warehouseId).toBe(coldWh?.id);
+  });
+
+  it('saves a row the presenter typed exactly like a sample row', async () => {
+    const { api, lists } = fakeApi();
+    await saveWarehouses(api, [{ code: 'main', name: ' Main store ', nameAr: '', condition: '' }]);
+    await saveItems(api, [{ sku: 'x-1', name: 'Typed item', nameAr: '', uom: '', warehouse: 'MAIN', condition: '', openingQty: 5, costMinor: 1234 }]);
+    expect(lists['/v1/inventory/warehouses']?.[0]).toMatchObject({ code: 'MAIN', name: 'Main store' });
+    expect(lists['/v1/inventory/items']?.[0]).toMatchObject({ sku: 'X-1', uom: 'piece', openingQty: 5 });
   });
 
   it('never duplicates: a second run adds nothing', async () => {
@@ -108,9 +116,9 @@ describe('filling', () => {
       if (init?.method === 'POST' && path === '/v1/inventory/items' && String(init.body).includes('"F-SHA"')) throw new Error('That already exists');
       return api(path, init);
     }) as Api;
-    const s = await fillStorage(failing);
-    const w = await fillWarehouses(failing, s.ids);
-    const r = await fillItems(failing, w.ids, s.ids);
+    await saveConditions(failing);
+    await saveWarehouses(failing);
+    const r = await saveItems(failing);
     expect(r.added).toBe(SAMPLE_ITEMS.length - 1);
     expect(r.failed).toEqual(['F-SHA: That already exists']);
   });
