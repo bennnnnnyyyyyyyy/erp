@@ -45,6 +45,11 @@ Template for further blocks; update them in the same change as the work:
   - **Done (2026-11-02):** `sql/033` applied and `sql/tests/029` passed in Supabase (project ggoerp). **Deployed and browser-checked 2026-11-02** (live app: the list and new-transfer pages load against the real API; the full request, approve, dispatch, receive flow and the self-approval refusal were checked in the demo build; the self-approval refusal was also checked on the live database for stock requests). **Not yet done on the live app: a full multi-role transfer** (needs a second person). **Hardening applied 2026-11-02:** `sql/034` (a cold item can no longer go to a warehouse with no condition; revokes an anonymous execute grant) and `sql/035` (batch receipts follow the same rule), each dry-run tested then applied, with tests 029 and 022 passing on the live project.
   - **Remaining:** a live multi-role transfer test; org settings for storage mismatch and receive confirmation (later); partial receipt (later).
 
+- [ ] **[ONBOARDING_WIZARD_PLAN.md](ONBOARDING_WIZARD_PLAN.md): first-run setup wizard**
+  - **Done (2026-11-04, on branch `worktree-onboarding-wizard`, not merged):** 8-step wizard (welcome, language, company, warehouse, items, team, approvals, done → tour) using existing routes only; automatic start in brand-new companies only; English and Arabic; tests; typecheck, lint, tests and build pass.
+  - **Waiting on:** Ben's review and merge after the demo; a browser check in a new company.
+  - **Remaining:** item import, progress saved on the account, VAT/ETA question.
+
 - [ ] **Language choice in Settings** (small change, no plan needed)
   - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.
   - **Remaining:** translate the rest of the screens (UI audit finding 1) once the Arabic review owner is decided.

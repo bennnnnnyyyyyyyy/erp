@@ -9,6 +9,7 @@ import {useI18n, tr } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
 import { tutorialContent } from './helpContent';
+import { onboardingContent } from './onboardingContent';
 import { TourButton } from './TourHost';
 
 // The getting-started tutorial. It exists only in companies that have the flag `show_tutorial` (sql/032): companies that signed up through
@@ -70,6 +71,7 @@ export function GettingStartedPage() {
   if (!asked) return <section className="page"><LanguageChooser /></section>;
 
   const c = tutorialContent(lang);
+  const wizard = onboardingContent(lang);
   const dones: (boolean | null)[] = [
     true,
     warehouses == null ? null : warehouses > 0,
@@ -106,6 +108,14 @@ export function GettingStartedPage() {
       </div>
       <p className="muted">{c.intro(session.org?.name ?? (lang === 'ar' ? 'شركتك' : 'your company'))}</p>
       {c.draftNote ? <p className="muted small" role="note">{c.draftNote}</p> : null}
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-card p-5 text-card-foreground shadow-xs">
+        <div className="min-w-0 flex-1">
+          <h2 className="m-0 text-base font-semibold">{wizard.steps.welcome.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{wizard.welcome.points.join(' · ')}</p>
+        </div>
+        <Button onClick={() => navigate('/start/setup')}>{wizard.welcome.start}</Button>
+      </div>
 
       <div className="mt-5 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
         <div className="flex items-center justify-between gap-3">

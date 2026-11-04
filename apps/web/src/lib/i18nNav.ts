@@ -71,6 +71,7 @@ export const NAV_AR: Record<string, string> = {
   Payments: 'المدفوعات',
   Payment: 'دفعة',
   Tutorial: 'الدليل التعليمي',
+  'Set up your company': 'إعداد شركتك',
   'Alert rules': 'قواعد التنبيه',
   General: 'عام',
   Users: 'المستخدمون',

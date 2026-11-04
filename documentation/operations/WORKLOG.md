@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-04 — First-run setup wizard, on branch `worktree-onboarding-wizard` (not merged, not deployed)
+
+**Objective.** Ben: the tutorial "needs to welcome me into the app, ask me the language, name of company, and stuff". Keep the sample companies as they are; Ben will create a new company to use it. Built on a branch because of tonight's demo freeze on `main` (Ben chose the worktree).
+
+**Actions Completed.**
+- Plan: [`ONBOARDING_WIZARD_PLAN.md`](../plans/ONBOARDING_WIZARD_PLAN.md).
+- New files in `apps/web/src/modules/help/`:
+  - `Onboarding.tsx`: 8 steps (welcome, language, company, warehouse, items, team, approvals, done → tour).
+  - `onboardingContent.ts`: English and Arabic text, progress kept per company in the browser, and the auto-start rule.
+  - `onboarding.test.ts`.
+- Wired in:
+  - `/start/setup` added in `modules/registry.tsx`.
+  - "Start setup" card on Getting started.
+  - Automatic first-run start in `modules/core/Home.tsx`, only when the tutorial flag is on, the person can manage the company and it has no warehouse. So never in Demo Cosmetics Factory or Demo Trading Co.
+  - Arabic nav label in `lib/i18nNav.ts`.
+
+**Database / System Result.** None. Uses existing API routes only; no migration, no API change.
+
+**Safety Status.**
+- Pass: `npm run typecheck`, `biome ci`, `npm test` (shared 30 + 1 skipped, API 132 + 7 skipped, web 54) and `vite build`. `npm run build` itself fails only in this machine's PowerShell 5 shell (`&&`).
+- Not seen in a browser: it needs the real API, so the check comes after merge, in a new company.
+- Not merged. Merge after the demo, with `thursday-ui-topbar`.
+
 ## 2026-11-03 (after final) — Top-bar menu shows the person's name (not deployed)
 
 **Objective.** The previous entry said a signed-in person would see their new name in the top-bar menu only after signing in again. Checked: the menu never showed a name at all (email only, initials from the email). Ben: "clean off the small catch".
