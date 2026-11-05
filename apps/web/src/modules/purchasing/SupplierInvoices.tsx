@@ -17,7 +17,7 @@ import { tr, trf } from '../../lib/i18n';
 type Summary = { orderId:string;number:string;supplierId:string;currency:string;lines:{orderLineId:string;itemId:string;receivedQty:number;billedQty:number;unitCostMinor:number}[] };
 type Supplier = {id:string;name:string};
 type Item = {id:string;sku:string;name:string};
-type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;currency:string;createdAt:string;totalMinor:number;lines:{orderLineId:string;qty:number;unitCostMinor:number}[]};
+type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;dueDate?:string;currency:string;createdAt:string;totalMinor:number;lines:{orderLineId:string;qty:number;unitCostMinor:number}[]};
 const money=(amountMinor:number,currency:string)=>formatMoney({amountMinor,currency});
 
 export function SupplierInvoices(){
@@ -97,6 +97,7 @@ export function SupplierInvoicePage() {
         <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>
         <div><dt>{tr('Purchase order')}</dt><dd><Link to={`/purchasing/orders/${inv.orderId}`}><code>{order?.number ?? '—'}</code></Link></dd></div>
         <div><dt>{tr('Invoice date')}</dt><dd>{formatDay(inv.invoiceDate, session.org)}</dd></div>
+        {inv.dueDate ? <div><dt>{tr('Due date')}</dt><dd>{formatDay(inv.dueDate, session.org)}</dd></div> : null}
         <div><dt>{tr('Date recorded')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
         <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
       </dl>

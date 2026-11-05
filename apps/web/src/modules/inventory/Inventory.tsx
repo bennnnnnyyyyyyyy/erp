@@ -91,9 +91,9 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
           <label>{tr('Unit')}<input required value={form.uom} onChange={set('uom')} /></label>
         </div>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
-        <label>{tr('Name in Arabic')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
         <div className="form-row">
-          <label>{tr('Opening stock')}<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
+          <label>{tr('Opening stock (optional)')}<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
           <label>
             {tr('Warehouse')}
             <select value={form.warehouseId} onChange={set('warehouseId')}>

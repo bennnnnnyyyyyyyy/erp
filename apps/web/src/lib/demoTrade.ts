@@ -5,7 +5,16 @@ import { catalog, createRequest, getRequest, receiveGoods, DemoRuleError, type A
 // stock to the ledger; a sales order raises a stock request that still needs a manager's approval.
 // Money is held as integer minor units (piastres), as the real product will.
 
-export type Party = { id: string; kind: 'supplier' | 'customer'; name: string; contact: string; city: string; phone: string };
+export type Party = {
+  id: string;
+  kind: 'supplier' | 'customer';
+  name: string;
+  contact: string;
+  city: string;
+  phone: string;
+  /** Payment terms in days; null or missing = the company default (sql/041). */
+  paymentTermsDays?: number | null;
+};
 export type POStatus = 'ordered' | 'received' | 'cancelled';
 export type PurchaseOrder = {
   id: string;

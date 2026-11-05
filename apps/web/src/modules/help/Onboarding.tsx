@@ -114,7 +114,7 @@ export function OnboardingPage() {
   const s = c.steps[key];
   return (
     <section className="page">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-5xl">
         <p className="m-0 text-sm text-muted-foreground">{c.stepOf(step + 1, total)}</p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={1} aria-valuemax={total} aria-valuenow={step + 1} aria-label={c.stepOf(step + 1, total)}>
           <div className="h-full rounded-full bg-primary" style={{ width: `${((step + 1) / total) * 100}%` }} />
@@ -248,7 +248,8 @@ function RowsSaver({ c, s, disabled, onSave }: { c: OnboardingContent; s: Return
   );
 }
 
-type Col<T> = { key: keyof T & string; label: string; type?: 'text' | 'number'; list?: string; width?: string };
+/** `optional`: the column may be left empty; its header says so (demo note, 5 Nov: people could not tell what was required). */
+type Col<T> = { key: keyof T & string; label: string; type?: 'text' | 'number'; list?: string; width?: string; optional?: boolean };
 
 /** An editable table: one input per cell, add and remove rows. Logical properties only, so it mirrors in Arabic. */
 function RowsTable<T extends Record<string, string | number | null>>({
@@ -257,23 +258,26 @@ function RowsTable<T extends Record<string, string | number | null>>({
   setRows,
   blank,
   addLabel,
+  optionalLabel,
 }: {
   cols: Col<T>[];
   rows: T[];
   setRows: (r: T[]) => void;
   blank: () => T;
   addLabel: string;
+  optionalLabel: string;
 }) {
   const set = (i: number, k: keyof T, v: string) =>
     setRows(rows.map((r, j) => (j === i ? { ...r, [k]: cols.find((x) => x.key === k)?.type === 'number' ? (v === '' ? null : Number(v)) : v } : r)));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-separate border-spacing-1 text-sm">
+      <table className="w-full min-w-[40rem] border-separate border-spacing-1 text-sm">
         <thead>
           <tr>
             {cols.map((col) => (
               <th key={col.key} scope="col" className="text-start font-medium" style={col.width ? { width: col.width } : undefined}>
                 {col.label}
+                {col.optional ? <span className="block text-xs font-normal text-muted-foreground">({optionalLabel})</span> : null}
               </th>
             ))}
             <th scope="col" className="w-8">
@@ -531,17 +535,19 @@ function StorageStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }
   return (
     <>
       <FillButton c={c} onFill={() => setRows(SAMPLE_CONDITIONS.map((x) => ({ ...x })))} />
+      <p className="m-0 mb-2 text-sm text-muted-foreground">{c.storage.skipHint}</p>
       {existing && existing.length > 0 ? <p className="m-0 mb-2 text-sm">{c.storage.existing(existing.length)}</p> : null}
       <RowsTable<SampleCondition>
         cols={[
           { key: 'name', label: c.storage.name },
-          { key: 'minTempC', label: c.storage.min, type: 'number', width: '8rem' },
-          { key: 'maxTempC', label: c.storage.max, type: 'number', width: '8rem' },
+          { key: 'minTempC', label: c.storage.min, type: 'number', width: '9rem', optional: true },
+          { key: 'maxTempC', label: c.storage.max, type: 'number', width: '9rem', optional: true },
         ]}
         rows={rows}
         setRows={setRows}
         blank={blank}
         addLabel={c.items.addRow}
+        optionalLabel={c.optional}
       />
       <RowsSaver c={c} s={saver} disabled={filled.length === 0} onSave={() => saver.run((p) => saveConditions(api, filled, p))} />
     </>
@@ -569,16 +575,18 @@ function WarehouseStep({ c, onDone }: { c: OnboardingContent; onDone: () => void
       </datalist>
       <RowsTable<SampleWarehouse>
         cols={[
-          { key: 'code', label: c.warehouse.code, width: '7rem' },
+          { key: 'code', label: c.warehouse.code, width: '9rem' },
           { key: 'name', label: c.warehouse.name },
-          { key: 'nameAr', label: `${c.warehouse.name} (ع)` },
-          { key: 'condition', label: c.steps.storage.title, list: 'onb-conditions' },
+          { key: 'nameAr', label: `${c.warehouse.name} (ع)`, optional: true },
+          { key: 'condition', label: c.warehouse.condition, list: 'onb-conditions', optional: true },
         ]}
         rows={rows}
         setRows={setRows}
         blank={blank}
         addLabel={c.items.addRow}
+        optionalLabel={c.optional}
       />
+      <p className="m-0 mt-1 text-xs text-muted-foreground">{c.warehouse.conditionHint}</p>
       <RowsSaver c={c} s={saver} disabled={filled.length === 0} onSave={() => saver.run((p) => saveWarehouses(api, filled, p))} />
     </>
   );
@@ -618,18 +626,19 @@ function ItemsStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) 
       </datalist>
       <RowsTable<ItemRow>
         cols={[
-          { key: 'sku', label: c.items.sku, width: '7rem' },
+          { key: 'sku', label: c.items.sku, width: '9rem' },
           { key: 'name', label: c.items.name },
-          { key: 'uom', label: c.items.unit, width: '5rem' },
-          { key: 'warehouse', label: c.warehouse.code, list: 'onb-warehouses', width: '6rem' },
-          { key: 'openingQty', label: c.items.opening, type: 'number', width: '6rem' },
-          { key: 'cost', label: c.items.cost, type: 'number', width: '6rem' },
-          { key: 'condition', label: c.steps.storage.title, list: 'onb-item-conditions', width: '8rem' },
+          { key: 'uom', label: c.items.unit, width: '7rem' },
+          { key: 'warehouse', label: c.warehouse.code, list: 'onb-warehouses', width: '8rem' },
+          { key: 'openingQty', label: c.items.opening, type: 'number', width: '8rem', optional: true },
+          { key: 'cost', label: c.items.cost, type: 'number', width: '8rem', optional: true },
+          { key: 'condition', label: c.warehouse.condition, list: 'onb-item-conditions', width: '10rem', optional: true },
         ]}
         rows={rows}
         setRows={setRows}
         blank={blank}
         addLabel={c.items.addRow}
+        optionalLabel={c.optional}
       />
       <RowsSaver c={c} s={saver} disabled={filled.length === 0} onSave={() => saver.run((p) => saveItems(api, filled.map(fromItemRow), p))} />
     </>
@@ -655,13 +664,14 @@ function PartyStep({ c, kind, onDone }: { c: OnboardingContent; kind: 'suppliers
       <RowsTable<SampleParty>
         cols={[
           { key: 'name', label: c.party.name },
-          { key: 'contact', label: c.party.contact },
-          { key: 'city', label: c.party.city, width: '9rem' },
+          { key: 'contact', label: c.party.contact, optional: true },
+          { key: 'city', label: c.party.city, width: '10rem', optional: true },
         ]}
         rows={rows}
         setRows={setRows}
         blank={blank}
         addLabel={c.items.addRow}
+        optionalLabel={c.optional}
       />
       <RowsSaver c={c} s={saver} disabled={filled.length === 0} onSave={() => saver.run((p) => saveParties(api, path, filled, p))} />
     </>

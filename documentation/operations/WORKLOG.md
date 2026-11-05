@@ -11,6 +11,46 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-05 (later) — Migrations 040–044 applied to live by CLI (Ben's yes)
+
+**Objective.** Ben: "yes apply 040-044 via cli". Land PR #1's database half before its code is merged (migrations first, then code).
+
+**Actions Completed.**
+- Applied `sql/040_lock_date.sql`, `041_payment_terms_due_dates.sql`, `042_stock_counts.sql`, `043_customer_returns.sql`, `044_item_units.sql` to project ggoerp, one file at a time and in order, with `npx supabase db query --linked -f`. Each file is its own transaction. None returned an error.
+- Checked where the code lives. The edits from worktree `worktree-next-slices` are all in commit `8d85390` on `pr/next-slices`, compared file by file. The only differences are newer text that came from `main` (top-bar translations, worklog). **`main` does not have them yet**: `pr/next-slices` is 2 commits ahead of `main`, plus today's uncommitted demo fixes.
+
+**Database / System Result.**
+- Read-only checks: `inv_counts`, `inv_count_lines`, `inv_item_units` and `sal_note_returns` exist. Each has RLS on, `select` only for `authenticated`, and no grants for `anon`.
+- Tests 035–039 run on live: all five ended "ALL TESTS PASSED (everything rolled back)".
+
+**Safety Status.**
+- **The database is now ahead of the deployed code.** The live API and web app are still `main`, which does not use the new tables or columns. Next: Ben commits today's changes on `pr/next-slices` and merges PR #1 into `main`, which deploys through CI.
+- Tests 001–034 were not re-run on live after the apply. CI ran them on a fresh database with 040–044.
+- Do not remove the `worktree-next-slices` worktree until PR #1 is merged. Its `node_modules` may be junctions; remove those first.
+
+## 2026-11-05 — Phase 0: dry run of 040–044 on live (rolled back); demo fixes for narrow inputs and optional fields; Miracle teardown draft (branch `pr/next-slices`, not merged)
+
+**Objective.** Continue phase 0 of [`ROADMAP_ACCOUNTING_SUITE.md`](../plans/ROADMAP_ACCOUNTING_SUITE.md): land PR #1, and make the quick fixes from the demo notes.
+
+**Actions Completed.**
+- **Dry run on ggoerp.** A read-only check first showed none of 040–044's tables on live (`inv_counts`, `inv_count_lines`, `inv_item_units`, `sal_note_returns` all absent). Then five runs, one per new test (035–039). Each run was one transaction: `begin`, migrations 040–044 (their own `begin`/`commit` lines removed), then the test, then `rollback`. No `commit` was sent. The files were made in the session scratchpad and are not in the repo.
+- **Demo fix: inputs too narrow.**
+  - `apps/web/src/styles.css`: inputs and selects inside list tables (`.table-wrap td`) get a minimum width (9rem, 8rem for numbers and dates). Pages are 1280px wide (was 1120px). Form fields wrap at 240px (was 210px). The list search box is 340px (was 280px).
+  - Setup wizard (`Onboarding.tsx`): wider card (`max-w-5xl`) and wider columns; the row tables keep a 40rem minimum and scroll sideways on a phone.
+- **Demo fix: optional fields and storage conditions.**
+  - Wizard tables: a column can be marked optional, and its header then says "(optional)" / "(اختياري)". Marked: lowest and highest °C, warehouse Arabic name, storage condition (warehouses and items), opening stock, cost, supplier and customer contact and city.
+  - Wizard storage step: a line saying the step is optional. Warehouse step: the column is now "Storage condition" (was the step title, "Storage conditions"), with a line under the table saying most warehouses need none and it can be left empty.
+  - Normal forms: Add item ("Name in Arabic (optional)", "Opening stock (optional)") and Add supplier or customer ("Contact person", "City", "Phone", each "(optional)"). New Arabic in `lib/i18nScreens.ts` and `onboardingContent.ts`.
+- **Research:** `documentation/planning/DRAFT_miracle-egypt_TEARDOWN.md`, the meeting notes written up from the research template, every claim marked *(told)* or *(inferred)*. Ben copies it to `documentation/research/miracle-egypt/`.
+
+**Database / System Result.** All five dry runs ended with "ALL TESTS PASSED (everything rolled back)": 035 lock date, 036 due dates, 037 stock counts, 038 customer returns, 039 item units. **Nothing applied; 040–044 are still not on live.** A second pass (the older tests 001–034, each with 040–044 in a rolled-back transaction) was blocked by the session's permission check and **did not run**. CI ran the full suite on a fresh database (39 passed).
+
+**Safety Status.**
+- `npm run typecheck` clean. `npm test`: shared 31 passed; API 135 passed, 7 skipped; web 63 passed.
+- Not checked in a browser. Ben: open the wizard (Getting started → setup) and Inventory → Add item, Purchasing → Suppliers → Add, and a list with inputs in its rows (for example a customer invoice from an order), in English and Arabic.
+- **Next:** with Ben's yes, apply 040–044 by CLI (`supabase db query --linked -f`, one file per migration, in order), run tests 035–039 on live, then Ben merges PR #1. Optionally run the older tests against live first.
+- The Arabic is a first draft for Ben's review.
+
 ## 2026-11-04 (night) — Fourth "Gulf Global Outsourcing" test company soft-deleted (live data change, Ben's request)
 
 **Objective.** Ben: "delete gulf global company pls".
@@ -27,6 +67,30 @@ run or deployed.
 **Safety Status.**
 - No other company touched. No code changed.
 - Undo: `update public.organizations set deleted_at = null where id = 'c9e42af1-51b5-47a7-9a9d-703d0c6c3b34';`
+
+## 2026-11-04 (late) — "Next" items started: overnight slices re-applied on a fresh branch, the two failing SQL tests fixed, first screens (branch `worktree-next-slices`, not merged)
+
+**Objective.** Ben: "start on the next things now" (the NEXT list in his update to Grant).
+
+**Actions Completed.**
+- **New worktree** `.claude/worktrees/next-slices` (branch `worktree-next-slices`) from current `main` (`cc91e71`, which already has the wizard and the efficiency fixes).
+  - The overnight work was re-applied with `git revert --no-commit 790b21f` (it undoes the revert of "s"), uncommitted. **Not** merging `superfix-workflow`: `main`'s revert would have deleted the work.
+  - Doc conflicts in `WORKLOG.md` and `checklist.md` were resolved by keeping both sides.
+  - `.claude/settings.json` was restored to `main`'s version, so the `bgIsolation` line does not come back.
+- **SQL fixes (both were failing in CI on 4 Nov):**
+  - Test 024: `sql/041`'s due-date trigger now also runs when an invoice's date changes, and the due date moves by the same days, so the terms are kept. New case T4b in test 036.
+  - Test 037: `sql/042`'s count approval updated a balance with "insert … on conflict". A *decrease* failed the not-negative check on the proposed insert row before the conflict clause, as `sql/026` already notes. It now updates the existing row and inserts only for an increase.
+- **Screens:**
+  - Settings → General: new "Closed periods and payment terms" card (`PeriodSettings.tsx`). Lock date for owners; default payment terms for owners and admins.
+  - Customers and Suppliers: a "Payment terms" column, editable in place for owners and admins (empty = company default).
+  - Due date shown on customer and supplier invoice pages.
+  - All new text has Arabic in `lib/i18nScreens.ts`.
+
+**Database / System Result.** None. Nothing applied; not deployed. Migrations 040–044 are still not on live.
+
+**Safety Status.**
+- SQL tests 035–039 and 024 need a run. Open a PR from this branch: the "SQL tests (local Supabase)" workflow runs on pull requests and never deploys.
+- **Order for live:** migrations first (dry-run, then apply on ggoerp, with Ben's go-ahead), **then** merge the code. Never the code first: that was today's breakage.
 
 ## 2026-11-04 (evening) — Efficiency audit and fixes F1–F4; "Explore more" on every wizard step (branch `worktree-onboarding-wizard`, not merged)
 
@@ -108,6 +172,48 @@ run or deployed.
 - **D4 note:** names keep "(sample)" to match the cosmetics company. Ben can ask to drop the suffix in both.
 - **Checks:** typecheck, `biome ci` and `npm test` (web 61) pass; `vite build` passes with the setting, and the email is present only in the wizard chunk. Not run in a browser.
 - **Then (Ben: "auto fill live in the website, no animations"):** each step's fill now puts the sample into the form on screen. List steps became editable tables, and Save stores the rows shown (sample or typed) through `saveConditions`, `saveWarehouses`, `saveItems`, `saveParties` and `saveApproval` in `sampleFill.ts`. Tests updated (web 62); typecheck, lint, tests and build pass.
+## 2026-11-03 (night) — Superfix workflow slices S1–S5a written; ERPNext and Dolibarr teardowns; live "Supabase not working" checked (not run, not deployed)
+
+**Objective.** Ben: study ERPNext and Dolibarr properly (behaviour only, both GPL), including their UI. Then "do a superfix plan (workflow for now) and apply" ([`SUPERFIX_WORKFLOW_PLAN.md`](../plans/SUPERFIX_WORKFLOW_PLAN.md), approved with all defaults D1–D7). Also: "live app says supabase not working".
+
+**Actions Completed.**
+- **Teardowns:** `research/erpnext/TEARDOWN.md` and `research/dolibarr/TEARDOWN.md`, from the local source copies (17.0.0-dev and a 2026-10-28 commit), including a UI teardown read from source.
+  - `documentation/research/` is in `.gitignore` and denied to agent edits, so the files are **not in this checkout**. They sit in the worktree `.claude/worktrees/research-erpnext-dolibarr` (branch `worktree-research-erpnext-dolibarr`) and in the job folder. Ben copies them in himself.
+  - The research index row and the new **source** evidence tag are also left for Ben to paste.
+- **Migrations** (each rerun-safe, ending with read-only checks):
+  - `sql/040_lock_date.sql`: owner-only lock date, enforced by triggers on customer and supplier invoices, expenses and payments, for both create and void.
+  - `sql/041_payment_terms_due_dates.sql`: terms on customers, suppliers and the company. `due_date` added to both invoice tables, with a trigger and a backfill. `alr_run` is carried over from `sql/030` with three lines changed, so "overdue" counts from the due date; behaviour is unchanged while terms are 0 days.
+  - `sql/042_stock_counts.sql`: count sessions with an expected-quantity snapshot. Approval by someone other than the starter or submitter. Stock moves of counted − snapshot. The ledger guard and check now accept `count_id`.
+  - `sql/043_customer_returns.sql`: `sal_note_returns` and `sal_submit_return_note`. Approving the credit note posts `return_in` moves at the original issue cost, updates the average cost (logged as `customer_return`) and limits returns to delivered minus returned.
+  - `sql/044_item_units.sql`: extra units per item with factors, and the `inv_to_base_qty` conversion.
+- **SQL tests:** `sql/tests/035`–`039`, one per slice, each covering isolation and no anonymous use.
+- **API:**
+  - Settings: `PUT /v1/core/org/lock-date`, `PUT /v1/core/org/payment-terms`; `OrgSettings` gains `lockDate` and `defaultPaymentTermsDays`.
+  - Terms: `PUT /v1/sales/customers/:id/terms`, `PUT /v1/purchasing/suppliers/:id/terms`. Customer and supplier lists return `paymentTermsDays`; invoice reads return `dueDate`.
+  - `GET /v1/finance/open-items` adds `dueDate`, `daysOverdue` and `ageBucket` (new `finance/ageing.ts`, with tests).
+  - Counts: `/v1/inventory/counts…`. Units: `/v1/inventory/items/:id/units…`. Returns: `POST /v1/sales/invoices/:id/returns`.
+  - New reason codes in `lib/rpc.ts`.
+- **Tests and docs:** `einvoicing.test.ts` now expects 6 note routes (the returns route was added deliberately). `sql/README.md`, `sql/tests/README.md`, the checklist and the plan (§8, deviations) are updated.
+- **Settings:** `.claude/settings.json` gains `"worktree": {"bgIsolation": "none"}`, which Ben approved.
+
+**Database / System Result.**
+- **Nothing was run on any database.** Docker is not installed here, and live applies need Ben's go-ahead. Migrations 040–044 and tests 035–039 are unproven until run.
+- **"Supabase not working" on the live app was checked read-only from outside:**
+  - The live bundle contains the Supabase URL, so it is not a missing build setting.
+  - The project is up: auth and REST answer in about 0.3 s, and the live publishable key is accepted by auth settings.
+  - Anonymous table reads are refused (by design, `sql/004`).
+  - The API `/health` returns ok (production); CORS allows erp-live.pages.dev.
+  - `vite.config.ts` in the checkout matches the commit.
+  - **Not reproduced.** Needs the exact message, the URL and the browser console from Ben.
+
+**Safety Status.**
+- `npm run typecheck`, `npm run lint` (`biome ci`) and `npm test` pass at the root: shared 31, API 135 with 7 skipped, web 47. `biome format --write` touched only files changed in this entry.
+- No commit, no deploy, no live data or schema change.
+- **Next:**
+  1. Run 040–044 then tests 035–039 on a throwaway database (CI's SQL workflow on push), or dry-run on ggoerp with Ben's approval, then apply.
+  2. S5b and S6 (storage decision, ADR-0007).
+  3. Screens.
+- Known limits are listed in plan §8: per-item counts, one batch per return line, no WhatsApp approval for counts yet, and returns not reflected in forecast or monthly COGS.
 
 ## 2026-11-03 (night) — No more refresh every few seconds; Odoo-style top bar with icons; tour waits for data (not deployed)
 

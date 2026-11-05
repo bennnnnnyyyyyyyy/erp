@@ -7,6 +7,7 @@ import { demoMode } from '../../../lib/demo';
 import { useI18n, type Lang, tr } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
+import { PeriodSettings } from './PeriodSettings';
 
 const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'EGP', 'JOD', 'LBP', 'INR', 'PKR', 'PHP'];
 
@@ -176,6 +177,7 @@ export function GeneralSettings() {
           </div>
         </div>
       )}
+      {canEdit && !demoMode && org.data ? <PeriodSettings org={org.data} onSaved={org.reload} /> : null}
     </section>
   );
 }

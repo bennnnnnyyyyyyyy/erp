@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { demoMode } from '../../lib/demo';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { Modal } from '../../components/Modal';
@@ -39,9 +40,54 @@ export const toMinor = (text: string) => Math.round((Number(text) || 0) * 100);
 
 // ------------------------------------------------------------------ suppliers and customers
 
+/** A party's payment terms in days, edited in place (owners and admins; sql/041). Empty = the company default. Saves on Enter or on leaving. */
+function TermsCell({ party, endpoint, onSaved }: { party: Party; endpoint: string; onSaved: () => void }) {
+  const initial = party.paymentTermsDays == null ? '' : String(party.paymentTermsDays);
+  const [value, setValue] = useState(initial);
+  const [state, setState] = useState<'idle' | 'saving' | 'error'>('idle');
+  useEffect(() => setValue(initial), [initial]);
+  const save = async () => {
+    if (value === initial) return;
+    const days = value.trim() === '' ? null : Number(value);
+    if (days !== null && (!Number.isInteger(days) || days < 0 || days > 365)) return setState('error');
+    setState('saving');
+    try {
+      await api(`${endpoint}/${party.id}/terms`, { method: 'PUT', body: JSON.stringify({ days }) });
+      setState('idle');
+      onSaved();
+    } catch {
+      setState('error');
+    }
+  };
+  return (
+    <input
+      type="number"
+      min={0}
+      max={365}
+      step={1}
+      className="w-24"
+      aria-label={trf('Payment terms for {name}', { name: party.name })}
+      aria-invalid={state === 'error' || undefined}
+      placeholder={tr('Company default')}
+      value={value}
+      disabled={state === 'saving'}
+      onChange={(e) => {
+        setValue(e.target.value);
+        setState('idle');
+      }}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+      }}
+    />
+  );
+}
+
 export function PartyList({ title, endpoint, noun, addPermission }: { title: string; endpoint: string; noun: string; addPermission?: string }) {
   const parties = useLoad(() => api<Party[]>(endpoint));
   const session = useSession();
+  // Terms are set by owners and admins (the database checks again). Not in the sample-data demo build, which has no such route.
+  const canSetTerms = !demoMode && (session.role === 'owner' || session.role === 'admin');
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', contact: '', city: '', phone: '' });
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +111,19 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
     { key: 'contact', label: tr('Contact'), value: (p) => p.contact },
     { key: 'city', label: tr('City'), value: (p) => p.city },
     { key: 'phone', label: tr('Phone'), value: (p) => p.phone, render: (p) => <code>{p.phone}</code> },
+    {
+      key: 'terms',
+      label: tr('Payment terms'),
+      value: (p) => p.paymentTermsDays ?? -1,
+      render: (p) =>
+        canSetTerms ? (
+          <TermsCell party={p} endpoint={endpoint} onSaved={parties.reload} />
+        ) : p.paymentTermsDays == null ? (
+          <span className="muted">{tr('Company default')}</span>
+        ) : (
+          trf('{n} days', { n: p.paymentTermsDays })
+        ),
+    },
   ];
 
   return (
@@ -87,10 +146,10 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
           <form className="stack" onSubmit={submit}>
             <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
             <div className="form-row">
-              <label>{tr('Contact person')}<input value={form.contact} onChange={set('contact')} /></label>
-              <label>{tr('City')}<input value={form.city} onChange={set('city')} /></label>
+              <label>{tr('Contact person (optional)')}<input value={form.contact} onChange={set('contact')} /></label>
+              <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
             </div>
-            <label>{tr('Phone')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
+            <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
             {error && <p className="error">{error}</p>}
             <div className="form-actions"><Button type="submit">{tr('Add')} {noun}</Button></div>
           </form>

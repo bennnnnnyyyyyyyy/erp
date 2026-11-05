@@ -161,14 +161,14 @@ main.content:focus { outline: none; }
 .nav-item:hover { background: var(--surface-2); }
 .nav-item.active { background: var(--accent); color: var(--primary); font-weight: 600; border-inline-start-color: var(--primary); }
 .content { padding: 2rem 2.25rem 4rem; min-width: 0; }
-.page { max-width: 1120px; animation: rise 0.35s ease-out both; }
+.page { max-width: 1280px; animation: rise 0.35s ease-out both; }
 /* Page header: the title, one plain line under it, then a clear gap before the content. Every screen gets the same rhythm. */
 .page > h1 { margin-block-end: 0.3rem; }
 .page > h1 + .muted, .page > .page-head + .muted { margin-block: 0 1.5rem; max-width: 68ch; font-size: 0.95rem; }
 .page > h1:not(:has(+ .muted)) { margin-block-end: 1.25rem; }
 
 /* Loading skeleton (components/Loading.tsx): the shape of a page, gently pulsing. */
-.skeleton { display: flex; flex-direction: column; gap: 0.7rem; max-width: 1120px; }
+.skeleton { display: flex; flex-direction: column; gap: 0.7rem; max-width: 1280px; }
 .center .skeleton { width: min(420px, 90vw); }
 .sk { border-radius: var(--radius); background: var(--surface-2); animation: shimmer 1.4s ease-in-out infinite; }
 .sk-title { height: 1.9rem; width: min(260px, 60%); }
@@ -221,7 +221,7 @@ main.content:focus { outline: none; }
 }
 .form-card h2 { font-size: 1.05rem; }
 /* Fields sit on a grid that fills the card and wraps on its own: two to four per row on a desktop, one on a phone. */
-.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 0.9rem 1rem; align-items: end; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 0.9rem 1rem; align-items: end; }
 .form-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .notice {
   position: relative; background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
@@ -241,7 +241,7 @@ main.content:focus { outline: none; }
 /* ---- list view and tables ---- */
 .list-view { margin-top: 1rem; }
 .list-toolbar { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
-.list-search { max-width: 280px; margin-top: 0; }
+.list-search { max-width: 340px; margin-top: 0; }
 .list-count { font-size: 0.85rem; }
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
 table { width: 100%; border-collapse: collapse; }
@@ -258,6 +258,10 @@ th.right, td.right { text-align: end; font-variant-numeric: tabular-nums; }
 td.right { font-family: var(--mono); font-size: 0.9rem; }
 td select { width: auto; margin-top: 0; padding: 0.3rem 0.5rem; text-transform: capitalize; }
 td input { margin-top: 0; }
+/* Demo note (5 Nov): inputs inside table cells were squeezed to a few characters. Give them a usable minimum width. */
+.table-wrap td input:not([type='checkbox']):not([type='radio']) { min-width: 9rem; }
+.table-wrap td input[type='number'], .table-wrap td input[type='date'] { min-width: 8rem; }
+.table-wrap td select { min-width: 9rem; }
 .th-sort { background: transparent; color: inherit; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .th-sort:hover:not(:disabled) { background: transparent; color: var(--text); }
 .row-actions { text-align: end; white-space: nowrap; }

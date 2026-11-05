@@ -18,18 +18,20 @@ export type OnboardingContent = {
   saved: string;
   notAllowed: string;
   exit: string;
+  /** Shown after a column or field that may be left empty. */
+  optional: string;
   steps: Record<StepKey, { title: string; body: string }>;
   welcome: { start: string; later: string; points: string[] };
   language: { personal: string; company: string; companyHint: string };
   company: { name: string; currency: string; timezone: string; dateFormat: string };
-  warehouse: { code: string; codeHint: string; name: string; existing: (n: number) => string };
+  warehouse: { code: string; codeHint: string; name: string; condition: string; conditionHint: string; existing: (n: number) => string };
   items: { sku: string; name: string; unit: string; opening: string; cost: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
   team: { email: string; fullName: string; role: string; roles: Record<'admin' | 'member' | 'viewer', string>; invite: string; invited: (email: string) => string; existing: (n: number) => string };
   approval: { always: string; minQty: string; minQtyHint: string; approvers: string; existing: (n: number) => string };
   done: { tour: string; home: string; checklist: string };
   /** "Explore more": each step links to the real screen it sets up (opens in a new tab, so the wizard stays where it is). */
   explore: { label: string; hint: string; screens: Record<StepKey, string> };
-  storage: { name: string; min: string; max: string; existing: (n: number) => string };
+  storage: { name: string; min: string; max: string; skipHint: string; existing: (n: number) => string };
   party: { name: string; contact: string; city: string; add: string; added: (name: string) => string; existing: (n: number) => string };
   fill: {
     one: string;
@@ -53,6 +55,7 @@ const EN: OnboardingContent = {
   saved: 'Saved',
   notAllowed: 'Only an owner or admin can change this. You can skip it; they can do it later.',
   exit: 'Leave setup (you can come back from Getting started)',
+  optional: 'optional',
   steps: {
     welcome: { title: 'Welcome', body: 'This app runs your warehouse, buying and selling, with a manager approval on every outgoing stock movement and a history nobody can change. A few short steps set up your company; every step can be skipped and changed later.' },
     language: { title: 'Your language', body: 'Choose the language you want to use. The layout turns right to left for Arabic.' },
@@ -81,6 +84,8 @@ const EN: OnboardingContent = {
     code: 'Code',
     codeHint: 'Letters and numbers, e.g. MAIN',
     name: 'Name',
+    condition: 'Storage condition',
+    conditionHint: 'Most warehouses need no storage condition: leave it empty. Fill it in only for a place such as a cold room.',
     existing: (n) => `You already have ${n} warehouse(s). Add another, or continue.`,
   },
   items: {
@@ -127,7 +132,7 @@ const EN: OnboardingContent = {
       done: 'The home page',
     },
   },
-  storage: { name: 'Name', min: 'Lowest °C', max: 'Highest °C', existing: (n) => `You already have ${n} storage condition(s).` },
+  storage: { name: 'Name', min: 'Lowest °C', max: 'Highest °C', skipHint: 'This step is optional. If none of your goods need special storage, skip it.', existing: (n) => `You already have ${n} storage condition(s).` },
   party: { name: 'Name', contact: 'Contact', city: 'City', add: 'Add', added: (name) => `Added ${name}`, existing: (n) => `You already have ${n}.` },
   fill: {
     one: 'Fill with sample data',
@@ -151,6 +156,7 @@ const AR: OnboardingContent = {
   saved: 'تم الحفظ',
   notAllowed: 'يستطيع المالك أو المدير فقط تغيير هذا. يمكنك تخطيه، ويمكنهم القيام به لاحقًا.',
   exit: 'اترك الإعداد (يمكنك العودة من صفحة البدء)',
+  optional: 'اختياري',
   steps: {
     welcome: { title: 'مرحبًا بك', body: 'يدير هذا التطبيق مستودعك ومشترياتك ومبيعاتك، مع موافقة مدير على كل حركة مخزون صادرة وسجل لا يمكن لأحد تغييره. بضع خطوات قصيرة تُعدّ شركتك؛ ويمكن تخطي كل خطوة وتغييرها لاحقًا.' },
     language: { title: 'لغتك', body: 'اختر اللغة التي تريد استخدامها. يتحول اتجاه الصفحة من اليمين إلى اليسار مع العربية.' },
@@ -179,6 +185,8 @@ const AR: OnboardingContent = {
     code: 'الرمز',
     codeHint: 'حروف وأرقام، مثل MAIN',
     name: 'الاسم',
+    condition: 'ظرف التخزين',
+    conditionHint: 'معظم المستودعات لا تحتاج إلى ظرف تخزين: اتركه فارغًا. املأه فقط لمكان مثل غرفة التبريد.',
     existing: (n) => `لديك بالفعل ${n} مستودع. أضف مستودعًا آخر أو تابع.`,
   },
   items: {
@@ -225,7 +233,7 @@ const AR: OnboardingContent = {
       done: 'الصفحة الرئيسية',
     },
   },
-  storage: { name: 'الاسم', min: 'أدنى درجة °م', max: 'أعلى درجة °م', existing: (n) => `لديك بالفعل ${n} من ظروف التخزين.` },
+  storage: { name: 'الاسم', min: 'أدنى درجة °م', max: 'أعلى درجة °م', skipHint: 'هذه الخطوة اختيارية. إذا لم تكن بضائعك تحتاج إلى تخزين خاص فتخطَّها.', existing: (n) => `لديك بالفعل ${n} من ظروف التخزين.` },
   party: { name: 'الاسم', contact: 'جهة الاتصال', city: 'المدينة', add: 'إضافة', added: (name) => `تمت إضافة ${name}`, existing: (n) => `لديك بالفعل ${n}.` },
   fill: {
     one: 'املأ ببيانات تجريبية',
