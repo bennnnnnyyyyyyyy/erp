@@ -28,6 +28,30 @@ run or deployed.
 - No other company touched. No code changed.
 - Undo: `update public.organizations set deleted_at = null where id = 'c9e42af1-51b5-47a7-9a9d-703d0c6c3b34';`
 
+## 2026-11-04 (late) — "Next" items started: overnight slices re-applied on a fresh branch, the two failing SQL tests fixed, first screens (branch `worktree-next-slices`, not merged)
+
+**Objective.** Ben: "start on the next things now" (the NEXT list in his update to Grant).
+
+**Actions Completed.**
+- **New worktree** `.claude/worktrees/next-slices` (branch `worktree-next-slices`) from current `main` (`cc91e71`, which already has the wizard and the efficiency fixes).
+  - The overnight work was re-applied with `git revert --no-commit 790b21f` (it undoes the revert of "s"), uncommitted. **Not** merging `superfix-workflow`: `main`'s revert would have deleted the work.
+  - Doc conflicts in `WORKLOG.md` and `checklist.md` were resolved by keeping both sides.
+  - `.claude/settings.json` was restored to `main`'s version, so the `bgIsolation` line does not come back.
+- **SQL fixes (both were failing in CI on 4 Nov):**
+  - Test 024: `sql/041`'s due-date trigger now also runs when an invoice's date changes, and the due date moves by the same days, so the terms are kept. New case T4b in test 036.
+  - Test 037: `sql/042`'s count approval updated a balance with "insert … on conflict". A *decrease* failed the not-negative check on the proposed insert row before the conflict clause, as `sql/026` already notes. It now updates the existing row and inserts only for an increase.
+- **Screens:**
+  - Settings → General: new "Closed periods and payment terms" card (`PeriodSettings.tsx`). Lock date for owners; default payment terms for owners and admins.
+  - Customers and Suppliers: a "Payment terms" column, editable in place for owners and admins (empty = company default).
+  - Due date shown on customer and supplier invoice pages.
+  - All new text has Arabic in `lib/i18nScreens.ts`.
+
+**Database / System Result.** None. Nothing applied; not deployed. Migrations 040–044 are still not on live.
+
+**Safety Status.**
+- SQL tests 035–039 and 024 need a run. Open a PR from this branch: the "SQL tests (local Supabase)" workflow runs on pull requests and never deploys.
+- **Order for live:** migrations first (dry-run, then apply on ggoerp, with Ben's go-ahead), **then** merge the code. Never the code first: that was today's breakage.
+
 ## 2026-11-04 (evening) — Efficiency audit and fixes F1–F4; "Explore more" on every wizard step (branch `worktree-onboarding-wizard`, not merged)
 
 **Objective.** Ben: "saving takes so long, do an efficiency audit". Then: "each step of the tutorial should have an explore more as well … work on fixing tutorial/demo".
@@ -108,6 +132,48 @@ run or deployed.
 - **D4 note:** names keep "(sample)" to match the cosmetics company. Ben can ask to drop the suffix in both.
 - **Checks:** typecheck, `biome ci` and `npm test` (web 61) pass; `vite build` passes with the setting, and the email is present only in the wizard chunk. Not run in a browser.
 - **Then (Ben: "auto fill live in the website, no animations"):** each step's fill now puts the sample into the form on screen. List steps became editable tables, and Save stores the rows shown (sample or typed) through `saveConditions`, `saveWarehouses`, `saveItems`, `saveParties` and `saveApproval` in `sampleFill.ts`. Tests updated (web 62); typecheck, lint, tests and build pass.
+## 2026-11-03 (night) — Superfix workflow slices S1–S5a written; ERPNext and Dolibarr teardowns; live "Supabase not working" checked (not run, not deployed)
+
+**Objective.** Ben: study ERPNext and Dolibarr properly (behaviour only, both GPL), including their UI. Then "do a superfix plan (workflow for now) and apply" ([`SUPERFIX_WORKFLOW_PLAN.md`](../plans/SUPERFIX_WORKFLOW_PLAN.md), approved with all defaults D1–D7). Also: "live app says supabase not working".
+
+**Actions Completed.**
+- **Teardowns:** `research/erpnext/TEARDOWN.md` and `research/dolibarr/TEARDOWN.md`, from the local source copies (17.0.0-dev and a 2026-10-28 commit), including a UI teardown read from source.
+  - `documentation/research/` is in `.gitignore` and denied to agent edits, so the files are **not in this checkout**. They sit in the worktree `.claude/worktrees/research-erpnext-dolibarr` (branch `worktree-research-erpnext-dolibarr`) and in the job folder. Ben copies them in himself.
+  - The research index row and the new **source** evidence tag are also left for Ben to paste.
+- **Migrations** (each rerun-safe, ending with read-only checks):
+  - `sql/040_lock_date.sql`: owner-only lock date, enforced by triggers on customer and supplier invoices, expenses and payments, for both create and void.
+  - `sql/041_payment_terms_due_dates.sql`: terms on customers, suppliers and the company. `due_date` added to both invoice tables, with a trigger and a backfill. `alr_run` is carried over from `sql/030` with three lines changed, so "overdue" counts from the due date; behaviour is unchanged while terms are 0 days.
+  - `sql/042_stock_counts.sql`: count sessions with an expected-quantity snapshot. Approval by someone other than the starter or submitter. Stock moves of counted − snapshot. The ledger guard and check now accept `count_id`.
+  - `sql/043_customer_returns.sql`: `sal_note_returns` and `sal_submit_return_note`. Approving the credit note posts `return_in` moves at the original issue cost, updates the average cost (logged as `customer_return`) and limits returns to delivered minus returned.
+  - `sql/044_item_units.sql`: extra units per item with factors, and the `inv_to_base_qty` conversion.
+- **SQL tests:** `sql/tests/035`–`039`, one per slice, each covering isolation and no anonymous use.
+- **API:**
+  - Settings: `PUT /v1/core/org/lock-date`, `PUT /v1/core/org/payment-terms`; `OrgSettings` gains `lockDate` and `defaultPaymentTermsDays`.
+  - Terms: `PUT /v1/sales/customers/:id/terms`, `PUT /v1/purchasing/suppliers/:id/terms`. Customer and supplier lists return `paymentTermsDays`; invoice reads return `dueDate`.
+  - `GET /v1/finance/open-items` adds `dueDate`, `daysOverdue` and `ageBucket` (new `finance/ageing.ts`, with tests).
+  - Counts: `/v1/inventory/counts…`. Units: `/v1/inventory/items/:id/units…`. Returns: `POST /v1/sales/invoices/:id/returns`.
+  - New reason codes in `lib/rpc.ts`.
+- **Tests and docs:** `einvoicing.test.ts` now expects 6 note routes (the returns route was added deliberately). `sql/README.md`, `sql/tests/README.md`, the checklist and the plan (§8, deviations) are updated.
+- **Settings:** `.claude/settings.json` gains `"worktree": {"bgIsolation": "none"}`, which Ben approved.
+
+**Database / System Result.**
+- **Nothing was run on any database.** Docker is not installed here, and live applies need Ben's go-ahead. Migrations 040–044 and tests 035–039 are unproven until run.
+- **"Supabase not working" on the live app was checked read-only from outside:**
+  - The live bundle contains the Supabase URL, so it is not a missing build setting.
+  - The project is up: auth and REST answer in about 0.3 s, and the live publishable key is accepted by auth settings.
+  - Anonymous table reads are refused (by design, `sql/004`).
+  - The API `/health` returns ok (production); CORS allows erp-live.pages.dev.
+  - `vite.config.ts` in the checkout matches the commit.
+  - **Not reproduced.** Needs the exact message, the URL and the browser console from Ben.
+
+**Safety Status.**
+- `npm run typecheck`, `npm run lint` (`biome ci`) and `npm test` pass at the root: shared 31, API 135 with 7 skipped, web 47. `biome format --write` touched only files changed in this entry.
+- No commit, no deploy, no live data or schema change.
+- **Next:**
+  1. Run 040–044 then tests 035–039 on a throwaway database (CI's SQL workflow on push), or dry-run on ggoerp with Ben's approval, then apply.
+  2. S5b and S6 (storage decision, ADR-0007).
+  3. Screens.
+- Known limits are listed in plan §8: per-item counts, one batch per return line, no WhatsApp approval for counts yet, and returns not reflected in forecast or monthly COGS.
 
 ## 2026-11-03 (night) — No more refresh every few seconds; Odoo-style top bar with icons; tour waits for data (not deployed)
 

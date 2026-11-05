@@ -49,6 +49,10 @@ Template for further blocks; update them in the same change as the work:
   - **Done (2026-11-04, on branch `worktree-onboarding-wizard`, not merged):** 8-step wizard (welcome, language, company, warehouse, items, team, approvals, done → tour) using existing routes only; automatic start in brand-new companies only; English and Arabic; tests; typecheck, lint, tests and build pass.
   - **Waiting on:** Ben's review and merge after the demo; a browser check in a new company.
   - **Remaining:** item import, progress saved on the account, VAT/ETA question.
+- [ ] **[SUPERFIX_WORKFLOW_PLAN.md](SUPERFIX_WORKFLOW_PLAN.md): workflow gaps from the ERPNext and Dolibarr teardowns**
+  - **Done (2026-11-03, written, not run, not deployed):** S1 lock date (`sql/040`), S2 payment terms and due dates (`sql/041`), S3 stock count sessions (`sql/042`), S4 customer returns through credit notes (`sql/043`), S5a units with conversion (`sql/044`); SQL tests 035-039; API routes; root typecheck, lint and tests pass.
+  - **Waiting on:** Ben's go-ahead to dry-run and apply 040-044 on ggoerp and run tests 035-039 there (or let CI's SQL workflow run them on push); the S6 storage decision.
+  - **Remaining:** S5b (units on order and request lines), S6 (audit chain anchored outside the database, needs ADR-0007), screens for all slices, WhatsApp/voice approval of counts.
 
 - [ ] **Language choice in Settings** (small change, no plan needed)
   - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.
