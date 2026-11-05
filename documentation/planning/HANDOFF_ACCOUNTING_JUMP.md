@@ -1,5 +1,16 @@
 # Handoff: the big jump to a general-purpose ERP (written 2026-11-05)
 
+> **Update, 5 Nov evening: the plan is now
+> [`ROADMAP_ACCOUNTING_SUITE.md`](../plans/ROADMAP_ACCOUNTING_SUITE.md).**
+> - It was built from Ben's meeting with a warehouse accountant who uses Miracle, and from his demo
+>   notes. It replaces section 3 below.
+> - Ben decided that packaging for a company's own servers, and SaaS billing, come **after** the
+>   accounting suite.
+> - **PR #1** (`pr/next-slices`, migrations 040–044) passed CI SQL tests: 39 passed, 0 failed.
+>   **Next:** dry run on live (rolled back), then apply 040–044 with Ben's yes, then Ben merges.
+> - The top bar is merged and pushed (`4e36a51`).
+> - The bad branch `pr/next-slices-ci-check` is deleted.
+
 Read this first in a fresh session. It records where things stand, what Ben decided on 5 Nov, and
 how far the product is from the goal. **The worklog wins** wherever this file and
 [`WORKLOG.md`](../operations/WORKLOG.md) disagree.

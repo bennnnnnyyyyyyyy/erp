@@ -54,6 +54,11 @@ Template for further blocks; update them in the same change as the work:
   - **Waiting on:** Ben's go-ahead to dry-run and apply 040-044 on ggoerp and run tests 035-039 there (or let CI's SQL workflow run them on push); the S6 storage decision.
   - **Remaining:** S5b (units on order and request lines), S6 (audit chain anchored outside the database, needs ADR-0007), screens for all slices, WhatsApp/voice approval of counts.
 
+- [ ] **[ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md): accounting suite roadmap, phases 0–9**
+  - **Done (2026-11-05):** draft written from the Miracle meeting notes and the demo notes. Phase 0 under way: PR #1 (S1–S5a, migrations 040–044) passed CI SQL tests (39/39).
+  - **Waiting on:** Ben's approval and answers Q1–Q8; Ben's yes to apply 040–044 on live.
+  - **Remaining:** one module plan per phase before building; ADR for the general ledger.
+
 - [ ] **Language choice in Settings** (small change, no plan needed)
   - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.
   - **Remaining:** translate the rest of the screens (UI audit finding 1) once the Arabic review owner is decided.
