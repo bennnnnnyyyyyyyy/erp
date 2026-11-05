@@ -5,7 +5,9 @@ import { demoMode } from '../lib/demo';
 import { useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
-import { resolveRoute, visibleApps } from '../modules/registry';
+import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
+import { AppMenu, DrawerMenu } from './AppMenu';
+import { AppIcon } from './icons';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
 import { TableLabels } from './TableLabels';
@@ -89,6 +91,14 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => setDrawerOpen(false), [path]);
+  // Fetch every screen's code once the browser is idle after sign-in, so no page (and no tour step) waits for a download later.
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    // Production only: the dev server serves every module unbundled, where preloading means hundreds of requests per page load.
+    if (!import.meta.env.PROD) return;
+    const run = () => preloadScreens();
+    if (w.requestIdleCallback) w.requestIdleCallback(run); else setTimeout(run, 1500);
+  }, []);
   useEffect(() => {
     const where = route?.page ? `${t(route.page.label)} · ${t(route.app.name)}` : route ? t(route.app.name) : undefined;
     document.title = [where, session.org?.name].filter(Boolean).join(' · ') || 'ERP';
@@ -98,26 +108,35 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   const Page = route?.page?.component;
 
   return (
-    <div className={route ? 'shell with-sidebar' : 'shell'}>
+    <div className="shell">
       <TourHost />
       <TableLabels />
       {!demoMode && ready && !asked && <FirstRunLanguage />}
       {/* Keyboard users jump past the top bar and the sidebar straight to the page (visible only when focused). */}
       <a href="#main" className="skip-link">{t('Skip to content')}</a>
+      {/* Odoo-style top bar: apps grid, the current app (icon and name), its menu across the bar; company and account at the end.
+          On a phone the menu moves into a drawer opened with the menu button. */}
       <header className="topbar">
         {route && (
-          <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')}>
+          <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')} aria-expanded={drawerOpen}>
             ☰
           </button>
         )}
-        <span className="brand-mark" aria-hidden="true" />
-        <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label={t('All apps')}>
+        <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label={t('All apps')} title={t('All apps')}>
           <span className="grid-icon" aria-hidden="true" />
-          {t('Apps')}
+          {!route && t('Apps')}
         </Link>
-        <span className="topbar-org"><bdi>{session.org?.name}</bdi></span>
-        {route && <span className="topbar-app">/ {t(route.app.name)}</span>}
+        {route ? (
+          <Link to={route.app.basePath || '/'} className="topbar-app-link">
+            <span className="topbar-app-icon"><AppIcon appKey={route.app.key} name={t(route.app.name)} /></span>
+            <span>{t(route.app.name)}</span>
+          </Link>
+        ) : (
+          <span className="topbar-org"><bdi>{session.org?.name}</bdi></span>
+        )}
+        {route && <AppMenu app={route.app} current={route.page ?? undefined} />}
         <span className="spacer" />
+        {route && <span className="topbar-org-end"><bdi>{session.org?.name}</bdi></span>}
         <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
           {dark ? '☀' : '☾'}
         </button>
@@ -125,20 +144,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
       </header>
 
-      {route && (
-        <nav className={drawerOpen ? 'sidebar open' : 'sidebar'} aria-label={`${t(route.app.name)} · ${t('Menu')}`}>
-          <div className="nav-heading">{t(route.app.name)}</div>
-          {route.app.pages.filter((p) => p.nav !== false).map((p) => {
-            const to = route.app.basePath + p.path;
-            const active = p === route.page || route.page?.parent === p.path;
-            return (
-              <Link key={to} to={to} className={active ? 'nav-item active' : 'nav-item'}>
-                {t(p.label)}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+      {route && <DrawerMenu app={route.app} current={route.page ?? undefined} open={drawerOpen} />}
 
       <main className="content" id="main" tabIndex={-1}>
         {atHome ? (

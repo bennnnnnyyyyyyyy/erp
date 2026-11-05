@@ -651,6 +651,12 @@ export const SCREENS_AR: Record<string, string> = {
   "Skip to content": "تخطَّ إلى المحتوى",
   "Sign out": "تسجيل الخروج",
   "Full name": "الاسم الكامل",
+  // Top-bar app menu (components/AppMenu.tsx)
+  "Operations": "العمليات",
+  "Reporting": "التقارير",
+  "Configuration": "الإعدادات",
+  "Menu": "القائمة",
+  "All apps": "كل التطبيقات",
   "{n} items": "{n} أصناف",
   "Yes, switch off": "نعم، أوقِفها",
   // Polish round 3: forms behind buttons, empty profit page, settings sections, users

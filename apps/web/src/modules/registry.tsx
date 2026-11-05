@@ -4,7 +4,9 @@ import { demoMode } from '../lib/demo';
 
 // Each screen file is its own chunk, fetched the first time one of its pages is opened (system audit 2026-11-03, finding 11:
 // the app shipped as a single 627 kB file). The Shell shows the loading skeleton while a chunk arrives.
+const SCREEN_LOADERS: (() => Promise<unknown>)[] = [];
 function lazyNamed<M, K extends keyof M>(load: () => Promise<M>, name: K): ComponentType {
+  SCREEN_LOADERS.push(load);
   return lazy(() => load().then((m) => ({ default: m[name] as unknown as ComponentType })));
 }
 const AppsSettings = lazyNamed(() => import('./core/settings/AppsSettings'), 'AppsSettings');
@@ -61,7 +63,7 @@ export type AppPage = {
   label: string;
   permission?: string;
   component: ComponentType;
-  /** false keeps the page out of the sidebar (record pages). */
+  /** false keeps the page out of the app menu (record pages). */
   nav?: boolean;
   /** Sidebar entry to highlight while on this page (its `path`). */
   parent?: string;
@@ -242,6 +244,26 @@ export const APPS: AppDef[] = [
 ];
 
 export const SUITE_ORDER: AppDef['suite'][] = ['Warehouse', 'Sales & Purchasing', 'Finance', 'Core'];
+
+/**
+ * Menu groups for apps with many pages, Odoo style: the top bar shows each group as one dropdown, placed where its first page would
+ * be. Pages not listed are single menu items. Keyed by app key, then by page path.
+ */
+export const MENU_GROUPS: Record<string, Record<string, string>> = {
+  inventory: {
+    '/requests': 'Operations', '/transfers': 'Operations', '/adjustments': 'Operations',
+    '/ledger': 'Reporting', '/forecast': 'Reporting', '/batches': 'Reporting',
+    '/reorder-levels': 'Configuration', '/approval-policies': 'Configuration',
+  },
+};
+
+/**
+ * Fetches every screen's code in the background (they are lazy chunks), so opening a page or a tour step later does not wait for a
+ * download. Called once after sign-in, when the browser is idle.
+ */
+export function preloadScreens(): void {
+  for (const load of SCREEN_LOADERS) void load().catch(() => undefined);
+}
 
 /** Apps this user can open, each with only the pages they are allowed to see. */
 export function visibleApps(session: SessionInfo): AppDef[] {

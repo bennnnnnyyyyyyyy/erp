@@ -18,7 +18,8 @@ import { placeTooltip, stepsFor, type Box } from './tourSteps';
 
 const START = 'erp:tour';
 const DONE_KEY = 'erp.tour.done';
-const WAIT_MS = 4000;
+// How long a step waits for its screen and its data before moving on. Some screens (the stock forecast) take several seconds.
+const WAIT_MS = 15000;
 
 /** Starts the tour from anywhere (a button on the tutorial or the Guide). */
 export function startTour(): void {
@@ -139,6 +140,9 @@ export function TourHost() {
     };
     const find = (): Element | null => {
       if (pathRef.current !== step.route) return null;
+      // Not while the screen is still loading its code or data (the skeleton, components/Loading.tsx): highlighting then would point
+      // at a placeholder and jump when the real content lands.
+      if (document.querySelector('main .skeleton')) return null;
       for (const sel of step.selectors) {
         const found = document.querySelector(sel);
         if (found) {
@@ -224,6 +228,19 @@ export function TourHost() {
   const last = i === steps.length - 1;
   const arrow = lang === 'ar' ? '←' : '→';
   const backArrow = lang === 'ar' ? '→' : '←';
+
+  // Until the step's screen and its data are ready, only a small note shows (no explanation pointing at nothing, no jumping box).
+  if (!box) {
+    return (
+      <div ref={rootRef} className="pointer-events-none fixed inset-0 z-[60]" data-tour-overlay>
+        <div role="status" aria-live="polite" className="pointer-events-auto absolute inset-x-0 bottom-6 mx-auto flex w-fit items-center gap-3 rounded-full border border-border bg-card px-4 py-2 text-sm text-card-foreground shadow-lg">
+          <span className="tour-spinner" aria-hidden="true" />
+          {lang === 'ar' ? 'جارٍ تحميل الشاشة…' : 'Loading this screen…'}
+          <Button variant="ghost" size="sm" className="h-8" onClick={() => close()}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} className="pointer-events-none fixed inset-0 z-[60]" data-tour-overlay>
