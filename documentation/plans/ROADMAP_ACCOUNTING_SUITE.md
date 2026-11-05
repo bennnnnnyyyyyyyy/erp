@@ -56,7 +56,8 @@ entries**.
 > **Status, 5 Nov (see the worklog):** CI SQL tests passed; the dry run on live passed and was rolled
 > back; demo fixes 2 are done in code (not deployed); the Miracle write-up is drafted in
 > [`../planning/DRAFT_miracle-egypt_TEARDOWN.md`](../planning/DRAFT_miracle-egypt_TEARDOWN.md).
-> **Waiting on:** Ben's yes to apply 040–044. The ERPNext and Dolibarr teardowns and the Odoo study
+> **040–044 applied to live** the same day, tests 035–039 pass there. **Waiting on:** Ben commits and
+> merges PR #1 into `main`. The ERPNext and Dolibarr teardowns and the Odoo study
 > are not started.
 
 1. **PR #1** (S1 lock date, S2 payment terms and ageing, S3 stock counts, S4 customer returns,

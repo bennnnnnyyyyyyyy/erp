@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-05 (later) — Migrations 040–044 applied to live by CLI (Ben's yes)
+
+**Objective.** Ben: "yes apply 040-044 via cli". Land PR #1's database half before its code is merged (migrations first, then code).
+
+**Actions Completed.**
+- Applied `sql/040_lock_date.sql`, `041_payment_terms_due_dates.sql`, `042_stock_counts.sql`, `043_customer_returns.sql`, `044_item_units.sql` to project ggoerp, one file at a time and in order, with `npx supabase db query --linked -f`. Each file is its own transaction. None returned an error.
+- Checked where the code lives. The edits from worktree `worktree-next-slices` are all in commit `8d85390` on `pr/next-slices`, compared file by file. The only differences are newer text that came from `main` (top-bar translations, worklog). **`main` does not have them yet**: `pr/next-slices` is 2 commits ahead of `main`, plus today's uncommitted demo fixes.
+
+**Database / System Result.**
+- Read-only checks: `inv_counts`, `inv_count_lines`, `inv_item_units` and `sal_note_returns` exist. Each has RLS on, `select` only for `authenticated`, and no grants for `anon`.
+- Tests 035–039 run on live: all five ended "ALL TESTS PASSED (everything rolled back)".
+
+**Safety Status.**
+- **The database is now ahead of the deployed code.** The live API and web app are still `main`, which does not use the new tables or columns. Next: Ben commits today's changes on `pr/next-slices` and merges PR #1 into `main`, which deploys through CI.
+- Tests 001–034 were not re-run on live after the apply. CI ran them on a fresh database with 040–044.
+- Do not remove the `worktree-next-slices` worktree until PR #1 is merged. Its `node_modules` may be junctions; remove those first.
+
 ## 2026-11-05 — Phase 0: dry run of 040–044 on live (rolled back); demo fixes for narrow inputs and optional fields; Miracle teardown draft (branch `pr/next-slices`, not merged)
 
 **Objective.** Continue phase 0 of [`ROADMAP_ACCOUNTING_SUITE.md`](../plans/ROADMAP_ACCOUNTING_SUITE.md): land PR #1, and make the quick fixes from the demo notes.
