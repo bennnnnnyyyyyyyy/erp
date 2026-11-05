@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-04 (night) — Fourth "Gulf Global Outsourcing" test company soft-deleted (live data change, Ben's request)
+
+**Objective.** Ben: "delete gulf global company pls".
+
+**Actions Completed.**
+- Read-only listing on ggoerp found four companies with that name. Three were already soft-deleted: the two in the entry below, and `8e2692a8-…` (Chris, deleted 17:00:27 UTC; that one had no worklog entry until now).
+- Exactly one was active: `c9e42af1-…` (owner chris.johnson.wiz@gmail.com, made 17:00:42 UTC, 105 audit rows).
+- Soft-deleted it by id **and** name in one transaction (`deleted_at = now()`), with an `organization.deleted` audit row. A guard aborted the transaction unless exactly one row changed.
+
+**Database / System Result.**
+- `deleted_at` 2026-11-04 20:58:06 UTC. The audit row is seq 106. No active company named like "Gulf" is left (verified by query).
+- Nothing erased. Chris gets a sign-up slot back.
+
+**Safety Status.**
+- No other company touched. No code changed.
+- Undo: `update public.organizations set deleted_at = null where id = 'c9e42af1-51b5-47a7-9a9d-703d0c6c3b34';`
+
 ## 2026-11-04 (evening) — Efficiency audit and fixes F1–F4; "Explore more" on every wizard step (branch `worktree-onboarding-wizard`, not merged)
 
 **Objective.** Ben: "saving takes so long, do an efficiency audit". Then: "each step of the tutorial should have an explore more as well … work on fixing tutorial/demo".
