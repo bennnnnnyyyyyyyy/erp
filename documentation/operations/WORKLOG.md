@@ -34,6 +34,41 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 — Accounting slice 3 written: `sql/047_accounting_switch_on.sql` and test 042 (branch `accounting-phase1`, not applied)
+
+**Objective.** Ben: "continue to 047". Switching accounting on for a company with history.
+
+**Actions Completed.**
+- `sql/047_accounting_switch_on.sql` (new):
+  - `acc_uncosted_receipts` and `acc_set_receipt_cost`: the owner or head accountant enters a documented cost for an old receipt that has none. Append-only; a zero cost needs a reason; never taken from the current average.
+  - `acc_switch_on_preview`.
+  - `acc_switch_on`, owner only, in one transaction:
+    1. seeds the chart;
+    2. refuses with `ACCOUNT_ROLE_MISSING` or `UNCOSTED_RECEIPTS` if anything is missing;
+    3. turns the module on;
+    4. backfills every document oldest first, with the 046 rules, marked as backfill;
+    5. checks the books balance, and audits the counts, totals and time taken.
+  - It cannot run twice.
+  - **New rule P17:** a cost changed by hand (`inv_set_item_cost`) revalues the stock on hand (on hand × the change) between inventory and stock differences. Found while timing the demo switch-on. Old hand changes are not backfilled, because the quantity on hand at that moment isn't recorded.
+- `sql/tests/042_accounting_switch_on.sql` (new): S0–S6.
+- READMEs updated.
+
+**Database / System Result.** All rolled back on ggoerp:
+- 047 + test 042: "ALL TESTS PASSED".
+- 047 with tests 019, 038, 040, 041: all passed.
+- Deliberate break (stock backfill skipped) → "FAIL S4c".
+- **Rolled-back switch-on of Demo Cosmetics Factory, as its owner:**
+  - 2,673 documents → 2,673 entries in 3.3 s;
+  - debits = credits = 94,704,908.09 EGP;
+  - the customers account (3,522,920.09) equals invoices − payments − credit notes from the documents, exactly;
+  - the inventory account (3,723,858.67) is 582,100.59 above today's stock at average cost (3,141,758.08). Cause: the demo seed recorded receipt costs but set item average costs directly (0 cost-log rows), so sales were valued at averages that don't follow from those receipts. This is a demo-data artefact, not a posting error.
+- Read-only check afterwards: nothing from 047 on live. **Not applied.**
+
+**Safety Status.**
+- Applying 047 needs Ben's yes. Applying it switches no company on.
+- Other companies have uncosted receipts (read-only count): Gulf Global Outsourcing (`gulf-global-outsourcing-22ae`, **active**, which the 4 Nov entries don't cover) 19; Demo Trading 9; Concurrency Check 3. They would need costs entered before switching on.
+- Next: 048 (manual journals with approval, opening balances), 049 (trial balance), then the API and screens.
+
 ## 2026-11-06 — `sql/046_accounting_posting.sql` applied to live (Ben's yes)
 
 **Objective.** Ben: "yes apply 046 and continue to 047".
