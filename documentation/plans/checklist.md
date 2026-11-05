@@ -10,7 +10,7 @@
 | ✅ Built and deployed (https://erp-live.pages.dev, sample data; see the worklog for what each run verified) | Inventory ([INVENTORY_PLAN.md](INVENTORY_PLAN.md): requests with approval, adjustments, batches and expiry, forecast, reorder levels, **transfers between warehouses**), purchasing ([PURCHASING_PLAN.md](PURCHASING_PLAN.md), [SUPPLIER_INVOICES_PLAN.md](SUPPLIER_INVOICES_PLAN.md)), sales ([SALES_PLAN.md](SALES_PLAN.md), [CUSTOMER_INVOICES_PLAN.md](CUSTOMER_INVOICES_PLAN.md)), finance, owner home and alerts ([OWNER_INSIGHTS_PLAN.md](OWNER_INSIGHTS_PLAN.md)), messaging and tasks ([TASKS_AND_OUTBOX_PLAN.md](TASKS_AND_OUTBOX_PLAN.md)), sign-up and getting-started, per-person language choice, the Guide |
 | 🟡 In progress or built but not proven | WhatsApp and voice approvals (built in part; **never tested on a real phone**); Arabic on every screen (the switch exists, the translations do not) |
 | 📋 Approved / ready | none |
-| 📝 Draft / RFC | [ETA_EINVOICING_PLAN.md](ETA_EINVOICING_PLAN.md) (slice A awaits Ben's approval); [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md), ADR-0001 to 0003 (check their status headers; still marked Proposed in the 28 Oct text below) |
+| 📝 Draft / RFC | [ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md) (phase 1 of the [accounting roadmap](ROADMAP_ACCOUNTING_SUITE.md), with the ADR-0004 draft; written 5 Nov, awaits Ben's approval); [ETA_EINVOICING_PLAN.md](ETA_EINVOICING_PLAN.md) (slice A awaits Ben's approval); [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md), ADR-0001 to 0003 (check their status headers; still marked Proposed in the 28 Oct text below) |
 | 💡 Backlog | CSV import with a preview, returns and credit notes, categories and units, barcode scanning, PDF printing, SQL tests in CI (written 2 Nov as `.github/workflows/sql-tests.yml`, untested until it runs on GitHub) |
 
 ## Detail
@@ -25,6 +25,11 @@
 - [x] **Inventory module plan** (`documentation/plans/INVENTORY_PLAN.md`)
   - **Done (reconciled 2026-11-02):** plan approved for slice 1; slice 1 and the later slices (adjustments, approval policies, batches and expiry, forecast, reorder levels, transfers) are built, applied to Supabase and deployed; see the worklog. (This block said "nothing" on 28 Oct.)
   - **Remaining:** partial transfer receipts, filters and pagination on lists, CSV import, returns.
+
+- [ ] **[ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md): Accounting, phase 1 (general ledger)**
+  - **Done (2026-11-05):** plan and [ADR-0004 draft](../planning/DRAFT_ADR-0004-general-ledger.md) written on branch `accounting-phase1`; Egyptian chart research in [UNIFIED_CHART_OF_ACCOUNTS.md](../reference/egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md).
+  - **Waiting on:** Ben's approval of the plan and the ADR; the pilot accountant for the unconfirmed codes in groups 3 and 4 (plan O1).
+  - **Remaining:** everything in the plan's rollout (sql/045-049, API, screens, switch-on of the demo company).
 
 Template for further blocks; update them in the same change as the work:
 

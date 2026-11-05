@@ -54,8 +54,8 @@ entries**.
 ### Phase 0: land what's built, and quick fixes from the demo
 
 > **Status, 5 Nov (see the worklog):** CI SQL tests passed; the dry run on live passed and was rolled
-> back; demo fixes 2 are done in code (not deployed); the Miracle write-up is drafted in
-> [`../planning/DRAFT_miracle-egypt_TEARDOWN.md`](../planning/DRAFT_miracle-egypt_TEARDOWN.md).
+> back; demo fixes 2 are done in code (not deployed); the Miracle write-up is in
+> [`../research/miracle-egypt/TEARDOWN.md`](../research/miracle-egypt/TEARDOWN.md).
 > **040–044 applied to live** the same day, tests 035–039 pass there. **Waiting on:** Ben commits and
 > merges PR #1 into `main`. The ERPNext and Dolibarr teardowns and the Odoo study
 > are not started.
@@ -78,6 +78,10 @@ entries**.
    - Do an Odoo inventory study for phase 8.
 
 ### Phase 1: accounting foundation (the general ledger)
+
+> **Plan:** [`ACCOUNTING_PLAN.md`](ACCOUNTING_PLAN.md) and the
+> [ADR-0004 draft](../planning/DRAFT_ADR-0004-general-ledger.md), written 5 Nov on branch
+> `accounting-phase1`, waiting for Ben's approval.
 
 *Notes: "basically the full accounting suite", "software needs an accountant who knows what he's
 doing".*
@@ -287,12 +291,28 @@ the companies' existing data.
   - **(a) branches inside one company**, with reports per branch and combined (recommended: one
     login, consolidated reports, branch permissions); or
   - **(b) one company per branch**, as Miracle does.
-- **Q3. Chart of accounts template:** the Egyptian Unified Accounting System, a simple small-business
-  chart, or the company's choice from both?
+- **Q3. Chart of accounts template.** **Decided (Ben, 5 Nov): Egyptian market first.** Everything
+  follows Egyptian rules and practice before any other market's:
+  - the default chart is the Egyptian Unified Accounting System (النظام المحاسبي الموحد) with its
+    coding, editable by the company;
+  - tax follows Egyptian law and the ETA;
+  - statements follow the Egyptian Accounting Standards;
+  - Arabic terms are the ones Egyptian accountants use.
+
+  Research and templates use Egyptian sources and Egyptian practice only (Ben: "nothing not
+  Egyptian"). The core still hardcodes nothing (`agents.md`). The exact chart and its codes come from a sourced research note, not from memory:
+  [`UNIFIED_CHART_OF_ACCOUNTS.md`](../reference/egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md).
+  It is partial: groups 1 and 2 are documented, groups 3 and 4 need the pilot accountant.
 - **Q4. Pilot:** can Joe and Amir's warehouse be the first real customer? Can we sit with their
   accountant again with a list of questions (cheques, taxes, closing, reports they print)?
-- **Q5. Approvals on accounting:** should manual journal entries and year-end closing need a second
-  person, as stock does?
+- **Q5. Approvals on accounting.** **Decided (Ben, 5 Nov):**
+  - Manual journal entries need a second person's approval, as stock does (approver ≠ requester,
+    enforced in the database).
+  - **Exception:** the head accountant and the boss (owner) post without extra approval.
+  - Design consequence: there are no custom roles yet, so "head accountant" needs either a
+    per-member flag or a new built-in role. The phase 1 plan decides which; the owner always has the
+    right.
+  - Year-end closing: assumed to follow the same rule; confirm in the phase 1 plan.
 - **Q6. Prices:** should a new purchase price update the item price automatically, or only suggest
   it?
 - **Q7. "Customise the columns even if I can't access":** what did you mean?
