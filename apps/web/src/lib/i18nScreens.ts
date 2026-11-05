@@ -416,6 +416,7 @@ export const SCREENS_AR: Record<string, string> = {
   "Unit": "الوحدة",
   "Name in Arabic": "الاسم بالعربية",
   "Opening stock": "المخزون الافتتاحي",
+  "Opening stock (optional)": "المخزون الافتتاحي (اختياري)",
   "Add warehouse": "إضافة مستودع",
   "A warehouse is any place you keep stock: a store room, a cold room, a shelf area. Items are received into one.": "المستودع هو أي مكان تحفظ فيه المخزون: مخزن أو غرفة تبريد أو منطقة أرفف. تُستلم الأصناف في أحدها.",
   "Short code": "رمز قصير",
@@ -772,6 +773,9 @@ export const SCREENS_AR: Record<string, string> = {
   "Add": "إضافة",
   "Add {noun}": "إضافة {noun}",
   "Contact person": "الشخص المسؤول",
+  "Contact person (optional)": "الشخص المسؤول (اختياري)",
+  "City (optional)": "المدينة (اختيارية)",
+  "Phone (optional)": "الهاتف (اختياري)",
   "(EGP)": "(EGP)",
   // (computed)
   "available": "متاح",

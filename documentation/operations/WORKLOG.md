@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-05 — Phase 0: dry run of 040–044 on live (rolled back); demo fixes for narrow inputs and optional fields; Miracle teardown draft (branch `pr/next-slices`, not merged)
+
+**Objective.** Continue phase 0 of [`ROADMAP_ACCOUNTING_SUITE.md`](../plans/ROADMAP_ACCOUNTING_SUITE.md): land PR #1, and make the quick fixes from the demo notes.
+
+**Actions Completed.**
+- **Dry run on ggoerp.** A read-only check first showed none of 040–044's tables on live (`inv_counts`, `inv_count_lines`, `inv_item_units`, `sal_note_returns` all absent). Then five runs, one per new test (035–039). Each run was one transaction: `begin`, migrations 040–044 (their own `begin`/`commit` lines removed), then the test, then `rollback`. No `commit` was sent. The files were made in the session scratchpad and are not in the repo.
+- **Demo fix: inputs too narrow.**
+  - `apps/web/src/styles.css`: inputs and selects inside list tables (`.table-wrap td`) get a minimum width (9rem, 8rem for numbers and dates). Pages are 1280px wide (was 1120px). Form fields wrap at 240px (was 210px). The list search box is 340px (was 280px).
+  - Setup wizard (`Onboarding.tsx`): wider card (`max-w-5xl`) and wider columns; the row tables keep a 40rem minimum and scroll sideways on a phone.
+- **Demo fix: optional fields and storage conditions.**
+  - Wizard tables: a column can be marked optional, and its header then says "(optional)" / "(اختياري)". Marked: lowest and highest °C, warehouse Arabic name, storage condition (warehouses and items), opening stock, cost, supplier and customer contact and city.
+  - Wizard storage step: a line saying the step is optional. Warehouse step: the column is now "Storage condition" (was the step title, "Storage conditions"), with a line under the table saying most warehouses need none and it can be left empty.
+  - Normal forms: Add item ("Name in Arabic (optional)", "Opening stock (optional)") and Add supplier or customer ("Contact person", "City", "Phone", each "(optional)"). New Arabic in `lib/i18nScreens.ts` and `onboardingContent.ts`.
+- **Research:** `documentation/planning/DRAFT_miracle-egypt_TEARDOWN.md`, the meeting notes written up from the research template, every claim marked *(told)* or *(inferred)*. Ben copies it to `documentation/research/miracle-egypt/`.
+
+**Database / System Result.** All five dry runs ended with "ALL TESTS PASSED (everything rolled back)": 035 lock date, 036 due dates, 037 stock counts, 038 customer returns, 039 item units. **Nothing applied; 040–044 are still not on live.** A second pass (the older tests 001–034, each with 040–044 in a rolled-back transaction) was blocked by the session's permission check and **did not run**. CI ran the full suite on a fresh database (39 passed).
+
+**Safety Status.**
+- `npm run typecheck` clean. `npm test`: shared 31 passed; API 135 passed, 7 skipped; web 63 passed.
+- Not checked in a browser. Ben: open the wizard (Getting started → setup) and Inventory → Add item, Purchasing → Suppliers → Add, and a list with inputs in its rows (for example a customer invoice from an order), in English and Arabic.
+- **Next:** with Ben's yes, apply 040–044 by CLI (`supabase db query --linked -f`, one file per migration, in order), run tests 035–039 on live, then Ben merges PR #1. Optionally run the older tests against live first.
+- The Arabic is a first draft for Ben's review.
+
 ## 2026-11-04 (night) — Fourth "Gulf Global Outsourcing" test company soft-deleted (live data change, Ben's request)
 
 **Objective.** Ben: "delete gulf global company pls".

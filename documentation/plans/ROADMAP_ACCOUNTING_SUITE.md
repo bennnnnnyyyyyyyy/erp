@@ -53,6 +53,12 @@ entries**.
 
 ### Phase 0: land what's built, and quick fixes from the demo
 
+> **Status, 5 Nov (see the worklog):** CI SQL tests passed; the dry run on live passed and was rolled
+> back; demo fixes 2 are done in code (not deployed); the Miracle write-up is drafted in
+> [`../planning/DRAFT_miracle-egypt_TEARDOWN.md`](../planning/DRAFT_miracle-egypt_TEARDOWN.md).
+> **Waiting on:** Ben's yes to apply 040–044. The ERPNext and Dolibarr teardowns and the Odoo study
+> are not started.
+
 1. **PR #1** (S1 lock date, S2 payment terms and ageing, S3 stock counts, S4 customer returns,
    S5a units):
    - CI SQL tests pass;

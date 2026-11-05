@@ -146,10 +146,10 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
           <form className="stack" onSubmit={submit}>
             <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
             <div className="form-row">
-              <label>{tr('Contact person')}<input value={form.contact} onChange={set('contact')} /></label>
-              <label>{tr('City')}<input value={form.city} onChange={set('city')} /></label>
+              <label>{tr('Contact person (optional)')}<input value={form.contact} onChange={set('contact')} /></label>
+              <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
             </div>
-            <label>{tr('Phone')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
+            <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
             {error && <p className="error">{error}</p>}
             <div className="form-actions"><Button type="submit">{tr('Add')} {noun}</Button></div>
           </form>
