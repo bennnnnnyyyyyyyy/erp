@@ -2,8 +2,12 @@ name: SQL tests (local Supabase)
 
 # Runs every migration and every SQL test on a throwaway database started inside the runner (Supabase local stack in Docker).
 # No secrets and no production data are involved; scripts/ci-sql-tests.sh refuses any database that is not localhost.
-# This is a separate workflow: the deploy job in ci-deploy.yml does not depend on it. It is marked continue-on-error until it has run
-# cleanly for a while, then it can be made a required check.
+# This is a separate workflow: the deploy job in ci-deploy.yml does not depend on it.
+#
+# False results (6 Nov 2026): the job used to be continue-on-error, so a failing SQL test showed as a pass, while an infrastructure
+# hiccup (Docker registry "Rate exceeded", a port already in use) also showed as a pass with nothing tested. Now starting the stack is
+# retried; if it still cannot start, the job says so as a warning (the tests did not run, which is not a test failure); and a failing
+# SQL test fails the job.
 
 on:
   pull_request:
@@ -30,9 +34,8 @@ concurrency:
 jobs:
   sql-tests:
     name: Migrations and SQL tests on a throwaway local database
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -45,10 +48,25 @@ jobs:
       - name: Make sure psql is available
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
 
+      # Up to three tries, cleaning up between them: image pulls are rate limited and a half-started stack can hold ports.
       - name: Start a local Supabase stack
-        run: supabase start
+        id: stack
+        continue-on-error: true
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start; then exit 0; fi
+            echo "::warning::supabase start failed (attempt $attempt of 3); cleaning up and retrying"
+            supabase stop --no-backup || true
+            sleep $((attempt * 30))
+          done
+          exit 1
+
+      - name: Report that the tests could not run
+        if: steps.stack.outcome != 'success'
+        run: echo "::warning::The local database could not start after 3 tries (infrastructure, not our code). SQL tests did NOT run on this commit; re-run the job."
 
       - name: Apply migrations and run every SQL test
+        if: steps.stack.outcome == 'success'
         run: bash scripts/ci-sql-tests.sh
 
       - name: Stop the local stack
