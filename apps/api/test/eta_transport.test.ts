@@ -13,7 +13,7 @@ import {
 } from '@erp/shared';
 import { EtaClient } from '../src/lib/eta/client';
 import { SimulatedTransport, type SimulatedScenario } from '../src/lib/eta/simulated';
-import { type EtaError, EtaModeError, transportFor, type EtaTransport, type TransportFactories } from '../src/lib/eta/transport';
+import { EtaError, EtaModeError, transportFor, type EtaTransport, type TransportFactories } from '../src/lib/eta/transport';
 import { runTransportContract } from './eta_transport.contract';
 
 // One contract, two implementations. The simulator always runs. ETA PreProd runs only when credentials are present in the
