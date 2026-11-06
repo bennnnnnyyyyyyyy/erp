@@ -16,6 +16,7 @@ const ADMIN_DB_ALLOWED = new Set([
   'lib/payments/links.ts',
   'lib/shipping/bosta.ts',
   'lib/store/shopify.ts',
+  'lib/aiService.ts',
   'lib/whatsappInbound.ts',
 ]);
 // Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.

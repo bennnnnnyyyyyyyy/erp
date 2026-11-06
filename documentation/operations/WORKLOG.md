@@ -34,6 +34,50 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (night) — Applied `sql/059` (Shopify orders) and `sql/060` (AI state) to live (ggoerp) by Ben via CLI
+
+**Objective.** Make the Shopify "Orders from the store" list and the AI "Try it" box work on live; with this, 056 to 060 are all applied.
+
+**Actions Completed.** Ben ran `npx supabase db query --linked -f` for 059 (verification `users_ingest = false`, `anon_tests = false`) and 060 (`users_read_state = false`). He also ran 058 a second time (rerun-safe; same result) after a mistyped file name. I checked read-only and re-ran tests 051, 053, 054 and 055 inside rolled-back transactions.
+
+**Database / System Result.** `sal_shopify_orders` has row level security on; `ai__provider_state` exists; users cannot read the Shopify keys or the AI state; Shopify now has four fields (the optional warehouse code added by 059). Tests 051 (rechecked because 059 replaced the provider field list), 053, 054 and 055 pass on live. No data changed (no shipments, no imports).
+
+**Safety Status.** Every new provider is off and simulated for every company; no keys exist. Stage E code (AI and voice) is still uncommitted, so the "Try it" box appears only after it is committed, merged and deployed. No commit made by me.
+
+## 2026-11-06 (night) — Applied `sql/058` (Bosta shipments) to live (ggoerp) by Ben via CLI
+
+**Objective.** Make the Bosta shipments section on the sales order page work on live.
+
+**Actions Completed.** Ben ran `npx supabase db query --linked -f sql/058_bosta_shipments.sql`; its verification printed `users_apply = false`, `anon_creates = false`. I then checked read-only and re-ran test 053 inside a rolled-back transaction.
+
+**Database / System Result.** `sal_shipments` and `sal_shipment_events` exist with row level security on; users cannot read the Bosta keys function; no shipments yet. Test 053 passes on live.
+
+**Safety Status.** Bosta stays off and simulated for every company until switched on; no keys exist. 059 and 060 are still not applied. No commit made by me.
+
+## 2026-11-06 (night) — Status check: integrations A to E (pause requested by Ben)
+
+**Objective.** Ben paused the work to check everything done so far and bring this log up to date.
+
+**Actions Completed.**
+- Live database checked read-only: `sql/056` and `sql/057` are applied; `sql/058` (Bosta), `sql/059` (Shopify) and `sql/060` (AI state) are **not** on live. Each passed its dry run with its test in a rolled-back transaction, with a deliberate-break check caught.
+- Git: stages A to D are committed and pushed by Ben (last commit `20e5471`, Shopify; PR #9 merged before it). Stage E (AI and voice) is in the working tree, not committed.
+- The entry "Payment link migration dependency staged locally" (another agent) was marked superseded, since 056 and 057 were applied afterwards.
+- Re-ran every check on the current tree: `npx biome ci` (no errors), `npm run typecheck` (no errors), `npm test` (shared 31, API 271 + 7 skipped, web 67). Smoke test passed (4) after the last screen change.
+
+| Stage | What | Database | Code |
+| --- | --- | --- | --- |
+| A | Provider settings, AI consent and caps | 056 on live | committed |
+| B | Paymob and Fawry pay links, signed callbacks | 057 on live | committed |
+| C | Bosta shipments, status webhook | 058 not applied | committed |
+| D | Shopify orders in | 059 not applied | committed |
+| E | AI assistant, test, speech to text | 060 not applied | not committed |
+| F | Bank statement import, CBE rate entry | not started | not started |
+| G | Setup guide for every key | not started | not started |
+
+**Database / System Result.** None changed by this check (read-only queries only). Screens for C, D and E fail to load their data on live until 058, 059 and 060 are applied; no keys exist, so nothing reaches any provider.
+
+**Safety Status.** Open items: apply 058, 059, 060 (Ben runs them, or says "apply"); commit stage E; unconfirmed provider details listed in each stage's entry (Paymob reference field and hmac location, Fawry V2 recipe, Bosta body fields, Shopify payload fields) are settled by one test transaction each once keys exist; the Arabic strings are machine drafts awaiting Ben's review; Google Sheets/Drive (PDF row 6) is still undecided. No commit made by me.
+
 ## 2026-11-06 (night) — Payment link migration dependency staged locally
 
 **Objective.** Resolve the failed Supabase CLI attempt to apply payment-link migration 057.
@@ -43,6 +87,25 @@ run or deployed.
 **Database / System Result.** The CLI attempt stopped while defining fin__link_credentials because core__provider_credentials was absent. No migration was applied to live; 056 and 057 remain pending.
 
 **Safety Status.** No live retry, production schema change, commit or push was made. Apply 056 before 057 only after Ben's explicit approval.
+
+**Later the same night:** superseded. Ben applied 056 and 057 with `supabase db push`; see "Applied `sql/056` and `sql/057` to live" below (checked read-only, tests 051 and 052 pass on live).
+
+## 2026-11-06 (night) — AI assistant and voice transcription built; `sql/060` NOT applied
+
+**Objective.** Ben's AI rules in working code: owner consent before data goes to OpenAI or ElevenLabs, USD 100 a month on our keys, Ollama (the company's own AI) as the alternative; built in simulated mode until keys arrive.
+
+**Actions Completed.**
+- `sql/060_ai_state.sql`, `sql/tests/055_ai_state.sql`: `ai__provider_state` (service role).
+- `apps/api/src/lib/aiProviders.ts`: OpenAI chat and speech to text, Ollama chat, ElevenLabs speech to text (injected fetch); cost estimates rounded up; the Ollama address must be a public https host name (no localhost or IP numbers), so our server cannot be pointed at internal addresses.
+- `apps/api/src/lib/aiService.ts` (secret-key allowlist: reads the saved AI keys and writes the usage log): chooses Ollama, else OpenAI, for chat; ElevenLabs, else OpenAI, for speech; refuses without consent; our key is capped at `AI_MONTHLY_CAP_USD` (default 100) in all and `AI_COMPANY_CAP_USD` (default 25) per company, and always uses our model; a company's own key is not capped; every call is logged with its estimated cost.
+- `apps/api/src/modules/core/aiRoutes.ts`: `POST /v1/core/ai/assistant` (reads items and stock with the caller's own sign-in, sends only those rows as data, returns text; cannot change anything), `/test`, `/transcribe` (audio up to 5 MB, text back). New env names `AI_COMPANY_CAP_USD` (plus `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `AI_MONTHLY_CAP_USD` from earlier).
+- `apps/web`: "Try it" under the AI notice in Settings → Integrations (ask, test the connection, transcribe a recording); `lib/api.ts` lets a file upload set its own type; Arabic strings.
+- Tests: `apps/api/test/ai.test.ts`.
+- **Not built:** voice approvals by phone or WhatsApp voice note (needs the WhatsApp number and a decision path through the same approval functions); the assistant searching anything other than items and stock.
+
+**Database / System Result.** Dry run of 060 on live (ggoerp) inside a rolled-back transaction: passed; deliberate break (OpenAI shown on without consent) caught. **Nothing applied to live.**
+
+**Safety Status.** `npm run typecheck`, `npx biome ci`, `npm test` (shared 31, API 271 + 7 skipped, web 67) and the smoke test pass. Prices used for the cap are estimates from the vendors' list prices and are rounded up. No keys exist. Apply 058, 059, 060 only through Ben. No commit made.
 
 ## 2026-11-06 (night) — Shopify orders in built; `sql/058` and `sql/059` NOT applied
 
