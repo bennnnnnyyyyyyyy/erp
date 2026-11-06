@@ -19,6 +19,7 @@ const idParam = (c: Context<AppEnv>) => {
 };
 type SupplierRow = {
   id: string;
+  code: string;
   name: string;
   contact: string | null;
   city: string | null;
@@ -38,6 +39,7 @@ type OrderRow = {
 };
 const supplier = (s: SupplierRow) => ({
   id: s.id,
+  code: s.code,
   name: s.name,
   contact: s.contact ?? '',
   city: s.city ?? '',
@@ -99,7 +101,7 @@ async function oneOrder(c: Context<AppEnv>, id: string) {
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('pur_suppliers')
-    .select('id, name, contact, city, phone, payment_terms_days')
+    .select('id, code, name, contact, city, phone, payment_terms_days')
     .eq('org_id', orgOf(c))
     .is('deleted_at', null)
     .order('name');
@@ -114,6 +116,13 @@ purchasingRoutes.put('/suppliers/:id/terms', requirePermission('purchasing.suppl
   await callRpc<void>(userDb(c), 'pur_set_supplier_terms', { p_supplier_id: idParam(c), p_days: days });
   return ok(c, { id: idParam(c), paymentTermsDays: days });
 });
+// Change a supplier's code (sql/050). The database allows owners and admins; codes are unique per company.
+purchasingRoutes.put('/suppliers/:id/code', requirePermission('purchasing.suppliers.manage'), async (c) => {
+  const code = text((await jsonBody(c)).code);
+  if (!/^[A-Za-z0-9-]{1,30}$/.test(code)) invalid('A code is letters, digits and dashes, up to 30');
+  await callRpc<void>(userDb(c), 'pur_set_supplier_code', { p_supplier_id: idParam(c), p_code: code });
+  return ok(c, { id: idParam(c), code });
+});
 purchasingRoutes.get('/orders', requirePermission('purchasing.orders.read'), async (c) => ok(c, await loadOrders(c)));
 purchasingRoutes.get('/orders/:id', requirePermission('purchasing.orders.read'), async (c) => ok(c, await oneOrder(c, idParam(c))));
 purchasingRoutes.post('/suppliers', requirePermission('purchasing.suppliers.manage'), async (c) => {
@@ -125,6 +134,8 @@ purchasingRoutes.post('/suppliers', requirePermission('purchasing.suppliers.mana
     p_contact: text(body.contact) || null,
     p_city: text(body.city) || null,
     p_phone: text(body.phone) || null,
+    // sql/050: a typed code, or an automatic one (S-00001) when empty.
+    p_code: text(body.code) || null,
   });
   return ok(c, { id, name, contact: text(body.contact), city: text(body.city), phone: text(body.phone) }, 201);
 });

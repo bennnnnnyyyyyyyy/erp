@@ -72,6 +72,17 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   DUPLICATE: { status: 409, message: 'That already exists', code: 'duplicate' },
   NOT_TRACKED: { status: 400, message: 'That item does not track batches', code: 'not_tracked' },
   EXPIRED: { status: 400, message: 'That batch has already expired', code: 'expired' },
+  // Treasury (sql/051).
+  TREASURY_ACCOUNT_REQUIRED: {
+    status: 400,
+    message: 'Choose the cash box or bank account the money went through',
+    code: 'treasury_account_required',
+  },
+  TREASURY_MISMATCH: { status: 400, message: 'That cash box or bank account does not fit this payment', code: 'treasury_mismatch' },
+  SAME_ACCOUNT: { status: 400, message: 'Choose two different accounts', code: 'same_account' },
+  CURRENCY_MISMATCH: { status: 400, message: 'Both accounts must hold the same currency', code: 'currency_mismatch' },
+  HAS_BALANCE: { status: 409, message: 'That account still holds money: transfer it out first', code: 'has_balance' },
+  OVERPAYMENT: { status: 409, message: 'That is more than is still owed', code: 'overpayment' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */

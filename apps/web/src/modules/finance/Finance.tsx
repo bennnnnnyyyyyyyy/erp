@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
-import { formatMoney } from '@erp/shared';
+import { formatMoney, type TreasuryAccount } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
@@ -22,6 +22,21 @@ type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' |
 type Named = { id: string; name: string };
 
 const today = () => new Date().toISOString().slice(0, 10);
+/** The cash box or bank account this browser last used for a payment method (a convenience only; the database checks the choice). */
+const lastBox = (method: string) => {
+  try {
+    return localStorage.getItem(`erp.treasury.last.${method}`) ?? '';
+  } catch {
+    return '';
+  }
+};
+const rememberBox = (method: string, id: string) => {
+  try {
+    localStorage.setItem(`erp.treasury.last.${method}`, id);
+  } catch {
+    // storage blocked: the picker just starts empty next time
+  }
+};
 const money = (amountMinor: number, currency: string) => formatMoney({ amountMinor, currency });
 const METHODS = ['cash', 'bank', 'card', 'cheque', 'other'];
 
@@ -123,6 +138,11 @@ export function PaymentsPage() {
   const [paidOn, setPaidOn] = useState(today());
   const [method, setMethod] = useState('bank');
   const [note, setNote] = useState('');
+  // Treasury (sql/051): with treasury on, a cash or bank payment names the cash box or bank account it went through, defaulting to
+  // the one this person used last for that method.
+  const treasuryOn = session.modules.includes('treasury');
+  const treasury = useLoad(() => (treasuryOn ? api<TreasuryAccount[]>('/v1/treasury/accounts').catch(() => [] as TreasuryAccount[]) : Promise.resolve([] as TreasuryAccount[])));
+  const [boxId, setBoxId] = useState(() => lastBox('bank'));
   useEffect(() => {
     if (!preset || !openIn.data || !openOut.data) return;
     const item = [...openIn.data, ...openOut.data].find((t) => t.value === preset);
@@ -144,6 +164,8 @@ export function PaymentsPage() {
     currency: t.currency,
   }));
   const chosen = open.find((t) => t.value === target);
+  const needsBox = treasuryOn && (method === 'cash' || method === 'bank');
+  const boxes = (treasury.data ?? []).filter((b) => b.active && b.kind === method && (!chosen || b.currency === chosen.currency));
   const label = (p: Payment) => p.customerInvoiceId ? p.targetNumber ?? tr('Sales invoice')
     : p.supplierInvoiceId ? trf('Purchase invoice {number}', { number: p.targetNumber ?? '' })
     : trf('Expense {number}', { number: p.targetNumber ?? '' });
@@ -174,15 +196,25 @@ export function PaymentsPage() {
         </div>
         <div className="form-row">
           <label>{tr('Date')}<input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></label>
-          <label>{tr('Method')}<select value={method} onChange={(e) => setMethod(e.target.value)}>{METHODS.map((m) => <option key={m} value={m}>{tr(m)}</option>)}</select></label>
+          <label>{tr('Method')}<select value={method} onChange={(e) => { setMethod(e.target.value); setBoxId(lastBox(e.target.value)); }}>{METHODS.map((m) => <option key={m} value={m}>{tr(m)}</option>)}</select></label>
+          {needsBox ? (
+            <label>{direction === 'in' ? tr('Paid into') : tr('Paid from')}
+              <select value={boxId} onChange={(e) => setBoxId(e.target.value)}>
+                <option value="">{tr('Choose…')}</option>
+                {boxes.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}
+              </select>
+            </label>
+          ) : null}
           <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
         </div>
-        <div><Button disabled={busy || !chosen || toMinor(amount) <= 0 || toMinor(amount) > (chosen?.left ?? 0)} onClick={() => run(async () => {
+        <div><Button disabled={busy || !chosen || toMinor(amount) <= 0 || toMinor(amount) > (chosen?.left ?? 0) || (needsBox && !boxes.some((b) => b.id === boxId))} onClick={() => run(async () => {
           const [kind, id] = target.split(':');
           const made = await api<{ number: string }>('/v1/finance/payments', { method: 'POST', body: JSON.stringify({
             direction, amountMinor: toMinor(amount), paidOn, method, note,
             customerInvoiceId: kind === 'c' ? id : undefined, supplierInvoiceId: kind === 's' ? id : undefined, expenseId: kind === 'e' ? id : undefined,
+            treasuryAccountId: needsBox ? boxId : undefined,
           }) });
+          if (needsBox) rememberBox(method, boxId);
           return trf('Payment {number} recorded.', { number: made.number });
         }, () => { setTarget(''); setAmount(''); setNote(''); payments.reload(); openIn.reload(); openOut.reload(); })}>{busy ? tr('Saving…') : tr('Record payment')}</Button>
         {chosen && toMinor(amount) > chosen.left && <span className="error small"> {trf('Exceeds the outstanding balance of {amount}.', { amount: money(chosen.left, chosen.currency) })}</span>}</div>

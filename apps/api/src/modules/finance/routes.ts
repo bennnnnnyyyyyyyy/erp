@@ -6,6 +6,8 @@ import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
+import type { ItemStatementLine, PartyStatementLine } from '@erp/shared';
+import { csvResponse, minorToText } from '../../lib/csv';
 import { type AgeBucket, ageBucket, daysOverdue, todayUtc } from './ageing';
 
 // Expenses and payments (sql/024). Owner/admin only: the permissions below are not granted to members, and the tables
@@ -367,6 +369,9 @@ financeRoutes.post('/payments', requirePermission('finance.entries.manage'), asy
   if ((direction !== 'in' && direction !== 'out') || amount === null || !DATE_RE.test(paidOn) || !METHODS.includes(method))
     invalid('Direction, an amount above zero, a date and a method are required');
   for (const v of Object.values(ids)) if (v && !UUID_RE.test(v)) invalid('Invalid reference');
+  // sql/051: the cash box or bank account the money went through (required by the database for cash and bank once treasury is on).
+  const treasuryAccountId = text(b.treasuryAccountId);
+  if (treasuryAccountId && !UUID_RE.test(treasuryAccountId)) invalid('Invalid treasury account');
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'fin_record_payment', {
     p_direction: direction,
     p_amount_minor: amount,
@@ -376,6 +381,7 @@ financeRoutes.post('/payments', requirePermission('finance.entries.manage'), asy
     p_supplier_invoice_id: ids.supplier || null,
     p_expense_id: ids.expense || null,
     p_note: text(b.note) || null,
+    p_treasury_account_id: treasuryAccountId || null,
   });
   return ok(c, made, 201);
 });
@@ -389,4 +395,128 @@ financeRoutes.post('/payments/:id/void', requirePermission('finance.entries.mana
 // The owner home numbers (sql/027): read-only, computed in the database, owner/admin only.
 financeRoutes.get('/insights', requirePermission('finance.reports.view'), async (c) => {
   return ok(c, await callRpc<Record<string, unknown>>(userDb(c), 'insights_home', {}));
+});
+
+// ---- statements of account (كشف حساب; TREASURY_PLAN.md S1, sql/052). Read-only, computed in the database. ?format=csv downloads.
+
+const statementPeriod = (c: Context<AppEnv>) => {
+  const from = c.req.query('from') ?? '';
+  const to = c.req.query('to') ?? '';
+  if (!DATE_RE.test(from) || !DATE_RE.test(to) || to < from) invalid('from and to are required (YYYY-MM-DD), with to on or after from');
+  return { from, to };
+};
+
+financeRoutes.get('/statements/party', requirePermission('finance.statements.view'), async (c) => {
+  const type = c.req.query('type') ?? '';
+  const id = c.req.query('id') ?? '';
+  const currency = (c.req.query('currency') ?? '').toUpperCase() || c.var.tenant.defaultCurrency;
+  if ((type !== 'customer' && type !== 'supplier') || !UUID_RE.test(id)) invalid('type (customer or supplier) and id are required');
+  if (!/^[A-Z]{3}$/.test(currency)) invalid('currency must be a three-letter code');
+  const p = statementPeriod(c);
+  const rows = await callRpc<
+    {
+      line_id: number | null;
+      entry_id: string | null;
+      entry_number: string | null;
+      entry_date: string;
+      source_type: string | null;
+      source_id: string | null;
+      event: string | null;
+      memo: string | null;
+      account_code: string | null;
+      debit_minor: number;
+      credit_minor: number;
+      balance_minor: number;
+      is_opening: boolean;
+    }[]
+  >(userDb(c), 'acc_party_statement', { p_party_type: type, p_party_id: id, p_from: p.from, p_to: p.to, p_currency: currency });
+  const lines: PartyStatementLine[] = (rows ?? []).map((r) => ({
+    isOpening: r.is_opening,
+    lineId: r.line_id === null ? null : Number(r.line_id),
+    entryId: r.entry_id,
+    entryNumber: r.entry_number,
+    entryDate: r.entry_date,
+    sourceType: r.source_type,
+    sourceId: r.source_id,
+    event: r.event,
+    memo: r.memo,
+    accountCode: r.account_code,
+    debitMinor: Number(r.debit_minor),
+    creditMinor: Number(r.credit_minor),
+    balanceMinor: Number(r.balance_minor),
+  }));
+  if (c.req.query('format') !== 'csv') return ok(c, { currency, lines });
+  return csvResponse(
+    c,
+    `statement-${type}-${p.from}-to-${p.to}.csv`,
+    ['date', 'entry', 'description', 'debit', 'credit', 'balance', 'currency'],
+    lines.map((l) => [
+      l.entryDate,
+      l.entryNumber,
+      l.isOpening ? 'Opening balance' : l.memo,
+      minorToText(l.debitMinor, currency),
+      minorToText(l.creditMinor, currency),
+      minorToText(l.balanceMinor, currency),
+      currency,
+    ]),
+  );
+});
+
+financeRoutes.get('/statements/item', requirePermission('finance.statements.view'), async (c) => {
+  const itemId = c.req.query('itemId') ?? '';
+  const warehouseId = c.req.query('warehouseId') ?? '';
+  if (!UUID_RE.test(itemId) || (warehouseId && !UUID_RE.test(warehouseId))) invalid('itemId is required');
+  const p = statementPeriod(c);
+  const rows = await callRpc<
+    {
+      move_id: number | null;
+      move_date: string;
+      kind: string;
+      ref: string | null;
+      warehouse_id: string | null;
+      qty_in: number | null;
+      qty_out: number | null;
+      unit_cost_minor: number | null;
+      value_minor: number | null;
+      cost_known: boolean;
+      balance_qty: number;
+      balance_value_minor: number;
+      is_opening: boolean;
+    }[]
+  >(userDb(c), 'inv_item_statement', { p_item_id: itemId, p_from: p.from, p_to: p.to, p_warehouse_id: warehouseId || null });
+  const n = (x: number | null) => (x === null ? null : Number(x));
+  const lines: ItemStatementLine[] = (rows ?? []).map((r) => ({
+    isOpening: r.is_opening,
+    moveId: n(r.move_id),
+    moveDate: r.move_date,
+    kind: r.kind,
+    ref: r.ref,
+    warehouseId: r.warehouse_id,
+    qtyIn: n(r.qty_in),
+    qtyOut: n(r.qty_out),
+    unitCostMinor: n(r.unit_cost_minor),
+    valueMinor: n(r.value_minor),
+    costKnown: r.cost_known,
+    balanceQty: Number(r.balance_qty),
+    balanceValueMinor: Number(r.balance_value_minor),
+  }));
+  const currency = c.var.tenant.defaultCurrency;
+  if (c.req.query('format') !== 'csv') return ok(c, { currency, lines });
+  return csvResponse(
+    c,
+    `item-statement-${p.from}-to-${p.to}.csv`,
+    ['date', 'kind', 'reference', 'in', 'out', 'unit_cost', 'value', 'balance_qty', 'balance_value', 'currency'],
+    lines.map((l) => [
+      l.moveDate,
+      l.kind,
+      l.ref,
+      l.qtyIn,
+      l.qtyOut,
+      l.unitCostMinor === null ? null : minorToText(l.unitCostMinor, currency),
+      l.valueMinor === null ? null : minorToText(l.valueMinor, currency),
+      l.balanceQty,
+      minorToText(l.balanceValueMinor, currency),
+      currency,
+    ]),
+  );
 });

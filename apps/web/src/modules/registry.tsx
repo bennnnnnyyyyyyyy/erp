@@ -52,6 +52,11 @@ const AlertsPage = lazyNamed(() => import('./alerts/Alerts'), 'AlertsPage');
 const GettingStartedPage = lazyNamed(() => import('./help/GettingStarted'), 'GettingStartedPage');
 const OnboardingPage = lazyNamed(() => import('./help/Onboarding'), 'OnboardingPage');
 const ProfitOverviewPage = lazyNamed(() => import('./finance/ProfitOverview'), 'ProfitOverviewPage');
+const TreasuryPage = lazyNamed(() => import('./treasury/Treasury'), 'TreasuryPage');
+const TreasuryAccountPage = lazyNamed(() => import('./treasury/Treasury'), 'TreasuryAccountPage');
+const TransfersPage = lazyNamed(() => import('./treasury/Treasury'), 'TransfersPage');
+const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
+const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/Setup'), 'AccountingSetupPage');
 const ChartPage = lazyNamed(() => import('./accounting/Setup'), 'ChartPage');
 const EntriesPage = lazyNamed(() => import('./accounting/Ledger'), 'EntriesPage');
@@ -211,6 +216,7 @@ export const APPS: AppDef[] = [
       { path: '/overview', label: 'Profit and loss', permission: 'finance.reports.view', component: ProfitOverviewPage },
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
+      { path: '/statements', label: 'Statement of account', permission: 'finance.statements.view', component: StatementsPage },
     ],
   } satisfies AppDef]),
   // Accounting (documentation/plans/ACCOUNTING_PLAN.md section 6). Real API only. Owner and admin only. Set-up and the chart show
@@ -229,6 +235,15 @@ export const APPS: AppDef[] = [
       { path: '/accounts', label: 'Chart of accounts', permission: 'accounting.ledger.view', component: ChartPage, beforeEnabled: true },
       { path: '/accounts/:id', label: 'Account', permission: 'accounting.ledger.view', component: AccountLinesPage, nav: false, parent: '/accounts' },
       { path: '/setup', label: 'Accounting setup', permission: 'accounting.ledger.view', component: AccountingSetupPage, beforeEnabled: true },
+    ],
+  } satisfies AppDef]),
+  // Treasury (documentation/plans/TREASURY_PLAN.md §6). Real API only. Owner and admin only; needs accounting on.
+  ...(demoMode ? [] : [{
+    key: 'treasury', module: 'treasury', name: 'Treasury', description: 'Cash boxes, bank accounts and transfers, by branch',
+    suite: 'Finance', basePath: '/treasury', pages: [
+      { path: '', label: 'Cash and banks', permission: 'treasury.accounts.view', component: TreasuryPage },
+      { path: '/accounts/:id', label: 'Treasury account', permission: 'treasury.accounts.view', component: TreasuryAccountPage, nav: false, parent: '' },
+      { path: '/transfers', label: 'Transfers', permission: 'treasury.accounts.view', component: TransfersPage },
     ],
   } satisfies AppDef]),
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.
@@ -266,6 +281,8 @@ export const APPS: AppDef[] = [
     pages: [
       { path: '', label: 'General', permission: 'core.org.read', component: GeneralSettings },
       { path: '/users', label: 'Users', permission: 'core.users.read', component: UsersSettings },
+      // Real API only: the sample-data demo has no branches (it stayed on the loading skeleton; found by the smoke test).
+      ...(demoMode ? [] : [{ path: '/branches', label: 'Branches', permission: 'core.org.read', component: BranchesSettings }]),
       { path: '/apps', label: 'Apps', permission: 'core.org.read', component: AppsSettings },
       { path: '/audit', label: 'Audit log', permission: 'core.audit.read', component: AuditLog },
     ],

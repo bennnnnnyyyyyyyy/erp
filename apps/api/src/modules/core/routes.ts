@@ -6,6 +6,7 @@ import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { invalid, jsonBody } from '../../lib/body';
 import { requirePermission } from '../../middleware/tenant';
+import { branchRoutes } from './branchRoutes';
 import { memberRoutes } from './memberRoutes';
 import { moduleRoutes } from './moduleRoutes';
 import { orgRoutes } from './org';
@@ -15,6 +16,7 @@ export const coreRoutes = new Hono<AppEnv>();
 coreRoutes.route('/org', orgRoutes);
 coreRoutes.route('/members', memberRoutes);
 coreRoutes.route('/modules', moduleRoutes);
+coreRoutes.route('/branches', branchRoutes);
 
 // The person's own saved language (sql/038). A display preference, not essential: if it cannot be read (for example the migration is not
 // applied yet) the session still loads and the person simply follows the company default.
