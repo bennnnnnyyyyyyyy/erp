@@ -15,6 +15,13 @@ export type ModuleManifest = {
   memberGrants?: string[];
   /** Suite on the home screen and in Settings → Apps. */
   suite: 'Core' | 'Warehouse' | 'Sales & Purchasing' | 'Finance';
+  /**
+   * Switched on only by its own set-up flow, never by the plain Apps toggle (accounting: `acc_switch_on`, which posts the history
+   * first; the database refuses any other way with USE_SWITCH_ON, and it can never be switched off).
+   */
+  switchOnOnly?: boolean;
+  /** Route prefixes (under `/v1/<key>`) that work before the module is on: its set-up screens. */
+  openBeforeEnabled?: string[];
 };
 
 export const MODULES: readonly ModuleManifest[] = [
@@ -161,6 +168,28 @@ export const MODULES: readonly ModuleManifest[] = [
     dependsOn: ['messaging'],
     permissions: ['alerts.rules.view', 'alerts.rules.manage'],
     suite: 'Warehouse',
+  },
+  {
+    // documentation/plans/ACCOUNTING_PLAN.md section 4. No key ends in ".read", so members and viewers get nothing (the database also
+    // refuses them). Owners and admins get every key here; the database narrows the chart, direct posting and reversal to the owner and
+    // the head accountant, and switch-on to the owner.
+    key: 'accounting',
+    name: 'Accounting',
+    description: 'General ledger: chart of accounts, automatic entries from every document, manual journals with approval, trial balance.',
+    core: false,
+    dependsOn: [],
+    permissions: [
+      'accounting.ledger.view',
+      'accounting.chart.manage',
+      'accounting.journal.create',
+      'accounting.journal.approve',
+      'accounting.journal.post_direct',
+      'accounting.module.switch_on',
+    ],
+    suite: 'Finance',
+    switchOnOnly: true,
+    // Preparing to switch on: chart, roles, fiscal years, category and reason accounts, uncosted receipts, the switch itself.
+    openBeforeEnabled: ['/setup', '/accounts', '/roles', '/fiscal-years', '/category-accounts', '/issue-reasons'],
   },
 ];
 

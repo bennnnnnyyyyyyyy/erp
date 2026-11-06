@@ -32,6 +32,26 @@ export function setActiveOrgId(orgId: string | null) {
   }
 }
 
+/** Downloads a file the API sends (for example a CSV export), with the same sign-in and organization headers as `api`. */
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const headers = new Headers();
+  if (data.session) headers.set('Authorization', `Bearer ${data.session.access_token}`);
+  const orgId = getActiveOrgId();
+  if (orgId) headers.set('X-Org-Id', orgId);
+  const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
+    throw new ApiError(res.status, body?.error ?? 'Download failed', body?.code);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (demoMode) return demoApi<T>(path, init);
   const { data } = await supabase.auth.getSession();

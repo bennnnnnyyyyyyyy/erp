@@ -28,8 +28,9 @@
 
 - [ ] **[ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md): Accounting, phase 1 (general ledger)**
   - **Done (2026-11-05):** plan and [ADR-0004 draft](../planning/DRAFT_ADR-0004-general-ledger.md) written on branch `accounting-phase1`; Egyptian chart research in [UNIFIED_CHART_OF_ACCOUNTS.md](../reference/egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md).
-  - **Waiting on:** Ben's approval of the plan and the ADR; the pilot accountant for the unconfirmed codes in groups 3 and 4 (plan O1).
-  - **Remaining:** everything in the plan's rollout (sql/045-049, API, screens, switch-on of the demo company).
+  - **Done (2026-11-06):** `sql/045`-`049` applied to live (tests 040-044 pass on live); permission keys, API routes (`apps/api/src/modules/accounting/routes.ts`, test `apps/api/test/accounting.test.ts`) and screens (`apps/web/src/modules/accounting/`, Arabic included) built on branch `accounting-phase1`, not deployed.
+  - **Waiting on:** Ben's browser check after deploy; the pilot accountant for the unconfirmed codes in groups 3 and 4 (plan O1); moving the ADR draft into `architecture/decisions/`.
+  - **Remaining:** deploy the API and web; switch accounting on for the demo company (owner, from Accounting setup) and check the trial balance; an issue-reason picker on stock requests.
 
 Template for further blocks; update them in the same change as the work:
 

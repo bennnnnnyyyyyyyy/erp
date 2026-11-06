@@ -50,6 +50,28 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
     message: 'Credit or debit notes still refer to this invoice: cancel or reject them first',
     code: 'active_notes',
   },
+  // Accounting (sql/045-049).
+  UNBALANCED: { status: 400, message: 'Debits and credits must be equal', code: 'unbalanced' },
+  NOT_LEAF: { status: 400, message: 'Post to a detail account, not a group account', code: 'not_leaf' },
+  ACCOUNT_INACTIVE: { status: 400, message: 'That account is inactive or not part of this company', code: 'account_inactive' },
+  ACCOUNT_ROLE_MISSING: { status: 409, message: 'An account role is not set up in Accounting setup', code: 'account_role_missing' },
+  HAS_ENTRIES: { status: 409, message: 'That account already has entries', code: 'has_entries' },
+  APPEND_ONLY: { status: 409, message: 'Posted entries cannot be changed; reverse them instead', code: 'append_only' },
+  UNCOSTED_RECEIPTS: {
+    status: 409,
+    message: 'Some stock receipts have no cost yet: enter them in Accounting setup first',
+    code: 'uncosted_receipts',
+  },
+  RECEIPT_COST_REQUIRED: { status: 400, message: 'With accounting on, received stock needs a unit cost', code: 'receipt_cost_required' },
+  NOTE_REQUIRED: { status: 400, message: 'A payment by "other" needs a note saying how it was paid', code: 'note_required' },
+  USE_SWITCH_ON: {
+    status: 400,
+    message: 'Accounting is switched on from Accounting setup and cannot be switched off',
+    code: 'use_switch_on',
+  },
+  DUPLICATE: { status: 409, message: 'That already exists', code: 'duplicate' },
+  NOT_TRACKED: { status: 400, message: 'That item does not track batches', code: 'not_tracked' },
+  EXPIRED: { status: 400, message: 'That batch has already expired', code: 'expired' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */

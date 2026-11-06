@@ -74,9 +74,17 @@ export function requirePermission(permission: string) {
   });
 }
 
-export function requireModule(moduleKey: string) {
+/**
+ * Refuses a module's routes until the organization has switched it on. `openPaths` are prefixes under `/v1/<module>` that stay
+ * reachable before that (a module's own set-up screens, for example accounting's switch-on); their routes still check permissions,
+ * and the database still checks the role.
+ */
+export function requireModule(moduleKey: string, openPaths: readonly string[] = []) {
+  const base = `/v1/${moduleKey}`;
   return createMiddleware<AppEnv>(async (c, next) => {
-    if (!c.var.tenant.modules.includes(moduleKey)) {
+    const rest = c.req.path.startsWith(base) ? c.req.path.slice(base.length) : '';
+    const open = openPaths.some((p) => rest === p || rest.startsWith(`${p}/`));
+    if (!open && !c.var.tenant.modules.includes(moduleKey)) {
       throw new HttpError(403, 'This module is not enabled for your organization', 'module_disabled');
     }
     await next();

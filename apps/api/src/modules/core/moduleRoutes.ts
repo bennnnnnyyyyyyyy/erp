@@ -22,6 +22,7 @@ moduleRoutes.get('/', requirePermission('core.org.read'), (c) => {
     suite: m.suite,
     core: m.core,
     enabled: c.var.tenant.modules.includes(m.key),
+    ...(m.switchOnOnly ? { switchOnOnly: true } : {}),
   }));
   return ok(c, list);
 });
@@ -31,6 +32,9 @@ for (const action of ['enable', 'disable'] as const) {
     const mod = findModule(c.req.param('key'));
     if (!mod) throw new HttpError(404, 'Unknown module', 'not_found');
     if (mod.core) throw new HttpError(400, `${mod.name} is always on`, 'invalid_input');
+    // Accounting is switched on by its own set-up screen (which posts the company's history first) and is never switched off.
+    if (mod.switchOnOnly)
+      throw new HttpError(400, `${mod.name} is switched on from its set-up screen and cannot be switched off`, 'use_switch_on');
     const enabled = c.var.tenant.modules;
 
     if (action === 'enable') {

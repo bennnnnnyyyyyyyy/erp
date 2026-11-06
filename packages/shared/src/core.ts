@@ -55,7 +55,16 @@ export type MyInvitation = { id: string; orgId: string; orgName: string; role: R
  */
 export type InviteResult = { kind: 'added'; member: Member; inviteLink: string } | { kind: 'invited'; invitation: Invitation };
 
-export type ModuleStatus = { key: string; name: string; description: string; suite: string; core: boolean; enabled: boolean };
+export type ModuleStatus = {
+  key: string;
+  name: string;
+  description: string;
+  suite: string;
+  core: boolean;
+  enabled: boolean;
+  /** Switched on only through its own set-up screen (accounting), never by the Apps toggle, and never switched off. */
+  switchOnOnly?: boolean;
+};
 
 export type AuditEntry = {
   id: number;

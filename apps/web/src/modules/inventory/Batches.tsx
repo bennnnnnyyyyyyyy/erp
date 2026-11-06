@@ -36,7 +36,7 @@ export function BatchesPage() {
   const conditions = useLoad(() => api<Condition[]>('/v1/inventory/storage-conditions'));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [f, setF] = useState({ itemId: '', warehouseId: '', batchNo: '', qty: '', mfg: '', exp: '' });
+  const [f, setF] = useState({ itemId: '', warehouseId: '', batchNo: '', qty: '', mfg: '', exp: '', cost: '' });
   const [cond, setCond] = useState({ name: '', min: '', max: '' });
   const canReceive = session.permissions.includes('inventory.batches.receive');
   const canManage = session.permissions.includes('inventory.batches.manage');
@@ -66,11 +66,13 @@ export function BatchesPage() {
             <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
             <label>{tr('Made on (optional)')}<input type="date" value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>
             <label>{tr('Expires on')}<input type="date" value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} /></label>
+            {/* sql/046: the cost of what was received. Required once accounting is on; otherwise optional (it also updates the average cost). */}
+            <label>{tr('Unit cost (needed with accounting)')}<input inputMode="decimal" placeholder="0.00" value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} /></label>
           </div>
           <div><Button disabled={busy || !f.itemId || !f.warehouseId || !f.batchNo.trim() || !(Number(f.qty) > 0)} onClick={() => run(async () => {
-            await api('/v1/inventory/batches', { method: 'POST', body: JSON.stringify({ itemId: f.itemId, warehouseId: f.warehouseId, batchNo: f.batchNo, qty: Number(f.qty), mfgDate: f.mfg, expiryDate: f.exp }) });
+            await api('/v1/inventory/batches', { method: 'POST', body: JSON.stringify({ itemId: f.itemId, warehouseId: f.warehouseId, batchNo: f.batchNo, qty: Number(f.qty), mfgDate: f.mfg, expiryDate: f.exp, unitCostMinor: f.cost.trim() ? Math.round(Number(f.cost) * 100) : null }) });
             return trf('Batch {no} received.', { no: f.batchNo.trim() });
-          }, () => { setF({ ...f, batchNo: '', qty: '', mfg: '', exp: '' }); reloadAll(); })}>{busy ? tr('Saving…') : tr('Receive batch')}</Button></div>
+          }, () => { setF({ ...f, batchNo: '', qty: '', mfg: '', exp: '', cost: '' }); reloadAll(); })}>{busy ? tr('Saving…') : tr('Receive batch')}</Button></div>
         </FormToggle>
       )}
 
