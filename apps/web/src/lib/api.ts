@@ -59,7 +59,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (data.session) headers.set('Authorization', `Bearer ${data.session.access_token}`);
   const orgId = getActiveOrgId();
   if (orgId) headers.set('X-Org-Id', orgId);
-  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  // a file upload sets its own multipart type; everything else is JSON
+  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;

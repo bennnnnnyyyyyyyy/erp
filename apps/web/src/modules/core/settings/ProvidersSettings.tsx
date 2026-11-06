@@ -9,6 +9,7 @@ import { tr, trf } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 import { Notice, useNotice } from '../../accounting/common';
+import { AiTry } from './AiTry';
 import { OnlineOrders } from './OnlineOrders';
 
 // Settings > Integrations: payments, shipping, store and AI providers (sql/056). Secret fields are write-only: once saved they show as
@@ -172,6 +173,7 @@ export function ProvidersSettings() {
         <div key={g} className="stack">
           <h3>{tr(GROUP_TITLE[g])}</h3>
           {g === 'ai' ? <AiNotice status={status} canManage={canManage} onChanged={reload} /> : null}
+          {g === 'ai' && consented ? <AiTry canManage={canManage} /> : null}
           {PROVIDERS.filter((p) => p.group === g).map((def) => {
             const item = providers.find((x) => x.kind === def.kind);
             if (!item) return null;
