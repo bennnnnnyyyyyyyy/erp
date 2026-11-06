@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { findModule } from '@erp/shared';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runOutboxPass } from './jobs/outbox';
@@ -25,7 +26,7 @@ app.get('/health', (c) => ok(c, { status: 'ok', env: c.env.APP_ENV }));
 const v1 = new Hono<AppEnv>();
 v1.use('*', requireAuth, rateLimit('api'), requireTenant);
 for (const [key, routes] of Object.entries(MODULE_ROUTES)) {
-  v1.use(`/${key}/*`, requireModule(key));
+  v1.use(`/${key}/*`, requireModule(key, findModule(key)?.openBeforeEnabled));
   v1.route(`/${key}`, routes);
 }
 app.route('/v1', v1);

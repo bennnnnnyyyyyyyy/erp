@@ -52,6 +52,15 @@ const AlertsPage = lazyNamed(() => import('./alerts/Alerts'), 'AlertsPage');
 const GettingStartedPage = lazyNamed(() => import('./help/GettingStarted'), 'GettingStartedPage');
 const OnboardingPage = lazyNamed(() => import('./help/Onboarding'), 'OnboardingPage');
 const ProfitOverviewPage = lazyNamed(() => import('./finance/ProfitOverview'), 'ProfitOverviewPage');
+const AccountingSetupPage = lazyNamed(() => import('./accounting/Setup'), 'AccountingSetupPage');
+const ChartPage = lazyNamed(() => import('./accounting/Setup'), 'ChartPage');
+const EntriesPage = lazyNamed(() => import('./accounting/Ledger'), 'EntriesPage');
+const EntryPage = lazyNamed(() => import('./accounting/Ledger'), 'EntryPage');
+const JournalsPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalsPage');
+const JournalEditPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalEditPage');
+const JournalPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalPage');
+const TrialBalancePage = lazyNamed(() => import('./accounting/Ledger'), 'TrialBalancePage');
+const AccountLinesPage = lazyNamed(() => import('./accounting/Ledger'), 'AccountLinesPage');
 
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
@@ -67,6 +76,8 @@ export type AppPage = {
   nav?: boolean;
   /** Sidebar entry to highlight while on this page (its `path`). */
   parent?: string;
+  /** Shown even before the app's module is switched on (its set-up pages; the module must list them in `openBeforeEnabled`). */
+  beforeEnabled?: boolean;
 };
 
 export type AppDef = {
@@ -202,6 +213,24 @@ export const APPS: AppDef[] = [
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
     ],
   } satisfies AppDef]),
+  // Accounting (documentation/plans/ACCOUNTING_PLAN.md section 6). Real API only. Owner and admin only. Set-up and the chart show
+  // before accounting is on, so the company can prepare and switch on; the rest needs it on.
+  ...(demoMode ? [] : [{
+    key: 'accounting', module: 'accounting', name: 'Accounting', description: 'Chart of accounts, journal, manual entries and trial balance',
+    suite: 'Finance', basePath: '/accounting', pages: [
+      { path: '', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage },
+      { path: '/trial-balance', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage, nav: false, parent: '' },
+      { path: '/entries', label: 'Journal', permission: 'accounting.ledger.view', component: EntriesPage },
+      { path: '/entries/:id', label: 'Journal entry', permission: 'accounting.ledger.view', component: EntryPage, nav: false, parent: '/entries' },
+      { path: '/journals', label: 'Manual journals', permission: 'accounting.ledger.view', component: JournalsPage },
+      { path: '/journals/new', label: 'New manual journal', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
+      { path: '/journals/:id', label: 'Manual journal', permission: 'accounting.ledger.view', component: JournalPage, nav: false, parent: '/journals' },
+      { path: '/journals/:id/edit', label: 'Change draft', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
+      { path: '/accounts', label: 'Chart of accounts', permission: 'accounting.ledger.view', component: ChartPage, beforeEnabled: true },
+      { path: '/accounts/:id', label: 'Account', permission: 'accounting.ledger.view', component: AccountLinesPage, nav: false, parent: '/accounts' },
+      { path: '/setup', label: 'Accounting setup', permission: 'accounting.ledger.view', component: AccountingSetupPage, beforeEnabled: true },
+    ],
+  } satisfies AppDef]),
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.
   ...(demoMode ? [] : [{
     key: 'start', module: 'core', name: 'Getting started', description: 'Setup checklist for a new company',
@@ -267,8 +296,11 @@ export function preloadScreens(): void {
 
 /** Apps this user can open, each with only the pages they are allowed to see. */
 export function visibleApps(session: SessionInfo): AppDef[] {
-  return APPS.filter((a) => session.modules.includes(a.module) && (a.visible?.(session) ?? true))
-    .map((a) => ({ ...a, pages: a.pages.filter((p) => !p.permission || hasPermission(session.permissions, p.permission)) }))
+  return APPS.filter((a) => (session.modules.includes(a.module) || a.pages.some((p) => p.beforeEnabled)) && (a.visible?.(session) ?? true))
+    .map((a) => {
+      const on = session.modules.includes(a.module);
+      return { ...a, pages: a.pages.filter((p) => (on || p.beforeEnabled) && (!p.permission || hasPermission(session.permissions, p.permission))) };
+    })
     .filter((a) => a.pages.length > 0);
 }
 
@@ -296,6 +328,12 @@ export function resolveRoute(path: string, apps: AppDef[]): Route | null {
   // Exact paths win over patterns, so /inventory/items beats /inventory/items/:id.
   const exact = app.pages.find((p) => p.path === rest);
   if (exact) return { app, page: exact, params: {} };
+  // The app's own address when its first page is not open to this person (accounting before switch-on shows only its set-up pages):
+  // open the first page they can see.
+  if (rest === '') {
+    const first = app.pages.find((p) => p.nav !== false && !p.path.includes(':'));
+    if (first) return { app, page: first, params: {} };
+  }
   for (const page of app.pages) {
     const params = page.path.includes(':') ? matchPath(page.path, rest) : null;
     if (params) return { app, page, params };

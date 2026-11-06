@@ -159,12 +159,13 @@ As built (046): supplier invoices today always bill at the order's cost (`sql/01
 price-difference line is zero until a later slice lets a bill carry its own price.
 
 **Build status (6 Nov):**
-- 045, 046 and 047 are applied to live.
-- 048 and 049 are written and dry-run on live, waiting for Ben's yes.
+- 045 to 049 are applied to live (048 and 049 on 6 Nov). No company has accounting on yet.
 - Added while building:
   - P17: a cost changed by hand revalues the stock on hand (047);
   - accounts used by expense categories or internal-use reasons are protected (048).
-- Not started: the API routes (§5), the screens (§6) and the permission keys (§4).
+- Built on branch `accounting-phase1`, not yet deployed: the permission keys (§4), the API routes (§5) and the screens (§6), with
+  Arabic, and a unit-cost field on the batch receipt and new-item (opening stock) forms. Still to do: an issue-reason picker on
+  stock requests (`inv_set_request_reason`; without one, internal issues post to the `internal_use` role's account).
 - `sql/048_accounting_manual_journals.sql`: manual journals and opening balances.
 - `sql/049_accounting_reports.sql`: trial balance and account drill-down.
 
@@ -172,7 +173,7 @@ price-difference line is zero until a later slice lets a bill carry its own pric
 
 | Key | Granted to by default | Allows |
 |---|---|---|
-| `accounting.ledger.read` | owner, admin | See the chart, entries, trial balance |
+| `accounting.ledger.view` | owner, admin | See the chart, entries, trial balance (named `.view`, not `.read`, because every `.read` key is granted to members automatically; see `packages/shared/src/permissions.ts`) |
 | `accounting.chart.manage` | owner, head accountant | Add and edit accounts and account roles |
 | `accounting.journal.create` | owner, admin | Draft manual entries and opening balances |
 | `accounting.journal.approve` | owner, admin | Approve someone else's draft (never one's own) |
@@ -190,21 +191,35 @@ one of these keys.
 All routes are behind `requirePermission(...)` and call one database function with the caller's
 JWT (ADR-0003).
 
+**As built (6 Nov).** Set-up routes work before accounting is on (`openBeforeEnabled` in `packages/shared/src/modules.ts`:
+`/setup`, `/accounts`, `/roles`, `/fiscal-years`, `/category-accounts`, `/issue-reasons`); the rest answer `module_disabled` until
+switch-on. The Apps toggle refuses accounting (`switchOnOnly`): it is switched on only by `/setup/switch-on`.
+
 | Method | Path | Permission | Notes |
 |---|---|---|---|
-| GET | `/v1/accounting/accounts` | `accounting.ledger.read` | Tree, with balances optional |
-| POST | `/v1/accounting/accounts` | `accounting.chart.manage` | Add under a parent |
+| GET | `/v1/accounting/setup/preview` | `accounting.ledger.view` | What switch-on would post; missing roles; uncosted receipts |
+| POST | `/v1/accounting/setup/prepare` | `accounting.chart.manage` | Adds the default chart (only what is missing) |
+| GET | `/v1/accounting/setup/uncosted-receipts` | `accounting.ledger.view` | Receipts with no cost from anywhere |
+| PUT | `/v1/accounting/setup/receipt-costs/:moveId` | `accounting.chart.manage` | Owner or head accountant (database) |
+| POST | `/v1/accounting/setup/switch-on` | `accounting.module.switch_on` | Owner (database); backfill and enable; returns counts and totals |
+| GET/PUT | `/v1/accounting/setup/head-accountants[/:membershipId]` | view / `accounting.module.switch_on` | Owner sets the flag (database) |
+| GET/POST | `/v1/accounting/accounts` | view / `accounting.chart.manage` | Flat list with `isLeaf`; add under a parent |
 | PATCH | `/v1/accounting/accounts/:id` | `accounting.chart.manage` | Name, Arabic name, active |
-| GET/PUT | `/v1/accounting/roles` | read / `accounting.chart.manage` | Account roles |
-| POST | `/v1/accounting/switch-on` | `accounting.module.switch_on` | Seed, backfill, enable; returns counts and totals |
-| GET | `/v1/accounting/entries` | `accounting.ledger.read` | Filters: dates, account, source type, party |
-| GET | `/v1/accounting/entries/:id` | `accounting.ledger.read` | With a link to the source document |
-| POST | `/v1/accounting/journals` | `accounting.journal.create` | Draft, or post directly if allowed |
+| GET | `/v1/accounting/accounts/:id/lines` | `accounting.ledger.view` | `from`, `to`, `currency`; running balance |
+| GET / PUT | `/v1/accounting/roles` / `roles/:role` | view / `accounting.chart.manage` | Account roles |
+| GET / PUT | `/v1/accounting/category-accounts` / `:id` | view / `accounting.chart.manage` | Expense category to account |
+| GET / POST / PUT | `/v1/accounting/issue-reasons` / `:id` | view / `accounting.chart.manage` | Internal-use reasons |
+| GET/POST | `/v1/accounting/fiscal-years` | view / `accounting.chart.manage` | |
+| GET | `/v1/accounting/entries` and `/entries/:id` | `accounting.ledger.view` | Filters: dates, source type; newest 300 |
+| GET | `/v1/accounting/journals` and `/journals/:id` | `accounting.ledger.view` | `?status=draft` lists approvals waiting |
+| POST / PUT | `/v1/accounting/journals` / `:id` | `accounting.journal.create` | Draft; `"post": true` also needs `post_direct` (owner or head accountant in the database) |
 | POST | `/v1/accounting/journals/:id/approve` and `/reject` | `accounting.journal.approve` | Not one's own |
-| POST | `/v1/accounting/entries/:id/reverse` | `accounting.journal.create` | Manual entries only; documents reverse by voiding |
-| GET | `/v1/accounting/trial-balance` | `accounting.ledger.read` | `from`, `to`, `currency`; CSV export |
-| GET/POST | `/v1/accounting/fiscal-years` | read / `accounting.chart.manage` | |
-| PUT | `/v1/core/members/:id/head-accountant` | owner (database) | Sets the flag |
+| POST | `/v1/accounting/journals/:id/cancel` | `accounting.journal.create` | The author's own draft |
+| POST | `/v1/accounting/journals/:id/reverse` | `accounting.journal.post_direct` | Manual journals only, once; documents reverse by voiding |
+| GET | `/v1/accounting/trial-balance` | `accounting.ledger.view` | `from`, `to`, `currency`; `format=csv` |
+
+Existing routes changed: `POST /v1/inventory/items` passes the opening stock's cost into the receipt; `POST /v1/inventory/batches`
+takes an optional `unitCostMinor` (required by the database once accounting is on).
 
 New error codes: `ACCOUNT_ROLE_MISSING` (names the role), `UNBALANCED`, `NOT_LEAF`, `APPEND_ONLY`,
 `SELF_APPROVAL`. `PERIOD_LOCKED` is reused.

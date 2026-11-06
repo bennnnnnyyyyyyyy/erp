@@ -68,7 +68,7 @@ export function useCatalog() {
 type StockLine = DemoItem & { onHand: number; reserved: number; available: number };
 
 function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehouse[]; onClose: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '' });
+  const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -76,7 +76,7 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
     e.preventDefault();
     setError(null);
     try {
-      await api('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ ...form, openingQty: Number(form.openingQty) }) });
+      await api('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null }) });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -94,6 +94,8 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
         <div className="form-row">
           <label>{tr('Opening stock (optional)')}<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
+          {/* sql/046: opening stock is a receipt, so it carries a unit cost (required once accounting is on). */}
+          <label>{tr('Unit cost (needed with accounting)')}<input inputMode="decimal" placeholder="0.00" value={form.cost} onChange={set('cost')} /></label>
           <label>
             {tr('Warehouse')}
             <select value={form.warehouseId} onChange={set('warehouseId')}>

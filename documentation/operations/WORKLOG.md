@@ -34,6 +34,61 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 — Accounting API routes, permission keys and screens (branch `accounting-phase1`, not deployed)
+
+**Objective.** Ben: "apply 048 and 049 and continue". Finish phase 1 of the accounting plan above the database: §4 permissions,
+§5 API, §6 screens.
+
+**Actions Completed.**
+- `packages/shared`: an `accounting` module manifest (`modules.ts`) with six keys. The read key is `accounting.ledger.view`, not
+  `.read`, because every `.read` key is granted to members automatically. New manifest fields: `switchOnOnly`, which keeps it off the
+  Apps toggle, and `openBeforeEnabled`, which lists the set-up routes that work before switch-on. Shared types and `journalProblem`
+  are in `accounting.ts`; `ModuleStatus.switchOnOnly` was added.
+- `apps/api`:
+  - `modules/accounting/routes.ts`: 29 routes, each behind an `accounting.*` permission and each calling one `acc_*` function;
+  - `requireModule` takes open set-up paths;
+  - the module toggle refuses accounting;
+  - new reason codes in `lib/rpc.ts`;
+  - `POST /inventory/items` now passes the opening stock's cost into the receipt. Before this, opening stock with accounting on would
+    fail `RECEIPT_COST_REQUIRED`.
+  - `POST /inventory/batches` takes `unitCostMinor`;
+  - new test `test/accounting.test.ts`.
+- `apps/web`:
+  - `modules/accounting/` (`common.tsx`, `Setup.tsx`, `Ledger.tsx`): Accounting setup (chart, roles, expense categories, uncosted
+    receipts, head accountant, fiscal years, switch-on with a preview), Chart of accounts, Journal and entry, Manual journals (editor
+    with running totals, approve, reject, withdraw, reverse), Trial balance with CSV, and account lines;
+  - the registry shows set-up pages before switch-on (`beforeEnabled`);
+  - Settings → Apps links accounting to its set-up screen;
+  - unit-cost fields on the batch receipt and new-item forms;
+  - `apiDownload` for the CSV;
+  - Arabic for every new string (`i18nNav.ts`, `i18nScreens.ts`; machine draft, Egyptian accounting terms).
+- Plan §5 is rewritten to the routes as built. The plan's build status and `checklist.md` are updated.
+
+**Database / System Result.** None. No migration, live data or deployment changed.
+
+**Safety Status.**
+- `npm run typecheck` passes.
+- `npm test` passes: shared 31, API 176 (7 skipped), web 63.
+- The `vite build` output is clean. `npm run build -w apps/web` itself fails only because the npm script shell is Windows
+  PowerShell 5, which rejects `&&`. That is a pre-existing environment issue, not a code problem.
+- No browser check yet: Ben checks it after deploying. Deploy order: the API before the web.
+- To try it: open Accounting → Accounting setup as owner, add the default chart, then switch on in a test company first.
+
+## 2026-11-06 — Applied `sql/048` and `sql/049` to live (ggoerp) via CLI
+
+**Objective.** Ben: "yes apply 048 and 049 and continue, using cli". Ben committed and pushed the branch (`6ee9748`).
+
+**Actions Completed.** Ran `supabase db query --linked -f` on `sql/048_accounting_manual_journals.sql` and then
+`sql/049_accounting_reports.sql`. Updated the `sql/README.md` rows to applied.
+
+**Database / System Result.** Both committed. 048's verification: `anon_can_save false`,
+`users_can_post_internal false`. 049's verification: `anon_can_read_tb false`, `users_can_read_tb true`. After the apply,
+live holds 0 accounts, 0 entries, 0 journals and no company with accounting on, so nothing changes for users until an
+owner switches accounting on.
+
+**Safety Status.** On live (all rolled back): tests 043, 044, 040, 041, 042, 001, 020, 021, 035 pass. Still to do in phase
+1: API routes, permission keys, screens. Merge PR `accounting-phase1` only now that 045–049 are on live.
+
 ## 2026-11-06 (evening) — Accounting slices 4 and 5 written (`sql/048`, `sql/049`, tests 043 and 044) and an audit of 045–047 (branch `accounting-phase1`, 048 and 049 not applied)
 
 **Objective.** Ben: "continue to 048" and "keep auditing, checking for mistakes".

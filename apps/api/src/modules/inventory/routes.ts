@@ -300,9 +300,12 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
     p_uom: text(body.uom) || 'piece',
     p_opening_qty: opening,
     p_warehouse_id: text(body.warehouseId) || null,
+    // sql/046: opening stock is a receipt, so it carries its unit cost (required once accounting is on; it also sets the average).
+    p_unit_cost_minor: opening > 0 ? cost : null,
   });
-  // Optional average cost in the same request (efficiency audit 2026-11-04, F4): the existing audited function, owners and admins only.
-  if (cost !== null && cost > 0) await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
+  // No opening stock: the optional average cost is set by hand (efficiency audit 2026-11-04, F4), the existing audited function,
+  // owners and admins only. With opening stock the receipt above already set it.
+  if (opening === 0 && cost !== null && cost > 0) await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
   return ok(
     c,
     toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }),
@@ -550,6 +553,9 @@ inventoryRoutes.post('/batches', requirePermission('inventory.batches.receive'),
     mfg = text(b.mfgDate),
     exp = text(b.expiryDate),
     supplier = text(b.supplierId);
+  // sql/046: the unit cost of the received batch (required once accounting is on; when given it also updates the average cost).
+  const cost = b.unitCostMinor === undefined || b.unitCostMinor === null || b.unitCostMinor === '' ? null : Number(b.unitCostMinor);
+  if (cost !== null && (!Number.isInteger(cost) || cost < 0)) invalid('unitCostMinor must be a whole number of minor units, zero or more');
   if (
     !UUID_RE.test(itemId) ||
     !UUID_RE.test(warehouseId) ||
@@ -570,6 +576,7 @@ inventoryRoutes.post('/batches', requirePermission('inventory.batches.receive'),
     p_mfg_date: mfg || null,
     p_expiry_date: exp || null,
     p_supplier_id: supplier || null,
+    p_unit_cost_minor: cost,
   });
   return ok(c, { id }, 201);
 });

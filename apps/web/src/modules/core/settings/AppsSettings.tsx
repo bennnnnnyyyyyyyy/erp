@@ -7,6 +7,7 @@ import { useReloadSession, useSession } from '../../../session';
 import { tr, trf } from '../../../lib/i18n';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Button } from '../../../components/ui/button';
+import { Link } from '../../../lib/router';
 // Switch modules on or off for the organization. Data is kept when a module is switched off.
 export function AppsSettings() {
   const session = useSession();
@@ -49,6 +50,9 @@ export function AppsSettings() {
             <span className="spacer" />
             {m.core ? (
               <span className="muted small">{tr('Always on')}</span>
+            ) : m.switchOnOnly ? (
+              // Accounting: switched on from its own set-up screen (it posts the company's history first) and never switched off.
+              m.enabled ? <span className="muted small">{tr('On (cannot be switched off)')}</span> : <Link to="/accounting/setup">{tr('Set up and switch on')}</Link>
             ) : canEdit ? (
               m.enabled
                 ? <ConfirmButton label={busy === m.key ? tr('Working…') : tr('Switch off')} confirmLabel={tr('Yes, switch off')} question={trf('Switch off {name}? Its data is kept, but nobody can open it until it\'s switched back on.', { name: tr(m.name) })} disabled={busy === m.key} onConfirm={() => toggle(m)} />
