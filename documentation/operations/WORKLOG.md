@@ -2144,18 +2144,3 @@ remove it before deleting the worktree (it is not tracked).
 Re-crawl of the sample build after the fixes: no text under 12px, no unlabelled controls, no empty headers, no contrast failures once
 animations finish. Not verified: live Arabic (the account's saved language overrides the browser setting), live phone, any live screen after
 the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitignored) at Ben's request. Audit scripts are not in the repo.
-
-## 2026-11-06 — UI colour and logos pass
-
-**Objective.** The app was pure grey (every theme token had zero chroma) and had no logo, so it looked generic. Add a brand colour, a product mark, per-app colour and recognisable channel logos on the Integrations screen.
-
-**Actions Completed.**
-- `apps/web/src/theme.css`: neutral palette retuned to an indigo brand hue (265) in light and dark: primary, accent, sidebar, borders and muted tones are lightly tinted.
-- `components/icons.tsx`: new `LogoMark` (gradient tile with a stock-block glyph, no customer branding), `appHueStyle` (one hue per app) and `ChannelLogo` (simplified Email, Slack, Teams, Telegram marks drawn in code, not vendor files).
-- `Shell.tsx`: logo replaces the dot-grid in the top bar; the current app's icon takes its own hue. `Home.tsx`: tiles take the app hue (tinted icon, coloured top edge).
-- `IntegrationsSettings.tsx`: channel logo on each card; an enabled channel gets a green edge and tint.
-- `styles.css`: the matching rules (light and dark), a soft top-bar shadow, active menu item uses the accent foreground.
-
-**Database / System Result.** None.
-
-**Safety Status.** `tsc --noEmit` clean for apps/web. Not verified: how it looks in a browser (light, dark, Arabic RTL), or contrast after the retint; full `npm test` not re-run. The sign-in screen has no logo yet.
