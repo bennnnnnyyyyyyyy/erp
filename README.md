@@ -2,7 +2,7 @@
 
 A warehouse-first ERP for small and mid-size businesses in Egypt and the GCC that hold stock. Modules are switched on per company, prices are in Egyptian pounds, and the web app works in Arabic and English.
 
-Status (2 Nov 2026): a working early build, deployed at https://erp-live.pages.dev with invented sample data, **not production-ready**. Built and deployed: inventory (stock requests with approval, adjustments, batches and expiry, forecast, reorder levels, transfers between warehouses), purchasing and supplier invoices, sales orders and customer invoices, expenses and payments, the owner home, alerts and messaging, sign-up, a guide, an English/Arabic choice per person. Not built or not yet proven: approvals by WhatsApp and voice on a real phone, Arabic on every screen, CSV import, returns and credit notes, Egyptian e-invoicing, a real customer pilot. The clickable no-database demo still exists (below). See [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) for scope, [`documentation/plans/checklist.md`](documentation/plans/checklist.md) for plan status and [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md) for what was actually run and deployed.
+Status (6 Nov 2026): a working early build, deployed at https://erp-live.pages.dev with invented sample data, **not production-ready**. What is built and live, what is only written, and what is not proven is kept in one place, [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (status overview); what was actually run and deployed is in [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md). In short: inventory, purchasing, sales, finance, accounting (general ledger), treasury and the integrations (payments, shipping, Shopify, AI, in simulated mode until keys are added) are built. Not yet proven: approvals by WhatsApp and voice on a real phone, any integration against a real provider, a real customer pilot. **Arabic:** every screen has Arabic text, but it is a machine draft that has not been reviewed by a native speaker yet. The clickable no-database demo still exists (below). See [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) for scope.
 
 ## What we are testing (hypotheses)
 
@@ -43,7 +43,7 @@ npm run dev:demo -w apps/web
 
 Open http://localhost:5173. The yellow bar lets you act as different people and flip the layout to right-to-left. A public copy runs at https://erp-demo-bas.pages.dev. Rebuild with `npm run build:demo`, deploy with `npx wrangler pages deploy apps/web/dist --project-name erp-demo --branch main`.
 
-**Run the real app** (needs a Supabase project with `sql/001` to `sql/035` applied in order, see [`sql/README.md`](sql/README.md)):
+**Run the real app** (needs a Supabase project with every migration in `sql/` applied in number order; [`sql/README.md`](sql/README.md) lists each file and whether it is applied to live):
 
 1. Copy `.env.example` to `.env` at the repo root and fill in the Supabase URL and keys. Never commit `.env`.
 2. `npm run dev:api` and `npm run dev:web`, then open http://localhost:5173.

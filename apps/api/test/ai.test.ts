@@ -90,6 +90,18 @@ describe('providers', () => {
     await expect(chatOllama({ baseUrl: 'https://127.0.0.1', model: 'm', system: 's', user: 'u' }, f.deps)).rejects.toThrow();
     expect(f.calls).toHaveLength(0);
   });
+  it('Ollama never follows a redirect (repo audit N3)', async () => {
+    const calls: Call[] = [];
+    const fetchFn = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return new Response(null, { status: 302, headers: { Location: 'http://10.0.0.5:11434/api/chat' } });
+    }) as typeof fetch;
+    await expect(chatOllama({ baseUrl: 'https://ai.example.com', model: 'm', system: 's', user: 'u' }, { fetch: fetchFn })).rejects.toThrow(
+      /redirects to http:\/\/10\.0\.0\.5/,
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.init.redirect).toBe('manual');
+  });
   it('speech to text: OpenAI and ElevenLabs read the text', async () => {
     const audio = { bytes: new Uint8Array([1, 2, 3]).buffer, name: 'a.webm', type: 'audio/webm' };
     const a = fake({ text: ' مرحبا ' });

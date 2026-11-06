@@ -2,20 +2,18 @@ name: SQL tests (local Supabase)
 
 # Runs every migration and every SQL test on a throwaway database started inside the runner (Supabase local stack in Docker).
 # No secrets and no production data are involved; scripts/ci-sql-tests.sh refuses any database that is not localhost.
-# This is a separate workflow: the deploy job in ci-deploy.yml does not depend on it.
+# This is a separate workflow: the deploy job in ci-deploy.yml does not depend on it, so an infrastructure outage here never blocks an
+# API fix. It is meant to be a REQUIRED CHECK on pull requests (branch protection), because migrations reach live by hand, not by deploy.
 #
-# False results (6 Nov 2026): the job used to be continue-on-error, so a failing SQL test showed as a pass, while an infrastructure
-# hiccup (Docker registry "Rate exceeded", a port already in use) also showed as a pass with nothing tested. Now starting the stack is
-# retried; if it still cannot start, the job says so as a warning (the tests did not run, which is not a test failure); and a failing
-# SQL test fails the job.
+# False results (6 Nov 2026): the job used to be continue-on-error, so a failing SQL test showed as a pass. Then an infrastructure
+# hiccup (Docker registry "Rate exceeded", a port already in use) still showed as a pass with nothing tested (repo audit N12).
+# Now: it runs on every pull request so it can be required; when nothing under sql/ changed it passes at once and says so; when SQL
+# changed, the stack start is retried, and if it still cannot start the job FAILS with "tests did not run, re-run the job", so green
+# only ever means "tests ran and passed".
 
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'sql/**'
-      - 'scripts/ci-sql-tests.sh'
-      - '.github/workflows/sql-tests.yml'
   push:
     branches: [main]
     paths:
@@ -39,18 +37,38 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Pull requests: run only when SQL (or this test setup) changed. Pushes to main and manual runs always run.
+      - name: Did SQL change?
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then echo "sql=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "origin/$BASE_REF...HEAD" | grep -qE '^(sql/|scripts/ci-sql-tests\.sh$|\.github/workflows/sql-tests\.yml$)'; then
+            echo "sql=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sql=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No SQL changes in this pull request; SQL tests not needed."
+          fi
 
       - name: Set up the Supabase CLI
+        if: steps.changes.outputs.sql == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
       - name: Make sure psql is available
+        if: steps.changes.outputs.sql == 'true'
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
 
       # Up to three tries, cleaning up between them: image pulls are rate limited and a half-started stack can hold ports.
       - name: Start a local Supabase stack
         id: stack
+        if: steps.changes.outputs.sql == 'true'
         continue-on-error: true
         run: |
           for attempt in 1 2 3; do
@@ -61,14 +79,16 @@ jobs:
           done
           exit 1
 
-      - name: Report that the tests could not run
-        if: steps.stack.outcome != 'success'
-        run: echo "::warning::The local database could not start after 3 tries (infrastructure, not our code). SQL tests did NOT run on this commit; re-run the job."
+      - name: Fail because the tests could not run
+        if: steps.changes.outputs.sql == 'true' && steps.stack.outcome != 'success'
+        run: |
+          echo "::error::The local database could not start after 3 tries (infrastructure, not our code). SQL tests did NOT run on this commit; re-run the job."
+          exit 1
 
       - name: Apply migrations and run every SQL test
-        if: steps.stack.outcome == 'success'
+        if: steps.changes.outputs.sql == 'true' && steps.stack.outcome == 'success'
         run: bash scripts/ci-sql-tests.sh
 
       - name: Stop the local stack
-        if: always()
+        if: always() && steps.changes.outputs.sql == 'true'
         run: supabase stop --no-backup

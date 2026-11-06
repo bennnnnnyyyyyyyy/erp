@@ -15,7 +15,7 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 
 - **Multi-agent collaboration**: humans and AI agents (Claude, Codex, Antigravity, Cursor) co-develop this repo. Follow the folder authorities in [`documentation/README.md`](documentation/README.md) to prevent context drift.
 - Keep plans, research, operational notes, architecture and worklogs under `documentation/` (`architecture/`, `plans/`, `planning/`, `research/`, `operations/`, `reference/`, `reviews/`).
-- **Competitor research** (studying an existing system to learn what it does) goes in `documentation/research/<system-slug>/`, copied from `documentation/research/_TEMPLATE/`. Record what the system does, never copy its code, assets, branding or copy text. See [`documentation/research/README.md`](documentation/research/README.md).
+- **Competitor research** (studying an existing system to learn what it does) goes in `documentation/research/<system-slug>/`, copied from `documentation/research/_TEMPLATE/`. Record what the system does, never copy its code, assets, branding or copy text. See [`documentation/research/README.md`](documentation/research/README.md). Our written teardowns are committed; screenshots, exports and imported files under `research/` are git-ignored (licensing) and stay local.
 - A module is not built until it has an approved plan in `documentation/plans/` (start from [`MODULE_PLAN_TEMPLATE.md`](documentation/plans/MODULE_PLAN_TEMPLATE.md)) and an entry in [`checklist.md`](documentation/plans/checklist.md).
 - Significant fixes, schema changes, migrations and architectural work must add a dated section to [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md) with **Objective**, **Actions Completed**, **Database / System Result**, and **Safety Status**.
 - Architectural decisions that are hard to reverse get an ADR in `documentation/architecture/decisions/`.
@@ -52,7 +52,7 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 - Do not give estimates of your own accord. When asked, check how fast things were actually coded in this project and estimate based upon that.
 - Never run `DROP`, `TRUNCATE`, broad `DELETE`, bucket destruction or production mutations without explicit user consent and a verified target.
 - Preserve append-only audit behavior. Prefer reviewed SQL migrations and local verification before any production schema change. Migrations are numbered, rerun-safe, and end with read-only verification queries.
-- Do not use automated browser testing. Give the user the URL and ask them to test manually.
+- Do not drive a browser against the live app or a person's session without asking first: give the user the URL and ask them to test manually. The headless CI smoke test of the sample build (`apps/web/e2e`, run by `ci-deploy.yml`) is exempt and must stay.
 - Keep secrets out of source, logs, plans and worklogs. Do not modify `.env`, `.dev.vars`, deployed secrets or production data unless explicitly asked.
 - Never author a commit. Finish the work, then the user will handle the commit and pushing to main.
 

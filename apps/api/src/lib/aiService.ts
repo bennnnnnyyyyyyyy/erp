@@ -22,9 +22,13 @@ import { HttpError } from './errors';
 // anything: the answer is text for a person to read.
 //
 // Order of choice: chat uses the company's own Ollama if it is on, else OpenAI; speech to text uses ElevenLabs if on, else OpenAI.
-// OpenAI and ElevenLabs are never used without the owner's consent (the database state already hides them if it was withdrawn).
+// No provider, Ollama included, is used without the owner's acceptance of the current AI notice (sql/061: the database state hides
+// them otherwise; Ollama sends data to an internet host the company typed, so it is an outside provider too).
 // A company's own key is not capped by us. Our key is capped: USD 100 a month across companies (AI_MONTHLY_CAP_USD) and a share for
 // each company (AI_COMPANY_CAP_USD, default 25) so one company cannot use it all. Cost figures are estimates, rounded up.
+// The cap is SOFT (repo audit N11): spend is checked before a call and recorded after it, so requests running at the same moment can
+// each pass the check; the overrun is bounded by one request each (800 output tokens or 5 MB of audio). The hard stop is the monthly
+// spending limit set on our OpenAI and ElevenLabs accounts.
 
 export type AiCaller = { orgId: string; userId: string };
 export type AiAnswer = { text: string; provider: 'openai' | 'ollama' | 'elevenlabs' | 'simulated'; simulated: boolean; ownKey: boolean };
@@ -59,7 +63,7 @@ async function record(
     ok: boolean;
   },
 ) {
-  const { error } = await adminDb(env).rpc('ai__record_usage', {
+  const args = {
     p_org: who.orgId,
     p_user: who.userId,
     p_provider: p.provider,
@@ -71,8 +75,12 @@ async function record(
     p_cost_micro: p.cost,
     p_own_key: p.ownKey,
     p_ok: p.ok,
-  });
-  if (error) console.error('ai usage not recorded', error.message);
+  };
+  // An unrecorded call is spend the cap never sees (repo audit 2026-11-06, N11), so try once more before giving up. A retry can only
+  // double-count (the log is append-only), which errs on the safe side of the cap.
+  let { error } = await adminDb(env).rpc('ai__record_usage', args);
+  if (error) ({ error } = await adminDb(env).rpc('ai__record_usage', args));
+  if (error) console.error('AI USAGE NOT RECORDED (cap will under-count)', p.provider, p.cost, error.message);
 }
 
 /** Refuse a call on our key once the shared or the company's monthly allowance is used. */

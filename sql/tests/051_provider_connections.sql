@@ -2,8 +2,9 @@
 -- Provider connections and AI rules (sql/056). Always rolls back. Needs sql/001-056.
 -- Covers: fields saved per provider (secret ones to Vault, plain ones to settings), unknown providers and fields refused, a field
 -- replaced or removed on its own, secrets never readable by users nor in the audit log, live refused until required fields exist,
--- OpenAI and ElevenLabs refused until the owner accepts the AI notice, only the owner gives or withdraws consent, withdrawing switches
--- them off, usage logged and summed per month for the caps, members and other companies see nothing, no anonymous use.
+-- OpenAI, ElevenLabs and (since sql/061) Ollama refused until the owner accepts the AI notice, only the owner gives or withdraws
+-- consent, withdrawing switches them off, usage logged and summed per month for the caps, members and other companies see nothing, no
+-- anonymous use. Needs sql/001-061 since 061 changed the Ollama rule.
 
 do $$
 declare
@@ -56,15 +57,18 @@ begin
   -- ---- AI1: consent
   ok := false; begin perform public.core_save_integration('openai', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
   if not ok then raise exception 'FAIL AI1a: OpenAI switched on without consent'; end if;
-  perform public.core_save_integration('ollama', true, 'simulated', null);   -- local AI needs no consent
+  -- sql/061: Ollama needs the notice too (it is called over the internet).
+  ok := false; begin perform public.core_save_integration('ollama', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
+  if not ok then raise exception 'FAIL AI1e: Ollama switched on without consent'; end if;
   ok := false; begin perform public.core_set_ai_consent(true); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL AI1b: an admin gave the AI consent'; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   perform public.core_set_ai_consent(true);
   perform public.core_save_integration('openai', true, 'simulated', null);
+  perform public.core_save_integration('ollama', true, 'simulated', null);
   perform public.core_set_ai_consent(false);
   if (select enabled from public.core_integrations where org_id = o and kind = 'openai') then raise exception 'FAIL AI1c: OpenAI still on after withdrawal'; end if;
-  if not (select enabled from public.core_integrations where org_id = o and kind = 'ollama') then raise exception 'FAIL AI1d: withdrawal switched Ollama off'; end if;
+  if (select enabled from public.core_integrations where org_id = o and kind = 'ollama') then raise exception 'FAIL AI1d: Ollama still on after withdrawal'; end if;
 
   -- ---- AI2: usage and caps
   reset role;

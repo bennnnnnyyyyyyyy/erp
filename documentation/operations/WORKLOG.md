@@ -8,41 +8,43 @@ gets an entry with these four headings:
 - **Database / System Result.** What happened in Supabase / Cloudflare / hosting, or "None".
 - **Safety Status.** Tests run, what was not verified, and manual steps still needed.
 
-## 2026-11-06 (night) — Repository audit re-checked; new findings and a reverse review of the fixes
-
-**Objective.** Ben asked to check the findings in `REPO_AUDIT_REPORT.md`, look for more, and then review the proposed fixes critically.
-
-**Actions Completed.** Appended an addendum to `REPO_AUDIT_REPORT.md`: status of findings 1–18 (13 still hold, 2 wider than reported, 2 superseded because 056–060 are applied, 1 partly fixed) and new findings N1–N9. Wrote `documentation/reviews/2026-11-06-repo-audit-fixes-reverse-review.md`, which argues against each proposed fix and gives a revised order.
-
-**Database / System Result.** None. Read-only checks only (grep, git, a Markdown link scan, `gh repo view`). The GitHub repository `bennnnnnyyyyyyyy/erp` is **public**, and it tracks personal emails (`email updates for grant.zip`) and working files at the root (N6).
-
-**Safety Status.** No code, migration or deployment changed; typecheck and tests were not run (documentation only). Open decisions for Ben: whether the repository stays public, a history rewrite, the product positioning sentence, migration 061, and branch protection for SQL tests. This entry is placed above the misplaced 2026-11-05 entry, which still needs moving (N2). No commit made by me.
-
-## 2026-11-05 (review) — Accounting phase 1 design review: changes incorporated, pending pilot chart confirmation
-
-**Objective.** Review the unbuilt accounting phase-1 plan and ADR before acceptance, concentrating
-on irreversible posting, correction, migration, currency and permission decisions.
-
-**Actions Completed.** Updated `ACCOUNTING_PLAN.md` and the ADR draft to: permit only
-non-financial drafts without entries; require defined reversing events for every postable source;
-make uncosted receipts require an explicit value; send internal use to reason-based expense
-accounts; use clearing accounts rather than treating cards, cheques and `other` as bank cash; and
-record O3–O6. The ADR now defaults to history replay but permits an audited, accountant-approved
-opening-balance cutover for incomplete legacy history, with a no-double-count guard. It also
-requires per-currency reporting and refuses cross-currency settlement until conversion accounting
-exists. The ledger tables are explicitly exempt from soft deletion, because they are immutable
-evidence. The accountant handoff now requests an anonymised Miracle chart export and the still
-unconfirmed codes and placements.
-
-**Database / System Result.** None. Documentation only; no migration, application, production data
-or deployment changed.
-
-**Safety Status.** The plan remains a draft until the pilot accountant confirms the open chart
-questions. The ADR has not moved to `documentation/architecture/decisions/` and must not be treated
-as accepted yet. Manual browser review of PR #1 remains a human task under the repository rule.
-
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
+
+## 2026-11-06 (night) — Repo audit fixes: webhook body caps, outbox retry, AI notice v2 (`sql/061` written, NOT applied), CI and docs
+
+**Objective.** Ben asked to check `REPO_AUDIT_REPORT.md`, find more, review the fixes critically, then "do all fixes needed" without
+touching the UI work another session is doing. The audit, its addendum (N1–N12) and the reverse review are now in
+`documentation/reviews/2026-11-06-repo-audit.md` and `documentation/reviews/2026-11-06-repo-audit-fixes-reverse-review.md`; a second
+reviewer's reply (`REPLY_TO_CLAUDE_CHAT.md`) was checked point by point and accepted.
+
+**Actions Completed.** On branch `fix/repo-audit` (worktree `.claude/worktrees/repo-audit`, from `integrations-all` at `ad4fde2`):
+- API: body caps before reading (`middleware/bodyLimit.ts`; 100 KB webhooks, 1 MB Shopify, 5 MB audio); outbox records each result with
+  retries and an ambiguous-`INVALID_STATE` check, and stops cleanly instead of throwing (`jobs/outbox.ts`); Ollama never follows
+  redirects; AI usage write retried; soft-cap comment. New tests `body_limit.test.ts`, `outbox_record.test.ts`, one in `ai.test.ts`.
+- `sql/061_ai_notice_version.sql` (new): notice version `v2` in the database, consent replaced and audited, Ollama under the notice,
+  withdrawal switches Ollama off, https-only Ollama address when saved or changed. New `sql/tests/056_ai_notice_version.sql`;
+  tests 051 and 055 updated for Ollama needing the notice. `AI_NOTICE_VERSION` = `v2`; settings screen and Arabic strings updated
+  (5 changed, 1 new: machine drafts for Ben's review).
+- CI: `sql-tests.yml` runs on every pull request and fails when the database cannot start; `ci-deploy.yml` checks doc links
+  (`scripts/check-doc-links.mjs`) and no longer builds in an autofill account.
+- Docs: 7 broken links fixed (2 in the ADR left to Ben, listed in `scripts/check-doc-links.known.txt`); README, `sql/README.md`,
+  checklist (overview rewritten; 28 Oct task list moved to `documentation/archive/checklist-2026-10-task-list.md`), ARCHITECTURE.md
+  written, plans index rebuilt, PRODUCT_BRIEF facts, agents.md (browser rule, research), `.gitignore` (research media only), this
+  worklog (11-05 review entry moved into date order, superseded notes on six stale entries), integrations report (Ollama claim,
+  merge step).
+
+**Database / System Result.** None. `sql/061` is written, not dry-run (no local database on this machine) and not applied. Nothing
+deployed. Read-only checks only: `gh repo view` (public, 0 forks; Ben accepted this), `gh run list` (five green SQL-test runs on 6 Nov).
+
+**Safety Status.** `npm run lint`, `npm run typecheck` and `npm test` pass in the worktree against its own `packages/shared` (shared 30
++ 1 skipped, API 285 + 7 skipped, web 67). Not run: SQL tests (CI runs them on the pull request), the browser smoke test (CI), any
+browser check. **Before merging:** set the `DEMO_AUTOFILL_EMAILS` repository variable; let the SQL workflow pass. **After merging:**
+apply `sql/061` right after the deploy: until then the screen asks for notice `v2` and accepting changes nothing (the old database keeps
+the `v1` row); with `061` but the old Worker, accepting would fail. Once both are live, every company's owner must accept the AI notice
+again before AI works. Left for Ben: the two ADR-0004 links, the
+positioning sentence (agents.md, PRODUCT_BRIEF), branch protection, OpenAI and ElevenLabs spending limits. Not done to avoid clashing
+with the other session's UI work: ConnectPhone header, screen preload. No commit made by me.
 
 ## 2026-11-06 (night) — Applied `sql/059` (Shopify orders) and `sql/060` (AI state) to live (ggoerp) by Ben via CLI
 
@@ -65,6 +67,8 @@ run or deployed.
 **Safety Status.** Bosta stays off and simulated for every company until switched on; no keys exist. 059 and 060 are still not applied. No commit made by me.
 
 ## 2026-11-06 (night) — Status check: integrations A to E (pause requested by Ben)
+
+> **Superseded (marked 6 Nov night, repo audit N2):** 058, 059 and 060 were applied later that night, and stage E was committed and merged to `main`; see the entries above. Kept as it was written.
 
 **Objective.** Ben paused the work to check everything done so far and bring this log up to date.
 
@@ -102,6 +106,8 @@ run or deployed.
 
 ## 2026-11-06 (night) — AI assistant and voice transcription built; `sql/060` NOT applied
 
+> **Superseded (marked 6 Nov night, repo audit N2):** `sql/060` was applied later that night; see the entries above. Kept as it was written.
+
 **Objective.** Ben's AI rules in working code: owner consent before data goes to OpenAI or ElevenLabs, USD 100 a month on our keys, Ollama (the company's own AI) as the alternative; built in simulated mode until keys arrive.
 
 **Actions Completed.**
@@ -119,6 +125,8 @@ run or deployed.
 
 ## 2026-11-06 (night) — Shopify orders in built; `sql/058` and `sql/059` NOT applied
 
+> **Superseded (marked 6 Nov night, repo audit N2):** `sql/058` and `sql/059` were applied later that night; see the entries above. Kept as it was written.
+
 **Objective.** Shopify orders arrive as open sales orders (matched by SKU), built in simulated mode until Shopify keys arrive. Ben also asked for any SQL to be applied; the apply of 058 was blocked by the safety classifier and Ben interrupted, so nothing was applied.
 
 **Actions Completed.**
@@ -134,6 +142,8 @@ run or deployed.
 **Safety Status.** `npm run typecheck`, `npx biome ci`, `npm test` (shared 31, API 247 + 7 skipped, web 67) and the smoke test pass. No keys exist. Apply 058, then 059, only through Ben (a command Ben runs himself, or an explicit "apply"). No commit made.
 
 ## 2026-11-06 (night) — Bosta shipments built; `sql/058` NOT applied
+
+> **Superseded (marked 6 Nov night, repo audit N2):** `sql/058` was applied later that night; see the entries above. Kept as it was written.
 
 **Objective.** Create a Bosta delivery from a sales order and follow its status, built in simulated mode until Bosta keys arrive.
 
@@ -161,6 +171,8 @@ run or deployed.
 
 ## 2026-11-06 (night) — Payment links (Paymob, Fawry) built; `sql/057` NOT applied
 
+> **Superseded (marked 6 Nov night, repo audit N2):** `sql/057` was applied later that night; see the entries above. Kept as it was written.
+
 **Objective.** "Pay now" on sales invoices through Paymob and Fawry, from Ben's provider choices, built in simulated mode until keys arrive.
 
 **Actions Completed.**
@@ -176,6 +188,8 @@ run or deployed.
 **Safety Status.** `npm run typecheck`, `npx biome ci`, `npm test` (shared 31, API 235 + 7 skipped, web 67) pass. No keys exist anywhere; a simulated link never contacts a provider. A simulated test payment records a real payment row noted "SIMULATED"; only an owner or admin can press it (the same people who can record a card payment by hand). Apply 056 then 057 only on Ben's explicit yes. No commit made.
 
 ## 2026-11-06 (night) — Integrations all-in-simulated: provider connections built (`sql/056` NOT applied); save point
+
+> **Superseded (marked 6 Nov night, repo audit N2):** `sql/056` was applied later that night; see the entries above. Kept as it was written.
 
 **Objective.** Ben's instruction: AI budget USD 100 a month for now, with customer consent, Ollama offered as the company's own local alternative, and "setup all apis and integrations pending my keys". Save point, checked against `ERP_integrations_table.pdf` (the 16-row status table) so the work stays on that list.
 
@@ -701,6 +715,29 @@ owner switches accounting on.
 - Applying 046 needs Ben's yes. With no company switched on, it posts nothing.
 - The API does not pass a cost to the receive functions yet, so receipts would be refused only for a company with accounting on. That cannot happen until 047 and the screens exist.
 - Next: 047 (cost old receipts, switch-on, backfill, timed on the demo company in a rolled-back run).
+
+## 2026-11-05 (review) — Accounting phase 1 design review: changes incorporated, pending pilot chart confirmation
+
+**Objective.** Review the unbuilt accounting phase-1 plan and ADR before acceptance, concentrating
+on irreversible posting, correction, migration, currency and permission decisions.
+
+**Actions Completed.** Updated `ACCOUNTING_PLAN.md` and the ADR draft to: permit only
+non-financial drafts without entries; require defined reversing events for every postable source;
+make uncosted receipts require an explicit value; send internal use to reason-based expense
+accounts; use clearing accounts rather than treating cards, cheques and `other` as bank cash; and
+record O3–O6. The ADR now defaults to history replay but permits an audited, accountant-approved
+opening-balance cutover for incomplete legacy history, with a no-double-count guard. It also
+requires per-currency reporting and refuses cross-currency settlement until conversion accounting
+exists. The ledger tables are explicitly exempt from soft deletion, because they are immutable
+evidence. The accountant handoff now requests an anonymised Miracle chart export and the still
+unconfirmed codes and placements.
+
+**Database / System Result.** None. Documentation only; no migration, application, production data
+or deployment changed.
+
+**Safety Status.** The plan remains a draft until the pilot accountant confirms the open chart
+questions. The ADR has not moved to `documentation/architecture/decisions/` and must not be treated
+as accepted yet. Manual browser review of PR #1 remains a human task under the repository rule.
 
 ## 2026-11-05 (late night, later) — `sql/045_accounting_core.sql` applied to live (Ben's yes)
 

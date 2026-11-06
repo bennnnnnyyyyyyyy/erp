@@ -5,6 +5,7 @@ import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
+import { KB, MB, limitBody } from '../../middleware/bodyLimit';
 import { requirePermission } from '../../middleware/tenant';
 
 // Assistant and voice (sql/056, sql/060; lib/aiService.ts). The assistant only answers: it reads stock with the CALLER'S OWN sign-in
@@ -76,8 +77,9 @@ aiRoutes.post('/test', requirePermission('core.integrations.manage'), async (c) 
   return ok(c, { answer: a.text, provider: a.provider, simulated: a.simulated });
 });
 
-const MAX_AUDIO = 5 * 1024 * 1024;
-aiRoutes.post('/transcribe', requirePermission('core.org.read'), async (c) => {
+const MAX_AUDIO = 5 * MB;
+// The body cap runs before formData() reads the upload (repo audit 2026-11-06, finding 8); a little over MAX_AUDIO for the multipart wrapping.
+aiRoutes.post('/transcribe', requirePermission('core.org.read'), limitBody(MAX_AUDIO + 64 * KB), async (c) => {
   const form = await c.req.formData().catch(() => null);
   const file = form?.get('audio');
   if (!form || !(file instanceof File)) invalid('Send the recording as the form field "audio"');

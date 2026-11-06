@@ -7,7 +7,7 @@ nothing is applied without Ben's yes.
 **Owner:** Ben · **Reviewers:** Ben; the pilot accountant for the chart (§3.1) and the posting
 rules (§7)
 **Decisions it rests on:**
-- [ADR-0004 draft](../planning/DRAFT_ADR-0004-general-ledger.md);
+- [ADR-0004 draft](../architecture/decisions/DRAFT_ADR-0004-general-ledger.md);
 - roadmap [Q3 and Q5](ROADMAP_ACCOUNTING_SUITE.md#5-decisions-only-ben-can-make).
 
 **Research:**

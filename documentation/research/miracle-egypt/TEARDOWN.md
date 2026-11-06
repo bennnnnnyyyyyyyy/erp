@@ -8,7 +8,7 @@
 **Studied by:** Ben, with Joe and Amir; written up by Claude · **Dates:** 2026-11-05 to 2026-11-05
 **Access used:** a meeting with an accountant at a warehouse who uses Miracle every day. No account of ours, no screenshots.
 **Status:** In progress (one meeting only)
-**Feeds plan(s):** [`ROADMAP_ACCOUNTING_SUITE.md`](../plans/ROADMAP_ACCOUNTING_SUITE.md)
+**Feeds plan(s):** [`ROADMAP_ACCOUNTING_SUITE.md`](../../plans/ROADMAP_ACCOUNTING_SUITE.md)
 
 > Record what the system does, in our own words. No copied code, assets or copy text.
 > **Evidence labels used here:** *(told)* = the accountant said so in the meeting; *(inferred)* = our

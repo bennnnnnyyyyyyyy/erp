@@ -163,7 +163,8 @@ export const PROVIDERS: readonly ProviderDef[] = [
     kind: 'ollama',
     group: 'ai',
     name: 'Ollama (your own AI)',
-    summary: 'Run the assistant on your own computer or server: nothing leaves your company and nothing is charged.',
+    summary:
+      'Run the assistant on your own server, reached by our servers over the internet at the https address you enter. Nothing is charged.',
     fields: [
       {
         key: 'base_url',
@@ -203,5 +204,9 @@ export type AiStatus = {
   ownProviderReady: { openai: boolean; elevenlabs: boolean };
 };
 
-/** The notice the owner accepts before company data may go to OpenAI or ElevenLabs (versioned; changing it asks again). */
-export const AI_NOTICE_VERSION = 'v1';
+/**
+ * The notice the owner accepts before company data may go to any AI provider (versioned; changing it asks again).
+ * v2 (sql/061, 6 Nov 2026): the notice covers Ollama, which reaches the company's server over the internet.
+ * Must equal core__ai_notice_version() in the database: the database refuses any other version, and only consent to its version counts.
+ */
+export const AI_NOTICE_VERSION = 'v2';

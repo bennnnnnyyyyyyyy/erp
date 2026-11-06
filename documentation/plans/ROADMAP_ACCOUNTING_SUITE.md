@@ -80,7 +80,7 @@ entries**.
 ### Phase 1: accounting foundation (the general ledger)
 
 > **Plan:** [`ACCOUNTING_PLAN.md`](ACCOUNTING_PLAN.md) and the
-> [ADR-0004 draft](../planning/DRAFT_ADR-0004-general-ledger.md), written 5 Nov on branch
+> [ADR-0004 draft](../architecture/decisions/DRAFT_ADR-0004-general-ledger.md), written 5 Nov on branch
 > `accounting-phase1`, waiting for Ben's approval.
 
 *Notes: "basically the full accounting suite", "software needs an accountant who knows what he's
