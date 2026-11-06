@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (night) — SQL tests in CI could not start since 20:26; fixed in the workflow
+
+**Objective.** The SQL workflow on PR #13 and on `main` failed with "the local database could not start".
+
+**Actions Completed.** Cause: `supabase start` applies `supabase/migrations/`, which since commits `11c34fe` (20:26) and `a32463c`
+(20:32) holds copies of 056 and 057 written by `supabase db push`. On the empty CI database they run before 001-055 exist
+(`relation "public.core_integrations" does not exist`), so every SQL-test run after 19:13 failed to start and tested nothing; the
+repo audit change (N12) made that visible instead of green. `.github/workflows/sql-tests.yml` now removes `supabase/migrations/`
+inside the throwaway runner before starting; `scripts/ci-sql-tests.sh` applies `sql/` in full as before. Branch `fix/sql-ci-start`.
+
+**Database / System Result.** None. The files in the repository and live's migration history are unchanged.
+
+**Safety Status.** The fix is proven only when the SQL job on its pull request is green; that run is also the first real test of
+`sql/061` and test 056. Do not apply `sql/061` to live before it.
+
 ## 2026-11-06 (night) — Repo audit fixes: webhook body caps, outbox retry, AI notice v2 (`sql/061` written, NOT applied), CI and docs
 
 **Objective.** Ben asked to check `REPO_AUDIT_REPORT.md`, find more, review the fixes critically, then "do all fixes needed" without

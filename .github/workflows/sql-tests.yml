@@ -65,6 +65,14 @@ jobs:
         if: steps.changes.outputs.sql == 'true'
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
 
+      # `supabase start` applies whatever is in supabase/migrations/ to the empty database. That folder holds copies of 056 and 057 made
+      # by `supabase db push` on 6 Nov (live's migration history), which fail without 001-055 first, so the stack never started and no
+      # SQL test ran after 19:13 that day. The runner is thrown away, so remove them here only: scripts/ci-sql-tests.sh applies sql/
+      # in full, and the files in the repository and live's history stay as they are.
+      - name: Start from an empty database (migrations come from sql/)
+        if: steps.changes.outputs.sql == 'true'
+        run: rm -rf supabase/migrations
+
       # Up to three tries, cleaning up between them: image pulls are rate limited and a half-started stack can hold ports.
       - name: Start a local Supabase stack
         id: stack
