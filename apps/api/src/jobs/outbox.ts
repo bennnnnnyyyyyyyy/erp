@@ -16,7 +16,38 @@ export type OutboxPassResult = {
   sent: number;
   failed: number;
   auditCheck: 'skipped' | 'clean' | 'BROKEN' | 'error';
+  /** Set when a result could not be recorded: sending stopped there, and the rest of the batch waits for the next pass. */
+  stoppedOnError: string | null;
 };
+
+type RpcResult = { error: { message: string } | null };
+export type CompletionDeps = {
+  complete: () => PromiseLike<RpcResult>;
+  /** The message's current status, or null when it cannot be read. */
+  status: () => PromiseLike<string | null>;
+  wait: (ms: number) => Promise<void>;
+};
+
+/**
+ * Records one delivery result, retrying a failed write (repo audit 2026-11-06, N1). A failed call is ambiguous: the write may have
+ * committed and only the answer was lost. msg_complete then refuses a retry with INVALID_STATE (the row is no longer `sending`), so
+ * INVALID_STATE is checked against the row: anything but `sending` means the result is already recorded. Returns the error text
+ * when it still cannot be recorded, so the caller stops sending instead of delivering more messages it cannot record.
+ */
+export async function recordDelivery(deps: CompletionDeps, attempts = 3): Promise<string | null> {
+  let last = '';
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await deps.wait(250 * i);
+    const r = await deps.complete();
+    if (!r.error) return null;
+    last = r.error.message;
+    if (/INVALID_STATE/.test(last)) {
+      const status = await deps.status();
+      if (status !== null && status !== 'sending') return null;
+    }
+  }
+  return last.slice(0, 300) || 'could not record the delivery result';
+}
 
 export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit?: number } = {}): Promise<OutboxPassResult> {
   const client = adminDb(env);
@@ -54,6 +85,7 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
 
   let sent = 0;
   let failed = 0;
+  let stoppedOnError: string | null = null;
   for (const message of messages) {
     let error: string | null = null;
     let via: string | null = null;
@@ -62,11 +94,23 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
     } catch (e) {
       error = (e instanceof Error ? e.message : String(e)).slice(0, 300);
     }
-    // sql/053: records the result, how it was delivered (simulated, resend, slack-webhook …) and the integration's last outcome.
-    const done = await client.rpc('msg_complete_delivery', { p_id: message.id, p_ok: error === null, p_error: error, p_via: via });
-    if (done.error) throw done.error;
     if (error === null) sent++;
     else failed++;
+    // sql/053: records the result, how it was delivered (simulated, resend, slack-webhook …) and the integration's last outcome.
+    // If it cannot be recorded, stop: sending more while the database is unreachable only multiplies the duplicates that the
+    // five-minute recovery in msg_claim_due will resend. Delivery is at-least-once; the unsent rest of the batch is retried next pass.
+    stoppedOnError = await recordDelivery({
+      complete: () => client.rpc('msg_complete_delivery', { p_id: message.id, p_ok: error === null, p_error: error, p_via: via }),
+      status: async () => {
+        const row = await client.from('msg_outbox').select('status').eq('id', message.id).maybeSingle();
+        return row.error || !row.data ? null : (row.data as { status: string }).status;
+      },
+      wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    });
+    if (stoppedOnError) {
+      console.error('outbox: delivery result not recorded, stopping this pass', message.id, stoppedOnError);
+      break;
+    }
   }
 
   return {
@@ -78,5 +122,6 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
     sent,
     failed,
     auditCheck,
+    stoppedOnError,
   };
 }

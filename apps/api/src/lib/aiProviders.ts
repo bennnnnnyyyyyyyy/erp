@@ -97,7 +97,13 @@ export async function chatOllama(
         { role: 'user', content: p.user },
       ],
     }),
+    // Never follow a redirect: it would bypass assertSafeOllamaUrl (repo audit 2026-11-06, N3). Ask for the final address instead.
+    redirect: 'manual',
   });
+  if (res.status >= 300 && res.status < 400) {
+    const to = res.headers.get('Location');
+    throw new Error(`The Ollama address redirects${to ? ` to ${to.slice(0, 200)}` : ''}. Save the final https address instead.`);
+  }
   const j = await json(res);
   const msg = isObj(j.message) ? j.message : {};
   const text = typeof msg.content === 'string' ? msg.content.trim() : '';

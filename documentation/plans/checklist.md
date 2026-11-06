@@ -1,17 +1,17 @@
 # Plans Execution Status & Checklist
 
-**Last updated:** 2026-11-02 (status overview reconciled with the worklog; the older "Detail" blocks and the "Task list by area" below were written on 28 to 30 Oct and parts are stale. **Where they disagree, the worklog wins.**)
-**Source of truth for what actually happened:** [`../operations/WORKLOG.md`](../operations/WORKLOG.md)
+**Last updated:** 2026-11-06 (night): status overview rewritten from the worklog (repo audit, finding 4). The 28 Oct "Task list by area" moved to [`../archive/checklist-2026-10-task-list.md`](../archive/checklist-2026-10-task-list.md); the "Detail" blocks below are dated and kept as history. **Where anything disagrees, the worklog wins.**
+**Source of truth for what actually happened:** [`../operations/WORKLOG.md`](../operations/WORKLOG.md). Migration status per file: [`sql/README.md`](../../sql/README.md).
 
 ## Status overview
 
 | Status | Plans |
 |---|---|
-| ✅ Built and deployed (https://erp-live.pages.dev, sample data; see the worklog for what each run verified) | Inventory ([INVENTORY_PLAN.md](INVENTORY_PLAN.md): requests with approval, adjustments, batches and expiry, forecast, reorder levels, **transfers between warehouses**), purchasing ([PURCHASING_PLAN.md](PURCHASING_PLAN.md), [SUPPLIER_INVOICES_PLAN.md](SUPPLIER_INVOICES_PLAN.md)), sales ([SALES_PLAN.md](SALES_PLAN.md), [CUSTOMER_INVOICES_PLAN.md](CUSTOMER_INVOICES_PLAN.md)), finance, owner home and alerts ([OWNER_INSIGHTS_PLAN.md](OWNER_INSIGHTS_PLAN.md)), messaging and tasks ([TASKS_AND_OUTBOX_PLAN.md](TASKS_AND_OUTBOX_PLAN.md)), sign-up and getting-started, per-person language choice, the Guide |
-| 🟡 In progress or built but not proven | WhatsApp and voice approvals (built in part; **never tested on a real phone**); Arabic on every screen (the switch exists, the translations do not) |
-| 📋 Approved / ready | none |
-| 📝 Draft / RFC | [ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md) (phase 1 of the [accounting roadmap](ROADMAP_ACCOUNTING_SUITE.md), with the ADR-0004 draft; written 5 Nov, awaits Ben's approval); [ETA_EINVOICING_PLAN.md](ETA_EINVOICING_PLAN.md) (slice A awaits Ben's approval); [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md), ADR-0001 to 0003 (check their status headers; still marked Proposed in the 28 Oct text below) |
-| 💡 Backlog | CSV import with a preview, returns and credit notes, categories and units, barcode scanning, PDF printing, SQL tests in CI (written 2 Nov as `.github/workflows/sql-tests.yml`, untested until it runs on GitHub) |
+| ✅ Built and on live (https://erp-live.pages.dev; `main` deploys on push; see the worklog for what each run verified) | Inventory ([INVENTORY_PLAN.md](INVENTORY_PLAN.md), [INVENTORY_TRANSFERS_PLAN.md](INVENTORY_TRANSFERS_PLAN.md)), purchasing ([PURCHASING_PLAN.md](PURCHASING_PLAN.md), [SUPPLIER_INVOICES_PLAN.md](SUPPLIER_INVOICES_PLAN.md)), sales ([SALES_PLAN.md](SALES_PLAN.md), [CUSTOMER_INVOICES_PLAN.md](CUSTOMER_INVOICES_PLAN.md)), finance, owner home and alerts ([OWNER_INSIGHTS_PLAN.md](OWNER_INSIGHTS_PLAN.md)), messaging and tasks ([TASKS_AND_OUTBOX_PLAN.md](TASKS_AND_OUTBOX_PLAN.md)), workflow gaps S1–S5a ([SUPERFIX_WORKFLOW_PLAN.md](SUPERFIX_WORKFLOW_PLAN.md), `sql/040`–`044`), accounting phase 1 ([ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md), `sql/045`–`049`, `055`; browser-checked on live 6 Nov), treasury, branches and statements ([TREASURY_PLAN.md](TREASURY_PLAN.md), `sql/050`–`052`), integrations stages A–E in simulated mode ([INTEGRATIONS_PLAN.md](INTEGRATIONS_PLAN.md), `sql/053`–`060`; no provider keys yet), sign-up and getting-started, per-person language choice, the Guide |
+| 🟡 Built but not proven | WhatsApp and voice approvals (**never tested on a real phone**); Arabic on every screen (machine drafts, **not yet reviewed by a native speaker**); every integration against a real provider (needs keys) |
+| 🛠 Written, not applied | `sql/061` (AI notice v2, Ollama under the notice; repo audit 2026-11-06), waiting for Ben |
+| 📝 Draft / RFC | [ETA_EINVOICING_PLAN.md](ETA_EINVOICING_PLAN.md) (slice A applied 3 Nov, screens and real signing not built); [ONBOARDING_WIZARD_PLAN.md](ONBOARDING_WIZARD_PLAN.md) (branch, not merged); [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md) phases 2–9; [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md), [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md); ADR-0001 to 0003 still Proposed; ADR-0004 draft in [`architecture/decisions/`](../architecture/decisions/) |
+| 💡 Backlog | Integrations stage F (bank statement import, CBE rates) and G (setup guide); CSV import with a preview, barcode scanning, PDF printing; cheques (waiting for the accountant) |
 
 ## Detail
 
@@ -27,7 +27,7 @@
   - **Remaining:** partial transfer receipts, filters and pagination on lists, CSV import, returns.
 
 - [ ] **[ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md): Accounting, phase 1 (general ledger)**
-  - **Done (2026-11-05):** plan and [ADR-0004 draft](../planning/DRAFT_ADR-0004-general-ledger.md) written on branch `accounting-phase1`; Egyptian chart research in [UNIFIED_CHART_OF_ACCOUNTS.md](../reference/egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md).
+  - **Done (2026-11-05):** plan and [ADR-0004 draft](../architecture/decisions/DRAFT_ADR-0004-general-ledger.md) written on branch `accounting-phase1`; Egyptian chart research in [UNIFIED_CHART_OF_ACCOUNTS.md](../reference/egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md).
   - **Done (2026-11-06):** `sql/045`-`049` applied to live (tests 040-044 pass on live); permission keys, API routes (`apps/api/src/modules/accounting/routes.ts`, test `apps/api/test/accounting.test.ts`) and screens (`apps/web/src/modules/accounting/`, Arabic included) built on branch `accounting-phase1`, not deployed.
   - **Waiting on:** Ben's browser check after deploy; the pilot accountant for the unconfirmed codes in groups 3 and 4 (plan O1); moving the ADR draft into `architecture/decisions/`.
   - **Remaining:** deploy the API and web; switch accounting on for the demo company (owner, from Accounting setup) and check the trial balance; an issue-reason picker on stock requests.
@@ -74,115 +74,8 @@ Template for further blocks; update them in the same change as the work:
   - **Done (2026-11-02):** "My language" in Settings > General (company default, English or Arabic); the company language is now only a default and never overrides a person's own choice. Typecheck and tests to be re-run by Ben's handoff; not browser-tested.
   - **Remaining:** translate the rest of the screens (UI audit finding 1) once the Arabic review owner is decided.
 
-## Task list by area
-
-`[x]` done and verified as stated, `[ ]` not done. Sources: [TECHNICAL_PLAN.md](TECHNICAL_PLAN.md) (phases in section 9) and [MANAGEMENT_PLAN.md](../planning/MANAGEMENT_PLAN.md).
-
-### A. Repository and documentation
-- [x] Docs structure, `agents.md`, worklog, checklist, plan and research templates, ADR format
-- [x] ADR-0001, 0002, 0003 written (all still Proposed)
-- [x] Worklog entries for the migration and the ADR-0003 rework
-- [ ] Accept or revise ADR-0001, 0002, 0003 and fill `{{DECIDERS}}`
-- [ ] Choose the product name and replace `{{PRODUCT_NAME}}`
-- [x] Root `README.md` (what it is, hypotheses, how to run) 2026-10-29
-- [x] `PRODUCT_BRIEF.md` (scope, modules, out of scope, first slice) 2026-10-29
-- [x] Moved `TECHNICAL_PLAN.md` to `documentation/plans/` and `MANAGEMENT_PLAN.md` to `documentation/planning/` 2026-10-29
-- [ ] `documentation/architecture/ARCHITECTURE.md` written once something runs
-- [ ] ADR-0004 channel ports and adapters, ADR-0005 e-invoicing route, ADR-0006 payment gateway
-- [ ] Decide GitHub organization (remote is a personal account)
-
-### B. Database (Supabase)
-- [x] `sql/001` tenancy core, `sql/002` user lookup (carried over)
-- [x] `sql/003` audit hash chain and core functions (written)
-- [ ] Choose project: reuse the existing one (it already has the four 001 tables) or a new staging project
-- [x] `sql/001`-`003` run by Ben in Supabase (reported)
-- [x] `sql/003` verified on a database (chain, append-only, privileges) 2026-10-29
-- [x] `sql/004` run and verified 2026-10-29 (extra privileges revoked; TRUNCATE refused on audit_log)
-- [x] Script written for the real-login check: `scripts/real-login-check.mjs` (syntax checked, not yet run against Supabase)
-- [ ] Run `scripts/real-login-check.mjs` with a real user (X-Org-Id through PostgREST, no direct writes, member refused) and record the result
-- [ ] Set `default_currency` default to EGP on an already-created `organizations` table
-- [x] SQL test script written: `sql/tests/001_core_isolation_and_audit.sql` (isolation, header check, roles, direct writes, admin functions, audit chain, append-only); run 2026-10-29: all passed
-- [x] `sql/tests/001_core_isolation_and_audit.sql` run in Supabase 2026-10-29: ALL TESTS PASSED
-- [ ] Scheduled `audit_verify` job and alert on a broken chain
-
-### C. API (Cloudflare Worker)
-- [x] Auth, tenant resolution, permission and module guards, standard responses
-- [x] Core routes: org, members, modules, audit, session
-- [x] User-scoped client, admin client, RPC wrapper, boundary test (ADR-0003)
-- [x] Org settings and module switching through database functions
-- [ ] Member invite/role/disable routes moved to database functions (still admin client plus separate audit call)
-- [ ] `.env` for the new repo (Supabase URL and keys); confirm `wrangler dev` runs against it
-- [ ] API tests that hit a real database (second-organization isolation)
-- [ ] Rate limiting on inbound webhooks and token checks (with messaging)
-
-### D. Web app: UI
-- [x] Shell, sign-in, org picker, password set/reset, Home, list view, modal
-- [x] Settings: General, Users, Apps, Audit log screens (carried over)
-- [x] Demo mode on sample data: `npm run dev:demo -w apps/web`, role switcher, working Users/Apps/General/Audit screens
-- [x] Demo of the first slice on sample data: stock, requests, approve/reject, issue (blocked without approval), ledger, history
-- [x] Demo of wave 2 on sample data: suppliers, purchase orders (receive adds stock), customers, sales orders (request stock links to the approval flow)
-- [ ] Manual review of Home, Settings, inventory, purchasing and sales demo in a browser; list fixes
-- [ ] Split demo code out of normal builds before any deploy
-- [x] Remove leftover CRM-era CSS from `styles.css`; restyle (palette, fonts, motion, logical properties)
-- [ ] Browser check of the restyle: contrast, spacing, dark mode, RTL flip, phone width
-- [ ] Home page: the "switch on" notice only checks for a business app tile, so it can stay up when a module is on but has no app yet
-- [ ] Arabic and English strings (no hard-coded text) and RTL layout for the shell and settings
-- [ ] Responsive check in a phone browser (web first, phone app later)
-- [ ] Inventory screens wired to the real API (see E, workstream C)
-- [ ] Audit log screen: entity history view, filters, chain status
-
-### E. Inventory module, wave 1 (slice 1 plan approved via orders.md)
-- [x] `INVENTORY_PLAN.md` (slice 1) written 2026-10-29
-- [x] Tables `inv_*` (`sql/006`, applied and verified 2026-10-29): warehouses, items, counters, requests, request lines, approvals, stock moves, stock balances. Approval policies are later.
-- [x] Functions: submit (reserve), decide, issue, cancel, create item and warehouse, receive stock; request state machine trigger
-- [x] Direct writes revoked; ledger and approvals append-only; an issue is refused without approval even for direct inserts
-- [ ] Permissions and module manifest entries (API side)
-- [ ] Workstream C: inventory API routes, web screens on the real API, test users and demo organization, Worker and web deploy (see update.md)
-- [ ] Screens: items, warehouses, new request, approvals inbox, request detail, stock on hand
-- [x] SQL tests `sql/tests/002_inventory_approval.sql` pass: state machine, self-approval, reservation, audit coverage, isolation, module switch
-- [ ] Still open: concurrency test, API tests, real-login script for inventory calls
-
-### F. Messaging layer (wave 1 interface, wave 2 WhatsApp)
-- [ ] Channel adapter interface and in-app adapter
-- [ ] `msg_*` tables: identities, outbox, events, decision tokens, templates
-- [ ] Transactional outbox and queue worker
-- [ ] WhatsApp adapter, identity verification, webhook signature check (only if interviews say yes)
-- [ ] Contract tests: in-app and fake WhatsApp give identical decisions and audit rows
-- [ ] Voice channel and Egyptian Arabic evaluation set (phase 3)
-
-### G. Demand validation (step 0)
-- [ ] Hands-on trials: Edara, Daftra, Odoo, Wafeq, Zoho, ERPNext, Business Central (six-point checklist each)
-- [ ] EGP quotes from Edara, Daftra, Zoho, NetSuite; confirm Odoo pricing from Egypt
-- [ ] 8-10 interviews with Egyptian SMEs that hold stock
-- [ ] Teardown notes in `documentation/research/<slug>/` (behaviour only, no copied code or text)
-- [ ] Re-rank vendors; update the plans if findings contradict them
-
-### H. Compliance, billing and business decisions
-- [ ] E-invoicing: day one, later, or via a provider (management)
-- [ ] WhatsApp provider quotes (Meta direct vs local provider)
-- [ ] Payment gateway quotes (Paymob assumed) and billing entity
-- [ ] Data protection review (Egypt, Saudi) and retention settings
-- [ ] Support model and hours for the pilot
-- [ ] Hosting region for first customers
-
-### I. Deployment and operations
-- [x] Demo deployed to Cloudflare Pages: https://erp-demo-bas.pages.dev (sample data, public, manual updates)
-- [ ] Restrict the demo to named people (Cloudflare Access) or confirm public is acceptable
-- [ ] Connect the GitHub repo to Cloudflare Pages for automatic demo deploys
-- [ ] Hosting for the real web app; first deploy of the API
-- [ ] Staging and production separation
-- [ ] CI running typecheck, tests and SQL tests
-- [ ] Backups and restore check
-- [ ] Status page and runbook
-
-### J. Later waves (not committed; gated by pilot evidence)
-- [ ] Parties (customers and suppliers), purchasing and receiving, sales orders and delivery notes
-- [ ] Invoicing, e-invoicing adapter, export to the customer's accounting tool
-- [ ] Billing in EGP with metering, price page from one source
-- [ ] Phone app, offline queue, tasks over messaging, AI intent extraction (flagged)
-- [ ] Lots, serials, expiry, costing methods, CSV import and onboarding
-
 ## Migrations
 
 See [`sql/README.md`](../../sql/README.md) for per-file status.
 - [ ] **[OWNER_INSIGHTS_PLAN.md](OWNER_INSIGHTS_PLAN.md): Owner home, finance, triggers, forecast, batches and expiry, cosmetics demo data** (draft, waiting for Ben's approval and answers to section 16)
+

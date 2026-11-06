@@ -46,6 +46,10 @@ jobs:
       - name: Test
         run: npm test
 
+      # Relative links between our own Markdown files must resolve (repo audit finding 6).
+      - name: Check documentation links
+        run: node scripts/check-doc-links.mjs
+
       # Browser smoke test of every screen in the sample build (apps/web/e2e, no secrets, no database). A broken screen stops the deploy.
       - name: Install the smoke-test browser
         run: npx playwright install --with-deps chromium
@@ -88,9 +92,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           VITE_API_BASE_URL: ${{ env.API_URL }}
-          # Who sees "Fill with sample data" in the setup wizard (ONBOARDING_WIZARD_PLAN.md Part B): the demo presenter's account only.
-          # A repository variable DEMO_AUTOFILL_EMAILS (comma-separated) overrides it; set it to a blank space to switch the button off.
-          DEMO_AUTOFILL_EMAILS: ${{ vars.DEMO_AUTOFILL_EMAILS || 'chris.johnson.wiz@gmail.com' }}
+          # Who sees "Fill with sample data" in the setup wizard (ONBOARDING_WIZARD_PLAN.md Part B): the accounts listed in the repository
+          # variable DEMO_AUTOFILL_EMAILS (comma-separated, Settings → Secrets and variables → Actions → Variables). No account is built
+          # in (repo audit finding 15): when the variable is not set, nobody sees the button.
+          DEMO_AUTOFILL_EMAILS: ${{ vars.DEMO_AUTOFILL_EMAILS }}
 
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3

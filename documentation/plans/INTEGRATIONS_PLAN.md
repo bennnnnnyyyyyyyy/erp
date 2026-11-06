@@ -4,7 +4,7 @@
 `sales`; e-invoicing extends `einvoicing`; AI gets its own module `assistant`.
 **Status:** `[📝 Draft, awaiting Ben's approval]`. Not in `checklist.md` as approved.
 **Owner:** Ben · **Reviewers:** the pilot accountant (payments, banks, e-invoicing)
-**Research:** [documentation/reference/INDEX.md](../reference/INDEX.md) (ignored by git: open it locally)
+**Research:** `documentation/reference/INDEX.md` (ignored by git, so not a link: open it locally)
 **Depends on modules:** core, messaging, finance, accounting, treasury, sales, einvoicing
 
 ---

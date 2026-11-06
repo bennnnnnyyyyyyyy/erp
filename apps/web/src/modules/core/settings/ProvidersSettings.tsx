@@ -16,7 +16,8 @@ import { OnlineOrders } from './OnlineOrders';
 // "saved" and can only be replaced or removed. Every provider starts simulated. AI needs the owner's consent first.
 
 const GROUP_TITLE: Record<ProviderDef['group'], string> = { payments: 'Payments', shipping: 'Shipping', store: 'Online store', ai: 'AI and voice' };
-const AI_KINDS = new Set(['openai', 'elevenlabs']);
+// Every AI provider needs the current AI notice, Ollama included (sql/061; repo audit N10).
+const AI_KINDS = new Set(['openai', 'elevenlabs', 'ollama']);
 
 function ProviderCard({ def, item, canManage, consented, onChanged }: { def: ProviderDef; item: ProviderSettings; canManage: boolean; consented: boolean; onChanged: () => void }) {
   const session = useSession();
@@ -113,7 +114,7 @@ function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManag
   const consent = (accept: boolean) =>
     run(async () => {
       await api('/v1/core/integrations/ai/consent', { method: 'PUT', body: JSON.stringify({ accept }) });
-      return accept ? tr('AI notice accepted.') : tr('Consent withdrawn. OpenAI and ElevenLabs are switched off.');
+      return accept ? tr('AI notice accepted.') : tr('Consent withdrawn. AI providers are switched off.');
     }, onChanged);
   const current = Boolean(status.consent && status.consent.version === AI_NOTICE_VERSION);
   return (
@@ -121,7 +122,7 @@ function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManag
       <h3>{tr('AI notice')}</h3>
       <p className="small">
         {tr(
-          'When AI is on, the text you ask about, the related company records, or voice recordings are sent to the AI provider (OpenAI or ElevenLabs) to produce an answer. The assistant only suggests: it never changes data by itself and only sees what the person asking is allowed to see. Prefer to keep everything in-house? Use Ollama below: it runs on your own computer or server, and nothing leaves your company.',
+          'When AI is on, the text you ask about, the related company records, or voice recordings are sent to the AI provider to produce an answer: OpenAI or ElevenLabs, or, with Ollama, the server at the address you enter, which our servers reach over the internet. The assistant only suggests: it never changes data by itself and only sees what the person asking is allowed to see.',
         )}
       </p>
       <p className="muted small">
@@ -134,11 +135,12 @@ function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManag
       {status.consent ? (
         <p className="small">{trf('Accepted {when} (notice {version}).', { when: formatDateTime(status.consent.acceptedAt, session.org), version: status.consent.version })}</p>
       ) : (
-        <p className="small">{tr('Not accepted yet. OpenAI and ElevenLabs stay off until the owner accepts.')}</p>
+        <p className="small">{tr('Not accepted yet. AI providers stay off until the owner accepts.')}</p>
       )}
+      {status.consent && !current ? <p className="small">{tr('The AI notice has changed. AI stays off until the owner accepts the new version.')}</p> : null}
       {canManage && isOwner ? (
         current ? (
-          <ConfirmButton label={tr('Withdraw consent')} confirmLabel={tr('Yes, withdraw')} question={tr('Withdraw consent? OpenAI and ElevenLabs switch off.')} disabled={busy} onConfirm={() => consent(false)} />
+          <ConfirmButton label={tr('Withdraw consent')} confirmLabel={tr('Yes, withdraw')} question={tr('Withdraw consent? All AI providers switch off.')} disabled={busy} onConfirm={() => consent(false)} />
         ) : (
           <Button disabled={busy} onClick={() => consent(true)}>
             {tr('I accept: allow sending company data to the AI provider')}

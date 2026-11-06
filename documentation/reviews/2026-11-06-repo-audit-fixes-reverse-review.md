@@ -1,177 +1,172 @@
 # Reverse review: fixes proposed by the 6 Nov repository audit
 
-**Date:** 6 November 2026
-**Reviews:** the fixes proposed in [`REPO_AUDIT_REPORT.md`](../../REPO_AUDIT_REPORT.md) (original findings 1–18 and addendum N1–N9).
+**Date:** 6 November 2026 (revised the same night after a second reviewer's reply, `REPLY_TO_CLAUDE_CHAT.md`; every point in it was checked against the code before being accepted)
+**Reviews:** the fixes proposed in [`2026-11-06-repo-audit.md`](2026-11-06-repo-audit.md) (formerly `REPO_AUDIT_REPORT.md` at the root; original findings 1–18 and addendum N1–N12).
 **Purpose:** argue against each fix before anyone builds it. For every fix: what it could break, what it misses, a cheaper or safer option, and a verdict.
-**Status:** static review only. Nothing was changed apart from this file and the report addendum; no tests, database or production operations were run.
+**Status:** static review only. No tests, database or production operations were run.
 
 ## Summary
 
-Most fixes survive, but five should change before they are built:
+Most fixes survive, but six should change before they are built:
 
-1. **The SQL deploy gate protects less than it looks.** Migrations reach live when Ben runs `supabase db query --linked` by hand, often before the code merges (worklog, 6 Nov night). A gate on the Worker/Pages deploy does not stand between a migration and the live database. The check belongs on the pull request and in the manual apply routine, not on deploy.
-2. **"Continue the outbox loop on a completion error" (N1) would make duplicates worse.** If the database is down, continuing sends every remaining message while recording none of them, and all of them are resent five minutes later. Today's throw is the safer behaviour. Only a narrower change is worth making.
-3. **The public repository (N6) outranks everything else.** Docs, CI and link fixes can wait; the personal emails cannot. Making the repository private is one click and reversible; a history rewrite is neither.
-4. **Bumping the AI notice version will switch AI off for every company at once.** That is the point of fix 10, but it needs the re-accept screen shipped first and a single source for the current version, or the Worker and database will disagree.
-5. **Rewriting the docs risks producing the next stale copy.** Shrink and point to the sources of truth instead of re-describing them.
+1. **The SQL check belongs on pull requests, not on deploy, and it must not pass when nothing ran.** Migrations reach live when Ben applies them by hand, often before the code merges, so a deploy gate does not stand between a migration and the live database. The workflow also finishes green when the database cannot start (N12).
+2. **"Continue the outbox loop on a completion error" would make duplicates worse.** Retry the write, treat "already completed" as success, then stop cleanly.
+3. **Body limits must stay per route.** One shared 100 KB limit would break Shopify (1 MB today) and audio (5 MB).
+4. **Raising the AI notice version switches AI off for every company at once.** Keep the version in the database and ship the re-accept banner with it.
+5. **Ollama is not "inside the company".** It sends data to a public host without the AI notice (N10). Decide the rule before tightening its URL check.
+6. **Rewriting the docs risks producing the next stale copy.** Shrink and point to the sources of truth instead.
+
+The public repository (N6) was raised and the owner accepted it as is on 6 Nov; it is out of scope here.
 
 ## Fix by fix
 
-### A. Webhook and upload body limits (findings 8, wider)
+### A. Webhook and upload body limits (finding 8)
 
-**Proposed:** a shared `readBodyLimited(c, maxBytes)` that rejects on Content-Length, then counts bytes while streaming; use it in all six webhooks and check Content-Length before `formData()` in `/transcribe`.
+**Proposed:** enforce each limit before buffering, for all six webhooks and `/transcribe`.
 
 **Against:**
-- Real impact is bounded. Cloudflare already caps request bodies per plan (100 MB on Free and Pro), and a Worker isolate has 128 MB of memory, so the worst case is one failed isolate, not a data issue. This is hardening, not an incident.
-- A hand-written stream reader is new security-sensitive code. The HMAC must run over the exact raw bytes; a decoding mistake (BOM, chunk-boundary UTF-8 split) turns into "every Paymob callback has a bad signature" in production.
-- Content-Length can be absent (chunked) or lie, so the early check alone is not enough; the streaming count is the real guard.
+- Real impact is bounded. Cloudflare caps request bodies per plan and an isolate has 128 MB of memory, so the worst case is one failed request, not a data issue. This is hardening, not an incident. Cloudflare's own guidance still says to enforce limits before buffering.
+- A hand-written stream reader is new security-sensitive code. The HMAC must run over the exact raw bytes; a decoding mistake turns into "every Paymob callback has a bad signature" in production.
+- **One shared limit is wrong.** Limits differ on purpose: 100 KB for most webhooks, 1 MB for Shopify (order payloads are large), 5 MB for audio.
+- **Hono's `bodyLimit` trusts Content-Length.** When the header is present without Transfer-Encoding it compares the header and never counts bytes. Whether a Worker can receive a body longer than its declared Content-Length must be tested, not assumed.
 
-**Cheaper option:** Hono already ships `hono/body-limit` (present in `node_modules/hono/dist/middleware/body-limit`). One `app.use('/webhooks/*', bodyLimit({ maxSize: 100 * 1024 }))` plus one on the transcribe route replaces six hand checks, handles chunked bodies, and leaves `c.req.text()` intact for the HMAC.
+**Safer option:** `bodyLimit` per route (`/webhooks/shopify` 1 MB, other webhooks 100 KB, `/v1/core/ai/transcribe` a little over 5 MB to allow multipart overhead), keeping the existing length checks after it as a second line until a test sends an oversized body with a false Content-Length through `wrangler dev` and shows a 413. `bodyLimit` also covers `/transcribe` properly, because it counts streamed bytes when no Content-Length is declared, rather than only checking the header.
 
-**Verdict:** do it, with `bodyLimit` rather than custom code. Keep the existing per-route checks until tests prove the middleware works, then remove them. Add one test per webhook: oversized body gives 413 and the provider function is never called.
+**Verdict:** do it, per route. One test per route: oversized gives 413 and the handler is never called.
 
 ### B. Duplicate delivery (finding 9) and the outbox loop (N1)
 
-**Proposed:** document at-least-once delivery; log and continue when `msg_complete_delivery` fails.
+**Proposed originally:** document at-least-once delivery; log and continue when `msg_complete_delivery` fails.
 
-**Against the "continue" half:**
-- The usual reason the completion write fails is that the database is unreachable or overloaded. Continuing then sends every remaining message in the batch with no record, and the five-minute recovery resends all of them. Today's throw stops after one duplicate.
-- Slack and Teams incoming webhooks, Telegram `sendMessage` and the WhatsApp Cloud API have no idempotency key, so "use provider idempotency" is only possible for Resend, which already has it.
+**Against "continue":** the usual reason the completion write fails is that the database is unreachable. Continuing then sends the whole batch with no record, and the five-minute recovery resends all of it. Today's throw stops after one duplicate. Slack and Teams incoming webhooks, Telegram and the WhatsApp Cloud API offer no idempotency key; only Resend does, and it already uses one.
 
-**Narrower option:** retry the completion write once or twice with a short delay. If it still fails, stop sending (as now) but return a result instead of throwing, so the scheduled job logs a clear count instead of an unhandled error. Do not shorten the five-minute recovery window: a shorter window produces more duplicates, not fewer.
+**Against a naive retry:** the result of a failed RPC is ambiguous. The write may have committed and only the response was lost. A retry then hits `msg_complete`, which raises `INVALID_STATE` because the row is no longer `sending`. A retry that treats that as a failure would log a false error, or worse, mark a delivered message as failed.
 
-**Verdict:** change N1's recommendation to "retry, then stop cleanly". Document at-least-once delivery in the messaging plan and in the approval-message text ("if you get this twice, the second is a copy"). Approval decisions are already guarded in the database (`inv_decide_request` raises `INVALID_STATE` unless the request is still `submitted`), so a duplicate prompt cannot double-approve.
+**Safer option:** retry the completion write once or twice with a short delay; if a retry raises `INVALID_STATE`, read the row and treat `sent` (or a later state) as success; if it still fails, stop sending and return a result instead of throwing. Do not shorten the five-minute recovery window; a shorter window produces more duplicates.
 
-### C. AI consent versioning (finding 10) — migration 061
+**Verdict:** do the safer option. Document at-least-once delivery in the messaging plan. A duplicate approval prompt cannot double-approve: `inv_decide_request` raises `INVALID_STATE` unless the request is still `submitted`.
 
-**Proposed:** same version does nothing; a different version withdraws the old consent and inserts the new one, both audited; `ai__provider_state` and `core_ai_status` require the current version.
+### C. AI consent versioning (finding 10), migration 061
 
-**Against:**
-- "Require the current version" needs one authority for what is current. If it lives in `packages/shared` and the database compares to a parameter, a Worker deployed before the migration (or after a rollback) sends the wrong version and AI silently turns off or stays on. If it lives only in the database, the UI cannot show the right notice text.
-- Raising the version switches AI off for every company until an owner re-accepts. That is correct legally, but it must ship with a visible "the AI notice changed, please review" banner, or it looks like an outage.
-- `core_set_ai_consent` is a live function with callers; changing its behaviour is a production schema change and needs Ben's go-ahead, a dry run and test 051 updated.
-
-**Safer shape:** keep the current version in one database setting (for example `core_settings`, or a constant function `core__ai_notice_version()`), have the API read it through `core_ai_status`, and have the UI show the notice for that version. Today every row is `v1`, so the migration changes nothing until the version is raised, and it can be applied early with no effect.
-
-**Verdict:** do it, but write it as "version lives in the database", ship the re-accept banner in the same release, and add the v1→v2 test. Ben applies it.
-
-### D. Ollama address (finding 11, N3)
-
-**Proposed:** tighten the database check to match `assertSafeOllamaUrl`; set `redirect: 'error'` on the fetch.
+**Proposed:** same version does nothing; a different version withdraws the old consent and inserts the new one, both audited; the state functions require the current version.
 
 **Against:**
-- The server check already blocks the dangerous cases. A matching database check is defence in depth, but two copies of the same rule (TypeScript and a SQL regex) will drift. A SQL regex for "not an IP literal, not localhost, not .local" is easy to get subtly wrong.
-- A tighter check makes existing saved `http://` addresses impossible to re-save. Count them first.
-- `redirect: 'error'` breaks setups where a proxy redirects (trailing slash, `www`), and the error will look like "Ollama is down".
+- "Require the current version" needs one authority for what is current. If it lives in `packages/shared` and the database compares a parameter, a Worker deployed before the migration (or after a rollback) sends the wrong version and AI silently turns off or stays on.
+- Raising the version switches AI off for every company until an owner re-accepts. Correct, but without a visible "the AI notice changed" banner it looks like an outage.
+- `core_set_ai_consent` is a live function; changing it is a production schema change and needs Ben's go-ahead, a dry run and test 051 updated.
 
-**Cheaper option:** in the database, only require `https://` (one simple regex) and leave host rules to the server. For redirects, use `redirect: 'manual'` and return a clear message: "Your Ollama address redirected to X; save the final address instead."
+**Safer shape:** keep the current version in the database (a constant function such as `core__ai_notice_version()`), have the API read it through `core_ai_status`, and have the UI show the notice for that version. Every row today is `v1`, so the migration changes nothing until the version is raised.
 
-**Verdict:** do the simple version. Put the `https://` change in migration 061 with a read-only verification query that counts existing non-https Ollama rows.
+**Verdict:** do it with the version in the database and the banner in the same release, plus the v1→v2 test. Ben applies it.
 
-### E. SQL tests as a deploy gate (finding 1)
+### D. Ollama: address rule (finding 11, N3) and consent (N10)
 
-**Proposed:** a SQL job inside `ci-deploy.yml` that always runs, skips when no SQL changed, and blocks deploy when SQL changed and tests did not run.
+**Proposed:** tighten the database URL check to match `assertSafeOllamaUrl`; stop following redirects; decide whether Ollama needs the AI notice.
+
+**Against the URL changes:**
+- The server check already blocks the dangerous cases. Two copies of the same host rule (TypeScript and a SQL regex) will drift, and a SQL regex for "not an IP, not localhost, not .local" is easy to get subtly wrong.
+- A stricter check makes existing saved `http://` addresses impossible to re-save. Count them first.
+- `redirect: 'error'` breaks proxies that redirect (trailing slash, `www`), and the error will read as "Ollama is down".
+
+**Against leaving Ollama outside the notice (N10):** the server only allows a public https host, so every Ollama call crosses the internet to a host an admin typed. "Our own server" is a claim nobody verifies. The two sensible options:
+- **Require the AI notice for Ollama too.** One-line change in `ai__provider_state` (drop `k = 'ollama' or`), consistent and honest. Cost: an owner must accept the notice even for their own machine.
+- **Owner-confirmed host.** The owner (not an admin) ticks "this host is run by my company", audited. More code, and still only a claim.
+
+**Verdict:** require the notice for Ollama (first option); it is the smallest change and matches what the system actually does. In the database, only require `https://`; leave host rules to the server. Use `redirect: 'manual'` with a message asking for the final address. Correct the integrations report's "keeps all data inside the company".
+
+### E. AI spending cap (N11)
+
+**Proposed:** make the cap a reservation in the database; set a provider-side limit.
+
+**Against a full reservation system:** it adds a check-and-reserve function, a settle step and a sweeper for reservations whose request died. The overrun it prevents is small: each request is capped at 800 output tokens or 5 MB of audio, so even dozens of concurrent requests overshoot by cents.
+
+**Cheaper option:** set a monthly spending limit on our OpenAI and ElevenLabs accounts (the true hard stop, outside our code); call the in-app figure a soft cap in the docs; make a failed usage write retry once rather than vanish. Do the reservation only if real usage approaches the cap.
+
+**Verdict:** provider-side limit plus honest wording now; reservation later if needed.
+
+### F. SQL tests as a check (finding 1, N12)
+
+**Proposed originally:** a SQL job inside `ci-deploy.yml` gating deploy.
 
 **Against:**
-- **Wrong place.** The worklog shows migrations applied to live by hand, from branches, before merge (056–060 on 6 Nov). The Worker deploy does not apply SQL, so gating it guards the code path that depends on SQL, not the SQL itself.
-- The local Supabase stack takes minutes and depends on Docker Hub; the workflow header records "Rate exceeded" failures. Blocking deploy on infrastructure flakiness will block an urgent API fix at the worst moment.
-- Merging the jobs into one workflow makes every main push slower.
+- **Wrong place.** Migrations are applied to live by hand, from branches, before merge (056–060 on 6 Nov). The deploy does not apply SQL.
+- **It can pass without testing (N12).** The stack start is `continue-on-error`; on failure the job warns and stays green.
+- The local Supabase stack takes about 4–5 minutes (Actions history) and depends on Docker Hub; blocking deploy on that blocks an urgent API fix at the worst moment.
 
 **Better option:**
-1. Keep `sql-tests.yml` separate, but make it run on every PR (no path filter) with a first step that exits successfully when no SQL changed, then mark it a **required check in branch protection**. That gates merging, which is when it matters.
-2. Add to the apply routine in `sql/README.md`: a migration is applied to live only after its SQL test passed on CI or locally, and the worklog entry names the run.
-3. Keep deploy independent, so an infrastructure outage on the SQL side never blocks an API hotfix.
+1. Run `sql-tests.yml` on every PR (no path filter). First step: if no SQL changed, exit successfully with "no SQL changes".
+2. If SQL changed and the stack cannot start after the retries, **fail** with a distinct message ("infrastructure: SQL tests did not run; re-run the job"). Green then only ever means "ran and passed".
+3. Mark it required in branch protection (Ben's GitHub setting).
+4. In `sql/README.md`, add to the apply routine: a migration is applied to live only after its SQL tests passed on CI or locally, and the worklog entry names the run.
+5. Keep deploy independent.
 
-**Verdict:** change the fix as above. Branch protection is a GitHub setting Ben changes himself.
+**Verdict:** change the fix as above.
 
-### F. Autofill default email (finding 15, N9)
+### G. Autofill default email (finding 15, N9)
 
-**Proposed:** default to `''`; Ben sets the repository variable; use a `.test` address in the test.
+**Against:** the next deploy after the change hides "Fill with sample data" for the demo presenter unless the variable is set first.
 
-**Against:** the next deploy after the change hides "Fill with sample data" for the demo presenter unless the variable is set first. If a demo is close, that is a visible regression.
+**Verdict:** Ben sets `DEMO_AUTOFILL_EMAILS` first, then the default is removed; the test uses a `.test` address.
 
-**Verdict:** do it, in this order: Ben sets `DEMO_AUTOFILL_EMAILS`, then the default is removed. In a public repository the address in the workflow is also public, which adds to N6.
+### H. Playwright in CI (finding 14)
 
-### G. Playwright in CI (finding 14)
-
-**Proposed:** keep Playwright and reword the rule.
-
-**Against:** none of substance. Removing the smoke test would drop the only check that every screen renders. The rule's purpose (agents should not drive a browser instead of asking a human) does not apply to a headless CI test.
+**Against removing it:** it is the only check that every screen renders. The rule's purpose (agents should not drive a browser instead of asking a human) does not apply to a headless CI test.
 
 **Verdict:** keep. Reword agents.md: "Agents do not run browser automation against live or user sessions without asking; the CI smoke test (`apps/web/e2e`) is exempt."
 
-### H. Public repository and committed personal data (N6)
-
-**Proposed:** remove from tree, add to `.gitignore`, optionally rewrite history.
-
-**Against a history rewrite:**
-- It needs a force-push to `main`, breaks every clone, worktree and open PR, and other agents (Codex, Antigravity, Cursor) would keep working on the old history.
-- It does not reach forks, clones or caches made while the repository was public.
-
-**Against doing nothing:** the emails are readable now; this is the only finding with an ongoing exposure.
-
-**Better order:**
-1. Ben decides whether the repository should be public. If not, make it private now (GitHub settings, reversible, no history change).
-2. Remove the files from the tree and add them to `.gitignore` in a normal commit.
-3. Rewrite history only if the repository must stay public, and only after warning every contributor.
-4. Separately, read the worklog for personal names and emails it does not need (it names four staff accounts) before any future public release.
-
-**Verdict:** top priority, but the first step is a setting, not code.
-
 ### I. Research ignore rule (N5)
 
-**Proposed:** un-ignore `documentation/research`, or keep it ignored deliberately.
+**Against un-ignoring:** teardowns collect competitor screenshots, exports and trial notes; committing screenshots or copied text is a licensing risk, which is probably why the rule exists. (The tracked `odoo/import/odoo_customers.csv` is our own invented sample data with `.example.com` addresses, so it is fine.)
 
-**Against un-ignoring:** teardowns collect competitor screenshots, exports and trial notes. In a public repository, committing competitor screenshots or copied text is a licensing risk, which is probably why the rule exists. (The tracked `odoo/import/odoo_customers.csv` is our own invented sample data with `.example.com` addresses, so it is fine.)
-
-**Verdict:** keep the folder ignored while the repository is public. Instead, ignore only `**/screenshots/` and `**/import/`, and commit our own written teardowns. Fix agents.md to say which parts are committed. Separately, remove or mark the two SUPERFIX links to teardowns that were never written.
+**Verdict:** keep screenshots and imports ignored (`**/screenshots/`, `**/import/`) and commit our own written teardowns; say so in agents.md. Remove or mark the two SUPERFIX links to teardowns that were never written.
 
 ### J. Docs refresh (findings 2–7, N2, N4, N7, N8)
 
-**Proposed:** rewrite README, sql/README, PRODUCT_BRIEF, the agents.md positioning, the checklist, ARCHITECTURE.md and the plans index; fix 9 links; reorder the worklog; move the report.
-
 **Against:**
 - Every full rewrite becomes another document to keep in sync; the drift exists because there are already too many status copies.
-- **agents.md positioning (N7)** is a product decision, not a doc fix. "Warehouse-first" may still be the sales pitch even if accounting is built first. Rewriting it without Ben's wording changes what every agent builds.
-- **Worklog:** it is history. Moving one misplaced entry is fine; rewriting old entries is not. Mark stale lines with a dated note instead.
-- **Moving root notes:** `REPLY_TO_CLAUDE_CHAT.md`, `neworder.md`, `sss.md` and `colluege audit.md` are linked from at least nine docs (worklog, day report, system audit, plans). Moving them breaks those links unless they are updated in the same change.
-- **Moving this report** breaks the links that point at it.
+- **agents.md positioning (N7)** is a product decision. "Warehouse-first" may still be the sales pitch even if accounting is built first; rewriting it without Ben's wording changes what every agent builds.
+- **Worklog:** it is history. Moving one misplaced entry is fine; rewriting old entries is not. Add "Superseded by …" lines to the stale status entries instead.
+- **Moving root notes:** `REPLY_TO_CLAUDE_CHAT.md`, `neworder.md`, `sss.md` and `colluege audit.md` are linked from at least nine docs. Moving them breaks those links unless they are updated in the same change. Moving this report breaks links to it too.
 
 **Cheaper option:**
-- README: change only the migration range, the date and an Arabic-draft note, and point to `sql/README.md` and the worklog for status, instead of listing features.
-- Checklist: one status table; everything else moved to `documentation/archive/checklist-2026-10.md`.
-- ARCHITECTURE.md: one page (request flow, tenancy, where rules are enforced, how migrations reach live), linking to ADRs. No feature lists.
-- Plans index: generate from the folder, or replace with "see the folder".
-- Links: fix the 9 now; add the link-scan script to `scripts/` and run it in CI so they stay fixed.
-- agents.md and PRODUCT_BRIEF: Ben supplies the positioning sentence; the agent applies it.
+- README: change only the migration range, the date and an Arabic-draft note; point to `sql/README.md` and the worklog for status.
+- sql/README: replace "has not run on GitHub yet" with the fact that it runs and is not yet required (N4).
+- Checklist: one status table; old blocks to `documentation/archive/checklist-2026-10.md`.
+- ARCHITECTURE.md: one page (request flow, tenancy, where rules are enforced, how migrations reach live), linking to ADRs.
+- Links: fix the 9 now; add the link-scan script to `scripts/` and run it in CI.
+- agents.md and PRODUCT_BRIEF: Ben supplies the positioning sentence.
 
-**Verdict:** do the small edits; get Ben's sentence for the positioning; add the link check to CI. Update links in the same change as any file move.
+**Verdict:** small edits; update links in the same change as any file move.
 
 ### K. UI items (findings 12, 13)
 
-**Preload (12):**
-- `navigator.connection` does not exist in Safari or Firefox, so a data-saver check does nothing for iPhone users, who are a large share of phone users in the GCC.
-- The preload exists so tour steps don't stall (comment at `Shell.tsx:94`). Turning it off on slow connections makes the tour stall exactly where it is slowest.
-- No bundle measurement exists yet; the cost may be small.
+**Preload (12):** `navigator.connection` does not exist in Safari or Firefox, so a data-saver check does nothing on iPhones; the preload exists so tour steps don't stall (`Shell.tsx:94`), and turning it off on slow connections stalls the tour where it is slowest; no bundle measurement exists yet.
 
-**Verdict:** measure first (`npm run build -w apps/web`, sum of lazy chunks). If small, close the finding. If large, preload only the current app's screens and the tour's screens.
+**Verdict:** measure first (sum of lazy chunks in `npm run build -w apps/web`). If small, close the finding; if large, preload only the current app's and the tour's screens.
 
-**ConnectPhone header (13):** no objection. Add the `Actions` string to the Arabic file too, or the RTL view shows English.
+**ConnectPhone header (13):** no objection. Add the `Actions` string to the Arabic file too.
 
 ## Revised order
 
-1. **Ben:** decide whether the repository is public; make it private if not (H).
-2. **Ben:** set `DEMO_AUTOFILL_EMAILS`, then the default can go (F).
-3. **Code, low risk:** `bodyLimit` middleware (A); outbox retry then stop cleanly (B); ConnectPhone header with its Arabic string (K); `.test` email in the fixture (F).
-4. **Migration 061, Ben applies:** consent version kept in the database, with the re-accept banner; Ollama `https://` only, with a count of existing rows (C, D).
-5. **CI:** SQL tests as a required PR check in branch protection, deploy left independent; link check script (E, J).
-6. **Docs:** small README and sql/README edits, checklist archive, one-page ARCHITECTURE.md, 9 links, worklog entry moved, research ignore narrowed; agents.md and PRODUCT_BRIEF once Ben gives the positioning (I, J).
-7. **Measure** the preload before changing it (K).
+1. **Code, low risk:** per-route `bodyLimit` (A); outbox retry with the ambiguous-result rule, then stop cleanly (B); Ollama `redirect: 'manual'` (D); ConnectPhone header with its Arabic string (K); `.test` email in the fixture (G).
+2. **AI:** require the notice for Ollama (D); provider-side spending limits and soft-cap wording (E); correct the integrations report.
+3. **Migration 061, Ben applies:** consent version in the database with the re-accept banner (C); Ollama `https://` only with a count of existing rows (D); the `ai__provider_state` change for Ollama (D).
+4. **CI:** SQL workflow on every PR, fail distinctly when it could not run, required in branch protection, deploy independent (F); link check script (J); autofill default removed after Ben sets the variable (G).
+5. **Docs:** README, sql/README, checklist archive, one-page ARCHITECTURE.md, 9 links, worklog order and superseded notes, research ignore narrowed; agents.md and PRODUCT_BRIEF once Ben gives the positioning (I, J).
+6. **Measure** the preload before changing it (K).
+
+## Status after implementation (6 Nov 2026, night)
+
+Built on branch `fix/repo-audit` as revised above (not merged): A per route with `bodyLimit`; B retry, ambiguity rule and clean stop; C and D as migration 061 (version in the database, Ollama under the notice, https-only address via a trigger that ignores unchanged rows) with the re-accept message on the settings screen; E retry plus soft-cap wording; F on pull requests, failing when it could not run, deploy left independent; G default removed; H rule reworded; I narrowed ignore rule; J small edits, link checker in CI, checklist archive. Details and file list: the implementation table in [`2026-11-06-repo-audit.md`](2026-11-06-repo-audit.md).
+
+Left open: K (UI items, another session is editing the UI); the ADR-0004 links; the positioning sentence; the GitHub and provider settings below.
 
 ## Decisions needed from Ben
 
-- Should the repository stay public?
-- If it stays public, rewrite history to remove the emails, or accept that they stay in history?
-- The positioning sentence for agents.md and PRODUCT_BRIEF.
-- Approval to write migration 061 (Ben applies it to live).
+- Ollama under the AI notice was built as recommended; revert it in 061 if an owner-confirmed host is preferred.
+- Apply migration 061 to live together with the API and web change (after its CI SQL run passes).
+- Set the `DEMO_AUTOFILL_EMAILS` repository variable before merging, or the sample-data button disappears.
 - Branch protection with SQL tests as a required check.
+- Set spending limits on our OpenAI and ElevenLabs accounts.
+- The positioning sentence for agents.md and PRODUCT_BRIEF.
+- Fix the two ADR-0004 links (`../plans/` → `../../plans/`), then remove them from `scripts/check-doc-links.known.txt`.

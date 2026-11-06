@@ -14,6 +14,7 @@ import { processTelegramUpdate } from './lib/telegramInbound';
 import { HttpError } from './lib/errors';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
+import { KB, MB, limitBody } from './middleware/bodyLimit';
 import { rateLimit } from './middleware/rateLimit';
 import { requireModule, requireTenant } from './middleware/tenant';
 import { MODULE_ROUTES } from './modules/registry';
@@ -41,6 +42,9 @@ app.route('/v1', v1);
 // person by their verified number and apply the same rules as the app. Always answers 200 quickly once the signature is
 // valid, because Meta retries otherwise.
 app.use('/webhooks/*', rateLimit('webhook'));
+// Body caps before any handler reads the body (repo audit 2026-11-06, finding 8). Shopify order payloads are larger than the rest.
+for (const hook of ['whatsapp', 'telegram', 'paymob', 'fawry', 'bosta']) app.use(`/webhooks/${hook}`, limitBody(100 * KB));
+app.use('/webhooks/shopify', limitBody(1 * MB));
 app.get('/webhooks/whatsapp', (c) => {
   const token = c.env.WHATSAPP_VERIFY_TOKEN;
   if (!token) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');

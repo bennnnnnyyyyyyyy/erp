@@ -2,7 +2,7 @@
 
 **Status:** Approved by Ben 2026-11-03 (all defaults D1–D7). S1–S4 and S5a written 2026-11-03, **not yet run on any database**; S5b and S6 open. See §8.
 **Owner:** Ben · **Author:** Claude (Opus 5.5)
-**Sources:** [`../research/erpnext/TEARDOWN.md`](../research/erpnext/TEARDOWN.md) §11, [`../research/dolibarr/TEARDOWN.md`](../research/dolibarr/TEARDOWN.md) §11 and §12, [`2026-11-03-system-audit.md`](2026-11-03-system-audit.md)
+**Sources:** `research/erpnext/TEARDOWN.md` §11 and `research/dolibarr/TEARDOWN.md` §11 and §12 (written on another machine from local source copies, see the worklog; never committed and not in this repository, so not linked), [`2026-11-03-system-audit.md`](2026-11-03-system-audit.md)
 **Scope:** backend workflows only (SQL functions, API routes, shared permission keys, SQL tests). Screens are a later plan. Where a slice needs a screen to be usable, a minimal one is listed under that slice.
 
 ## 1. Goal

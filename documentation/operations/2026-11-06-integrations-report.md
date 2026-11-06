@@ -53,7 +53,7 @@ Details for some rows:
   - The assistant only answers; it cannot change anything.
   - The owner must accept a notice before company data is sent to OpenAI or ElevenLabs.
   - Calls on our key are capped at USD 100 a month in total and USD 25 per company.
-  - Ollama keeps all data inside the company.
+  - Ollama sends the question and matching stock data to the https address the company enters, over the internet; since `sql/061` it needs the AI notice too (repo audit N10; corrected 6 Nov night).
 
 ## 3. Other work in the same period
 - **Accounting and treasury check:** checked on the demo company in the browser. The books balance and transfers work.
@@ -76,7 +76,7 @@ Details for some rows:
 - **Google Sheets and Drive:** row 6 of `ERP_integrations_table.pdf`; no decision made yet.
 
 ## 6. What's needed
-1. Merge `integrations-all` into `main` so the new screens go live.
+1. ~~Merge `integrations-all` into `main` so the new screens go live.~~ Done: the code is on `main` (checked 6 Nov night).
 2. **Keys:** each integration stays in test mode until its keys are entered:
    - Resend (plus a verified email domain)
    - Telegram bot

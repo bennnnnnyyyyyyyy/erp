@@ -33,20 +33,22 @@ A clickable demo of this slice on sample data exists (see the README). It imitat
 
 ## Modules
 
-| Module | Purpose | When |
+The "When" column was the 29 Oct plan. What is actually built and live is kept in one place: the status overview in [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (updated 6 Nov 2026).
+
+| Module | Purpose | When (29 Oct plan) |
 |---|---|---|
 | Core | Organization, users, roles, settings, audit log | Built (foundation) |
-| Inventory | Items, warehouses, stock ledger, requests, approvals | Wave 1, needs an approved plan |
+| Inventory | Items, warehouses, stock ledger, requests, approvals | Wave 1 (since built) |
 | Messaging | Channel adapters, outbox, identity binding, WhatsApp, later voice | Interface in wave 1, WhatsApp only if interviews say yes |
 | Tasks | Assignable warehouse tasks over the same channels | Wave 2 |
-| Parties, Purchasing, Sales | Customers, suppliers, purchase orders, sales orders and delivery | Wave 2 (demo sample exists, not committed) |
-| Invoicing, E-invoicing, Accounting export | Invoices, Egypt/Saudi e-invoicing, export to the customer's accounting tool | Wave 3 |
+| Parties, Purchasing, Sales | Customers, suppliers, purchase orders, sales orders and delivery | Wave 2 (since built) |
+| Invoicing, E-invoicing, Accounting | Invoices, Egypt/Saudi e-invoicing; since Nov 2026 a general ledger and treasury (see below) | Wave 3 |
 | Billing | Our own plans and EGP billing | Before the first paying customer |
 
 ## Out of scope
 
 - CRM, time and attendance, HR, payroll.
-- A full general ledger and statutory accounting (we export to the customer's accounting tool instead).
+- ~~A full general ledger and statutory accounting (we export to the customer's accounting tool instead).~~ Changed in Nov 2026: a general ledger, treasury and statements are built ([`ROADMAP_ACCOUNTING_SUITE.md`](documentation/plans/ROADMAP_ACCOUNTING_SUITE.md)). How the product is positioned after that change is Ben's decision and is not yet rewritten here.
 - A native phone app at first: the product is a web app now, with a phone app later on the same back end.
 - Point of sale and manufacturing, unless customers ask.
 - Per-customer custom code. Variation lives in settings, custom fields and approval policies.

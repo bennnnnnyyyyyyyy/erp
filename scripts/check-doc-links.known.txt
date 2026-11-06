@@ -1,0 +1,6 @@
+# Links known to be broken, skipped by scripts/check-doc-links.mjs. Keep this list short; remove a line when its link is fixed.
+# Format: <file> -> <target>, exactly as the checker prints it.
+
+# ADR-0004 draft moved from planning/ to architecture/decisions/; its links need ../../plans/. Agents may not edit ADRs: Ben fixes these.
+documentation/architecture/decisions/DRAFT_ADR-0004-general-ledger.md -> ../plans/ACCOUNTING_PLAN.md
+documentation/architecture/decisions/DRAFT_ADR-0004-general-ledger.md -> ../plans/ROADMAP_ACCOUNTING_SUITE.md

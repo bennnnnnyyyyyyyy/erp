@@ -52,7 +52,14 @@ dist-*/
 
 Trial_capture_workbook_v8 (1).xlsx
 Trial_capture_workbook_v12.xlsx
-documentation/research
+# Competitor research: our written teardowns (*.md) are committed (agents.md); screenshots, exports and imports stay local (licensing).
+# Files already tracked under these folders stay tracked (an ignore rule does not untrack). Repo audit 2026-11-06, N5.
+documentation/research/**/screenshots/*
+!documentation/research/**/screenshots/README.md
+documentation/research/**/import/
+documentation/research/**/*.pdf
+documentation/research/**/*.png
+documentation/research/**/*.jpg
 # Third-party documentation saved for reference (unknown licences: never committed). Covers eta-sdk/ and the integration folders.
 # The three files already tracked here (README.md, arabic-glossary.md, egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md) are our own
 # writing; git keeps tracking them, because an ignore rule does not untrack files.
