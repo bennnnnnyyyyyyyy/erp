@@ -157,6 +157,14 @@ posting.
 
 As built (046): supplier invoices today always bill at the order's cost (`sql/018`), so the
 price-difference line is zero until a later slice lets a bill carry its own price.
+
+**Build status (6 Nov):**
+- 045, 046 and 047 are applied to live.
+- 048 and 049 are written and dry-run on live, waiting for Ben's yes.
+- Added while building:
+  - P17: a cost changed by hand revalues the stock on hand (047);
+  - accounts used by expense categories or internal-use reasons are protected (048).
+- Not started: the API routes (§5), the screens (§6) and the permission keys (§4).
 - `sql/048_accounting_manual_journals.sql`: manual journals and opening balances.
 - `sql/049_accounting_reports.sql`: trial balance and account drill-down.
 

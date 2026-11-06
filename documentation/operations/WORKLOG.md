@@ -34,6 +34,60 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (evening) — Accounting slices 4 and 5 written (`sql/048`, `sql/049`, tests 043 and 044) and an audit of 045–047 (branch `accounting-phase1`, 048 and 049 not applied)
+
+**Objective.** Ben: "continue to 048" and "keep auditing, checking for mistakes".
+
+**Actions Completed.**
+- **Audit of 045–047:**
+  - (a) **Bug found:** an account used by an expense category or an internal-use reason could be made inactive or given sub-accounts. That would make every later expense or issue using it fail to post, and the document with it. Fixed in 048 (`acc__account_in_use`; `acc_create_account` and `acc_update_account` replaced).
+  - (b) **Demo switch-on cross-checks** (rolled back), each against the documents:
+    - GRNI 0 = documents 0;
+    - suppliers −2,034,992.37 = documents;
+    - customers 3,522,920.09 = documents.
+
+    Bank −3,855,213.63 (more paid out by bank than received in the demo data) and opening balances −10,222,581.68 (demo opening stock) are data, not errors.
+  - (c) **REST schema refresh:** Supabase's `pgrst_ddl_watch` event trigger is on, and each re-created receive function exists once, so the API sees 046's versions.
+  - (d) **Function privileges on live:** every internal accounting function is closed to anonymous and signed-in users except `acc__append_only()` (a trigger function, harmless). Closed in 048.
+- `sql/048_accounting_manual_journals.sql` (new):
+  - `acc_manual_journals` and its lines;
+  - `acc_save_journal` (draft, or post directly), `acc_decide_journal`, `acc_cancel_journal`, `acc_reverse_journal`;
+  - a second person approves, enforced in the function **and** by check constraints; the owner and a head accountant post and reverse directly (Q5);
+  - opening balances only on a fiscal year's first day; lock date checked; accounting must be on.
+- `sql/049_accounting_reports.sql` (new, read-only):
+  - `acc_trial_balance(from, to, currency)`: opening, period and closing per account; parents roll up;
+  - `acc_account_lines(account, from, to, currency)`: running balance; a group includes its sub-accounts.
+- Tests 043 (J0–J7) and 044 (R1–R3); READMEs updated.
+
+**Database / System Result.** All rolled back on ggoerp:
+- 048 + 043, 048 + 040, 048 + 042 passed.
+- 048 + 049 with 044, 040, 041, 042 and 043 passed.
+- Deliberate breaks, each caught:
+  - self-approval check removed → "FAIL J2c" (the check constraint still blocked it);
+  - in-use check removed → "FAIL J6a";
+  - roll-up removed → "FAIL R1f".
+- Trial balance on a rolled-back demo switch-on: 12 accounts with entries, debits = credits = 94,704,908.09 EGP, closing balances sum to 0, 11 ms.
+- My own mistakes along the way, all found by the tests before anything was applied:
+  - 049's first version lacked `WITH RECURSIVE`, used a temporary table in a read-only function, and had a `UNION ... ORDER BY` on unnamed columns;
+  - test 044 first assumed the test company's currency was EGP.
+- A read-only check afterwards found nothing from 048 or 049 on live. **Neither is applied.**
+
+**Safety Status.**
+- 048 and 049 need Ben's yes. Neither changes any company's data; 048 replaces two 045 functions with stricter versions.
+- Phase 1 SQL is then complete. Still to do: the accounting API routes, the screens (chart, setup and switch-on, journal, manual entry, approvals, trial balance, uncosted receipts), permission keys in `packages/shared`, and the cost field on the receive screens.
+
+## 2026-11-06 — `sql/047_accounting_switch_on.sql` applied to live (Ben's yes)
+
+**Objective.** Ben: "yes apply 047 and continue to 048".
+
+**Actions Completed.** Applied `sql/047_accounting_switch_on.sql` to ggoerp with `npx supabase db query --linked -f`. No error.
+
+**Database / System Result.**
+- Verification: `accounting_on` = 0, so no company is switched on.
+- Tests on live, all "ALL TESTS PASSED (everything rolled back)": 042, 041, 040, 019, 038.
+
+**Safety Status.** Nothing posts until an owner calls `acc_switch_on`, and no screen calls it yet. Not deployed: no code change.
+
 ## 2026-11-06 — Accounting slice 3 written: `sql/047_accounting_switch_on.sql` and test 042 (branch `accounting-phase1`, not applied)
 
 **Objective.** Ben: "continue to 047". Switching accounting on for a company with history.
