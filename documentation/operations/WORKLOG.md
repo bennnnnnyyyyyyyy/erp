@@ -44,6 +44,16 @@ run or deployed.
 
 **Safety Status.** No live retry, production schema change, commit or push was made. Apply 056 before 057 only after Ben's explicit approval.
 
+## 2026-11-06 (night) — Applied `sql/056` and `sql/057` to live (ggoerp) by Ben via `supabase db push`
+
+**Objective.** Put provider connections, the AI consent and cap tables, and payment links on the live database so the new Settings and invoice screens work.
+
+**Actions Completed.** Ben ran `supabase db push`, which applied `20261106180000_056_provider_connections.sql` and `20261106182028_057_payment_links.sql`. I then verified read-only and re-ran tests 051 and 052 inside rolled-back transactions.
+
+**Database / System Result.** All four new tables (`core_ai_consent`, `ai_usage`, `fin_payment_links`, `fin_payment_link_events`) have row level security on. Users cannot execute the credential, settle or link-credential functions; anonymous cannot create links. Tests 051 and 052 pass on live. Existing data untouched (887 payment rows before and after not changed by these migrations).
+
+**Safety Status.** No keys exist yet; every provider is simulated and off. The web and API changes are not deployed until the branch is merged and CI deploys it, so the new screens appear only after that. No commit made by me.
+
 ## 2026-11-06 (night) — Payment links (Paymob, Fawry) built; `sql/057` NOT applied
 
 **Objective.** "Pay now" on sales invoices through Paymob and Fawry, from Ben's provider choices, built in simulated mode until keys arrive.
