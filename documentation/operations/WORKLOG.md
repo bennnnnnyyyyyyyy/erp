@@ -34,6 +34,64 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (evening) — Live browser check of accounting and treasury on the demo company
+
+**Objective.** Ben switched accounting on for Demo Cosmetics Factory, then asked: "do your browser tests" (another chat is doing a UI
+audit, so this check covers behaviour and text only).
+
+**Actions Completed.** The checks on https://erp-live.pages.dev, as owner:
+- **Trial balance:**
+  - It balances: debits = credits = EGP 94,758,271.67 all time; EGP 75,425,562.62 this year.
+  - Customers in the books are EGP 3,469,556.51. That equals invoices (EGP 17,329,614.36) minus customer payments
+    (EGP 13,860,057.85), checked against the documents by a read-only query.
+  - It differs from the rolled-back trial by exactly one payment recorded since then (PAY-0448, EGP 53,363.58).
+  - 2,674 entries, all marked history.
+- **Entries:**
+  - The journal list, an entry, and its "Open the document" link (to PAY-0448) work.
+  - An account's lines run correctly to the trial-balance closing (191 Cash on hand, EGP 3,669,943.25).
+- **Treasury:**
+  - Switched on in Settings → Apps; "Add the default treasury accounts" added 6.
+  - The main cash box and bank account balances equal the books.
+  - Transfer TR-000001 (EGP 1,000 cash → bank) was recorded, then voided; both balances returned exactly.
+- **Payment form:** the "Paid into" picker filters by method (bank → only the bank account). No payment was recorded.
+- **Statements:**
+  - Port Said Trading closes at EGP 105,614.38, the sum of its five open invoices.
+  - The item statement for Shampoo runs quantity and value.
+- **Settings → Branches:** MAIN holds all 5 warehouses. No console errors.
+
+**Findings and fixes (branch `integrations-wave1`):**
+1. The journal showed raw event codes (`paid_in`, `issued_internal`, `expensed`, `received_other`). The labels for all events are now
+   in plain words, with Arabic; unknown codes show without underscores.
+2. Entry lines did not say which customer or supplier they belong to. They now show the code and name.
+3. The item statement showed `receipt` and `issue`. They are now Receipt and Issue (with Arabic), and the other kinds too.
+4. Treasury transfers now have a source name and a link from the entry.
+
+**Not code (reported to Ben):**
+- **Sample data:** stock leaves at EGP 24.00 a unit but arrives at EGP 24.65–26.40, so the demo's stock value drifts upward. This is the
+  known sample-data cost issue.
+- **Sample data:** the main bank account is below zero (all customer receipts in cash, all supplier payments by bank).
+- **Older code:** the payment history shows "5336358 minor units" instead of pounds.
+
+**Database / System Result.** Demo company (sample data):
+- the treasury module is on;
+- 6 treasury accounts added;
+- transfer TR-000001 recorded and voided (net zero).
+
+**Safety Status.** Typecheck, `biome ci` and tests pass (shared 31, API 216, web 63).
+
+## 2026-11-06 (18:22) — Applied `sql/054` (Telegram) to live (ggoerp) via CLI
+
+**Objective.** Ben: "apply 054 to live".
+
+**Database / System Result.**
+- Committed.
+- Checks: users cannot read link codes or complete links; anonymous callers cannot start them.
+- Live has 0 Telegram links, 0 link codes and 0 integrations.
+
+**Safety Status.**
+- On live, all rolled back: tests 049, 048, 004, 005, 006, 003, 001 and 024 pass.
+- Nothing sends until branch `integrations-wave1` is deployed and a company switches an integration on.
+
 ## 2026-11-06 (evening) — Telegram channel: the last item of integrations wave 1 (`sql/054` not applied)
 
 **Objective.** Ben: "finish integration lists"; he chose "Finish wave 1 (Telegram)".

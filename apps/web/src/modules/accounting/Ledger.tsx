@@ -94,6 +94,14 @@ export function EntryPage() {
   const id = useParam('id');
   const entry = useLoad(() => api<LedgerEntry>(`/v1/accounting/entries/${id}`));
   const accounts = useAccounts();
+  // Customer and supplier names for lines that carry one (found missing in the live browser check of 6 Nov).
+  const parties = useLoad(async () => {
+    const [c, s] = await Promise.all([
+      api<{ id: string; code?: string; name: string }[]>('/v1/sales/customers').catch(() => []),
+      api<{ id: string; code?: string; name: string }[]>('/v1/purchasing/suppliers').catch(() => []),
+    ]);
+    return new Map([...c, ...s].map((p) => [p.id, p.code ? `${p.code} · ${p.name}` : p.name]));
+  });
   if (!entry.data || !accounts.data) return <section className="page"><Loading error={entry.error ?? accounts.error} /></section>;
   const e = entry.data;
   const acc = byId(accounts.data);
@@ -119,7 +127,10 @@ export function EntryPage() {
           const a = acc.get(l.accountId);
           return (
             <tr key={l.lineNo}>
-              <td>{a ? <Link to={`/accounting/accounts/${a.id}?from=${firstOfYear()}&to=${today()}`}>{accountLabel(a)}</Link> : l.accountId}</td>
+              <td>
+                {a ? <Link to={`/accounting/accounts/${a.id}?from=${firstOfYear()}&to=${today()}`}>{accountLabel(a)}</Link> : l.accountId}
+                {l.partyId ? <div className="muted small">{parties.data?.get(l.partyId) ?? (l.partyType === 'supplier' ? tr('Supplier') : tr('Customer'))}</div> : null}
+              </td>
               <td>{l.memo}</td>
               <td className="right">{side(l.debitMinor, e.currency)}</td>
               <td className="right">{side(l.creditMinor, e.currency)}</td>

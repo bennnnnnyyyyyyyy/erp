@@ -8,7 +8,7 @@ import { tr } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
-import { Notice, firstOfYear, money, side, sourceLabel, sourcePath, today, useNotice } from '../accounting/common';
+import { Notice, firstOfYear, money, moveLabel, side, sourceLabel, sourcePath, today, useNotice } from '../accounting/common';
 
 // Statement of account (كشف حساب; TREASURY_PLAN.md S1, sql/052) for a customer, a supplier or an item, for a period: opening
 // balance, lines with a running balance, closing balance. Printable (the browser's print) and CSV. Owner and admin only.
@@ -112,7 +112,7 @@ export function StatementsPage() {
             {item.data.lines.map((l, i) => (
               <tr key={l.moveId ?? `o${i}`}>
                 <td className="nowrap">{formatDay(l.moveDate, session.org)}</td>
-                <td>{l.isOpening ? <strong>{tr('Opening balance')}</strong> : tr(l.kind)}</td>
+                <td>{l.isOpening ? <strong>{tr('Opening balance')}</strong> : moveLabel(l.kind)}</td>
                 <td>{l.ref}</td>
                 <td className="right">{l.qtyIn ?? ''}</td>
                 <td className="right">{l.qtyOut ?? ''}</td>
