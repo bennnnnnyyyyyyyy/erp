@@ -2,7 +2,7 @@ import { useEffect, useRef, type SyntheticEvent } from 'react';
 import { useI18n } from '../lib/i18n';
 import { Link, usePath } from '../lib/router';
 import { MENU_GROUPS, type AppDef, type AppPage } from '../modules/registry';
-import { AppIcon, PageIcon, appHueStyle } from './icons';
+import { AppIcon, LogoMark, PageIcon, appHueStyle } from './icons';
 
 // The current app's menu in the top bar, Odoo style: single pages as items, grouped pages (MENU_GROUPS) as one dropdown each. Every
 // item has an icon. Dropdowns are <details>, so they work with the keyboard and their links stay in the page; one opens at a time and
@@ -82,6 +82,10 @@ export function DrawerMenu({ app, current, open }: { app: AppDef; current: AppPa
   const { t } = useI18n();
   return (
     <nav className={open ? 'sidebar open' : 'sidebar'} style={appHueStyle(app.key)} aria-label={`${t(app.name)} · ${t('Menu')}`}>
+      <Link to="/" className="sidebar-brand" aria-label={t('All apps')}>
+        <LogoMark size={30} />
+        <span>{t('All apps')}</span>
+      </Link>
       <Link to={app.basePath || '/'} className="sidebar-app">
         <span className="sidebar-app-icon"><AppIcon appKey={app.key} name={t(app.name)} /></span>
         <span className="sidebar-app-name">{t(app.name)}</span>

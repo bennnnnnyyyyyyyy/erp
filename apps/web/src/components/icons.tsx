@@ -61,8 +61,8 @@ export function PageIcon({ appKey, path }: { appKey: string; path: string }) {
 
 /** One hue (OKLCH degrees) per app, so tiles, the top bar and the menu are told apart by colour and not only by shape. */
 const HUE: Record<string, number> = {
-  inventory: 250, tasks: 160, messaging: 195, purchasing: 55, sales: 145, finance: 300, accounting: 285, treasury: 215,
-  trade: 25, alerts: 75, guide: 330, start: 15, settings: 265,
+  inventory: 200, tasks: 165, messaging: 215, purchasing: 70, sales: 150, finance: 190, accounting: 180, treasury: 205,
+  trade: 45, alerts: 55, guide: 75, start: 160, settings: 200,
 };
 export const appHue = (appKey: string): number => HUE[appKey] ?? 265;
 /** Inline style that sets the app's hue for the `--h` colour rules in styles.css. */
@@ -74,13 +74,13 @@ export function LogoMark({ size = 28 }: { size?: number }) {
     <svg className="logo-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <defs>
         <linearGradient id="lm-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="oklch(0.66 0.19 285)" />
-          <stop offset="1" stopColor="oklch(0.48 0.21 255)" />
+          <stop offset="0" stopColor="oklch(0.5 0.1 195)" />
+          <stop offset="1" stopColor="oklch(0.34 0.08 210)" />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="9" fill="url(#lm-g)" />
-      <path d="M16 6.5l8.5 4.6v9.8L16 25.5l-8.5-4.6v-9.8L16 6.5z" fill="none" stroke="#fff" strokeOpacity=".95" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M7.8 11.3L16 16l8.2-4.7M16 16v9.2" fill="none" stroke="#fff" strokeOpacity=".95" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+      <rect width="32" height="32" rx="9" fill="url(#lm-g)" /><path d="M16 4.5l11.5 11.5L16 27.5 4.5 16z" fill="oklch(0.82 0.15 78)" opacity=".18" />
+      <path d="M16 6.5l8.5 4.6v9.8L16 25.5l-8.5-4.6v-9.8L16 6.5z" fill="none" stroke="oklch(0.86 0.15 80)" strokeWidth="1.9" strokeLinejoin="round" />
+      <path d="M7.8 11.3L16 16l8.2-4.7M16 16v9.2" fill="none" stroke="oklch(0.86 0.15 80)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }

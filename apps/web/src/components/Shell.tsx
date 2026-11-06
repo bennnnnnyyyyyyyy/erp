@@ -126,6 +126,12 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           <LogoMark size={26} />
           {!route && t('Apps')}
         </Link>
+        {route && (
+          <nav className="crumbs" aria-label={t('Where you are')}>
+            <Link to={route.app.basePath || '/'}>{t(route.app.name)}</Link>
+            {route.page && route.page.path !== '' && <><span aria-hidden="true">/</span><span className="crumb-here">{t(route.page.label)}</span></>}
+          </nav>
+        )}
         {route ? (
           <Link to={route.app.basePath || '/'} className="topbar-app-link" style={appHueStyle(route.app.key)}>
             <span className="topbar-app-icon"><AppIcon appKey={route.app.key} name={t(route.app.name)} /></span>

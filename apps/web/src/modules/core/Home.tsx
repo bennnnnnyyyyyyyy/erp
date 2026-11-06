@@ -57,12 +57,11 @@ export function Home({ apps }: { apps: AppDef[] }) {
 
   return (
     <section className="home">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="home-hero">
         <div>
+          <p className="home-eyebrow">{today(timeZone, lang)}</p>
           <h1>{t(greeting(timeZone))}</h1>
-          <p className="muted">
-            <bdi>{session.org?.name}</bdi> · {today(timeZone, lang)}
-          </p>
+          <p className="home-org"><bdi>{session.org?.name}</bdi></p>
         </div>
         <TourButton />
       </div>
