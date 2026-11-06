@@ -8,6 +8,7 @@ import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
 import type { ItemStatementLine, PartyStatementLine } from '@erp/shared';
 import { csvResponse, minorToText } from '../../lib/csv';
+import { attachProviderAddress, type LinkInfo, type Payer } from '../../lib/payments/links';
 import { type AgeBucket, ageBucket, daysOverdue, todayUtc } from './ageing';
 
 // Expenses and payments (sql/024). Owner/admin only: the permissions below are not granted to members, and the tables
@@ -519,4 +520,73 @@ financeRoutes.get('/statements/item', requirePermission('finance.statements.view
       currency,
     ]),
   );
+});
+
+// ---- "Pay now" links (sql/057; Paymob and Fawry). Owner and admin. The provider's signed callback records the payment, never the browser.
+const LINK_COLS =
+  'id, invoice_id, provider, provider_ref, amount_minor, currency, status, simulated, url, provider_txn, review_reason, payment_id, created_at, paid_at';
+
+financeRoutes.get('/payment-links', requirePermission('finance.reports.view'), async (c) => {
+  const invoice = c.req.query('invoiceId') ?? '';
+  if (invoice && !UUID_RE.test(invoice)) invalid('Invalid invoice');
+  let q = userDb(c).from('fin_payment_links').select(LINK_COLS).eq('org_id', orgOf(c)).order('created_at', { ascending: false }).limit(100);
+  if (invoice) q = q.eq('invoice_id', invoice);
+  const { data, error } = await q;
+  if (error) throw error;
+  return ok(c, data ?? []);
+});
+
+financeRoutes.post('/payment-links', requirePermission('finance.entries.manage'), async (c) => {
+  const b = await jsonBody(c);
+  const invoiceId = text(b.invoiceId);
+  const provider = text(b.provider);
+  const amount = b.amountMinor === undefined || b.amountMinor === null ? null : minor(b.amountMinor);
+  if (
+    !UUID_RE.test(invoiceId) ||
+    (provider !== 'paymob' && provider !== 'fawry') ||
+    (b.amountMinor !== undefined && b.amountMinor !== null && amount === null)
+  )
+    invalid('An invoice, a provider (paymob or fawry) and, optionally, an amount above zero are required');
+  const db = userDb(c);
+  const link = await callRpc<LinkInfo>(db, 'fin_create_payment_link', {
+    p_invoice_id: invoiceId,
+    p_provider: provider,
+    p_amount_minor: amount,
+  });
+  // Simulated: nothing leaves the system; the screen offers "Simulate payment".
+  if (link.simulated) return ok(c, { ...link, url: null, reference: null }, 201);
+  const { data: inv } = await db.from('sal_invoices').select('customer_id').eq('org_id', orgOf(c)).eq('id', invoiceId).maybeSingle();
+  const { data: cust } = inv
+    ? await db
+        .from('sal_customers')
+        .select('name, contact, phone')
+        .eq('org_id', orgOf(c))
+        .eq('id', (inv as { customer_id: string }).customer_id)
+        .maybeSingle()
+    : { data: null };
+  const cu = (cust ?? {}) as { name?: string; contact?: string | null; phone?: string | null };
+  const payer: Payer = {
+    name: cu.name ?? 'Customer',
+    phone: cu.phone ?? null,
+    email: cu.contact && cu.contact.includes('@') ? cu.contact : null,
+  };
+  try {
+    const where = await attachProviderAddress(c.env, db, provider, link, payer, new URL(c.req.url).origin);
+    return ok(c, { ...link, ...where }, 201);
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : 'The provider could not be reached';
+    await callRpc<void>(db, 'fin_payment_link_fail', { p_link_id: link.id, p_reason: reason }).catch(() => undefined);
+    throw new HttpError(502, reason, 'provider_error');
+  }
+});
+
+financeRoutes.post('/payment-links/:id/cancel', requirePermission('finance.entries.manage'), async (c) => {
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'fin_cancel_payment_link', { p_link_id: id });
+  return ok(c, { id, status: 'cancelled' });
+});
+
+financeRoutes.post('/payment-links/:id/simulate-pay', requirePermission('finance.entries.manage'), async (c) => {
+  const id = idParam(c);
+  return ok(c, await callRpc<{ result: string }>(userDb(c), 'fin_simulate_pay_link', { p_link_id: id }));
 });

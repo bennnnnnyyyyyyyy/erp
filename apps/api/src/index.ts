@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runFxPass } from './jobs/fx';
 import { runOutboxPass } from './jobs/outbox';
+import { processFawryCallback, processPaymobCallback } from './lib/payments/links';
 import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
 import { processInbound } from './lib/whatsappInbound';
 import { processTelegramUpdate } from './lib/telegramInbound';
@@ -82,6 +83,22 @@ app.post('/webhooks/telegram', async (c) => {
   }
   const handled = await processTelegramUpdate(c.env, update);
   return c.json({ success: true, data: { handled } });
+});
+
+// Payment provider callbacks (sql/057). Public, so each is verified with that company's own key (found through our reference) before
+// anything happens; the database re-checks amount, currency and invoice and records once per provider transaction.
+const MAX_CALLBACK = 100_000;
+app.post('/webhooks/paymob', async (c) => {
+  const raw = await c.req.text();
+  if (raw.length > MAX_CALLBACK) return fail(c, 413, 'Too large', 'too_large');
+  const r = await processPaymobCallback(c.env, raw, c.req.query('hmac') ?? '');
+  return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
+});
+app.post('/webhooks/fawry', async (c) => {
+  const raw = await c.req.text();
+  if (raw.length > MAX_CALLBACK) return fail(c, 413, 'Too large', 'too_large');
+  const r = await processFawryCallback(c.env, raw);
+  return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
 });
 
 app.notFound((c) => fail(c, 404, 'Not found'));
