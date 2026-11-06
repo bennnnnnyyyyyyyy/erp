@@ -2159,3 +2159,10 @@ the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitigno
 **Database / System Result.** None.
 
 **Safety Status.** `tsc --noEmit` clean for apps/web. Not verified: how it looks in a browser (light, dark, Arabic RTL), or contrast after the retint; full `npm test` not re-run. The sign-in screen has no logo yet.
+
+### Addendum — persistent sidebar (same day)
+Ben found the first pass still bland and unusable. Cause (checked on the demo build): the app's pages were hidden inside top-bar dropdowns ("Operations ▾", "Reporting ▾"), content stopped at ~1270px, and the stat cards were plain boxes. Studied Behance "ERP web design" case studies (Raad ERP and others) for structure only; nothing was copied.
+- `Shell.tsx`: the app menu is now a persistent left sidebar on desktop (grouped, icons, visible); the dropdown `AppMenu` is no longer rendered (the phone drawer is unchanged and shares the same menu).
+- `AppMenu.tsx` (`DrawerMenu`): app header (coloured icon + name) and the app's hue for the active item.
+- `styles.css`: sticky sidebar, wider content (1560px), stat cards with a coloured edge and larger number.
+Checked on the demo build in Chrome: Inventory in LTR and in RTL (sidebar flips to the right). Not checked: dark mode with the sidebar, phone width, other apps' screens. The Home launcher is still a plain tile grid.

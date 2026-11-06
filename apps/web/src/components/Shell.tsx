@@ -6,7 +6,7 @@ import { useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
 import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
-import { AppMenu, DrawerMenu } from './AppMenu';
+import { DrawerMenu } from './AppMenu';
 import { AppIcon, LogoMark, appHueStyle } from './icons';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
@@ -108,7 +108,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   const Page = route?.page?.component;
 
   return (
-    <div className="shell">
+    <div className={route ? 'shell with-sidebar' : 'shell'}>
       <TourHost />
       <TableLabels />
       {!demoMode && ready && !asked && <FirstRunLanguage />}
@@ -134,8 +134,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         ) : (
           <span className="topbar-org"><bdi>{session.org?.name}</bdi></span>
         )}
-        {route && <AppMenu app={route.app} current={route.page ?? undefined} />}
-        <span className="spacer" />
+                <span className="spacer" />
         {route && <span className="topbar-org-end"><bdi>{session.org?.name}</bdi></span>}
         <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
           {dark ? '☀' : '☾'}
