@@ -33,6 +33,8 @@ export type Bindings = {
   OPENAI_API_KEY?: string;
   ELEVENLABS_API_KEY?: string;
   AI_MONTHLY_CAP_USD?: string;
+  // Fawry address override (staging: https://atfawry.fawrystaging.com). Default: the live Fawry address.
+  FAWRY_BASE_URL?: string;
 };
 
 export type AuthUser = { id: string; email: string };

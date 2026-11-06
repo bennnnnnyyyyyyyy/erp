@@ -34,6 +34,22 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (night) — Payment links (Paymob, Fawry) built; `sql/057` NOT applied
+
+**Objective.** "Pay now" on sales invoices through Paymob and Fawry, from Ben's provider choices, built in simulated mode until keys arrive.
+
+**Actions Completed.**
+- `sql/057_payment_links.sql`, `sql/tests/052_payment_links.sql`: link table, per-transaction event table, create/cancel/simulate functions, and `fin__settle_payment_link` (service role) which records one card payment through the same rules as a manual one (card clearing account, audit in the same transaction) or holds the case for a person (`review`).
+- `apps/api/src/lib/payments/links.ts`: Paymob intention request and HMAC-SHA512 check; Fawry charge request and V2 SHA-256 check; callback handlers. `POST /webhooks/paymob`, `POST /webhooks/fawry` (public, rate limited, verified with the company's own key found through our reference). Finance routes: list, create, cancel, simulate-pay for links.
+- `apps/web`: `PaymentLinks.tsx` on the sales invoice (hidden in demo mode); Arabic strings.
+- Tests: `apps/api/test/payments.test.ts` (signatures against node crypto, callback reading, route guards).
+- **Exception to flag:** `lib/payments/links.ts` is on the secret-key allowlist. Creating a link needs the company's provider key while a signed-in user waits, so the server reads it through `fin__link_credentials`, which answers only for a live link under five minutes old with no address yet. The user's own JWT does everything else.
+- **Unconfirmed until a provider test transaction:** where Paymob puts our reference (read from `order.merchant_order_id`), how the `hmac` arrives (read from the query), and Fawry's V2 recipe (from a third-party SDK that cites Fawry's page; Fawry's site could not be reached).
+
+**Database / System Result.** Dry run on live (ggoerp) with 056 included inside a rolled-back transaction: passed; deliberate break (amount check removed) caught. **Nothing applied to live.**
+
+**Safety Status.** `npm run typecheck`, `npx biome ci`, `npm test` (shared 31, API 235 + 7 skipped, web 67) pass. No keys exist anywhere; a simulated link never contacts a provider. A simulated test payment records a real payment row noted "SIMULATED"; only an owner or admin can press it (the same people who can record a card payment by hand). Apply 056 then 057 only on Ben's explicit yes. No commit made.
+
 ## 2026-11-06 (night) — Integrations all-in-simulated: provider connections built (`sql/056` NOT applied); save point
 
 **Objective.** Ben's instruction: AI budget USD 100 a month for now, with customer consent, Ollama offered as the company's own local alternative, and "setup all apis and integrations pending my keys". Save point, checked against `ERP_integrations_table.pdf` (the 16-row status table) so the work stays on that list.

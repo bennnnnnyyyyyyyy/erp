@@ -11,6 +11,7 @@ import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
+import { PaymentLinks } from '../finance/PaymentLinks';
 import { Pill } from '../trade/common';
 
 import { tr, trf } from '../../lib/i18n';
@@ -153,6 +154,7 @@ export function CustomerInvoicePage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const invoices = { reload: record.reload };
+  const [payKey, setPayKey] = useState(0);
 
   if (record.error) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link><Loading error={record.error} /></section>;
   if (!record.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
@@ -201,7 +203,8 @@ export function CustomerInvoicePage() {
 
       {inv.status === 'void' && <p className="muted">{tr('This invoice was voided. Its quantity can be invoiced again.')}</p>}
       {canManage && inv.status === 'issued' && <div className="form-actions" style={{ marginBlockStart: '1rem' }}><ConfirmButton label={tr('Void invoice')} confirmLabel={tr('Yes, void it')} question={tr('Void this invoice? It can not be undone; its quantity can then be invoiced again.')} disabled={busy} onConfirm={voidIt} /></div>}
-      {inv.status === 'issued' && <PaymentsAgainst field="customerInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />}
+      {inv.status === 'issued' && <PaymentsAgainst key={payKey} field="customerInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />}
+      {inv.status === 'issued' && <PaymentLinks invoiceId={inv.id} onPaid={() => setPayKey((k) => k + 1)} />}
       <RecordHistory key={inv.id} id={inv.id} />
     </section>
   );

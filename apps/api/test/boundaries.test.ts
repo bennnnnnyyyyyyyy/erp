@@ -13,6 +13,7 @@ const ADMIN_DB_ALLOWED = new Set([
   'lib/channels/integrations.ts',
   'jobs/fx.ts',
   'lib/telegramInbound.ts',
+  'lib/payments/links.ts',
   'lib/whatsappInbound.ts',
 ]);
 // Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.

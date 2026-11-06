@@ -7,8 +7,10 @@ import { api } from '../../../lib/api';
 import { formatDateTime, formatDay } from '../../../lib/format';
 import { tr, trf } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
+import { demoMode } from '../../../lib/demo';
 import { useSession } from '../../../session';
 import { Notice, useNotice } from '../../accounting/common';
+import { ProvidersSettings } from './ProvidersSettings';
 
 // Settings > Integrations (INTEGRATIONS_PLAN.md wave 1; sql/053). Owners and admins. Each integration starts "simulated": messages
 // are marked delivered but nothing leaves the system, so a company can try it safely. Webhook URLs are write-only (a hint is shown).
@@ -127,6 +129,8 @@ export function IntegrationsSettings() {
       <h1>{tr('Integrations')}</h1>
       <p className="muted">{tr('Send copies of your messages to email, Slack or Microsoft Teams. Each starts simulated, so you can try it without anything being sent. A message never approves anything by itself: decisions are made in the app.')}</p>
       {list.data.map((item) => <IntegrationCard key={item.kind} item={item} canManage={canManage} onChanged={list.reload} />)}
+
+      {demoMode ? null : <ProvidersSettings />}
 
       <div className="form-card stack">
         <h2>{tr('Exchange rates')}</h2>
