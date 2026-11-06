@@ -21,6 +21,13 @@ export type Bindings = {
   // domain verified with Resend. Without them, email works in simulated mode only.
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  // Telegram (lib/telegram.ts, sql/054). Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET. TELEGRAM_BOT_USERNAME is the bot's name
+  // (for the t.me link). Without them, Telegram works in simulated mode only and linking is unavailable.
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_WEBHOOK_SECRET?: string;
+  TELEGRAM_BOT_USERNAME?: string;
+  /** The web app's address, for "Open in the app" buttons (defaults to the first ALLOWED_ORIGINS entry). */
+  APP_URL?: string;
 };
 
 export type AuthUser = { id: string; email: string };

@@ -38,6 +38,7 @@ integrationRoutes.get('/', requirePermission('core.integrations.view'), async (c
   const rows = new Map(((data ?? []) as Row[]).map((r) => [r.kind, r]));
   // Live email needs our sending account on this server; the screen says so instead of letting a company pick a mode that fails.
   const emailReady = Boolean(c.env.RESEND_API_KEY && c.env.EMAIL_FROM);
+  const telegramReady = Boolean(c.env.TELEGRAM_BOT_TOKEN);
   return ok<IntegrationSettings[]>(
     c,
     INTEGRATION_KINDS.map((kind) => {
@@ -48,8 +49,8 @@ integrationRoutes.get('/', requirePermission('core.integrations.view'), async (c
         mode: r?.mode ?? 'simulated',
         messageKinds: r?.settings?.kinds ?? [],
         secretHint: r?.secret_hint ?? null,
-        needsSecret: kind !== 'email',
-        liveAvailable: kind === 'email' ? emailReady : Boolean(r?.secret_hint),
+        needsSecret: kind === 'slack' || kind === 'teams',
+        liveAvailable: kind === 'email' ? emailReady : kind === 'telegram' ? telegramReady : Boolean(r?.secret_hint),
         lastStatus: r?.last_status ?? null,
         lastError: r?.last_error ?? null,
         lastDeliveryAt: r?.last_delivery_at ?? null,
@@ -67,6 +68,8 @@ integrationRoutes.put('/:kind', requirePermission('core.integrations.manage'), a
   if (kinds.some((k) => !(INTEGRATION_MESSAGE_KINDS as readonly string[]).includes(k))) invalid('Unknown message kind');
   if (kind === 'email' && mode === 'live' && !(c.env.RESEND_API_KEY && c.env.EMAIL_FROM))
     throw new HttpError(409, 'Live email is not set up on this server yet; keep it simulated', 'not_configured');
+  if (kind === 'telegram' && mode === 'live' && !c.env.TELEGRAM_BOT_TOKEN)
+    throw new HttpError(409, 'Telegram is not set up on this server yet; keep it simulated', 'not_configured');
   await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: mode, p_kinds: kinds });
   return ok(c, { kind });
 });
@@ -74,7 +77,7 @@ integrationRoutes.put('/:kind', requirePermission('core.integrations.manage'), a
 // Write-only: the URL is never returned, only a short hint.
 integrationRoutes.put('/:kind/secret', requirePermission('core.integrations.manage'), async (c) => {
   const kind = kindParam(c.req.param('kind'));
-  if (kind === 'email') invalid('Email needs no webhook URL');
+  if (kind === 'email' || kind === 'telegram') invalid('Only Slack and Teams take a webhook URL');
   const url = (await jsonBody(c)).url;
   if (typeof url !== 'string' || !/^https:\/\//.test(url.trim()) || url.length > 2000) invalid('Paste the full https webhook URL');
   const hint = await callRpc<string>(userDb(c), 'core_set_integration_secret', { p_kind: kind, p_secret: url.trim() });

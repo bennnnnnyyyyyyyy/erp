@@ -9,6 +9,13 @@
 
 ---
 
+**Build status (6 Nov):**
+- Wave 1 is built on branch `integrations-wave1`: email, Slack, Teams, Telegram and exchange rates, each simulated until switched to
+  live.
+- `sql/053` is applied; `sql/054` (Telegram) is written and dry-run.
+- Not deployed. Live use needs our Resend account and domain (email) and a Telegram bot (Telegram). Slack and Teams need only each
+  company's own webhook URL.
+
 ## 1. Goal
 
 Connect the ERP to the services companies in Egypt and the Gulf already use:

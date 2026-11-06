@@ -7,6 +7,7 @@ import type { Bindings } from '../src/env';
 import type { OutboxMessage } from '../src/lib/channels';
 import { type IntegrationDeps, type IntegrationState, makeIntegrationAdapters } from '../src/lib/channels/integrations';
 import { groupRates } from '../src/jobs/fx';
+import { parseUpdate, startLink } from '../src/lib/telegram';
 
 // Integrations wave 1 (INTEGRATIONS_PLAN.md; sql/053, proved by sql/tests/048). Adapters run against fakes here: nothing real is sent.
 
@@ -32,13 +33,14 @@ function fakes(state: IntegrationState | null, secret: string | null = null) {
     state: async () => state,
     secret: async () => secret,
     email: async () => 'boss@example.com',
+    telegramChat: async () => '424242',
     fetch: (async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       return new Response('{}', { status: 200 });
     }) as unknown as typeof fetch,
   };
-  const [email, slack, teams] = makeIntegrationAdapters(deps);
-  return { email: email!, slack: slack!, teams: teams!, calls };
+  const [email, slack, teams, telegram] = makeIntegrationAdapters(deps);
+  return { email: email!, slack: slack!, teams: teams!, telegram: telegram!, calls };
 }
 
 describe('integration adapters', () => {
@@ -84,6 +86,69 @@ describe('integration adapters', () => {
     const f = fakes({ enabled: true, mode: 'live' }, 'https://hooks.slack.com/services/a/b/c');
     await f.slack.send(msg({ channel: 'slack', secret_body: 'CODE 123456' }), env);
     expect(String(f.calls[0]!.init.body)).not.toContain('123456');
+  });
+});
+
+describe('telegram', () => {
+  const tgEnv = { ...env, TELEGRAM_BOT_TOKEN: '123:abc', APP_URL: 'https://erp-live.pages.dev' } as Bindings;
+
+  it('sends to the linked chat with an "Open in the app" button, and never puts the token in an error', async () => {
+    const f = fakes({ enabled: true, mode: 'live' });
+    expect(await f.telegram.send(msg({ channel: 'telegram' }), tgEnv)).toBe('telegram-bot');
+    const call = f.calls[0]!;
+    expect(call.url).toBe('https://api.telegram.org/bot123:abc/sendMessage');
+    const body = JSON.parse(String(call.init.body)) as { chat_id: string; reply_markup: { inline_keyboard: { url: string }[][] } };
+    expect(body.chat_id).toBe('424242');
+    expect(body.reply_markup.inline_keyboard[0]![0]!.url).toBe('https://erp-live.pages.dev');
+    const failing = makeIntegrationAdapters({
+      state: async () => ({ enabled: true, mode: 'live' }),
+      secret: async () => null,
+      email: async () => null,
+      telegramChat: async () => '1',
+      fetch: (async () => new Response(JSON.stringify({ description: 'chat not found' }), { status: 400 })) as unknown as typeof fetch,
+    })[3]!;
+    await expect(failing.send(msg({ channel: 'telegram' }), tgEnv)).rejects.toThrow(/^Telegram returned 400: chat not found$/);
+  });
+
+  it('simulated mode sends nothing; a person who never linked is a visible failure in live mode', async () => {
+    expect(await fakes({ enabled: true, mode: 'simulated' }).telegram.send(msg({ channel: 'telegram' }), tgEnv)).toBe('simulated');
+    const unlinked = makeIntegrationAdapters({
+      state: async () => ({ enabled: true, mode: 'live' }),
+      secret: async () => null,
+      email: async () => null,
+      telegramChat: async () => null,
+      fetch: (async () => new Response('{}')) as unknown as typeof fetch,
+    })[3]!;
+    await expect(unlinked.send(msg({ channel: 'telegram' }), tgEnv)).rejects.toThrow(/not linked/);
+  });
+
+  it('reads only private "/start <code>" messages', () => {
+    const code = 'a'.repeat(36);
+    expect(parseUpdate({ message: { chat: { id: 77, type: 'private' }, text: `/start ${code}` } })).toEqual({
+      chatId: '77',
+      code,
+      text: `/start ${code}`,
+    });
+    expect(parseUpdate({ message: { chat: { id: 77, type: 'private' }, text: 'hello' } })?.code).toBeNull();
+    expect(parseUpdate({ message: { chat: { id: -100, type: 'group' }, text: `/start ${code}` } })).toBeNull();
+    expect(parseUpdate({ edited_message: {} })).toBeNull();
+    expect(startLink({ ...env, TELEGRAM_BOT_USERNAME: '@erp_bot' } as Bindings, code)).toBe(`https://t.me/erp_bot?start=${code}`);
+    expect(startLink(env, code)).toBeNull();
+  });
+
+  it("the webhook refuses calls without Telegram's secret header", async () => {
+    const live = { ...env, TELEGRAM_BOT_TOKEN: '1:a', TELEGRAM_WEBHOOK_SECRET: 's3cret' };
+    expect((await app.request('/webhooks/telegram', { method: 'POST', body: '{}' }, live)).status).toBe(401);
+    expect(
+      (
+        await app.request(
+          '/webhooks/telegram',
+          { method: 'POST', body: '{}', headers: { 'X-Telegram-Bot-Api-Secret-Token': 'wrong' } },
+          live,
+        )
+      ).status,
+    ).toBe(401);
+    expect((await app.request('/webhooks/telegram', { method: 'POST', body: '{}' }, env)).status).toBe(503);
   });
 });
 

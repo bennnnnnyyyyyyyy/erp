@@ -1,5 +1,6 @@
 import type { Bindings } from '../../env';
 import { adminDb } from '../db.admin';
+import { appUrl, sendTelegram } from '../telegram';
 import type { ChannelAdapter, OutboxMessage } from './index';
 
 // Email, Slack and Teams (documentation/plans/INTEGRATIONS_PLAN.md wave 1; sql/053). Like every channel, these only DELIVER a
@@ -9,7 +10,7 @@ import type { ChannelAdapter, OutboxMessage } from './index';
 //                through the company's own webhook URL, read from Vault by the job only (core__integration_secret)
 // A company that switched an integration off after a message was queued gets "skipped", not a send.
 
-export type IntegrationKind = 'email' | 'slack' | 'teams';
+export type IntegrationKind = 'email' | 'slack' | 'teams' | 'telegram';
 export type IntegrationState = { enabled: boolean; mode: 'simulated' | 'live' };
 
 /** What the adapters need from the outside world; replaced in tests so nothing real is called. */
@@ -18,6 +19,8 @@ export type IntegrationDeps = {
   secret(env: Bindings, orgId: string, kind: IntegrationKind): Promise<string | null>;
   /** The recipient's email, only while they are an active member (sql/053 msg__recipient_email). */
   email(env: Bindings, outboxId: string): Promise<string | null>;
+  /** The recipient's linked Telegram chat, only while they are an active member (sql/054 msg__recipient_telegram). */
+  telegramChat(env: Bindings, outboxId: string): Promise<string | null>;
   fetch: typeof fetch;
 };
 
@@ -39,6 +42,11 @@ const realDeps: IntegrationDeps = {
   },
   async email(env, outboxId) {
     const { data, error } = await adminDb(env).rpc('msg__recipient_email', { p_outbox_id: outboxId });
+    if (error) throw new Error(error.message);
+    return (data as string | null) ?? null;
+  },
+  async telegramChat(env, outboxId) {
+    const { data, error } = await adminDb(env).rpc('msg__recipient_telegram', { p_outbox_id: outboxId });
     if (error) throw new Error(error.message);
     return (data as string | null) ?? null;
   },
@@ -143,5 +151,17 @@ export function makeIntegrationAdapters(deps: IntegrationDeps = realDeps): Chann
       }),
   });
 
-  return [email, webhook('slack'), webhook('teams')];
+  // Telegram (sql/054): our one bot, to people who linked their Telegram; an "Open in the app" button, never a decision.
+  const telegram: ChannelAdapter = {
+    kind: 'telegram',
+    send: (message, env) =>
+      deliver('telegram', message, env, deps, async () => {
+        const chat = await deps.telegramChat(env, message.id);
+        if (!chat) throw new Error('The recipient has not linked Telegram');
+        await sendTelegram(env, chat, message.secret_body ?? plainText(message), { buttonUrl: appUrl(env), fetchImpl: deps.fetch });
+        return 'telegram-bot';
+      }),
+  };
+
+  return [email, webhook('slack'), webhook('teams'), telegram];
 }

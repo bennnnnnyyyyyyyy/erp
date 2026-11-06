@@ -1,6 +1,6 @@
 // Integrations, wave 1 (documentation/plans/INTEGRATIONS_PLAN.md; database sql/053). Shapes shared by the API and the web app.
 
-export const INTEGRATION_KINDS = ['email', 'slack', 'teams'] as const;
+export const INTEGRATION_KINDS = ['email', 'slack', 'teams', 'telegram'] as const;
 export type IntegrationKind = (typeof INTEGRATION_KINDS)[number];
 
 /** Outbox message kinds a company may route to an integration (sql/053 core__integration_kinds). */

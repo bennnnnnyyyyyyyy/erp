@@ -5,6 +5,7 @@ import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { runOutboxPass } from '../../jobs/outbox';
+import { startLink } from '../../lib/telegram';
 import { requirePermission } from '../../middleware/tenant';
 
 // Notifications (each person's own inbox) and the outbox (delivery status, owners and admins only; the database
@@ -13,6 +14,14 @@ import { requirePermission } from '../../middleware/tenant';
 export const messagingRoutes = new Hono<AppEnv>();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Link this person's Telegram (sql/054): a single-use, 10-minute link to our bot. Pressing Start in Telegram finishes the link.
+messagingRoutes.post('/telegram/link', requirePermission('messaging.notifications.read'), async (c) => {
+  if (!c.env.TELEGRAM_BOT_TOKEN || !startLink(c.env, 'x'.repeat(36)))
+    throw new HttpError(503, 'Telegram is not set up on this server yet', 'not_configured');
+  const code = await callRpc<string>(userDb(c), 'msg_telegram_link_start');
+  return ok(c, { url: startLink(c.env, code), expiresInMinutes: 10 });
+});
 
 messagingRoutes.get('/notifications', requirePermission('messaging.notifications.read'), async (c) => {
   const { data, error } = await userDb(c)

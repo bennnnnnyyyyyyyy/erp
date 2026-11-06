@@ -14,11 +14,12 @@ import { Notice, useNotice } from '../../accounting/common';
 // are marked delivered but nothing leaves the system, so a company can try it safely. Webhook URLs are write-only (a hint is shown).
 // A channel only delivers: approving still happens in the app.
 
-const NAME: Record<IntegrationKind, string> = { email: 'Email', slack: 'Slack', teams: 'Microsoft Teams' };
+const NAME: Record<IntegrationKind, string> = { email: 'Email', slack: 'Slack', teams: 'Microsoft Teams', telegram: 'Telegram' };
 const HELP: Record<IntegrationKind, string> = {
   email: 'Sends a copy of the chosen messages to each person by email.',
   slack: 'Posts the chosen messages to one Slack channel. In Slack: create an app, turn on Incoming Webhooks, add it to a channel, and paste the webhook URL here.',
   teams: 'Posts the chosen messages to one Teams channel. In Teams: on the channel, open Workflows, choose "Send webhook alerts to a channel", and paste the URL it gives you here.',
+  telegram: 'Sends a copy of the chosen messages on Telegram to each person who has linked it (Messages → Connect WhatsApp and Telegram). Free; each message has an "Open in the app" button.',
 };
 const KIND_LABEL: Record<string, string> = {
   approval_request: 'Approval requests',

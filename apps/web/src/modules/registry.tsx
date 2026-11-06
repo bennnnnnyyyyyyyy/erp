@@ -198,7 +198,7 @@ const MESSAGING_APP: AppDef = {
   basePath: '/messaging',
   pages: [
     { path: '', label: 'Notifications', permission: 'messaging.notifications.read', component: NotificationsPage },
-    { path: '/whatsapp', label: 'Connect WhatsApp', permission: 'messaging.notifications.read', component: ConnectPhonePage },
+    { path: '/whatsapp', label: 'Connect WhatsApp and Telegram', permission: 'messaging.notifications.read', component: ConnectPhonePage },
     { path: '/outbox', label: 'Message outbox', permission: 'messaging.outbox.manage', component: OutboxPage },
   ],
 };

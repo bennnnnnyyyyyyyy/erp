@@ -34,6 +34,43 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (evening) — Telegram channel: the last item of integrations wave 1 (`sql/054` not applied)
+
+**Objective.** Ben: "finish integration lists"; he chose "Finish wave 1 (Telegram)".
+
+**Actions Completed.**
+- `sql/054_telegram.sql` and test 049:
+  - single-use hashed link codes;
+  - a link is completed only by our webhook (service role);
+  - Telegram chats become verified identities;
+  - `telegram` is a per-company integration;
+  - copies go only to people who linked.
+- API:
+  - `lib/telegram.ts` (send, with an "Open in the app" button; parse "/start <code>"; deep link);
+  - `lib/telegramInbound.ts`;
+  - `POST /webhooks/telegram`, checked with Telegram's secret header;
+  - `POST /v1/messaging/telegram/link`;
+  - the Telegram adapter (simulated or live);
+  - reason code `RATE_LIMITED`;
+  - tests in `integrations.test.ts`.
+- Web:
+  - Messages → "Connect WhatsApp and Telegram" gets a Telegram section (connect, unlink);
+  - Settings → Integrations gets a Telegram card;
+  - Arabic for both.
+- Telegram never decides anything; bot replies point to the app.
+
+**Database / System Result.** None: 054 was dry-run on live and rolled back.
+
+**Safety Status.**
+- 054: test 049 passes; regressions 048, 001, 003-006 and 024 pass; a deliberate break (copies to people who never linked) was
+  caught.
+- `biome ci` clean, typecheck passes, tests pass (shared 31, API 216, web 63).
+- Live use needs:
+  - a bot made with @BotFather;
+  - Worker secrets `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` and `TELEGRAM_BOT_USERNAME`;
+  - one `setWebhook` call pointing at `/webhooks/telegram` with the same secret.
+- Until then Telegram works in simulated mode only, and "Connect Telegram" says it is not set up.
+
 ## 2026-11-06 (18:04) — Applied `sql/053` to live (ggoerp) via CLI
 
 **Objective.** Ben: "apply 053 to live".
