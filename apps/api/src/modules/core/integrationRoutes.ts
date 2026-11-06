@@ -1,5 +1,19 @@
 import { Hono } from 'hono';
-import { INTEGRATION_KINDS, INTEGRATION_MESSAGE_KINDS, type FxRate, type IntegrationKind, type IntegrationSettings } from '@erp/shared';
+import {
+  AI_NOTICE_VERSION,
+  findProvider,
+  INTEGRATION_KINDS,
+  INTEGRATION_MESSAGE_KINDS,
+  PROVIDER_KINDS,
+  PROVIDERS,
+  type AiStatus,
+  type FxRate,
+  type IntegrationKind,
+  type IntegrationSettings,
+  type ProviderKind,
+  type ProviderSettings,
+} from '@erp/shared';
+import { aiCapUsd } from '../../lib/ai';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
@@ -94,6 +108,93 @@ integrationRoutes.post('/:kind/test', requirePermission('core.integrations.manag
   const kind = kindParam(c.req.param('kind'));
   const id = await callRpc<string>(userDb(c), 'core_test_integration', { p_kind: kind });
   return ok(c, { kind, outboxId: id }, 201);
+});
+
+// ------------------------------------------------------------------ providers (sql/056): payments, shipping, store, AI
+
+const providerParam = (k: string | undefined): ProviderKind => {
+  if (!k || !findProvider(k)) throw new HttpError(404, 'Unknown provider', 'not_found');
+  return k as ProviderKind;
+};
+
+integrationRoutes.get('/providers', requirePermission('core.integrations.view'), async (c) => {
+  const { data, error } = await userDb(c)
+    .from('core_integrations')
+    .select('kind, mode, enabled, settings, last_status, last_error, last_delivery_at')
+    .eq('org_id', c.var.tenant.orgId)
+    .in('kind', PROVIDER_KINDS as unknown as string[]);
+  if (error) throw error;
+  type PRow = {
+    kind: ProviderKind;
+    mode: 'simulated' | 'live';
+    enabled: boolean;
+    settings: { config?: Record<string, string>; saved_fields?: string[] } | null;
+    last_status: 'sent' | 'failed' | null;
+    last_error: string | null;
+    last_delivery_at: string | null;
+  };
+  const rows = new Map(((data ?? []) as PRow[]).map((r) => [r.kind, r]));
+  return ok<ProviderSettings[]>(
+    c,
+    PROVIDERS.map((p) => {
+      const r = rows.get(p.kind);
+      return {
+        kind: p.kind,
+        enabled: r?.enabled ?? false,
+        mode: r?.mode ?? 'simulated',
+        savedFields: r?.settings?.saved_fields ?? [],
+        config: r?.settings?.config ?? {},
+        lastStatus: r?.last_status ?? null,
+        lastError: r?.last_error ?? null,
+        lastDeliveryAt: r?.last_delivery_at ?? null,
+      };
+    }),
+  );
+});
+
+// Write-only for secret fields; an empty string removes a field. Field names are checked here and again in the database.
+integrationRoutes.put('/providers/:kind/fields', requirePermission('core.integrations.manage'), async (c) => {
+  const kind = providerParam(c.req.param('kind'));
+  const values = (await jsonBody(c)).values;
+  const allowed = new Set(findProvider(kind)!.fields.map((f) => f.key));
+  if (!values || typeof values !== 'object' || Array.isArray(values)) invalid('values must be an object');
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(values as Record<string, unknown>)) {
+    if (!allowed.has(k) || typeof v !== 'string' || v.length > 4000) invalid(`Invalid field ${k}`);
+    clean[k] = v;
+  }
+  return ok(
+    c,
+    await callRpc<{ kind: string; savedFields: string[] }>(userDb(c), 'core_save_provider_fields', { p_kind: kind, p_values: clean }),
+  );
+});
+
+integrationRoutes.put('/providers/:kind', requirePermission('core.integrations.manage'), async (c) => {
+  const kind = providerParam(c.req.param('kind'));
+  const b = await jsonBody(c);
+  const mode = b.mode === 'live' ? 'live' : b.mode === 'simulated' ? 'simulated' : null;
+  if (typeof b.enabled !== 'boolean' || !mode) invalid('enabled and mode (simulated or live) are required');
+  await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: mode, p_kinds: [] });
+  return ok(c, { kind });
+});
+
+// AI: consent (owner only, in the database), this month's use, our cap.
+integrationRoutes.get('/ai', requirePermission('core.integrations.view'), async (c) => {
+  const s = await callRpc<{ consent: AiStatus['consent']; monthCalls: number; monthSpendMicroUsd: number }>(userDb(c), 'core_ai_status');
+  return ok<AiStatus>(c, {
+    consent: s.consent,
+    monthCalls: Number(s.monthCalls),
+    monthSpendMicroUsd: Number(s.monthSpendMicroUsd),
+    serviceCapUsd: aiCapUsd(c.env),
+    ownProviderReady: { openai: Boolean(c.env.OPENAI_API_KEY), elevenlabs: Boolean(c.env.ELEVENLABS_API_KEY) },
+  });
+});
+
+integrationRoutes.put('/ai/consent', requirePermission('core.integrations.manage'), async (c) => {
+  const accept = (await jsonBody(c)).accept;
+  if (typeof accept !== 'boolean') invalid('accept must be true or false');
+  await callRpc<void>(userDb(c), 'core_set_ai_consent', { p_accept: accept, p_notice_version: AI_NOTICE_VERSION });
+  return ok(c, { accepted: accept });
 });
 
 // ------------------------------------------------------------------ exchange rates (shared reference data, sql/053)

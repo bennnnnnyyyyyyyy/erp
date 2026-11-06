@@ -28,6 +28,11 @@ export type Bindings = {
   TELEGRAM_BOT_USERNAME?: string;
   /** The web app's address, for "Open in the app" buttons (defaults to the first ALLOWED_ORIGINS entry). */
   APP_URL?: string;
+  // AI (lib/ai.ts, sql/056). Our keys, used for companies that accepted the AI notice and have no key of their own. Secrets:
+  // OPENAI_API_KEY, ELEVENLABS_API_KEY. AI_MONTHLY_CAP_USD: the most we spend a month across all companies on our keys (default 100).
+  OPENAI_API_KEY?: string;
+  ELEVENLABS_API_KEY?: string;
+  AI_MONTHLY_CAP_USD?: string;
 };
 
 export type AuthUser = { id: string; email: string };

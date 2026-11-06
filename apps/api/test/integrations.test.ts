@@ -175,6 +175,11 @@ describe('integration routes', () => {
     ['PUT', '/v1/core/integrations/slack/secret'],
     ['DELETE', '/v1/core/integrations/slack/secret'],
     ['POST', `/v1/core/integrations/${ID}/test`],
+    ['GET', '/v1/core/integrations/providers'],
+    ['PUT', '/v1/core/integrations/providers/paymob/fields'],
+    ['PUT', '/v1/core/integrations/providers/paymob'],
+    ['GET', '/v1/core/integrations/ai'],
+    ['PUT', '/v1/core/integrations/ai/consent'],
     ['GET', '/v1/core/fx/rate?from=USD&to=EGP'],
     ['GET', '/v1/core/fx/today'],
   ];
@@ -187,8 +192,8 @@ describe('integration routes', () => {
     const declared = src.match(/integrationRoutes\.(get|post|put|delete)\(/g) ?? [];
     const guarded =
       src.match(/integrationRoutes\.(get|post|put|delete)\([^\n]*requirePermission\('core\.integrations\.(view|manage)'\)/g) ?? [];
-    expect(declared.length).toBe(5);
-    expect(guarded.length).toBe(5);
+    expect(declared.length).toBe(10);
+    expect(guarded.length).toBe(10);
     expect(src).not.toMatch(/(?<!Routes)\.(insert|update|upsert)\(/);
     expect(src).not.toContain('secret_id');
   });
