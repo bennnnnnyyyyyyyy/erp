@@ -1,5 +1,5 @@
 /*
-  Design tokens: the public shadcn/ui "neutral" theme (MIT) with a 0.625rem radius, light and dark. coss ui
+  Design tokens: the public shadcn/ui theme structure (MIT), tinted with an indigo brand hue (265) with a 0.625rem radius, light and dark. coss ui
   (https://coss.com/ui) is only a visual reference: its component source is AGPL-3.0, so none of it is copied here.
   Tailwind's theme and utilities are loaded WITHOUT its reset (preflight), so the existing screens keep working until they
   are moved over. New code can use Tailwind utilities (bg-background, text-muted-foreground, border-border, rounded-lg ...).
@@ -51,65 +51,65 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0.004 265);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.96 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.50 0.20 265);
+  --primary-foreground: oklch(0.99 0.01 265);
+  --secondary: oklch(0.96 0.012 265);
+  --secondary-foreground: oklch(0.30 0.08 265);
+  --muted: oklch(0.965 0.008 265);
+  --muted-foreground: oklch(0.46 0.02 265);
+  --accent: oklch(0.945 0.035 265);
+  --accent-foreground: oklch(0.36 0.15 265);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.45 0.2 27);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.9 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.915 0.01 265);
+  --input: oklch(0.89 0.012 265);
+  --ring: oklch(0.60 0.16 265);
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-700);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-700);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-700);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.35 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar: oklch(0.975 0.012 265);
+  --sidebar-foreground: oklch(0.34 0.03 265);
+  --sidebar-border: oklch(0.91 0.015 265);
+  --sidebar-accent: oklch(0.93 0.04 265);
   --radius: 0.625rem;
   color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.16 0.015 265);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0 0);
+  --card: oklch(0.205 0.02 265);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0 0);
+  --popover: oklch(0.205 0.02 265);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: oklch(0.72 0.15 265);
+  --primary-foreground: oklch(0.18 0.04 265);
+  --secondary: oklch(0.27 0.03 265);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.26 0.02 265);
+  --muted-foreground: oklch(0.72 0.02 265);
+  --accent: oklch(0.30 0.06 265);
+  --accent-foreground: oklch(0.92 0.04 265);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.75 0.15 22);
   --border: oklch(1 0 0 / 11%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.62 0.14 265);
   --info-foreground: var(--color-blue-400);
   --success-foreground: var(--color-emerald-400);
   --warning-foreground: var(--color-amber-400);
-  --sidebar: oklch(0.16 0 0);
-  --sidebar-foreground: oklch(0.8 0 0);
+  --sidebar: oklch(0.185 0.02 265);
+  --sidebar-foreground: oklch(0.82 0.02 265);
   --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-accent: oklch(0.24 0 0);
+  --sidebar-accent: oklch(0.28 0.06 265);
   color-scheme: dark;
 }

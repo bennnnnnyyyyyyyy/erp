@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { hasPermission, INTEGRATION_MESSAGE_KINDS, type FxRate, type IntegrationKind, type IntegrationSettings } from '@erp/shared';
+import { ChannelLogo } from '../../../components/icons';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
@@ -48,8 +49,9 @@ function IntegrationCard({ item, canManage, onChanged }: { item: IntegrationSett
   const toggleKind = (k: string) => save({ messageKinds: item.messageKinds.includes(k) ? item.messageKinds.filter((x) => x !== k) : [...item.messageKinds, k] });
 
   return (
-    <div className="form-card stack">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className={`form-card stack integration-card${item.enabled ? ' is-on' : ''}`}>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="channel-logo"><ChannelLogo kind={item.kind} /></span>
         <h2>{tr(NAME[item.kind])}</h2>
         <span className={`pill st-${item.enabled ? 'sent' : 'cancelled'}`}>{item.enabled ? tr('On') : tr('Off')}</span>
         <span className="muted small">{item.mode === 'live' ? tr('Live') : tr('Simulated: nothing is really sent')}</span>

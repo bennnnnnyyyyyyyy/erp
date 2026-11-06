@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 // Line icons for apps (home tiles and the top bar) and for each page in an app's menu. Drawn here (no icon library, no copied icon
 // set): 24x24, stroke only, so they follow the text colour in light and dark mode and need no flipping in right-to-left layouts.
@@ -57,4 +57,61 @@ export function PageIcon({ appKey, path }: { appKey: string; path: string }) {
     return <AppIcon appKey={appKey} name="" />;
   }
   return <>{PAGE.find(([re]) => re.test(path))?.[1] ?? DEFAULT_PAGE}</>;
+}
+
+/** One hue (OKLCH degrees) per app, so tiles, the top bar and the menu are told apart by colour and not only by shape. */
+const HUE: Record<string, number> = {
+  inventory: 250, tasks: 160, messaging: 195, purchasing: 55, sales: 145, finance: 300, accounting: 285, treasury: 215,
+  trade: 25, alerts: 75, guide: 330, start: 15, settings: 265,
+};
+export const appHue = (appKey: string): number => HUE[appKey] ?? 265;
+/** Inline style that sets the app's hue for the `--h` colour rules in styles.css. */
+export const appHueStyle = (appKey: string) => ({ '--h': appHue(appKey) }) as CSSProperties;
+
+/** The product mark: a rounded tile with a stacked-block glyph (stock), in the brand gradient. No customer branding is hardcoded here. */
+export function LogoMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg className="logo-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="lm-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="oklch(0.66 0.19 285)" />
+          <stop offset="1" stopColor="oklch(0.48 0.21 255)" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#lm-g)" />
+      <path d="M16 6.5l8.5 4.6v9.8L16 25.5l-8.5-4.6v-9.8L16 6.5z" fill="none" stroke="#fff" strokeOpacity=".95" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M7.8 11.3L16 16l8.2-4.7M16 16v9.2" fill="none" stroke="#fff" strokeOpacity=".95" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Integration channel logos in each service's own colours (simplified marks drawn here, not the vendors' artwork files). */
+export function ChannelLogo({ kind }: { kind: string }) {
+  const box = { viewBox: '0 0 32 32', 'aria-hidden': true } as const;
+  switch (kind) {
+    case 'slack':
+      return (
+        <svg {...box}><rect width="32" height="32" fill="#fff" />
+          <g strokeWidth="4" strokeLinecap="round" fill="none">
+            <path d="M12 8v8" stroke="#36c5f0" /><path d="M24 12h-8" stroke="#2eb67d" />
+            <path d="M20 24v-8" stroke="#ecb22e" /><path d="M8 20h8" stroke="#e01e5a" />
+          </g></svg>
+      );
+    case 'teams':
+      return (
+        <svg {...box}><rect width="32" height="32" fill="#5059c9" />
+          <circle cx="23" cy="10" r="3" fill="#a9afff" /><rect x="6" y="10" width="15" height="14" rx="2.2" fill="#fff" />
+          <path d="M9.5 14h8M13.5 14v6.5" stroke="#5059c9" strokeWidth="2.2" strokeLinecap="round" /><path d="M22 14h4v6a3 3 0 01-3 3h-1z" fill="#a9afff" /></svg>
+      );
+    case 'telegram':
+      return (
+        <svg {...box}><rect width="32" height="32" fill="#27a7e7" />
+          <path d="M6.5 15.5l17.8-6.9c.8-.3 1.5.2 1.2 1.4l-3 14.2c-.2 1-.8 1.2-1.7.8l-4.6-3.4-2.2 2.1c-.3.3-.5.5-1 .5l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2L10.9 17.9l-4.5-1.4c-1-.3-1-1 .1-1z" fill="#fff" /></svg>
+      );
+    default:
+      return (
+        <svg {...box}><rect width="32" height="32" fill="#ef6c4d" />
+          <rect x="6.5" y="9" width="19" height="14" rx="2.5" fill="#fff" /><path d="M7.5 11l8.5 6.2L24.5 11" fill="none" stroke="#ef6c4d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      );
+  }
 }
