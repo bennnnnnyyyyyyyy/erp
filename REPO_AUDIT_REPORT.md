@@ -180,3 +180,101 @@ Provisional 0–4 scores based on static review and recorded audit evidence:
 - Relative Markdown-link scan: eight non-template broken/mislocated links found among the first-party docs examined.
 - Tests and browser checks: not run. The available PowerShell launcher was denied by the environment; direct Node subprocess launch also returned EPERM. No database or production operations were attempted.
 - Files changed: REPO_AUDIT_REPORT.md only.
+
+---
+
+## Addendum: re-verification and new findings (6 November 2026, later the same day)
+
+**Scope:** every finding above re-checked against the current tree (branch `integrations-all`, identical to `main` except one report file), plus a further pass over the webhooks, outbox, AI routes, migrations 053–060, route permission checks, git-tracked files and Markdown links. Static review; no tests, database or production operations were run.
+
+### Status of the original findings
+
+| # | Finding | Status now |
+|---|---|---|
+| 1 | SQL tests are not a deploy gate | **Confirmed.** Extra complication: `sql-tests.yml` only triggers on `sql/**` changes, so marking it a required check as-is would block every PR that does not touch SQL. |
+| 2 | Migration 056 status conflict | **Superseded.** 056–060 are all applied to live (worklog 6 Nov night; [sql/README.md](sql/README.md)). The remaining drift: [README.md:46](README.md:46) still says the real app needs `sql/001`–`035`. |
+| 3 | Canonical product docs stale | **Confirmed.** |
+| 4 | Checklist contradicts itself | **Confirmed.** |
+| 5 | ARCHITECTURE.md and plan index are placeholders | **Confirmed.** |
+| 6 | Broken internal links (8) | **Confirmed: 9.** Root cause of five: ADR-0004 moved to `architecture/decisions/` but links still use `../planning/`, and the ADR's own links use `../plans/` (should be `../../plans/`). Two more point at research teardowns that were never committed (see N5). |
+| 7 | Root scratch files and `{{PRODUCT_NAME}}` | **Confirmed and wider** (see N6, N8). |
+| 8 | WhatsApp body read before size cap | **Confirmed and wider.** Telegram, Paymob, Fawry and Bosta webhooks do the same ([index.ts:57](apps/api/src/index.ts:57) onwards); Paymob, Fawry and Bosta buffer before any authentication. `/v1/core/ai/transcribe` parses the whole multipart upload with `formData()` before its 5 MB check. The `100_000` cap compares UTF-16 string length, not bytes. |
+| 9 | Duplicate delivery after recovery | **Confirmed.** The WhatsApp adapter has no idempotency key either. |
+| 10 | AI consent ignores notice version | **Confirmed** ([056_provider_connections.sql:161](sql/056_provider_connections.sql:161)). |
+| 11 | Ollama URL validation | **Partly fixed.** The server now calls `assertSafeOllamaUrl` (https only, no localhost, IP literals or `.local/.internal/.lan`) before every request ([aiProviders.ts:41](apps/api/src/lib/aiProviders.ts:41)). Remaining: the database still accepts `http://`, and the request follows redirects (N3). |
+| 12 | All screens preloaded after sign-in | **Confirmed** (production builds only, [Shell.tsx:95](apps/web/src/components/Shell.tsx:95)). |
+| 13 | Empty ConnectPhone header | **Confirmed** ([ConnectPhone.tsx:73](apps/web/src/modules/messaging/ConnectPhone.tsx:73)). |
+| 14 | Playwright vs. repo rule | **Confirmed as a policy conflict.** The project owner's standing guidance is that the browser ban targets specific agents, so the rule wording, not CI, is the likely fix. |
+| 15 | Account-specific autofill default | **Confirmed.** The same address is also used in [onboardingSample.test.ts:43](apps/web/src/modules/help/onboardingSample.test.ts:43). |
+| 16 | Provider integrations not end-to-end | **Mostly superseded.** Stages A–E (settings, pay links, Bosta, Shopify, AI and voice) are built, on `main`, and their migrations applied. Stage F (bank statement import, CBE rates) and G (setup guide) are not started. |
+| 17 | Arabic not ready to claim | Still true. |
+| 18 | Not runtime-verified | Still true, including for this addendum. |
+
+### New findings
+
+#### N1 (P2). One failed completion write aborts the whole delivery pass
+
+[outbox.ts:67](apps/api/src/jobs/outbox.ts:67) throws inside the send loop when `msg_complete_delivery` fails. Every message claimed later in the same batch is left in `sending` and only recovered after five minutes, and the message whose send succeeded is resent. A transient database error therefore delays a whole batch and guarantees one duplicate.
+
+**Recommendation:** log the error and continue the loop; count it separately in the pass result.
+
+#### N2 (P2). Worklog is out of order and carries stale status
+
+The 2026-11-05 review entry sits at the top of [WORKLOG.md](documentation/operations/WORKLOG.md), above the "Entry heading format" note and above the 11-06 entries, breaking "newest first". The 6 Nov status check says Stage E is not committed; it is on `main` (commit `deb21f2`). Since the worklog is the declared source of truth, stale lines in it are the most expensive kind of drift.
+
+#### N3 (P3). Ollama request follows redirects
+
+`chatOllama` uses the default `redirect: 'follow'`, so a host that passes `assertSafeOllamaUrl` can redirect the call elsewhere (including plain http). Cloudflare Workers cannot reach private networks, so impact is low, but the guard should not be bypassable by one hop.
+
+**Recommendation:** `redirect: 'error'` (or `'manual'`) on the fetch.
+
+#### N4 (P3). sql/README describes the SQL workflow incorrectly
+
+[sql/README.md](sql/README.md) says the SQL workflow is non-blocking and "has not run on GitHub yet"; the header of `.github/workflows/sql-tests.yml` records the 6 Nov change that made failing tests fail the job.
+
+#### N5 (P2). Competitor research is git-ignored despite the rule requiring it there
+
+`.gitignore` contains `documentation/research`, while agents.md requires research under `documentation/research/<slug>/`. Existing files (Miracle, Odoo) were force-added, so any new teardown is silently left out unless someone remembers `git add -f`. The ERPNext and Dolibarr teardowns linked from SUPERFIX_WORKFLOW_PLAN.md do not exist locally either: the plan cites research that was never written. Because the repository is public (N6), the ignore rule may be deliberate (competitor material); the rule and the instructions need to agree either way.
+
+#### N6 (P1). Personal correspondence and working files are committed to a public repository
+
+The GitHub remote `bennnnnnyyyyyyyy/erp` is **public** (checked with `gh repo view`: `PUBLIC`). Tracked at the repo root: `email updates for grant.zip` (six `.eml` emails plus a workbook), `Trial_capture_workbook_v13.xlsx`, `ERP_integrations_table.pdf`, and a 246 KB saved page `Home (11_2_2026 …).html`. No credentials were found in them (the `eyJ…` string in the HTML is image data), but the emails are personal correspondence and are readable by anyone. The worklog, CI workflow and a test also name staff and demo account email addresses, and the docs give the live API and Pages URLs. Deleting the files leaves them in git history and in any existing forks or clones.
+
+**Recommendation:** first decide whether the repository should be public at all; making it private is the fastest containment. Then remove the files from the tree and add them to `.gitignore`; rewriting history is only worth it if the repository stays public (it needs a force-push by the owner and breaks every existing clone and worktree).
+
+#### N7 (P2). agents.md and PRODUCT_BRIEF describe the old product direction
+
+Both describe a warehouse-first product with a general ledger out of scope; the current direction (Nov 2026) is a general-purpose ERP with the accounting suite first. agents.md is loaded by every AI agent in every session, so it propagates the old direction into new work.
+
+#### N8 (P3). This report breaks the root allowlist
+
+`REPO_AUDIT_REPORT.md` sits at the root, which the documentation rules reserve for a fixed list of files; reviews belong in `documentation/reviews/`.
+
+#### N9 (P3). Test fixture uses a real account email
+
+[onboardingSample.test.ts](apps/web/src/modules/help/onboardingSample.test.ts) uses the demo presenter's real address. Use a reserved `.test` address.
+
+### Checked and found sound
+
+- Migrations 053–060: every new table has `org_id`, RLS enabled, `revoke all` from `anon`/`authenticated`, then `grant select` (057 and 058 do it in a loop).
+- Every webhook signature or secret comparison is constant-time (`safeEqual`, `equalText`).
+- The AI assistant's PostgREST `.or()` filter is built from words matching `[\p{L}\p{N}-]`, so commas, dots and parentheses cannot inject filter syntax.
+- `/v1/core/session`, `/me/language` and `/people` have no `requirePermission` by design: they are self-scoped or names-only for any member.
+- Demo passwords live in `.temp/demo-credentials.txt`, which is git-ignored and untracked.
+
+### Updated recommended order
+
+1. Decide whether the repository stays public, then act on N6 (personal data in git) and N5 (research ignore rule).
+2. Code: shared byte-limited body reader for all webhooks and `/transcribe`; outbox continue-on-error (N1); Ollama `redirect: 'error'` (N3); migration 061 for consent versioning (finding 10) and the database Ollama check (finding 11), applied by the owner.
+3. CI: SQL job inside `ci-deploy.yml` that always runs, skips when no SQL changed, and gates deploy; remove the hard-coded autofill default.
+4. Docs: README, sql/README, PRODUCT_BRIEF, agents.md positioning, checklist, ARCHITECTURE.md, plans index, nine links, worklog order; move this report to `documentation/reviews/`.
+5. UI: ConnectPhone header; data-saver-aware preload.
+
+A reverse review of these fixes (what each could break, and cheaper alternatives) is in [documentation/reviews/2026-11-06-repo-audit-fixes-reverse-review.md](documentation/reviews/2026-11-06-repo-audit-fixes-reverse-review.md).
+
+### Addendum verification record
+
+- Link scan: Node script over all git-tracked Markdown (excluding templates and `documentation/reference/`): 9 broken.
+- Grep sweeps: webhook body handling, `safeEqual` usage, `requirePermission` counts per route file, `revoke`/RLS per migration 053–060, tokens in tracked files.
+- `git ls-files`, `git check-ignore`, `git cat-file` for tracked-file and branch checks.
+- Not run: typecheck, tests, SQL tests, browser. Files changed by this addendum: `REPO_AUDIT_REPORT.md` (this section appended) and the reverse review file.
