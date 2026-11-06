@@ -34,6 +34,20 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (night) — Integrations all-in-simulated: provider connections built (`sql/056` NOT applied); save point
+
+**Objective.** Ben's instruction: AI budget USD 100 a month for now, with customer consent, Ollama offered as the company's own local alternative, and "setup all apis and integrations pending my keys". Save point, checked against `ERP_integrations_table.pdf` (the 16-row status table) so the work stays on that list.
+
+**Actions Completed.**
+- `sql/056_provider_connections.sql` and `sql/tests/051_provider_connections.sql`: provider fields (Paymob, Fawry, Bosta, Shopify, OpenAI, ElevenLabs, Ollama), secrets in Vault as one bundle, AI consent (owner only, versioned `v1`), AI usage log and monthly spend for the cap.
+- `packages/shared/src/integrations.ts`: provider definitions, `ProviderSettings`, `AiStatus`, `AI_NOTICE_VERSION`.
+- `apps/api`: routes `GET /integrations/providers`, `PUT /integrations/providers/:kind/fields` (write-only secrets), `PUT /integrations/providers/:kind`, `GET /integrations/ai`, `PUT /integrations/ai/consent`; `lib/ai.ts` (cap, default USD 100, env `AI_MONTHLY_CAP_USD`); env names `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`; route tests updated (10 routes, all need sign-in).
+- Not yet built: Settings screen for providers and the AI notice (and Arabic), payment links (Paymob, Fawry), Bosta, Shopify, AI and voice adapters, bank statement import, Google Sheets/Drive export, setup guide.
+
+**Database / System Result.** Dry run of 056 on live (ggoerp) inside a rolled-back transaction: passed; deliberate break caught; tests 048, 049, 001 pass with 056. **Nothing applied to live.**
+
+**Safety Status.** `npm run typecheck`, `npm test` (shared 31, API 221 + 7 skipped, web 67) pass. No keys stored anywhere; nothing leaves the system until a key is supplied and a company switches an integration to live. Apply 056 only on Ben's explicit yes. No commit made.
+
 ## 2026-11-06 (19:31) — Applied `sql/055` (stock revaluation) to live (ggoerp) via CLI
 
 **Objective.** Ben: "apply 055 to live".

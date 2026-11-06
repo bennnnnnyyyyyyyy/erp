@@ -32,3 +32,168 @@ export type IntegrationSettings = {
 };
 
 export type FxRate = { from: string; to: string; rate: number; rateDate: string; source: string };
+
+// ------------------------------------------------------------------ providers (sql/056; Ben's choices, 6 Nov)
+
+export const PROVIDER_KINDS = ['paymob', 'fawry', 'bosta', 'shopify', 'openai', 'elevenlabs', 'ollama'] as const;
+export type ProviderKind = (typeof PROVIDER_KINDS)[number];
+export type ProviderGroup = 'payments' | 'shipping' | 'store' | 'ai';
+
+export type ProviderField = {
+  key: string;
+  label: string;
+  /** Stored write-only in the vault; never shown again once saved. */
+  secret: boolean;
+  required: boolean;
+  placeholder?: string;
+  help?: string;
+};
+
+export type ProviderDef = {
+  kind: ProviderKind;
+  group: ProviderGroup;
+  name: string;
+  summary: string;
+  fields: ProviderField[];
+  webhookPath?: string;
+};
+
+/** The same fields as sql/056 core__provider_fields; labels and help for the settings screen. */
+export const PROVIDERS: readonly ProviderDef[] = [
+  {
+    kind: 'paymob',
+    group: 'payments',
+    name: 'Paymob',
+    summary: 'Card, wallet and instalment payments through a "Pay now" link on each sales invoice.',
+    webhookPath: '/webhooks/paymob',
+    fields: [
+      { key: 'secret_key', label: 'Secret key', secret: true, required: true, placeholder: 'egy_sk_…' },
+      { key: 'public_key', label: 'Public key', secret: true, required: true, placeholder: 'egy_pk_…' },
+      { key: 'hmac_secret', label: 'HMAC secret', secret: true, required: true, help: 'Paymob dashboard → Settings → Account info.' },
+      {
+        key: 'integration_ids',
+        label: 'Payment method IDs',
+        secret: false,
+        required: true,
+        placeholder: '4001,4002',
+        help: 'The integration IDs of the methods to offer, comma-separated.',
+      },
+    ],
+  },
+  {
+    kind: 'fawry',
+    group: 'payments',
+    name: 'Fawry',
+    summary: 'Payment by Fawry reference number at any Fawry outlet, or by card, for each sales invoice.',
+    webhookPath: '/webhooks/fawry',
+    fields: [
+      { key: 'merchant_code', label: 'Merchant code', secret: false, required: true },
+      { key: 'secure_key', label: 'Security key', secret: true, required: true },
+    ],
+  },
+  {
+    kind: 'bosta',
+    group: 'shipping',
+    name: 'Bosta',
+    summary: 'Create a Bosta delivery from a sales order and follow its status here.',
+    webhookPath: '/webhooks/bosta',
+    fields: [
+      { key: 'api_key', label: 'API key', secret: true, required: true, help: 'Bosta → Settings → API Integration (read/write).' },
+      {
+        key: 'webhook_secret',
+        label: 'Webhook secret',
+        secret: true,
+        required: true,
+        help: "Any long random text. Enter the same text in Bosta as the webhook's Authorization header.",
+      },
+    ],
+  },
+  {
+    kind: 'shopify',
+    group: 'store',
+    name: 'Shopify',
+    summary: 'Shopify orders arrive here as sales orders (matched by SKU) and go through the normal stock approval.',
+    webhookPath: '/webhooks/shopify',
+    fields: [
+      { key: 'shop_domain', label: 'Shop domain', secret: false, required: true, placeholder: 'your-store.myshopify.com' },
+      { key: 'access_token', label: 'Admin API access token', secret: true, required: true, placeholder: 'shpat_…' },
+      { key: 'webhook_secret', label: 'API secret key (signs webhooks)', secret: true, required: true },
+    ],
+  },
+  {
+    kind: 'openai',
+    group: 'ai',
+    name: 'OpenAI',
+    summary: "The assistant and voice transcription. Needs the owner's consent: company data is sent to OpenAI.",
+    fields: [
+      {
+        key: 'api_key',
+        label: 'Your own API key (optional)',
+        secret: true,
+        required: false,
+        help: 'Leave empty to use ours, within the monthly limit.',
+      },
+      { key: 'model', label: 'Model (optional)', secret: false, required: false, placeholder: 'gpt-5-mini' },
+    ],
+  },
+  {
+    kind: 'elevenlabs',
+    group: 'ai',
+    name: 'ElevenLabs',
+    summary: "Voice transcription (Arabic supported). Needs the owner's consent: recordings are sent to ElevenLabs.",
+    fields: [
+      {
+        key: 'api_key',
+        label: 'Your own API key (optional)',
+        secret: true,
+        required: false,
+        help: 'Leave empty to use ours, within the monthly limit.',
+      },
+    ],
+  },
+  {
+    kind: 'ollama',
+    group: 'ai',
+    name: 'Ollama (your own AI)',
+    summary: 'Run the assistant on your own computer or server: nothing leaves your company and nothing is charged.',
+    fields: [
+      {
+        key: 'base_url',
+        label: 'Ollama address',
+        secret: false,
+        required: true,
+        placeholder: 'https://ai.your-company.com',
+        help: 'Must be reachable from the internet over https (for example through a tunnel).',
+      },
+      { key: 'model', label: 'Model', secret: false, required: true, placeholder: 'qwen2.5:7b' },
+      { key: 'api_key', label: 'Access key (optional)', secret: true, required: false, help: 'If your address is protected by a key.' },
+    ],
+  },
+];
+
+export const findProvider = (kind: string) => PROVIDERS.find((p) => p.kind === kind);
+
+export type ProviderSettings = {
+  kind: ProviderKind;
+  enabled: boolean;
+  mode: 'simulated' | 'live';
+  /** Names of saved fields (secret or plain); values of secret fields are never returned. */
+  savedFields: string[];
+  /** Plain (non-secret) values, for showing and editing. */
+  config: Record<string, string>;
+  lastStatus: 'sent' | 'failed' | null;
+  lastError: string | null;
+  lastDeliveryAt: string | null;
+};
+
+export type AiStatus = {
+  consent: { version: string; acceptedBy: string; acceptedAt: string } | null;
+  monthCalls: number;
+  monthSpendMicroUsd: number;
+  /** Our monthly cap across all companies on our keys (USD). */
+  serviceCapUsd: number;
+  ownProviderReady: { openai: boolean; elevenlabs: boolean };
+};
+
+/** The notice the owner accepts before company data may go to OpenAI or ElevenLabs (versioned; changing it asks again). */
+export const AI_NOTICE_VERSION = 'v1';

@@ -3,7 +3,7 @@
 // Anything the SDK does not publish (for example the person-buyer threshold) is deliberately NOT checked here.
 
 import { isValidTaxPair, ITEM_TYPES } from './codes';
-import { type EtaDocInput } from './build';
+import type { EtaDocInput } from './build';
 import { calcLine, calcTotals } from './calc';
 import { parseDec, ZERO } from './decimal';
 
