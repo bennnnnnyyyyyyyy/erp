@@ -683,6 +683,52 @@ accountingRoutes.post('/journals/:id/reverse', requirePermission('accounting.jou
   return ok(c, { id, entryId });
 });
 
+// ------------------------------------------------------------------ stock value check and revaluation (sql/055, needs accounting on)
+
+// Per item: quantity on hand, average cost, value in the books, value at average cost, and the difference.
+accountingRoutes.get('/stock-value', requirePermission('accounting.ledger.view'), async (c) => {
+  const rows = await callRpc<
+    {
+      item_id: string;
+      sku: string;
+      item_name: string;
+      on_hand: number;
+      avg_cost_minor: number | null;
+      book_minor: number;
+      target_minor: number;
+      difference_minor: number;
+    }[]
+  >(userDb(c), 'acc_stock_value_check');
+  return ok(
+    c,
+    (rows ?? []).map((r) => ({
+      itemId: r.item_id,
+      sku: r.sku,
+      name: r.item_name,
+      onHand: Number(r.on_hand),
+      avgCostMinor: r.avg_cost_minor === null ? null : Number(r.avg_cost_minor),
+      bookMinor: num(r.book_minor),
+      targetMinor: num(r.target_minor),
+      differenceMinor: num(r.difference_minor),
+    })),
+  );
+});
+
+// One correcting entry, item by item, bringing the books to quantity × average cost. Owner or head accountant (database).
+accountingRoutes.post('/stock-value/revalue', requirePermission('accounting.chart.manage'), async (c) => {
+  const b = await jsonBody(c);
+  const date = text(b.date);
+  const note = text(b.note);
+  if (!DATE_RE.test(date) || !note || note.length > 300) invalid('A date and a reason are required');
+  return ok(
+    c,
+    await callRpc<{ items: number; netMinor: number; entryId: string | null }>(userDb(c), 'acc_revalue_stock', {
+      p_date: date,
+      p_note: note,
+    }),
+  );
+});
+
 // ------------------------------------------------------------------ trial balance (needs accounting on)
 
 type TbRow = {

@@ -42,6 +42,7 @@ const SOURCE_LABEL: Record<string, string> = {
   manual_journal: 'Manual journal',
   cost_change: 'Cost change',
   treasury_transfer: 'Treasury transfer',
+  stock_revaluation: 'Stock revaluation',
 };
 export const sourceLabel = (t: string) => tr(SOURCE_LABEL[t] ?? t);
 
@@ -102,6 +103,7 @@ const MOVE_LABEL: Record<string, string> = {
   transfer_in: 'Transfer in',
   transfer_out: 'Transfer out',
   return_in: 'Customer return',
+  revaluation: 'Revaluation',
 };
 export const moveLabel = (k: string) => (MOVE_LABEL[k] ? tr(MOVE_LABEL[k]) : k.replace(/_/g, ' '));
 

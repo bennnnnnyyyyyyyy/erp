@@ -175,6 +175,10 @@ begin
   for m in reverse 12..1 loop
     v_ms := (date_trunc('month', current_date) - make_interval(months => m))::date;
     d := 0.10 * (12 - m) / 11.0;                                  -- input prices drift up about 10% over the year
+    -- The items' cost follows the month's price, so stock issued this month leaves at about what it came in at (issues take the
+    -- item's average cost when inserted, sql/023). Fixed 6 Nov 2026: before, issues used the starting cost all year while receipts
+    -- rose 10%, so stock value drifted EGP 582,100 above quantity × average cost.
+    update public.inv_items i set avg_cost_minor = round(t.cost * (1 + d)) from t_item t where t.id = i.id and i.org_id = oid;
     select coalesce(sum(tl.qty), 0) into units from t_lines tl join t_orders so on so.n = tl.n where so.ms = v_ms;
 
     -- (a) finished goods "received from production" on day 1, 15% more than the month sells
@@ -323,7 +327,12 @@ begin
       where q.org_id = oid and q.status in ('submitted', 'approved') and q.warehouse_id = b.warehouse_id and l2.item_id = b.item_id), 0) where b.org_id = oid;
   update public.inv_items i set reorder_level = ceil((select coalesce(sum(tl.qty), 0) from t_lines tl where tl.sku = i.sku) / 12.0 * 0.6) where i.org_id = oid and i.sku like 'F-%';
   update public.inv_items i set reorder_level = ceil((select coalesce(sum(b.on_hand), 0) from public.inv_stock_balances b where b.item_id = i.id) + 40) where i.org_id = oid and i.sku in ('F-OIL', 'F-SER', 'R-FR2');
-  update public.inv_items i set avg_cost_minor = round(i.avg_cost_minor * 1.10) where i.org_id = oid and i.sku not like 'x%';
+  -- Average cost = the stock's value from the ledger rows / quantity on hand, so quantity × average cost equals the stock value the
+  -- books will hold when accounting is switched on (6 Nov 2026; replaces a flat 10% bump that did not match the ledger).
+  update public.inv_items i set avg_cost_minor = v.avg
+    from (select m.item_id, round(sum(round(m.qty * coalesce(m.unit_cost_minor, 0))) / nullif(sum(m.qty), 0))::bigint as avg
+            from public.inv_stock_moves m where m.org_id = oid group by m.item_id having sum(m.qty) > 0) v
+   where i.id = v.item_id and i.org_id = oid;
   insert into public.inv_counters (org_id, key, value) values (oid, 'request', v_req), (oid, 'sales_order', v_so), (oid, 'sales_invoice', v_inv), (oid, 'payment', v_pay), (oid, 'expense', v_exp), (oid, 'purchase_order', v_po)
   on conflict (org_id, key) do update set value = excluded.value;
   insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary)

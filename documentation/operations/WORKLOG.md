@@ -34,6 +34,48 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (19:31) — Applied `sql/055` (stock revaluation) to live (ggoerp) via CLI
+
+**Objective.** Ben: "apply 055 to live".
+
+**Database / System Result.**
+- Committed. Anonymous callers cannot revalue; users cannot call the internal function.
+- No revaluation has been posted yet: 0 revaluation entries and 0 cost-log rows.
+
+**Safety Status.**
+- On live, all rolled back: tests 050, 047, 042, 041, 019 and 038 pass.
+- The demo company's correction (preview −EGP 582,100.59 on 45 items) waits for Ben's click in Accounting setup, after the
+  `integrations-wave1` code is deployed.
+
+## 2026-11-06 (evening) — Demo stock costs: seed fixed; stock revaluation built (`sql/055` not applied); provider checklist
+
+**Objective.** Ben: "fix the demo sample stock costs"; and "give me a checkbox for providers with options, with a pro and con".
+
+**Actions Completed.**
+- **Cause:** `sql/seed/004` set item average costs directly. Issues took the flat starting cost all year while receipts rose 10%, and
+  a final flat +10% bump did not match the ledger.
+  - On the demo company: books EGP 3,723,858.67 vs quantity × average cost EGP 3,141,758.08 (45 items, −EGP 582,100.59).
+- **Seed fixed:** the items' cost follows each month's price, so issues match receipts. At the end, average cost = ledger value ÷
+  quantity, so a new demo company starts consistent.
+- **Live demo:** entries are permanent, so the fix is a correcting entry. `sql/055` and test 050 add a stock value check and
+  "Revalue stock to average cost":
+  - one entry, item by item, against the stock-adjustment account (owner or head accountant);
+  - the item statement shows a Revaluation line;
+  - API `GET /v1/accounting/stock-value` and `POST /v1/accounting/stock-value/revalue`;
+  - a "Stock value check" card in Accounting setup, with Arabic.
+- `documentation/planning/INTEGRATION_PROVIDER_CHOICES.md`: 15 sections of checkboxes with pros and cons, for Ben to fill in.
+
+**Database / System Result.** None: 055 was dry-run on live and rolled back. The rolled-back preview for the demo company gave
+45 items and a net −EGP 582,100.59.
+
+**Safety Status.**
+- Test 050 passes; regressions 047, 042, 041, 019 and 038 pass; a deliberate break (write-downs only) was caught.
+- Typecheck and `biome ci` pass; tests pass (shared 31, API 216, web 67).
+- Next steps for Ben:
+  1. say yes to apply 055;
+  2. deploy;
+  3. press "Revalue stock to average cost" in Accounting setup on the demo company (it posts to the books, so it is his click).
+
 ## 2026-11-06 (evening) — Live browser check of accounting and treasury on the demo company
 
 **Objective.** Ben switched accounting on for Demo Cosmetics Factory, then asked: "do your browser tests" (another chat is doing a UI
@@ -1939,7 +1981,7 @@ remove it before deleting the worktree (it is not tracked).
   phase 1 and treasury phase 2; the fixes were re-applied on top as uncommitted changes, with no conflicts. Checked on the combined code:
   typecheck, tests (shared 31, API 216, web 67), `biome ci` (no errors) and the smoke test (4/4).
 - Not touched (other session): `ConnectPhone.tsx` still has one empty `<th>`; `Messaging.tsx`, `registry.tsx`, `modules.ts`, Integrations.
-- The written findings file `documentation/reviews/2026-11-06-ui-audit.md` could not be saved (writes to it were blocked); the findings are in the chat report.
+- The full findings are saved in `documentation/reviews/2026-11-06-ui-audit.md`.
 
 **Database / System Result.** None.
 

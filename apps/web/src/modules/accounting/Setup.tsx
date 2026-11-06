@@ -259,6 +259,7 @@ export function AccountingSetupPage() {
           ) : <p className="muted small">{tr('Only an owner can switch accounting on.')}</p>}
         </div>
       ) : null}
+      {p.accountingOn ? <StockValueCard canRevalue={canManage} /> : null}
       {result ? (
         <div className="form-card stack">
           <h2>{tr('Switch-on result')}</h2>
@@ -267,6 +268,56 @@ export function AccountingSetupPage() {
         </div>
       ) : null}
     </section>
+  );
+}
+
+// ------------------------------------------------------------------ stock value check (sql/055)
+
+type StockValueRow = { itemId: string; sku: string; name: string; onHand: number; avgCostMinor: number | null; bookMinor: number; targetMinor: number; differenceMinor: number };
+
+/** Books vs quantity × average cost; the owner or head accountant can post one correcting entry. */
+function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
+  const session = useSession();
+  const rows = useLoad(() => api<StockValueRow[]>('/v1/accounting/stock-value'));
+  const { message, busy, run } = useNotice();
+  const [note, setNote] = useState('');
+  const currency = session.org?.defaultCurrency ?? 'EGP';
+  if (!rows.data) return <div className="form-card"><Loading error={rows.error} rows={2} /></div>;
+  const off = rows.data.filter((r) => r.differenceMinor !== 0);
+  const sum = (k: 'bookMinor' | 'targetMinor' | 'differenceMinor') => rows.data!.reduce((s, r) => s + r[k], 0);
+  return (
+    <div className="form-card stack">
+      <h2>{tr('Stock value check')}</h2>
+      <p className="muted small">{tr('Each item\'s value in the books should equal quantity on hand × average cost. It can drift when costs were set outside normal receipts, for example in imported or sample data.')}</p>
+      <Notice message={message} />
+      <p>{trf('In the books: {book}. At average cost: {target}. Difference: {diff} on {n} items.', {
+        book: money(sum('bookMinor'), currency), target: money(sum('targetMinor'), currency), diff: money(sum('differenceMinor'), currency), n: off.length,
+      })}</p>
+      {off.length ? (
+        <>
+          <div className="table-wrap"><table><thead><tr>
+            <th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('On hand')}</th><th scope="col" className="right">{tr('Average cost')}</th>
+            <th scope="col" className="right">{tr('In the books')}</th><th scope="col" className="right">{tr('At average cost')}</th><th scope="col" className="right">{tr('Difference')}</th>
+          </tr></thead><tbody>
+            {off.slice(0, 50).map((r) => (
+              <tr key={r.itemId}><td><code>{r.sku}</code> {r.name}</td><td className="right">{r.onHand}</td><td className="right">{r.avgCostMinor === null ? '—' : money(r.avgCostMinor, currency)}</td>
+                <td className="right">{money(r.bookMinor, currency)}</td><td className="right">{money(r.targetMinor, currency)}</td><td className="right">{money(r.differenceMinor, currency)}</td></tr>
+            ))}
+          </tbody></table></div>
+          {canRevalue ? (
+            <div className="form-row">
+              <label>{tr('Reason')}<input value={note} maxLength={300} placeholder={tr('e.g. Correct sample-data costs')} onChange={(e) => setNote(e.target.value)} /></label>
+              <ConfirmButton label={tr('Revalue stock to average cost')} confirmLabel={tr('Yes, post the correction')} disabled={busy || !note.trim()}
+                question={trf('Post one entry of {diff} to bring stock to average cost? It cannot be edited afterwards, only reversed by another entry.', { diff: money(sum('differenceMinor'), currency) })}
+                onConfirm={() => run(async () => {
+                  const r = await api<{ items: number; netMinor: number }>('/v1/accounting/stock-value/revalue', { method: 'POST', body: JSON.stringify({ date: new Date().toISOString().slice(0, 10), note }) });
+                  return trf('{n} items revalued; net {amount}.', { n: r.items, amount: money(r.netMinor, currency) });
+                }, rows.reload)} />
+            </div>
+          ) : <p className="muted small">{tr('Only the owner or the head accountant can post the correction.')}</p>}
+        </>
+      ) : <p className="muted small">{tr('Every item is at quantity × average cost.')}</p>}
+    </div>
   );
 }
 
