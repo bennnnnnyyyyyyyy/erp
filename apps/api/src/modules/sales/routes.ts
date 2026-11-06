@@ -104,7 +104,7 @@ async function one(c: Context<AppEnv>, id: string) {
 salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('sal_customers')
-    .select('id,name,contact,city,phone,payment_terms_days')
+    .select('id,code,name,contact,city,phone,payment_terms_days')
     .eq('org_id', orgOf(c))
     .is('deleted_at', null)
     .order('name');
@@ -114,6 +114,7 @@ salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (
     (
       (data ?? []) as {
         id: string;
+        code: string;
         name: string;
         contact: string | null;
         city: string | null;
@@ -123,6 +124,7 @@ salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (
     ).map((x) => ({
       id: x.id,
       kind: 'customer',
+      code: x.code,
       name: x.name,
       contact: x.contact ?? '',
       city: x.city ?? '',
@@ -140,6 +142,13 @@ salesRoutes.put('/customers/:id/terms', requirePermission('sales.customers.manag
   await callRpc<void>(userDb(c), 'sal_set_customer_terms', { p_customer_id: idParam(c), p_days: days });
   return ok(c, { id: idParam(c), paymentTermsDays: days });
 });
+// Change a customer's code (sql/050). The database allows owners and admins; codes are unique per company.
+salesRoutes.put('/customers/:id/code', requirePermission('sales.customers.manage'), async (c) => {
+  const code = text((await jsonBody(c)).code);
+  if (!/^[A-Za-z0-9-]{1,30}$/.test(code)) invalid('A code is letters, digits and dashes, up to 30');
+  await callRpc<void>(userDb(c), 'sal_set_customer_code', { p_customer_id: idParam(c), p_code: code });
+  return ok(c, { id: idParam(c), code });
+});
 salesRoutes.get('/orders', requirePermission('sales.orders.read'), async (c) => ok(c, await loadOrders(c)));
 salesRoutes.get('/orders/:id', requirePermission('sales.orders.read'), async (c) => ok(c, await one(c, idParam(c))));
 salesRoutes.post('/customers', requirePermission('sales.customers.manage'), async (c) => {
@@ -151,6 +160,8 @@ salesRoutes.post('/customers', requirePermission('sales.customers.manage'), asyn
     p_contact: text(b.contact) || null,
     p_city: text(b.city) || null,
     p_phone: text(b.phone) || null,
+    // sql/050: a typed code, or an automatic one (C-00001) when empty.
+    p_code: text(b.code) || null,
   });
   return ok(c, { id, kind: 'customer', name, contact: text(b.contact), city: text(b.city), phone: text(b.phone) }, 201);
 });

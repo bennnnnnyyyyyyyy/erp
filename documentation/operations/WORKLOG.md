@@ -34,6 +34,111 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (17:02) — Phase 2 API and screens (branch `treasury-phase2`, not deployed)
+
+**Objective.** Finish phase 2 above the database (TREASURY_PLAN.md §4–6).
+
+**Actions Completed.**
+- **`packages/shared`:**
+  - a `treasury` module (depends on accounting and finance; keys `treasury.accounts.view`, `.manage`, `treasury.transfers.create`);
+  - new keys `core.branches.manage` and `finance.statements.view`;
+  - shared types in `treasury.ts`.
+- **`apps/api`:**
+  - `modules/treasury/routes.ts`: 8 routes for accounts, balances, lines with CSV, set-up, and transfers with void;
+  - `core/branchRoutes.ts`;
+  - `PUT /inventory/warehouses/:id/branch`;
+  - `GET /finance/statements/party` and `/item`, each with CSV;
+  - `POST /finance/payments` takes `treasuryAccountId`;
+  - customer and supplier lists return `code`, and create takes `code`; `PUT .../code` changes it;
+  - new reason codes;
+  - shared CSV helpers in `lib/csv.ts`, which the trial balance now uses too;
+  - new test `test/treasury.test.ts`.
+- **`apps/web`:**
+  - Treasury: accounts grouped by branch with ledger balances, set-up, adding a box or bank account;
+  - the account page: lines, CSV, print;
+  - Transfers;
+  - Settings → Branches, with warehouses per branch;
+  - Finance → Statement of account (customer, supplier, item; CSV; print);
+  - the payment form has a "Paid into / from" picker, filtered by method and currency, that remembers the last choice;
+  - customers and suppliers get a code column (searchable), a code field, and code-first labels in pickers;
+  - a print stylesheet;
+  - Arabic for every new string (machine draft).
+
+**Database / System Result.** None in this step.
+
+**Safety Status.**
+- `npm run typecheck` passes.
+- `npx biome ci` is clean, after formatting the 6 new files.
+- `npm test` passes: shared 31, API 197 (7 skipped), web 63.
+- `vite build` is clean.
+- Not browser-checked: treasury needs accounting switched on in a company first, and Ben has not clicked that yet. After deploy, the check is:
+  1. Settings → Apps → Treasury → Switch on;
+  2. Treasury → Add the default treasury accounts;
+  3. record a payment by cash;
+  4. make a transfer;
+  5. open a customer statement.
+
+## 2026-11-06 (16:51) — Applied `sql/050`, `051`, `052` to live (ggoerp) via CLI
+
+**Objective.** Ben: "yes" (apply 050-052).
+
+**Actions Completed.** Ran `supabase db query --linked -f` on 050, 051 and 052, in that order. Marked them applied in
+`sql/README.md`.
+
+**Database / System Result.**
+- All three committed.
+- Checks on live:
+  - 0 companies without a MAIN branch (11 branches in all);
+  - 0 warehouses without a branch;
+  - 0 customers or suppliers without a code (50 customers coded);
+  - 0 treasury accounts, and treasury is on for no company;
+  - statements and branch functions are closed to anonymous callers.
+- Nothing changes for users until the API and screens ship and an owner prepares treasury.
+
+**Safety Status.** On live, all rolled back: tests 045, 046, 047, 001, 013, 015, 020, 028, 034 and 040-044 pass.
+
+## 2026-11-06 (late) — Phase 2 started: treasury plan, `sql/050`-`052` written and dry-run (not applied); phase 1 browser check
+
+**Objective.** Ben: "write the treasury plan, branches inside one company … finished phase 1 and start on 2, do your own browser
+tests".
+
+**Actions Completed.**
+- **Plan:** [`TREASURY_PLAN.md`](../plans/TREASURY_PLAN.md), added to `checklist.md`.
+- **`sql/050_core_branches_party_codes.sql`** (test 045):
+  - branches, with MAIN for every company, and a trigger that gives new companies MAIN too;
+  - warehouses in branches;
+  - customer and supplier codes, typed or automatic.
+- **`sql/051_treasury.sql`** (test 046):
+  - treasury accounts;
+  - payments through a treasury account (P13′);
+  - transfers (P18);
+  - balances read from the ledger.
+- **`sql/052_statements.sql`** (test 047): customer, supplier and item statements.
+- **Fixes found while testing:**
+  - The branch seed wrote an extra audit row. That broke test 001 T1d, which expects exactly one row for a new company. The seed is
+    now part of the audited company creation.
+  - Test 046 assumed the company currency was EGP. It now sets it, as test 044 does.
+- **Browser check of phase 1** on https://erp-live.pages.dev, as the owner of Demo Cosmetics Factory:
+  - Accounting setup → "Add the default chart" added 37 accounts and set all 19 roles.
+  - The preview counts 2,672 past documents and 0 uncosted receipts.
+  - The menu shows only Setup and Chart before switch-on. Settings → Apps shows "Set up and switch on". No console errors.
+  - Switch-on itself was **not** run: the safety classifier refused the irreversible click. Ben clicks it.
+  - The Apps description had no Arabic; added.
+
+**Database / System Result.**
+- Live: the demo company now has its default chart and roles. These are data rows; nothing else changed.
+- 050, 051 and 052 are **not applied**. Each was dry-run on live inside one transaction with its test, then rolled back.
+
+**Safety Status.**
+- Tests 045, 046 and 047 pass.
+- Regressions pass with 050 and 051 applied in the same rolled-back transaction: 001, 013-015, 017, 018, 020, 021, 023, 028, 030,
+  034-036, and 040-045.
+- Deliberate breaks were caught:
+  - automatic codes stopped skipping typed codes (the unique index stopped it);
+  - payments ignoring the treasury account (T3e);
+  - the customer statement including sales lines (P1a).
+- Applying 050-052 needs Ben's yes. The API and screens for phase 2 are next.
+
 ## 2026-11-06 — Accounting API routes, permission keys and screens (branch `accounting-phase1`, not deployed)
 
 **Objective.** Ben: "apply 048 and 049 and continue". Finish phase 1 of the accounting plan above the database: §4 permissions,

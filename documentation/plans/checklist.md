@@ -32,6 +32,11 @@
   - **Waiting on:** Ben's browser check after deploy; the pilot accountant for the unconfirmed codes in groups 3 and 4 (plan O1); moving the ADR draft into `architecture/decisions/`.
   - **Remaining:** deploy the API and web; switch accounting on for the demo company (owner, from Accounting setup) and check the trial balance; an issue-reason picker on stock requests.
 
+- [ ] **[TREASURY_PLAN.md](TREASURY_PLAN.md): phase 2, treasury, branches, party codes and statements**
+  - **Done (2026-11-06):** plan written and approved to build (Ben: branches inside one company; cheques wait for the accountant).
+  - **Done (2026-11-06):** `sql/050`–`052` applied to live (tests 045–047 pass on live); API (`modules/treasury`, `core/branchRoutes`, finance statements, payment treasury account, party codes; test `apps/api/test/treasury.test.ts`) and screens (Treasury, Transfers, Settings → Branches, Finance → Statement of account, payment picker, codes on customers and suppliers; Arabic) on branch `treasury-phase2`, not deployed.
+  - **Remaining:** deploy; browser check (needs accounting switched on in a company, then treasury switched on in Settings → Apps); cheques (waiting for the accountant); per-branch permissions and reports (later).
+
 Template for further blocks; update them in the same change as the work:
 
 - [ ] **[<PLAN>.md](<PLAN>.md): <name>**

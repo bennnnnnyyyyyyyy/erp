@@ -116,15 +116,28 @@ async function oneRequest(c: Context<AppEnv>, id: string) {
 inventoryRoutes.get('/warehouses', requirePermission('inventory.items.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('inv_warehouses')
-    .select('id, code, name')
+    .select('id, code, name, branch_id')
     .eq('org_id', orgOf(c))
     .is('deleted_at', null)
     .order('code');
   if (error) throw error;
   return ok(
     c,
-    (data ?? []).map((w: { id: string; code: string; name: string }) => ({ id: w.id, code: w.code, name: w.name })),
+    (data ?? []).map((w: { id: string; code: string; name: string; branch_id: string | null }) => ({
+      id: w.id,
+      code: w.code,
+      name: w.name,
+      branchId: w.branch_id,
+    })),
   );
+});
+
+// Put a warehouse in a branch (sql/050). Owners and admins; the database checks again.
+inventoryRoutes.put('/warehouses/:id/branch', requirePermission('core.branches.manage'), async (c) => {
+  const branchId = text((await jsonBody(c)).branchId);
+  if (!UUID_RE.test(branchId)) invalid('branchId is required');
+  await callRpc<void>(userDb(c), 'inv_set_warehouse_branch', { p_warehouse_id: idParam(c), p_branch_id: branchId });
+  return ok(c, { id: idParam(c), branchId });
 });
 
 inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {

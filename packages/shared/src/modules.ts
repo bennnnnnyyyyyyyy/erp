@@ -31,7 +31,7 @@ export const MODULES: readonly ModuleManifest[] = [
     description: 'Organization, users, roles, settings and the audit log.',
     core: true,
     dependsOn: [],
-    permissions: ['core.org.read', 'core.org.manage', 'core.users.read', 'core.users.manage', 'core.audit.read'],
+    permissions: ['core.org.read', 'core.org.manage', 'core.users.read', 'core.users.manage', 'core.audit.read', 'core.branches.manage'],
     suite: 'Core',
   },
   // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for
@@ -155,7 +155,8 @@ export const MODULES: readonly ModuleManifest[] = [
     description: 'Expenses and payments: money in, money out, and what is still owed.',
     core: false,
     dependsOn: ['inventory'],
-    permissions: ['finance.reports.view', 'finance.entries.manage'],
+    // finance.statements.view: customer, supplier and item statements of account (TREASURY_PLAN.md S1, sql/052).
+    permissions: ['finance.reports.view', 'finance.entries.manage', 'finance.statements.view'],
     suite: 'Finance',
   },
   {
@@ -190,6 +191,17 @@ export const MODULES: readonly ModuleManifest[] = [
     switchOnOnly: true,
     // Preparing to switch on: chart, roles, fiscal years, category and reason accounts, uncosted receipts, the switch itself.
     openBeforeEnabled: ['/setup', '/accounts', '/roles', '/fiscal-years', '/category-accounts', '/issue-reasons'],
+  },
+  {
+    // documentation/plans/TREASURY_PLAN.md (sql/051). Needs accounting on: balances come from the ledger (the database refuses the
+    // switch otherwise). Owners and admins only; the database narrows managing accounts to the owner and the head accountant.
+    key: 'treasury',
+    name: 'Treasury',
+    description: 'Cash boxes and bank accounts by branch, payments through them, transfers between them, balances from the ledger.',
+    core: false,
+    dependsOn: ['accounting', 'finance'],
+    permissions: ['treasury.accounts.view', 'treasury.accounts.manage', 'treasury.transfers.create'],
+    suite: 'Finance',
   },
 ];
 

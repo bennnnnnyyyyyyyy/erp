@@ -8,6 +8,8 @@ import { catalog, createRequest, getRequest, receiveGoods, DemoRuleError, type A
 export type Party = {
   id: string;
   kind: 'supplier' | 'customer';
+  /** Customer or supplier code (sql/050): typed, or automatic C-00001 / S-00001. Absent in the sample-data demo. */
+  code?: string;
   name: string;
   contact: string;
   city: string;

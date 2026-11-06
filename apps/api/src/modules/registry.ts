@@ -11,6 +11,7 @@ import { financeRoutes } from './finance/routes';
 import { alertsRoutes } from './alerts/routes';
 import { einvoicingRoutes } from './einvoicing/routes';
 import { accountingRoutes } from './accounting/routes';
+import { treasuryRoutes } from './treasury/routes';
 
 // Each module's routes, keyed by its manifest key in packages/shared/src/modules.ts.
 // Adding a module: create src/modules/<key>/routes.ts, add its manifest, register it here.
@@ -25,6 +26,7 @@ export const MODULE_ROUTES: Record<string, Hono<AppEnv>> = {
   alerts: alertsRoutes,
   einvoicing: einvoicingRoutes,
   accounting: accountingRoutes,
+  treasury: treasuryRoutes,
 };
 
 for (const key of Object.keys(MODULE_ROUTES)) {

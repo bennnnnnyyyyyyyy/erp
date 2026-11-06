@@ -4,7 +4,6 @@ import {
   ACCOUNT_ROLES,
   hasPermission,
   journalProblem,
-  minorUnitsFor,
   type Account,
   type AccountKind,
   type AccountLine,
@@ -23,6 +22,7 @@ import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
+import { csvResponse, minorToText } from '../../lib/csv';
 import { requirePermission } from '../../middleware/tenant';
 
 // Accounting (documentation/plans/ACCOUNTING_PLAN.md sections 4 and 5; database sql/045-049). Owners and admins only: no key here ends
@@ -700,20 +700,6 @@ type TbRow = {
   closing_minor: number;
 };
 
-const csvCell = (v: string | number) => {
-  const s = String(v);
-  // Quote, and stop a spreadsheet reading a leading =, +, - or @ in a name as a formula.
-  const safe = /^[=+\-@]/.test(s) && typeof v === 'string' ? `'${s}` : s;
-  return /[",\n\r]/.test(safe) || safe !== s ? `"${safe.replace(/"/g, '""')}"` : safe;
-};
-/** Exact decimal text of a minor-unit amount (no floating point), with the currency's own number of decimals. */
-export const minorToText = (n: number, currency: string) => {
-  const digits = minorUnitsFor(currency);
-  const sign = n < 0 ? '-' : '';
-  const a = String(Math.abs(n)).padStart(digits + 1, '0');
-  return digits === 0 ? `${sign}${a}` : `${sign}${a.slice(0, -digits)}.${a.slice(-digits)}`;
-};
-
 // One currency at a time (the company's own by default). ?format=csv downloads it.
 accountingRoutes.get('/trial-balance', requirePermission('accounting.ledger.view'), async (c) => {
   const p = period(c);
@@ -733,12 +719,14 @@ accountingRoutes.get('/trial-balance', requirePermission('accounting.ledger.view
     closingMinor: num(r.closing_minor),
   }));
   if (c.req.query('format') !== 'csv') return ok(c, out);
-  const header = ['code', 'name', 'name_ar', 'kind', 'detail_account', 'currency', 'opening', 'debit', 'credit', 'closing'];
-  const body = out.map((r) =>
-    [
+  return csvResponse(
+    c,
+    `trial-balance-${p.from}-to-${p.to}.csv`,
+    ['code', 'name', 'name_ar', 'kind', 'detail_account', 'currency', 'opening', 'debit', 'credit', 'closing'],
+    out.map((r) => [
       r.code,
       r.name,
-      r.nameAr ?? '',
+      r.nameAr,
       r.kind,
       r.isLeaf ? 'yes' : 'no',
       r.currency,
@@ -746,12 +734,6 @@ accountingRoutes.get('/trial-balance', requirePermission('accounting.ledger.view
       minorToText(r.debitMinor, r.currency),
       minorToText(r.creditMinor, r.currency),
       minorToText(r.closingMinor, r.currency),
-    ]
-      .map(csvCell)
-      .join(','),
+    ]),
   );
-  return c.body(`﻿${[header.join(','), ...body].join('\r\n')}\r\n`, 200, {
-    'Content-Type': 'text/csv; charset=utf-8',
-    'Content-Disposition': `attachment; filename="trial-balance-${p.from}-to-${p.to}.csv"`,
-  });
 });

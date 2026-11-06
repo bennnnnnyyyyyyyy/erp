@@ -6,7 +6,7 @@ import { defaultPermissionsFor, findModule, journalProblem } from '@erp/shared';
 import app from '../src/index';
 import type { AppEnv } from '../src/env';
 import { requireModule } from '../src/middleware/tenant';
-import { minorToText } from '../src/modules/accounting/routes';
+import { minorToText } from '../src/lib/csv';
 
 // Accounting API (documentation/plans/ACCOUNTING_PLAN.md sections 4-5). The rules themselves live in the database and are proved by
 // sql/tests/040-044; these cover the API layer: sign-in, a permission on every route, no direct writes, the module gate.

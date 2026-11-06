@@ -89,7 +89,7 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
   // Terms are set by owners and admins (the database checks again). Not in the sample-data demo build, which has no such route.
   const canSetTerms = !demoMode && (session.role === 'owner' || session.role === 'admin');
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', contact: '', city: '', phone: '' });
+  const [form, setForm] = useState({ name: '', contact: '', city: '', phone: '', code: '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -99,7 +99,7 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
     try {
       await api(endpoint, { method: 'POST', body: JSON.stringify(form) });
       setAdding(false);
-      setForm({ name: '', contact: '', city: '', phone: '' });
+      setForm({ name: '', contact: '', city: '', phone: '', code: '' });
       parties.reload();
     } catch (err) {
       setError((err as Error).message);
@@ -107,6 +107,8 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
   }
 
   const columns: Column<Party>[] = [
+    // sql/050: the code is searchable like every column (ListView searches all of them).
+    ...(demoMode ? [] : [{ key: 'code', label: tr('Code'), value: (p: Party) => p.code ?? '', render: (p: Party) => <code>{p.code}</code> }]),
     { key: 'name', label: tr('Name'), value: (p) => p.name, render: (p) => <strong>{p.name}</strong> },
     { key: 'contact', label: tr('Contact'), value: (p) => p.contact },
     { key: 'city', label: tr('City'), value: (p) => p.city },
@@ -150,6 +152,9 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
               <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
             </div>
             <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
+            {demoMode ? null : (
+              <label>{tr('Code (optional)')}<input value={form.code} onChange={set('code')} placeholder={tr('Automatic if empty')} /></label>
+            )}
             {error && <p className="error">{error}</p>}
             <div className="form-actions"><Button type="submit">{tr('Add')} {noun}</Button></div>
           </form>
@@ -218,7 +223,7 @@ export function NewOrderForm(props: {
             {props.partyLabel}
             <select required value={partyId} onChange={(e) => setPartyId(e.target.value)}>
               <option value="">{tr('Choose…')}</option>
-              {parties.data.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {parties.data.map((p) => <option key={p.id} value={p.id}>{p.code ? `${p.code} · ${p.name}` : p.name}</option>)}
             </select>
           </label>
           <label>
