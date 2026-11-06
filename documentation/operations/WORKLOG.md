@@ -72,6 +72,9 @@ run or deployed.
 - The `vite build` output is clean. `npm run build -w apps/web` itself fails only because the npm script shell is Windows
   PowerShell 5, which rejects `&&`. That is a pre-existing environment issue, not a code problem.
 - No browser check yet: Ben checks it after deploying. Deploy order: the API before the web.
+- Follow-up the same day: CI failed on `biome ci`, the formatting check, which I had not run locally. Six new or changed files are
+  now formatted with Biome, and one test was adjusted for the reformatted line. `biome ci`, typecheck and tests now pass locally.
+  Run `npx biome ci` before handing off.
 - To try it: open Accounting → Accounting setup as owner, add the default chart, then switch on in a test company first.
 
 ## 2026-11-06 — Applied `sql/048` and `sql/049` to live (ggoerp) via CLI

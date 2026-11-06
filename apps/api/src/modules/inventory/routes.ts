@@ -305,7 +305,8 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
   });
   // No opening stock: the optional average cost is set by hand (efficiency audit 2026-11-04, F4), the existing audited function,
   // owners and admins only. With opening stock the receipt above already set it.
-  if (opening === 0 && cost !== null && cost > 0) await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
+  if (opening === 0 && cost !== null && cost > 0)
+    await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
   return ok(
     c,
     toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }),

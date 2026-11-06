@@ -57,7 +57,8 @@ describe('accounting routes', () => {
 
   it('puts an accounting permission on every route', () => {
     const declared = source.match(/accountingRoutes(\.(get|post|put|patch|delete)|\[method\])\(/g) ?? [];
-    const guarded = source.match(/accountingRoutes(\.(get|post|put|patch|delete)|\[method\])\([^\n]*requirePermission\('accounting\.[a-z_.]+'\)/g) ?? [];
+    const guarded =
+      source.match(/accountingRoutes(\.(get|post|put|patch|delete)|\[method\])\([^\n]*requirePermission\('accounting\.[a-z_.]+'\)/g) ?? [];
     expect(declared.length).toBeGreaterThanOrEqual(28);
     expect(guarded.length).toBe(declared.length);
   });
@@ -102,7 +103,8 @@ describe('accounting routes', () => {
   });
 
   it('members and viewers get no accounting key; owners and admins get all', () => {
-    for (const role of ['member', 'viewer'] as const) expect(defaultPermissionsFor(role).filter((p) => p.startsWith('accounting.'))).toEqual([]);
+    for (const role of ['member', 'viewer'] as const)
+      expect(defaultPermissionsFor(role).filter((p) => p.startsWith('accounting.'))).toEqual([]);
     const keys = findModule('accounting')!.permissions;
     for (const role of ['owner', 'admin'] as const) expect(defaultPermissionsFor(role)).toEqual(expect.arrayContaining(keys));
   });
@@ -110,7 +112,7 @@ describe('accounting routes', () => {
   it('accounting cannot be switched on or off from the Apps toggle', () => {
     expect(findModule('accounting')?.switchOnOnly).toBe(true);
     const mod = readFileSync(join(__dirname, '../src/modules/core/moduleRoutes.ts'), 'utf8');
-    expect(mod).toContain('if (mod.switchOnOnly) throw');
+    expect(mod).toMatch(/if \(mod\.switchOnOnly\)\s+throw/);
   });
 });
 
@@ -148,10 +150,30 @@ describe('accounting helpers', () => {
   it('checks a journal like the database does', () => {
     const a = ID;
     expect(journalProblem([{ accountId: a, debitMinor: 100 }])).toBe('too_few_lines');
-    expect(journalProblem([{ accountId: a, debitMinor: 100 }, { accountId: a, creditMinor: 90 }])).toBe('unbalanced');
-    expect(journalProblem([{ accountId: a, debitMinor: 100, creditMinor: 100 }, { accountId: a, creditMinor: 0 }])).toBe('bad_line');
-    expect(journalProblem([{ accountId: a, debitMinor: 1.5 }, { accountId: a, creditMinor: 1.5 }])).toBe('bad_line');
-    expect(journalProblem([{ accountId: a, debitMinor: 100 }, { accountId: a, creditMinor: 100 }])).toBeNull();
+    expect(
+      journalProblem([
+        { accountId: a, debitMinor: 100 },
+        { accountId: a, creditMinor: 90 },
+      ]),
+    ).toBe('unbalanced');
+    expect(
+      journalProblem([
+        { accountId: a, debitMinor: 100, creditMinor: 100 },
+        { accountId: a, creditMinor: 0 },
+      ]),
+    ).toBe('bad_line');
+    expect(
+      journalProblem([
+        { accountId: a, debitMinor: 1.5 },
+        { accountId: a, creditMinor: 1.5 },
+      ]),
+    ).toBe('bad_line');
+    expect(
+      journalProblem([
+        { accountId: a, debitMinor: 100 },
+        { accountId: a, creditMinor: 100 },
+      ]),
+    ).toBeNull();
   });
 
   it('writes exact amounts with the currency decimals', () => {

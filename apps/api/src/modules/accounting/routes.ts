@@ -157,7 +157,15 @@ accountingRoutes.put('/setup/head-accountants/:id', requirePermission('accountin
 
 // ------------------------------------------------------------------ chart of accounts and account roles
 
-type AccountRow = { id: string; code: string; name: string; name_ar: string | null; parent_id: string | null; kind: AccountKind; active: boolean };
+type AccountRow = {
+  id: string;
+  code: string;
+  name: string;
+  name_ar: string | null;
+  parent_id: string | null;
+  kind: AccountKind;
+  active: boolean;
+};
 
 accountingRoutes.get('/accounts', requirePermission('accounting.ledger.view'), async (c) => {
   const rows = await fetchAll<AccountRow>((from, to) =>
@@ -382,7 +390,8 @@ type EntryLineRow = {
   warehouse_id: string | null;
   memo: string | null;
 };
-const ENTRY_COLS = 'id, number, entry_date, currency, source_type, source_id, event, memo, reverses_entry_id, is_backfill, posted_by, approved_by, created_at';
+const ENTRY_COLS =
+  'id, number, entry_date, currency, source_type, source_id, event, memo, reverses_entry_id, is_backfill, posted_by, approved_by, created_at';
 const ENTRY_LINE_COLS = 'entry_id, line_no, account_id, debit_minor, credit_minor, party_type, party_id, item_id, warehouse_id, memo';
 
 function shapeEntry(e: EntryRow, lines: EntryLineRow[], withLines: boolean): LedgerEntry {
@@ -425,7 +434,8 @@ accountingRoutes.get('/entries', requirePermission('accounting.ledger.view'), as
   const from = c.req.query('from') ?? '';
   const to = c.req.query('to') ?? '';
   const source = c.req.query('source') ?? '';
-  if ((from && !DATE_RE.test(from)) || (to && !DATE_RE.test(to)) || (source && !/^[a-z][a-z_]{1,40}$/.test(source))) invalid('Invalid filter');
+  if ((from && !DATE_RE.test(from)) || (to && !DATE_RE.test(to)) || (source && !/^[a-z][a-z_]{1,40}$/.test(source)))
+    invalid('Invalid filter');
   let q = userDb(c).from('acc_entries').select(ENTRY_COLS).eq('org_id', orgOf(c));
   if (from) q = q.gte('entry_date', from);
   if (to) q = q.lte('entry_date', to);
@@ -559,7 +569,12 @@ accountingRoutes.get('/journals', requirePermission('accounting.ledger.view'), a
 
 accountingRoutes.get('/journals/:id', requirePermission('accounting.ledger.view'), async (c) => {
   const id = idParam(c);
-  const { data, error } = await userDb(c).from('acc_manual_journals').select(JOURNAL_COLS).eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
+  const { data, error } = await userDb(c)
+    .from('acc_manual_journals')
+    .select(JOURNAL_COLS)
+    .eq('org_id', orgOf(c))
+    .eq('id', id)
+    .maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, 'Journal not found', 'not_found');
   return ok(c, shapeJournal(data as JournalRow, await journalLines(c, [id]), true));
@@ -581,7 +596,8 @@ function journalBody(b: Record<string, unknown>) {
     const partyType = text(l.partyType);
     const partyId = text(l.partyId);
     if (!UUID_RE.test(accountId)) invalid('Each line needs an account');
-    if ((partyType || partyId) && (!['customer', 'supplier'].includes(partyType) || !UUID_RE.test(partyId))) invalid('Invalid customer or supplier on a line');
+    if ((partyType || partyId) && (!['customer', 'supplier'].includes(partyType) || !UUID_RE.test(partyId)))
+      invalid('Invalid customer or supplier on a line');
     return {
       accountId,
       debitMinor: Number(l.debitMinor ?? 0),
@@ -639,7 +655,7 @@ for (const [action, decision] of [
   // Someone else's draft only (SELF_APPROVAL in the function and a check constraint).
   accountingRoutes.post(`/journals/:id/${action}`, requirePermission('accounting.journal.approve'), async (c) => {
     const id = idParam(c);
-    const comment = text((await c.req.json().catch(() => ({})) as { comment?: unknown }).comment);
+    const comment = text(((await c.req.json().catch(() => ({}))) as { comment?: unknown }).comment);
     const res = await callRpc<{ id: string; number: string; status: string; entryId: string | null }>(userDb(c), 'acc_decide_journal', {
       p_id: id,
       p_decision: decision,

@@ -64,7 +64,11 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   },
   RECEIPT_COST_REQUIRED: { status: 400, message: 'With accounting on, received stock needs a unit cost', code: 'receipt_cost_required' },
   NOTE_REQUIRED: { status: 400, message: 'A payment by "other" needs a note saying how it was paid', code: 'note_required' },
-  USE_SWITCH_ON: { status: 400, message: 'Accounting is switched on from Accounting setup and cannot be switched off', code: 'use_switch_on' },
+  USE_SWITCH_ON: {
+    status: 400,
+    message: 'Accounting is switched on from Accounting setup and cannot be switched off',
+    code: 'use_switch_on',
+  },
   DUPLICATE: { status: 409, message: 'That already exists', code: 'duplicate' },
   NOT_TRACKED: { status: 400, message: 'That item does not track batches', code: 'not_tracked' },
   EXPIRED: { status: 400, message: 'That batch has already expired', code: 'expired' },
