@@ -34,6 +34,22 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (18:04) — Applied `sql/053` to live (ggoerp) via CLI
+
+**Objective.** Ben: "apply 053 to live".
+
+**Actions Completed.** Ran `supabase db query --linked -f sql/053_integrations_wave1.sql`. Marked it applied in `sql/README.md`.
+
+**Database / System Result.**
+- Committed. The outbox now accepts the `slack` and `teams` channels.
+- Live has 0 integrations (none live), 0 exchange rates and 0 copied messages.
+- Users can neither read a secret id nor call the secret function.
+
+**Safety Status.**
+- On live, all rolled back: tests 048, 001, 003, 005, 011, 024, 041 and 046 pass.
+- Nothing is sent anywhere: no company has an integration, and the code that delivers them (branch `integrations-wave1`) is not
+  deployed yet.
+
 ## 2026-11-06 (18:00) — CI false results fixed; integrations wave 1 built (branch `integrations-wave1`, `sql/053` not applied)
 
 **Objective.** Ben: "fix the ci giving me false negatives, start on plan after".
