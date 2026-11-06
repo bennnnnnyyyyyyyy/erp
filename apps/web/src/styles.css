@@ -110,7 +110,6 @@ main.content:focus { outline: none; }
 .shell { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: 1fr; min-height: 100vh; }
 .shell.with-sidebar { grid-template-columns: 232px 1fr; }
 .topbar {
-  box-shadow: 0 4px 14px -8px oklch(0.4 0.15 265 / 0.25);
   grid-column: 1 / -1; display: flex; align-items: center; gap: 0.7rem; padding-inline: 1rem;
   background: var(--sidebar); color: var(--sidebar-foreground); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20;
 }
@@ -160,7 +159,7 @@ main.content:focus { outline: none; }
   border-inline-start: 3px solid transparent; transition: background 0.12s;
 }
 .nav-item:hover { background: var(--surface-2); }
-.nav-item.active { background: var(--accent); color: var(--accent-foreground); font-weight: 600; border-inline-start-color: var(--primary); }
+.nav-item.active { background: var(--accent); color: var(--primary); font-weight: 600; border-inline-start-color: var(--primary); }
 .content { padding: 2rem 2.25rem 4rem; min-width: 0; }
 .page { max-width: 1280px; animation: rise 0.35s ease-out both; }
 /* Page header: the title, one plain line under it, then a clear gap before the content. Every screen gets the same rhythm. */
@@ -206,19 +205,9 @@ main.content:focus { outline: none; }
 }
 .tile:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .tile-icon {
-  width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 0.45rem;
-  background: linear-gradient(145deg, oklch(0.95 0.045 var(--h, 265)), oklch(0.90 0.08 var(--h, 265))); color: oklch(0.45 0.17 var(--h, 265));
-  box-shadow: inset 0 0 0 1px oklch(0.8 0.09 var(--h, 265) / 0.5);
+  width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 0.45rem;
+  background: var(--accent); color: var(--primary);
 }
-.dark .tile-icon, .dark .topbar-app-icon { background: linear-gradient(145deg, oklch(0.32 0.07 var(--h, 265)), oklch(0.27 0.06 var(--h, 265))); color: oklch(0.82 0.13 var(--h, 265)); box-shadow: inset 0 0 0 1px oklch(0.5 0.1 var(--h, 265) / 0.4); }
-.tile:hover { border-color: oklch(0.65 0.14 var(--h, 265)); }
-.tile { overflow: hidden; }
-.tile::before { content: ''; position: absolute; inset-inline: 0; inset-block-start: 0; height: 3px; background: linear-gradient(90deg, oklch(0.7 0.15 var(--h, 265)), oklch(0.6 0.18 calc(var(--h, 265) + 30))); opacity: 0.85; }
-.logo-mark { flex: none; display: block; filter: drop-shadow(0 1px 2px rgb(40 30 120 / 0.25)); }
-.channel-logo { width: 38px; height: 38px; flex: none; display: block; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px var(--border), var(--shadow-sm); }
-.channel-logo svg { width: 100%; height: 100%; display: block; }
-.integration-card { border-inline-start: 4px solid var(--border-strong); }
-.integration-card.is-on { border-inline-start-color: var(--ok); background: linear-gradient(90deg, var(--ok-soft), var(--surface) 22%); }
 .tile-icon svg { width: 24px; height: 24px; }
 .tile-name { font-weight: 600; font-size: 1.05rem; }
 .tile-desc { font-size: 0.88rem; }
@@ -461,7 +450,7 @@ td input { margin-top: 0; }
   color: var(--ink-text); text-decoration: none; font-weight: 650; font-size: 1rem; border-radius: var(--radius); white-space: nowrap;
 }
 .topbar-app-link:hover { background: var(--sidebar-accent); }
-.topbar-app-icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: oklch(0.93 0.06 var(--h, 265)); color: oklch(0.45 0.17 var(--h, 265)); }
+.topbar-app-icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--accent); color: var(--primary); }
 .topbar-app-icon svg { width: 16px; height: 16px; }
 .topbar-org-end { font-size: 0.85rem; color: color-mix(in srgb, var(--ink-text) 85%, transparent); white-space: nowrap; margin-inline-end: 0.25rem; }
 .appmenu { display: flex; align-items: center; gap: 0.1rem; min-width: 0; overflow: visible; }
@@ -496,6 +485,7 @@ td input { margin-top: 0; }
 .nav-group { display: flex; flex-direction: column; gap: 0.15rem; margin-block-start: 0.6rem; }
 .nav-group-heading { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); margin: 0.2rem 0 0.25rem 0.65rem; }
 /* Desktop: no sidebar (the menu is in the top bar). Phones: the top-bar menu hides and the drawer (.sidebar) takes over. */
+@media (min-width: 721px) { .sidebar { display: none; } }
 @media (max-width: 1100px) { .topbar-org-end { display: none; } .appmenu-item { padding: 0 0.5rem; } }
 @media (max-width: 720px) {
   .appmenu, .topbar-org-end { display: none; }
@@ -534,32 +524,3 @@ td input { margin-top: 0; }
 /* Account names in the chart: plain until hovered, so the bold group rows stand out from the detail rows. */
 .account-link { text-decoration: none; }
 .account-link:hover { text-decoration: underline; }
-
-/* ---- Persistent sidebar (desktop) ----
-   The app's pages are always visible, grouped, with icons: no menu to open to find out what exists. Phones keep the drawer. */
-.sidebar-app { display: flex; align-items: center; gap: 0.65rem; padding: 0.35rem 0.4rem 0.9rem; margin-block-end: 0.35rem; text-decoration: none; color: var(--text); border-block-end: 1px solid var(--border); }
-.sidebar-app-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none;
-  background: linear-gradient(145deg, oklch(0.62 0.17 var(--h, 265)), oklch(0.5 0.19 calc(var(--h, 265) + 20))); color: #fff; box-shadow: 0 2px 6px -1px oklch(0.45 0.18 var(--h, 265) / 0.45); }
-.sidebar-app-icon svg { width: 19px; height: 19px; }
-.sidebar-app-name { font-weight: 700; font-size: 1.02rem; letter-spacing: -0.01em; }
-.nav-item { border-inline-start: 0; border-radius: 9px; padding: 0.5rem 0.65rem; font-size: 0.92rem; color: color-mix(in srgb, var(--text) 85%, transparent); }
-.nav-item .menu-icon { width: 18px; height: 18px; opacity: 0.7; }
-.nav-item .menu-icon svg { width: 18px; height: 18px; }
-.nav-item:hover { background: color-mix(in srgb, var(--primary) 7%, transparent); color: var(--text); }
-.nav-item.active { background: oklch(0.94 0.045 var(--h, 265)); color: oklch(0.38 0.15 var(--h, 265)); font-weight: 650; border-inline-start: 0; }
-.nav-item.active .menu-icon { opacity: 1; color: oklch(0.48 0.18 var(--h, 265)); }
-.dark .nav-item.active { background: oklch(0.3 0.07 var(--h, 265)); color: oklch(0.9 0.08 var(--h, 265)); }
-.dark .nav-item.active .menu-icon { color: oklch(0.8 0.14 var(--h, 265)); }
-.nav-group-heading { margin-inline-start: 0.65rem; margin-block-start: 0.5rem; }
-@media (min-width: 721px) {
-  .shell.with-sidebar { grid-template-columns: 248px minmax(0, 1fr); }
-  .sidebar { display: flex; position: sticky; inset-block-start: 52px; height: calc(100vh - 52px); overflow-y: auto; padding: 0.9rem 0.7rem 1.5rem; background: var(--sidebar); }
-  .topbar-app-link, .drawer-toggle { display: none; }
-  .content { padding: 1.75rem 2.25rem 4rem; }
-  .page { max-width: 1560px; }
-}
-/* Stat cards: a coloured edge and a bigger number, so the row reads as the page's headline. */
-.stat { position: relative; overflow: hidden; padding: 1rem 1.2rem 1rem 1.3rem; }
-.stat::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; width: 4px; background: var(--primary); }
-.stat.warn::before { background: var(--signal); }
-.stat-value { font-size: 2.15rem; font-weight: 600; margin-block: 0.15rem; }
