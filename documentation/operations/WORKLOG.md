@@ -8,6 +8,16 @@ gets an entry with these four headings:
 - **Database / System Result.** What happened in Supabase / Cloudflare / hosting, or "None".
 - **Safety Status.** Tests run, what was not verified, and manual steps still needed.
 
+## 2026-11-06 (night) — Repository audit re-checked; new findings and a reverse review of the fixes
+
+**Objective.** Ben asked to check the findings in `REPO_AUDIT_REPORT.md`, look for more, and then review the proposed fixes critically.
+
+**Actions Completed.** Appended an addendum to `REPO_AUDIT_REPORT.md`: status of findings 1–18 (13 still hold, 2 wider than reported, 2 superseded because 056–060 are applied, 1 partly fixed) and new findings N1–N9. Wrote `documentation/reviews/2026-11-06-repo-audit-fixes-reverse-review.md`, which argues against each proposed fix and gives a revised order.
+
+**Database / System Result.** None. Read-only checks only (grep, git, a Markdown link scan, `gh repo view`). The GitHub repository `bennnnnnyyyyyyyy/erp` is **public**, and it tracks personal emails (`email updates for grant.zip`) and working files at the root (N6).
+
+**Safety Status.** No code, migration or deployment changed; typecheck and tests were not run (documentation only). Open decisions for Ben: whether the repository stays public, a history rewrite, the product positioning sentence, migration 061, and branch protection for SQL tests. This entry is placed above the misplaced 2026-11-05 entry, which still needs moving (N2). No commit made by me.
+
 ## 2026-11-05 (review) — Accounting phase 1 design review: changes incorporated, pending pilot chart confirmation
 
 **Objective.** Review the unbuilt accounting phase-1 plan and ADR before acceptance, concentrating
@@ -2134,3 +2144,25 @@ remove it before deleting the worktree (it is not tracked).
 Re-crawl of the sample build after the fixes: no text under 12px, no unlabelled controls, no empty headers, no contrast failures once
 animations finish. Not verified: live Arabic (the account's saved language overrides the browser setting), live phone, any live screen after
 the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitignored) at Ben's request. Audit scripts are not in the repo.
+
+## 2026-11-06 — UI colour and logos pass
+
+**Objective.** The app was pure grey (every theme token had zero chroma) and had no logo, so it looked generic. Add a brand colour, a product mark, per-app colour and recognisable channel logos on the Integrations screen.
+
+**Actions Completed.**
+- `apps/web/src/theme.css`: neutral palette retuned to an indigo brand hue (265) in light and dark: primary, accent, sidebar, borders and muted tones are lightly tinted.
+- `components/icons.tsx`: new `LogoMark` (gradient tile with a stock-block glyph, no customer branding), `appHueStyle` (one hue per app) and `ChannelLogo` (simplified Email, Slack, Teams, Telegram marks drawn in code, not vendor files).
+- `Shell.tsx`: logo replaces the dot-grid in the top bar; the current app's icon takes its own hue. `Home.tsx`: tiles take the app hue (tinted icon, coloured top edge).
+- `IntegrationsSettings.tsx`: channel logo on each card; an enabled channel gets a green edge and tint.
+- `styles.css`: the matching rules (light and dark), a soft top-bar shadow, active menu item uses the accent foreground.
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc --noEmit` clean for apps/web. Not verified: how it looks in a browser (light, dark, Arabic RTL), or contrast after the retint; full `npm test` not re-run. The sign-in screen has no logo yet.
+
+### Addendum — persistent sidebar (same day)
+Ben found the first pass still bland and unusable. Cause (checked on the demo build): the app's pages were hidden inside top-bar dropdowns ("Operations ▾", "Reporting ▾"), content stopped at ~1270px, and the stat cards were plain boxes. Studied Behance "ERP web design" case studies (Raad ERP and others) for structure only; nothing was copied.
+- `Shell.tsx`: the app menu is now a persistent left sidebar on desktop (grouped, icons, visible); the dropdown `AppMenu` is no longer rendered (the phone drawer is unchanged and shares the same menu).
+- `AppMenu.tsx` (`DrawerMenu`): app header (coloured icon + name) and the app's hue for the active item.
+- `styles.css`: sticky sidebar, wider content (1560px), stat cards with a coloured edge and larger number.
+Checked on the demo build in Chrome: Inventory in LTR and in RTL (sidebar flips to the right). Not checked: dark mode with the sidebar, phone width, other apps' screens. The Home launcher is still a plain tile grid.
