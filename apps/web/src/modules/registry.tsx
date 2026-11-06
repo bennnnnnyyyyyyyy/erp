@@ -56,6 +56,7 @@ const TreasuryPage = lazyNamed(() => import('./treasury/Treasury'), 'TreasuryPag
 const TreasuryAccountPage = lazyNamed(() => import('./treasury/Treasury'), 'TreasuryAccountPage');
 const TransfersPage = lazyNamed(() => import('./treasury/Treasury'), 'TransfersPage');
 const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
+const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/Setup'), 'AccountingSetupPage');
 const ChartPage = lazyNamed(() => import('./accounting/Setup'), 'ChartPage');
@@ -283,6 +284,8 @@ export const APPS: AppDef[] = [
       { path: '/users', label: 'Users', permission: 'core.users.read', component: UsersSettings },
       // Real API only: the sample-data demo has no branches (it stayed on the loading skeleton; found by the smoke test).
       ...(demoMode ? [] : [{ path: '/branches', label: 'Branches', permission: 'core.org.read', component: BranchesSettings }]),
+      // Integrations (INTEGRATIONS_PLAN.md wave 1). Real API only. Owner and admin only.
+      ...(demoMode ? [] : [{ path: '/integrations', label: 'Integrations', permission: 'core.integrations.view', component: IntegrationsSettings }]),
       { path: '/apps', label: 'Apps', permission: 'core.org.read', component: AppsSettings },
       { path: '/audit', label: 'Audit log', permission: 'core.audit.read', component: AuditLog },
     ],

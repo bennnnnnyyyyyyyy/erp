@@ -56,7 +56,7 @@ messagingRoutes.get('/outbox', requirePermission('messaging.outbox.manage'), asy
   const { data, error } = await userDb(c)
     .from('msg_outbox')
     .select(
-      'id, recipient_id, channel, kind, subject, status, attempts, max_attempts, next_attempt_at, expires_at, last_error, sent_at, created_at',
+      'id, recipient_id, channel, kind, subject, status, attempts, max_attempts, next_attempt_at, expires_at, last_error, sent_at, created_at, delivered_via',
     )
     .eq('org_id', c.var.tenant.orgId)
     .order('created_at', { ascending: false })

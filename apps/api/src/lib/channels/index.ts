@@ -1,5 +1,6 @@
 import type { Bindings } from '../../env';
 import { adminDb } from '../db.admin';
+import { makeIntegrationAdapters } from './integrations';
 import { makeWhatsAppAdapter } from './whatsapp';
 
 // Channel adapters (neworder.md section 3). A channel only DELIVERS a message. It never approves, never changes
@@ -9,7 +10,8 @@ import { makeWhatsAppAdapter } from './whatsapp';
 export type OutboxMessage = {
   id: string;
   org_id: string;
-  recipient_id: string;
+  /** Empty only for a company-channel post (Slack, Teams: sql/053). */
+  recipient_id: string | null;
   channel: string;
   kind: string;
   subject: string;
@@ -22,7 +24,8 @@ export type OutboxMessage = {
 
 export interface ChannelAdapter {
   readonly kind: string;
-  send(message: OutboxMessage, env: Bindings): Promise<void>;
+  /** Resolves with how the message was delivered (for example 'simulated' or 'resend'), recorded as delivered_via. */
+  send(message: OutboxMessage, env: Bindings): Promise<string | void>;
 }
 
 /** In-app: the message becomes a notification in the person's inbox. Repeating a send creates nothing new. */
@@ -48,7 +51,7 @@ const ADAPTERS = new Map<string, ChannelAdapter>([
   ['whatsapp', makeWhatsAppAdapter()],
 ]);
 
-/** WhatsApp, voice and email are not connected yet: sending on them fails visibly instead of pretending. */
+/** Channels not connected yet (voice): sending on them fails visibly instead of pretending. */
 export function adapterFor(channel: string): ChannelAdapter {
   return (
     ADAPTERS.get(channel) ?? {

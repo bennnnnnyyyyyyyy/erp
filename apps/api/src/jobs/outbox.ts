@@ -56,12 +56,14 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
   let failed = 0;
   for (const message of messages) {
     let error: string | null = null;
+    let via: string | null = null;
     try {
-      await adapterFor(message.channel).send(message, env);
+      via = (await adapterFor(message.channel).send(message, env)) ?? message.channel;
     } catch (e) {
       error = (e instanceof Error ? e.message : String(e)).slice(0, 300);
     }
-    const done = await client.rpc('msg_complete', { p_id: message.id, p_ok: error === null, p_error: error });
+    // sql/053: records the result, how it was delivered (simulated, resend, slack-webhook …) and the integration's last outcome.
+    const done = await client.rpc('msg_complete_delivery', { p_id: message.id, p_ok: error === null, p_error: error, p_via: via });
     if (done.error) throw done.error;
     if (error === null) sent++;
     else failed++;

@@ -34,6 +34,39 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (18:00) — CI false results fixed; integrations wave 1 built (branch `integrations-wave1`, `sql/053` not applied)
+
+**Objective.** Ben: "fix the ci giving me false negatives, start on plan after".
+
+**Actions Completed.**
+- **CI.**
+  - `sql-tests.yml`: the job was `continue-on-error`. Two runs looked like passes: one where the database never started (16:28 on
+    main: registry "Rate exceeded", a port in use) and one where a test had actually failed. Now the start is retried 3 times; if it
+    still fails, a warning says the tests did not run; and a failing SQL test fails the job.
+  - `ci-deploy.yml`: PR runs queue per branch and cancel stale runs (they shared the production deploy queue); deploys unchanged.
+  - Both workflows are pinned to `ubuntu-24.04`, ahead of GitHub's move to Ubuntu 26.
+  - `biome.json`: the deprecated `recommended` setting is migrated to `preset`.
+- **Wave 1** (INTEGRATIONS_PLAN.md):
+  - `sql/053` and test 048: per-company email, Slack and Teams; Vault secrets; routing; delivery results; exchange rates.
+  - API:
+    - `lib/channels/integrations.ts` (simulated or live; Resend with an idempotency key; Slack, and Teams Adaptive Cards);
+    - `jobs/fx.ts` (Frankfurter, at most every 6 hours, from the cron);
+    - `core/integrationRoutes.ts` (settings, write-only URL, test, rates);
+    - keys `core.integrations.view` and `.manage`;
+    - the outbox shows "Company channel" and how each message was delivered;
+    - test `integrations.test.ts`.
+  - Web: Settings → Integrations, with Arabic.
+
+**Database / System Result.** None: 053 was dry-run on live and rolled back.
+
+**Safety Status.**
+- 053: test 048 passes; regressions 001, 003-007, 010, 011, 021, 024 and 026 pass; a deliberate break (routing ignoring the chosen
+  kinds) was caught.
+- `biome ci` clean, typecheck passes, tests pass (shared 31, API 212, web 63), build passes, smoke test 4/4.
+- Live email needs Worker secrets `RESEND_API_KEY` and `EMAIL_FROM`, and a domain verified with Resend. Until then email is simulated
+  only.
+- PR #4 merged at 17:29 before the CI-fix commit `eb437a3`, so that fix rides on this branch.
+
 ## 2026-11-06 (evening) — Integrations research saved; integrations plan drafted
 
 **Objective.** Ben (`s.md`): collect official documentation for 16 integrations into `documentation/reference/`, ignored by git;

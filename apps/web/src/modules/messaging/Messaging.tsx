@@ -57,8 +57,10 @@ export function NotificationsPage() {
 }
 
 type OutboxRow = {
-  id: string; recipientId: string; channel: string; kind: string; subject: string; status: 'pending' | 'sending' | 'sent' | 'failed' | 'expired' | 'cancelled';
+  id: string; recipientId: string | null; channel: string; kind: string; subject: string; status: 'pending' | 'sending' | 'sent' | 'failed' | 'expired' | 'cancelled';
   attempts: number; maxAttempts: number; nextAttemptAt: string; expiresAt: string; lastError: string | null; sentAt: string | null; createdAt: string;
+  /** How it was delivered (sql/053): simulated, resend, slack-webhook … */
+  deliveredVia?: string | null;
 };
 type PassResult = { reminders: number; escalations: number; lowStock: number; alerts: number; claimed: number; sent: number; failed: number; auditCheck: string };
 
@@ -85,10 +87,10 @@ export function OutboxPage() {
 
   const columns: Column<OutboxRow>[] = [
     { key: 'when', label: tr('Queued'), value: (m) => m.createdAt, render: (m) => <span className="nowrap">{formatDateTime(m.createdAt, session.org)}</span> },
-    { key: 'to', label: 'To', value: (m) => who(m.recipientId) },
+    { key: 'to', label: tr('To'), value: (m) => (m.recipientId ? who(m.recipientId) : tr('Company channel')) },
     { key: 'kind', label: tr('Kind'), value: (m) => m.kind, render: (m) => <code>{m.kind}</code> },
     { key: 'subject', label: tr('Message'), value: (m) => m.subject, render: (m) => (<>{m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>) },
-    { key: 'channel', label: tr('Channel'), value: (m) => m.channel },
+    { key: 'channel', label: tr('Channel'), value: (m) => m.channel, render: (m) => (<>{m.channel}{m.deliveredVia && m.deliveredVia !== m.channel ? <div className="muted small">{m.deliveredVia}</div> : null}</>) },
     { key: 'status', label: tr('Status'), value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{m.status}</span> },
     { key: 'attempts', label: tr('Attempts'), value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
   ];

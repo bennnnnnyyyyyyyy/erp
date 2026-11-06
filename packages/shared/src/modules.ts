@@ -31,7 +31,17 @@ export const MODULES: readonly ModuleManifest[] = [
     description: 'Organization, users, roles, settings and the audit log.',
     core: true,
     dependsOn: [],
-    permissions: ['core.org.read', 'core.org.manage', 'core.users.read', 'core.users.manage', 'core.audit.read', 'core.branches.manage'],
+    permissions: [
+      'core.org.read',
+      'core.org.manage',
+      'core.users.read',
+      'core.users.manage',
+      'core.audit.read',
+      'core.branches.manage',
+      // Integrations (INTEGRATIONS_PLAN.md, sql/053): owners and admins only (neither key ends in ".read").
+      'core.integrations.view',
+      'core.integrations.manage',
+    ],
     suite: 'Core',
   },
   // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for

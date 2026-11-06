@@ -17,6 +17,10 @@ export type Bindings = {
   WHATSAPP_GRAPH_VERSION?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
   WHATSAPP_TEMPLATE_LANG?: string;
+  // Email (lib/channels/integrations.ts, sql/053). Secret: RESEND_API_KEY. EMAIL_FROM like "ERP <notifications@example.com>" on a
+  // domain verified with Resend. Without them, email works in simulated mode only.
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
 };
 
 export type AuthUser = { id: string; email: string };

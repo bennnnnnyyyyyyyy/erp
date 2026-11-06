@@ -7,6 +7,7 @@ import { ok } from '../../lib/response';
 import { invalid, jsonBody } from '../../lib/body';
 import { requirePermission } from '../../middleware/tenant';
 import { branchRoutes } from './branchRoutes';
+import { fxRoutes, integrationRoutes } from './integrationRoutes';
 import { memberRoutes } from './memberRoutes';
 import { moduleRoutes } from './moduleRoutes';
 import { orgRoutes } from './org';
@@ -17,6 +18,8 @@ coreRoutes.route('/org', orgRoutes);
 coreRoutes.route('/members', memberRoutes);
 coreRoutes.route('/modules', moduleRoutes);
 coreRoutes.route('/branches', branchRoutes);
+coreRoutes.route('/integrations', integrationRoutes);
+coreRoutes.route('/fx', fxRoutes);
 
 // The person's own saved language (sql/038). A display preference, not essential: if it cannot be read (for example the migration is not
 // applied yet) the session still loads and the person simply follows the company default.

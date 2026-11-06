@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { findModule } from '@erp/shared';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
+import { runFxPass } from './jobs/fx';
 import { runOutboxPass } from './jobs/outbox';
 import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
 import { processInbound } from './lib/whatsappInbound';
@@ -81,6 +82,13 @@ export default Object.assign(app, {
       runOutboxPass(env).then(
         (r) => console.log('outbox pass', JSON.stringify(r)),
         (e) => console.error('outbox pass failed', e instanceof Error ? e.message : String(e)),
+      ),
+    );
+    // Daily exchange rates (sql/053); fetches at most every 6 hours, so most runs only check.
+    ctx.waitUntil(
+      runFxPass(env).then(
+        (r) => !r.skipped && console.log('fx pass', JSON.stringify(r)),
+        (e) => console.error('fx pass failed', e instanceof Error ? e.message : String(e)),
       ),
     );
   },
