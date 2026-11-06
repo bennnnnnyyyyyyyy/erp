@@ -34,6 +34,16 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (night) — Payment link migration dependency staged locally
+
+**Objective.** Resolve the failed Supabase CLI attempt to apply payment-link migration 057.
+
+**Actions Completed.** The CLI migration folder contained 057 but not its declared prerequisite 056. Added a timestamped copy of sql/056_provider_connections.sql ahead of 20261106182028_057_payment_links.sql, and refreshed the 057 copy from its canonical SQL source. Migration 056 defines core__provider_credentials(uuid, text), which 057 calls when creating provider payment links and handling callbacks.
+
+**Database / System Result.** The CLI attempt stopped while defining fin__link_credentials because core__provider_credentials was absent. No migration was applied to live; 056 and 057 remain pending.
+
+**Safety Status.** No live retry, production schema change, commit or push was made. Apply 056 before 057 only after Ben's explicit approval.
+
 ## 2026-11-06 (night) — Payment links (Paymob, Fawry) built; `sql/057` NOT applied
 
 **Objective.** "Pay now" on sales invoices through Paymob and Fawry, from Ben's provider choices, built in simulated mode until keys arrive.
