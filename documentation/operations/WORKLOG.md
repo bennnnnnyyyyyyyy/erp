@@ -34,6 +34,192 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (19:31) — Applied `sql/055` (stock revaluation) to live (ggoerp) via CLI
+
+**Objective.** Ben: "apply 055 to live".
+
+**Database / System Result.**
+- Committed. Anonymous callers cannot revalue; users cannot call the internal function.
+- No revaluation has been posted yet: 0 revaluation entries and 0 cost-log rows.
+
+**Safety Status.**
+- On live, all rolled back: tests 050, 047, 042, 041, 019 and 038 pass.
+- The demo company's correction (preview −EGP 582,100.59 on 45 items) waits for Ben's click in Accounting setup, after the
+  `integrations-wave1` code is deployed.
+
+## 2026-11-06 (evening) — Demo stock costs: seed fixed; stock revaluation built (`sql/055` not applied); provider checklist
+
+**Objective.** Ben: "fix the demo sample stock costs"; and "give me a checkbox for providers with options, with a pro and con".
+
+**Actions Completed.**
+- **Cause:** `sql/seed/004` set item average costs directly. Issues took the flat starting cost all year while receipts rose 10%, and
+  a final flat +10% bump did not match the ledger.
+  - On the demo company: books EGP 3,723,858.67 vs quantity × average cost EGP 3,141,758.08 (45 items, −EGP 582,100.59).
+- **Seed fixed:** the items' cost follows each month's price, so issues match receipts. At the end, average cost = ledger value ÷
+  quantity, so a new demo company starts consistent.
+- **Live demo:** entries are permanent, so the fix is a correcting entry. `sql/055` and test 050 add a stock value check and
+  "Revalue stock to average cost":
+  - one entry, item by item, against the stock-adjustment account (owner or head accountant);
+  - the item statement shows a Revaluation line;
+  - API `GET /v1/accounting/stock-value` and `POST /v1/accounting/stock-value/revalue`;
+  - a "Stock value check" card in Accounting setup, with Arabic.
+- `documentation/planning/INTEGRATION_PROVIDER_CHOICES.md`: 15 sections of checkboxes with pros and cons, for Ben to fill in.
+
+**Database / System Result.** None: 055 was dry-run on live and rolled back. The rolled-back preview for the demo company gave
+45 items and a net −EGP 582,100.59.
+
+**Safety Status.**
+- Test 050 passes; regressions 047, 042, 041, 019 and 038 pass; a deliberate break (write-downs only) was caught.
+- Typecheck and `biome ci` pass; tests pass (shared 31, API 216, web 67).
+- Next steps for Ben:
+  1. say yes to apply 055;
+  2. deploy;
+  3. press "Revalue stock to average cost" in Accounting setup on the demo company (it posts to the books, so it is his click).
+
+## 2026-11-06 (evening) — Live browser check of accounting and treasury on the demo company
+
+**Objective.** Ben switched accounting on for Demo Cosmetics Factory, then asked: "do your browser tests" (another chat is doing a UI
+audit, so this check covers behaviour and text only).
+
+**Actions Completed.** The checks on https://erp-live.pages.dev, as owner:
+- **Trial balance:**
+  - It balances: debits = credits = EGP 94,758,271.67 all time; EGP 75,425,562.62 this year.
+  - Customers in the books are EGP 3,469,556.51. That equals invoices (EGP 17,329,614.36) minus customer payments
+    (EGP 13,860,057.85), checked against the documents by a read-only query.
+  - It differs from the rolled-back trial by exactly one payment recorded since then (PAY-0448, EGP 53,363.58).
+  - 2,674 entries, all marked history.
+- **Entries:**
+  - The journal list, an entry, and its "Open the document" link (to PAY-0448) work.
+  - An account's lines run correctly to the trial-balance closing (191 Cash on hand, EGP 3,669,943.25).
+- **Treasury:**
+  - Switched on in Settings → Apps; "Add the default treasury accounts" added 6.
+  - The main cash box and bank account balances equal the books.
+  - Transfer TR-000001 (EGP 1,000 cash → bank) was recorded, then voided; both balances returned exactly.
+- **Payment form:** the "Paid into" picker filters by method (bank → only the bank account). No payment was recorded.
+- **Statements:**
+  - Port Said Trading closes at EGP 105,614.38, the sum of its five open invoices.
+  - The item statement for Shampoo runs quantity and value.
+- **Settings → Branches:** MAIN holds all 5 warehouses. No console errors.
+
+**Findings and fixes (branch `integrations-wave1`):**
+1. The journal showed raw event codes (`paid_in`, `issued_internal`, `expensed`, `received_other`). The labels for all events are now
+   in plain words, with Arabic; unknown codes show without underscores.
+2. Entry lines did not say which customer or supplier they belong to. They now show the code and name.
+3. The item statement showed `receipt` and `issue`. They are now Receipt and Issue (with Arabic), and the other kinds too.
+4. Treasury transfers now have a source name and a link from the entry.
+
+**Not code (reported to Ben):**
+- **Sample data:** stock leaves at EGP 24.00 a unit but arrives at EGP 24.65–26.40, so the demo's stock value drifts upward. This is the
+  known sample-data cost issue.
+- **Sample data:** the main bank account is below zero (all customer receipts in cash, all supplier payments by bank).
+- **Older code:** the payment history shows "5336358 minor units" instead of pounds.
+
+**Database / System Result.** Demo company (sample data):
+- the treasury module is on;
+- 6 treasury accounts added;
+- transfer TR-000001 recorded and voided (net zero).
+
+**Safety Status.** Typecheck, `biome ci` and tests pass (shared 31, API 216, web 63).
+
+## 2026-11-06 (18:22) — Applied `sql/054` (Telegram) to live (ggoerp) via CLI
+
+**Objective.** Ben: "apply 054 to live".
+
+**Database / System Result.**
+- Committed.
+- Checks: users cannot read link codes or complete links; anonymous callers cannot start them.
+- Live has 0 Telegram links, 0 link codes and 0 integrations.
+
+**Safety Status.**
+- On live, all rolled back: tests 049, 048, 004, 005, 006, 003, 001 and 024 pass.
+- Nothing sends until branch `integrations-wave1` is deployed and a company switches an integration on.
+
+## 2026-11-06 (evening) — Telegram channel: the last item of integrations wave 1 (`sql/054` not applied)
+
+**Objective.** Ben: "finish integration lists"; he chose "Finish wave 1 (Telegram)".
+
+**Actions Completed.**
+- `sql/054_telegram.sql` and test 049:
+  - single-use hashed link codes;
+  - a link is completed only by our webhook (service role);
+  - Telegram chats become verified identities;
+  - `telegram` is a per-company integration;
+  - copies go only to people who linked.
+- API:
+  - `lib/telegram.ts` (send, with an "Open in the app" button; parse "/start <code>"; deep link);
+  - `lib/telegramInbound.ts`;
+  - `POST /webhooks/telegram`, checked with Telegram's secret header;
+  - `POST /v1/messaging/telegram/link`;
+  - the Telegram adapter (simulated or live);
+  - reason code `RATE_LIMITED`;
+  - tests in `integrations.test.ts`.
+- Web:
+  - Messages → "Connect WhatsApp and Telegram" gets a Telegram section (connect, unlink);
+  - Settings → Integrations gets a Telegram card;
+  - Arabic for both.
+- Telegram never decides anything; bot replies point to the app.
+
+**Database / System Result.** None: 054 was dry-run on live and rolled back.
+
+**Safety Status.**
+- 054: test 049 passes; regressions 048, 001, 003-006 and 024 pass; a deliberate break (copies to people who never linked) was
+  caught.
+- `biome ci` clean, typecheck passes, tests pass (shared 31, API 216, web 63).
+- Live use needs:
+  - a bot made with @BotFather;
+  - Worker secrets `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` and `TELEGRAM_BOT_USERNAME`;
+  - one `setWebhook` call pointing at `/webhooks/telegram` with the same secret.
+- Until then Telegram works in simulated mode only, and "Connect Telegram" says it is not set up.
+
+## 2026-11-06 (18:04) — Applied `sql/053` to live (ggoerp) via CLI
+
+**Objective.** Ben: "apply 053 to live".
+
+**Actions Completed.** Ran `supabase db query --linked -f sql/053_integrations_wave1.sql`. Marked it applied in `sql/README.md`.
+
+**Database / System Result.**
+- Committed. The outbox now accepts the `slack` and `teams` channels.
+- Live has 0 integrations (none live), 0 exchange rates and 0 copied messages.
+- Users can neither read a secret id nor call the secret function.
+
+**Safety Status.**
+- On live, all rolled back: tests 048, 001, 003, 005, 011, 024, 041 and 046 pass.
+- Nothing is sent anywhere: no company has an integration, and the code that delivers them (branch `integrations-wave1`) is not
+  deployed yet.
+
+## 2026-11-06 (18:00) — CI false results fixed; integrations wave 1 built (branch `integrations-wave1`, `sql/053` not applied)
+
+**Objective.** Ben: "fix the ci giving me false negatives, start on plan after".
+
+**Actions Completed.**
+- **CI.**
+  - `sql-tests.yml`: the job was `continue-on-error`. Two runs looked like passes: one where the database never started (16:28 on
+    main: registry "Rate exceeded", a port in use) and one where a test had actually failed. Now the start is retried 3 times; if it
+    still fails, a warning says the tests did not run; and a failing SQL test fails the job.
+  - `ci-deploy.yml`: PR runs queue per branch and cancel stale runs (they shared the production deploy queue); deploys unchanged.
+  - Both workflows are pinned to `ubuntu-24.04`, ahead of GitHub's move to Ubuntu 26.
+  - `biome.json`: the deprecated `recommended` setting is migrated to `preset`.
+- **Wave 1** (INTEGRATIONS_PLAN.md):
+  - `sql/053` and test 048: per-company email, Slack and Teams; Vault secrets; routing; delivery results; exchange rates.
+  - API:
+    - `lib/channels/integrations.ts` (simulated or live; Resend with an idempotency key; Slack, and Teams Adaptive Cards);
+    - `jobs/fx.ts` (Frankfurter, at most every 6 hours, from the cron);
+    - `core/integrationRoutes.ts` (settings, write-only URL, test, rates);
+    - keys `core.integrations.view` and `.manage`;
+    - the outbox shows "Company channel" and how each message was delivered;
+    - test `integrations.test.ts`.
+  - Web: Settings → Integrations, with Arabic.
+
+**Database / System Result.** None: 053 was dry-run on live and rolled back.
+
+**Safety Status.**
+- 053: test 048 passes; regressions 001, 003-007, 010, 011, 021, 024 and 026 pass; a deliberate break (routing ignoring the chosen
+  kinds) was caught.
+- `biome ci` clean, typecheck passes, tests pass (shared 31, API 212, web 63), build passes, smoke test 4/4.
+- Live email needs Worker secrets `RESEND_API_KEY` and `EMAIL_FROM`, and a domain verified with Resend. Until then email is simulated
+  only.
+- PR #4 merged at 17:29 before the CI-fix commit `eb437a3`, so that fix rides on this branch.
+
 ## 2026-11-06 (evening) — Integrations research saved; integrations plan drafted
 
 **Objective.** Ben (`s.md`): collect official documentation for 16 integrations into `documentation/reference/`, ignored by git;
@@ -1776,3 +1962,30 @@ remove it before deleting the worktree (it is not tracked).
 
 **Safety Status.** `npm install` ok (0 vulnerabilities); `npm run typecheck` clean in shared, api and web; `npm test` passing (shared 4, api 11). Not browser-tested. No `.env` files, secrets, node_modules or git history copied. Open: product name and deciders placeholders, README, PRODUCT_BRIEF, ADR-0003, the db/audit rework.
 
+
+## 2026-11-06 (ui) — UI audit of the sample and live builds, and the fixes
+
+**Objective.** Ben asked for an extensive UI audit in the `ui-work` worktree, using the project skills and a browser.
+
+**Actions Completed.**
+- Created worktree `../ERP-ui` on new branch `ui-work` from main (002046c); `npm install` there.
+- Playwright + axe-core crawl of 21 sample-build pages in 6 viewport/language/theme configurations.
+- Second crawl of 40 live screens (English light and dark), signed in by Ben in a test browser; read-only, nothing clicked or submitted.
+- Fixes in `apps/web/src` (no api, shared or sql changes): list counter and quantity lines in Arabic (`components/views/ListView.tsx`,
+  `lib/format.ts`, inventory Inventory/Transfers), untranslated step labels, app descriptions and audit-log actions, labels on unlabelled
+  dropdowns and empty table headers (`sr-only`), bell label, forecast dates and numbers, chart-of-accounts kind/underline/search, statement
+  empty prompt, contrast tokens, 12px minimum text and 44px phone touch targets (`styles.css`).
+- New Arabic strings are in `lib/i18nAudit.ts` (merged in `lib/i18n.tsx`), not `i18nScreens.ts`, to avoid a merge conflict with the
+  integrations work. They can move into `SCREENS_AR` after merge. New tests: `lib/i18nAudit.test.ts`.
+- `ui-work` was moved (no commit authored) to the tip of `origin/integrations-wave1` (13f10e7), which already contains main, accounting
+  phase 1 and treasury phase 2; the fixes were re-applied on top as uncommitted changes, with no conflicts. Checked on the combined code:
+  typecheck, tests (shared 31, API 216, web 67), `biome ci` (no errors) and the smoke test (4/4).
+- Not touched (other session): `ConnectPhone.tsx` still has one empty `<th>`; `Messaging.tsx`, `registry.tsx`, `modules.ts`, Integrations.
+- The full findings are saved in `documentation/reviews/2026-11-06-ui-audit.md`.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` passing (web 67); smoke test 4/4; `biome ci` unchanged (it only covers api and shared).
+Re-crawl of the sample build after the fixes: no text under 12px, no unlabelled controls, no empty headers, no contrast failures once
+animations finish. Not verified: live Arabic (the account's saved language overrides the browser setting), live phone, any live screen after
+the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitignored) at Ben's request. Audit scripts are not in the repo.

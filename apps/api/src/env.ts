@@ -17,6 +17,17 @@ export type Bindings = {
   WHATSAPP_GRAPH_VERSION?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
   WHATSAPP_TEMPLATE_LANG?: string;
+  // Email (lib/channels/integrations.ts, sql/053). Secret: RESEND_API_KEY. EMAIL_FROM like "ERP <notifications@example.com>" on a
+  // domain verified with Resend. Without them, email works in simulated mode only.
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  // Telegram (lib/telegram.ts, sql/054). Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET. TELEGRAM_BOT_USERNAME is the bot's name
+  // (for the t.me link). Without them, Telegram works in simulated mode only and linking is unavailable.
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_WEBHOOK_SECRET?: string;
+  TELEGRAM_BOT_USERNAME?: string;
+  /** The web app's address, for "Open in the app" buttons (defaults to the first ALLOWED_ORIGINS entry). */
+  APP_URL?: string;
 };
 
 export type AuthUser = { id: string; email: string };

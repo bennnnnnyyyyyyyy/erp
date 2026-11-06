@@ -82,6 +82,7 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   SAME_ACCOUNT: { status: 400, message: 'Choose two different accounts', code: 'same_account' },
   CURRENCY_MISMATCH: { status: 400, message: 'Both accounts must hold the same currency', code: 'currency_mismatch' },
   HAS_BALANCE: { status: 409, message: 'That account still holds money: transfer it out first', code: 'has_balance' },
+  RATE_LIMITED: { status: 429, message: 'Too many tries; wait a while and try again', code: 'rate_limited' },
   OVERPAYMENT: { status: 409, message: 'That is more than is still owed', code: 'overpayment' },
 };
 

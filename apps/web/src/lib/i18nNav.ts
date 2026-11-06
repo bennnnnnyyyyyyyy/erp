@@ -64,6 +64,7 @@ export const NAV_AR: Record<string, string> = {
   Task: 'مهمة',
   Notifications: 'الإشعارات',
   'Connect WhatsApp': 'ربط واتساب',
+  'Connect WhatsApp and Telegram': 'ربط واتساب وتيليجرام',
   'Message outbox': 'صندوق الرسائل الصادرة',
   Expenses: 'المصروفات',
   Expense: 'مصروف',
@@ -89,6 +90,8 @@ export const NAV_AR: Record<string, string> = {
   Transfers: 'التحويلات',
   'Statement of account': 'كشف حساب',
   Branches: 'الفروع',
+  // integrations (wave 1)
+  Integrations: 'الربط مع خدمات أخرى',
   Payments: 'المدفوعات',
   Payment: 'دفعة',
   Tutorial: 'الدليل التعليمي',

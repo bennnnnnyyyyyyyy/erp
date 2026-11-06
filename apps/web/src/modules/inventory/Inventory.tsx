@@ -8,7 +8,7 @@ import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import type { ApprovalPolicy, DemoItem, DemoRequest, DemoWarehouse, LedgerMove, RequestStatus, StockAdjustment, StockRow } from '../../lib/demoInventory';
 import { usePeople } from '../../lib/people';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -46,7 +46,7 @@ function Steps({ status }: { status: RequestStatus }) {
         const cls = ended ? (i === 0 ? 'done' : i === 1 ? 'bad' : '') : i < at ? 'done' : i === at ? (status === 'issued' ? 'done' : 'current') : '';
         return (
           <li key={text} className={`step ${cls}`} data-n={i + 1}>
-            {text}
+            {tr(text)}
           </li>
         );
       })}
@@ -295,7 +295,7 @@ export function ReorderLevelsPage() {
       {error && <p className="error notice">{error}</p>}
       <div className="table-wrap">
         <table>
-          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col">{tr('Status')}</th><th scope="col" /></tr></thead>
+          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead>
           <tbody>
             {rows.map((row) => {
               const value = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
@@ -356,7 +356,7 @@ export function ApprovalPoliciesPage() {
     }
   }
 
-  const warehouseName = (id: string | null) => id ? cat.warehouseName(id) : 'All warehouses';
+  const warehouseName = (id: string | null) => id ? cat.warehouseName(id) : tr('All warehouses');
 
   if (!cat.warehouses.data || !policies.data) return <section className="page"><Loading /></section>;
 
@@ -377,7 +377,7 @@ export function ApprovalPoliciesPage() {
       )}
       <div className="table-wrap">
         <table>
-          <thead><tr><th scope="col">{tr('Threshold')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col">{tr('Required')}</th>{canManage && <th scope="col" />}</tr></thead>
+          <thead><tr><th scope="col">{tr('Threshold')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col">{tr('Required')}</th>{canManage && <th scope="col"><span className="sr-only">{tr('Actions')}</span></th>}</tr></thead>
           <tbody>
             {policies.data.map((p) => <tr key={p.id}><td><strong>{p.minTotalQty}</strong> {tr('units or more')}</td><td>{warehouseName(p.warehouseId)}</td><td>{trf(p.requiredApprovals === 1 ? '{n} approval' : '{n} approvals', { n: p.requiredApprovals })}</td>{canManage && <td><Button variant="outline" type="submit" onClick={() => remove(p.id)}>{tr('Remove')}</Button></td>}</tr>)}
             {policies.data.length === 0 && <tr><td colSpan={canManage ? 4 : 3} className="muted empty">{tr('No extra approval policies. One approval is enough for every request.')}</td></tr>}
@@ -451,7 +451,7 @@ export function AdjustmentsPage() {
       </form></FormToggle>
       <div className="table-wrap">
         <table>
-          <thead><tr><th scope="col">{tr('Count')}</th><th scope="col">{tr('Item')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col" className="right">{tr('Book')}</th><th scope="col" className="right">{tr('Counted')}</th><th scope="col" className="right">{tr('Difference')}</th><th scope="col">{tr('Status')}</th><th scope="col" /></tr></thead>
+          <thead><tr><th scope="col">{tr('Count')}</th><th scope="col">{tr('Item')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col" className="right">{tr('Book')}</th><th scope="col" className="right">{tr('Counted')}</th><th scope="col" className="right">{tr('Difference')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead>
           <tbody>
             {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><Button type="submit" onClick={() => act(a.id, 'approve')}>{tr('Approve')}</Button> <Button variant="outline" type="submit" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</Button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <Button variant="outline" type="submit" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</Button>}</td></tr>)}
             {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No stock counts yet.')}</td></tr>}
@@ -478,9 +478,9 @@ export function RequestsList() {
     { key: 'wh', label: tr('Warehouse'), value: (r) => cat.warehouseName(r.warehouseId) },
     // A request can carry 20+ lines (a production issue of raw materials). The list shows the first three and a count; the full list is
     // still searched, exported and shown on hover, and the request's own page has every line.
-    { key: 'items', label: tr('Items'), value: (r) => r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', '), render: (r) => {
-      const all = r.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`);
-      return <span title={all.join(', ')}>{all.slice(0, 3).join(', ')}{all.length > 3 && <span className="muted"> {trf('+ {count} more', { count: all.length - 3 })}</span>}</span>;
+    { key: 'items', label: tr('Items'), value: (r) => r.lines.map((l) => qtyLine(l.qty, cat.itemName(l.itemId))).join(', '), render: (r) => {
+      const all = r.lines.map((l) => qtyLine(l.qty, cat.itemName(l.itemId)));
+      return <span title={all.join(', ')}>{all.slice(0, 3).map(ltrIsolate).join(', ')}{all.length > 3 && <span className="muted"> {trf('+ {count} more', { count: all.length - 3 })}</span>}</span>;
     } },
     { key: 'status', label: tr('Status'), value: (r) => r.status, render: (r) => <StatusPill status={r.status} /> },
     { key: 'when', label: tr('Requested'), value: (r) => r.createdAt, render: (r) => <span className="nowrap">{formatDateTime(r.createdAt, session.org)}</span> },

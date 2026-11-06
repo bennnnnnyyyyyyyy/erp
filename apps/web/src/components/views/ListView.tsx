@@ -82,7 +82,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
           aria-label={trf('Search {title}', { title })}
         />
         <span className="muted list-count">
-          {shown.length} of {rows.length}
+          {trf('{shown} of {total}', { shown: shown.length, total: rows.length })}
         </span>
         <span className="spacer" />
         {toolbar}
@@ -96,13 +96,13 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
             <tr>
               {columns.map((c) => (
                 <th key={c.key} scope="col" className={c.align === 'right' ? 'right' : undefined}>
-                  <button className="th-sort" onClick={() => toggleSort(c.key)}>
+                  <button className="th-sort" onClick={() => toggleSort(c.key)} aria-label={c.label || tr('Actions')}>
                     {c.label}
                     {sort?.key === c.key ? (sort.dir === 1 ? ' ↑' : ' ↓') : ''}
                   </button>
                 </th>
               ))}
-              {actions && <th scope="col" aria-label={tr('Actions')} />}
+              {actions && <th scope="col"><span className="sr-only">{tr('Actions')}</span></th>}
             </tr>
           </thead>
           <tbody>

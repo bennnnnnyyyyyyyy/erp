@@ -53,3 +53,15 @@ export function formatDateTime(iso: string | null | undefined, org: OrgPrefs | n
   if (!iso) return '';
   return `${formatDate(iso, org)} ${parts(iso, org?.timezone ?? 'UTC').time}`;
 }
+
+/** "30 × Safety gloves": a quantity and an item name. The × is the same in both languages. */
+export const qtyLine = (qty: number | string, name: string): string => `${qty} × ${name}`;
+
+/**
+ * Keeps a piece of left-to-right text (a quantity line, a code) in its own order inside an Arabic sentence. Without it the bidi
+ * algorithm moves the number to the wrong end ("x Safety gloves 30"). For display only: never put it in a CSV or a search value.
+ */
+const LRI = String.fromCodePoint(0x2066);
+const PDI = String.fromCodePoint(0x2069);
+export const ltrIsolate = (text: string): string => `${LRI}${text}${PDI}`;
+

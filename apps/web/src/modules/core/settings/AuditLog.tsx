@@ -13,8 +13,11 @@ import { usePeople } from '../../../lib/people';
 export function readableAction(key: string): string {
   const [area, ...rest] = key.replace(/_/g, ' ').split('.');
   const text = [area, rest.join(' ')].filter(Boolean);
-  const first = text[0] ? text[0].charAt(0).toUpperCase() + text[0].slice(1) : key;
-  return text.length > 1 ? `${first}: ${text[1]}` : first;
+  const first = text[0] ? tr(text[0].charAt(0).toUpperCase() + text[0].slice(1)) : key;
+  // The whole phrase ("rule created") if it has an Arabic text, else word by word; English stays exactly as before.
+  const phrase = (s: string) => (tr(s) !== s ? tr(s) : s.split(' ').map((w) => tr(w)).join(' '));
+  const detail = text[1];
+  return detail ? `${first}: ${phrase(detail)}` : first;
 }
 
 export function AuditLog() {
@@ -37,7 +40,7 @@ export function AuditLog() {
       key: 'who',
       label: tr('User'),
       value: (e) => {
-        if (!e.actor_user_id) return 'System';
+        if (!e.actor_user_id) return tr('System');
         const name = who(e.actor_user_id);
         // 'Someone' means the person is no longer in the people list (disabled): fall back to the email, then the id.
         return name === 'Someone' ? (emails.get(e.actor_user_id) ?? e.actor_user_id) : name;

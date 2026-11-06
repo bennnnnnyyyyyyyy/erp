@@ -118,7 +118,7 @@ export function AccountingSetupPage() {
               <td>{tr(ROLE_LABEL[r.role] ?? r.role)}</td>
               <td>
                 {canManage ? (
-                  <AccountSelect accounts={list} value={r.accountId ?? ''} onChange={(id) => id && run(async () => {
+                  <AccountSelect accounts={list} value={r.accountId ?? ''} label={tr(ROLE_LABEL[r.role] ?? r.role)} onChange={(id) => id && run(async () => {
                     await api(`/v1/accounting/roles/${r.role}`, { method: 'PUT', body: JSON.stringify({ accountId: id }) });
                     return tr('Saved.');
                   }, () => { roles.reload(); preview.reload(); })} />
@@ -141,7 +141,7 @@ export function AccountingSetupPage() {
               <td>{c.name}</td>
               <td>
                 {canManage ? (
-                  <AccountSelect accounts={list} value={c.accountId ?? ''} empty={tr('Default expense account')} onChange={(id) => run(async () => {
+                  <AccountSelect accounts={list} value={c.accountId ?? ''} empty={tr('Default expense account')} label={c.name} onChange={(id) => run(async () => {
                     await api(`/v1/accounting/category-accounts/${c.categoryId}`, { method: 'PUT', body: JSON.stringify({ accountId: id || null }) });
                     return tr('Saved.');
                   }, categories.reload)} />
@@ -259,6 +259,7 @@ export function AccountingSetupPage() {
           ) : <p className="muted small">{tr('Only an owner can switch accounting on.')}</p>}
         </div>
       ) : null}
+      {p.accountingOn ? <StockValueCard canRevalue={canManage} /> : null}
       {result ? (
         <div className="form-card stack">
           <h2>{tr('Switch-on result')}</h2>
@@ -270,7 +271,60 @@ export function AccountingSetupPage() {
   );
 }
 
+// ------------------------------------------------------------------ stock value check (sql/055)
+
+type StockValueRow = { itemId: string; sku: string; name: string; onHand: number; avgCostMinor: number | null; bookMinor: number; targetMinor: number; differenceMinor: number };
+
+/** Books vs quantity × average cost; the owner or head accountant can post one correcting entry. */
+function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
+  const session = useSession();
+  const rows = useLoad(() => api<StockValueRow[]>('/v1/accounting/stock-value'));
+  const { message, busy, run } = useNotice();
+  const [note, setNote] = useState('');
+  const currency = session.org?.defaultCurrency ?? 'EGP';
+  if (!rows.data) return <div className="form-card"><Loading error={rows.error} rows={2} /></div>;
+  const off = rows.data.filter((r) => r.differenceMinor !== 0);
+  const sum = (k: 'bookMinor' | 'targetMinor' | 'differenceMinor') => rows.data!.reduce((s, r) => s + r[k], 0);
+  return (
+    <div className="form-card stack">
+      <h2>{tr('Stock value check')}</h2>
+      <p className="muted small">{tr('Each item\'s value in the books should equal quantity on hand × average cost. It can drift when costs were set outside normal receipts, for example in imported or sample data.')}</p>
+      <Notice message={message} />
+      <p>{trf('In the books: {book}. At average cost: {target}. Difference: {diff} on {n} items.', {
+        book: money(sum('bookMinor'), currency), target: money(sum('targetMinor'), currency), diff: money(sum('differenceMinor'), currency), n: off.length,
+      })}</p>
+      {off.length ? (
+        <>
+          <div className="table-wrap"><table><thead><tr>
+            <th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('On hand')}</th><th scope="col" className="right">{tr('Average cost')}</th>
+            <th scope="col" className="right">{tr('In the books')}</th><th scope="col" className="right">{tr('At average cost')}</th><th scope="col" className="right">{tr('Difference')}</th>
+          </tr></thead><tbody>
+            {off.slice(0, 50).map((r) => (
+              <tr key={r.itemId}><td><code>{r.sku}</code> {r.name}</td><td className="right">{r.onHand}</td><td className="right">{r.avgCostMinor === null ? '—' : money(r.avgCostMinor, currency)}</td>
+                <td className="right">{money(r.bookMinor, currency)}</td><td className="right">{money(r.targetMinor, currency)}</td><td className="right">{money(r.differenceMinor, currency)}</td></tr>
+            ))}
+          </tbody></table></div>
+          {canRevalue ? (
+            <div className="form-row">
+              <label>{tr('Reason')}<input value={note} maxLength={300} placeholder={tr('e.g. Correct sample-data costs')} onChange={(e) => setNote(e.target.value)} /></label>
+              <ConfirmButton label={tr('Revalue stock to average cost')} confirmLabel={tr('Yes, post the correction')} disabled={busy || !note.trim()}
+                question={trf('Post one entry of {diff} to bring stock to average cost? It cannot be edited afterwards, only reversed by another entry.', { diff: money(sum('differenceMinor'), currency) })}
+                onConfirm={() => run(async () => {
+                  const r = await api<{ items: number; netMinor: number }>('/v1/accounting/stock-value/revalue', { method: 'POST', body: JSON.stringify({ date: new Date().toISOString().slice(0, 10), note }) });
+                  return trf('{n} items revalued; net {amount}.', { n: r.items, amount: money(r.netMinor, currency) });
+                }, rows.reload)} />
+            </div>
+          ) : <p className="muted small">{tr('Only the owner or the head accountant can post the correction.')}</p>}
+        </>
+      ) : <p className="muted small">{tr('Every item is at quantity × average cost.')}</p>}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ chart of accounts
+
+/** 'asset' is shown as "Asset" (or its Arabic), not the raw database value. */
+const kindLabel = (k: string) => tr(k.charAt(0).toUpperCase() + k.slice(1));
 
 export function ChartPage() {
   const session = useSession();
@@ -314,7 +368,7 @@ export function ChartPage() {
             {!form.parentId || parent?.kind === 'equity' || parent?.kind === 'liability' ? (
               <label>{tr('Kind')}
                 <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-                  {ACCOUNT_KINDS.filter((k) => !parent || k === 'equity' || k === 'liability').map((k) => <option key={k} value={k}>{tr(k)}</option>)}
+                  {ACCOUNT_KINDS.filter((k) => !parent || k === 'equity' || k === 'liability').map((k) => <option key={k} value={k}>{kindLabel(k)}</option>)}
                 </select>
               </label>
             ) : null}
@@ -329,9 +383,9 @@ export function ChartPage() {
         </FormToggle>
       ) : null}
 
-      <label className="search">{tr('Search by code or name')}<input value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+      <label className="search">{tr('Search by code or name')}<input type="search" placeholder={tr('Search…')} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
       <div className="table-wrap"><table><thead><tr>
-        <th scope="col">{tr('Code')}</th><th scope="col">{tr('Name')}</th><th scope="col">{tr('Kind')}</th><th scope="col">{tr('Status')}</th>{canManage ? <th scope="col" /> : null}
+        <th scope="col">{tr('Code')}</th><th scope="col">{tr('Name')}</th><th scope="col">{tr('Kind')}</th><th scope="col">{tr('Status')}</th>{canManage ? <th scope="col"><span className="sr-only">{tr('Actions')}</span></th> : null}
       </tr></thead><tbody>
         {shown.map((a) => (
           <tr key={a.id} className={a.active ? undefined : 'muted'}>
@@ -345,10 +399,10 @@ export function ChartPage() {
                   <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>{tr('Cancel')}</Button>
                 </span>
               ) : (
-                <Link to={`/accounting/accounts/${a.id}`}>{a.isLeaf ? accountName(a) : <strong>{accountName(a)}</strong>}</Link>
+                <Link className="account-link" to={`/accounting/accounts/${a.id}`}>{a.isLeaf ? accountName(a) : <strong>{accountName(a)}</strong>}</Link>
               )}
             </td>
-            <td>{tr(a.kind)}</td>
+            <td>{kindLabel(a.kind)}</td>
             <td>{a.active ? (a.isLeaf ? tr('Detail') : tr('Group')) : tr('Inactive')}</td>
             {canManage ? (
               <td className="nowrap">

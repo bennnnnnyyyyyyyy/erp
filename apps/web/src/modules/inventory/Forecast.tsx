@@ -3,6 +3,8 @@ import { Loading } from '../../components/Loading';
 import { useLoad } from '../../lib/useLoad';
 import { Link } from '../../lib/router';
 import { Pill } from '../trade/common';
+import { formatDay } from '../../lib/format';
+import { useSession } from '../../session';
 
 import { tr, trf } from '../../lib/i18n';
 // When will each item run out? From this organization's own issue history (sql/029). Items nobody issued in 90 days get no forecast.
@@ -13,9 +15,10 @@ type Row = {
   historyDays: number; issuesCount: number; confidence: 'good' | 'thin' | 'none'; leadDays: number; onOrder: number; suggestedOrder: number | null;
 };
 
-const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('en-GB', { maximumFractionDigits: 2 }));
+const fmt = (n: number) => n.toLocaleString('en-GB', { maximumFractionDigits: 2 });
 
 export function ForecastPage() {
+  const session = useSession();
   const data = useLoad(() => api<Row[]>('/v1/inventory/forecast'));
   if (!data.data) return <section className="page"><Loading error={data.error} /></section>;
   const rows = data.data;
@@ -32,7 +35,7 @@ export function ForecastPage() {
         {[
           { label: tr('Stock-out within 14 days'), value: String(soon), tone: soon > 0 ? 'text-destructive-foreground' : 'text-success-foreground' },
           { label: tr('Reorder suggested'), value: String(toOrder.length), tone: toOrder.length > 0 ? 'text-warning-foreground' : 'text-success-foreground' },
-          { label: tr('Items with a forecast'), value: `${used.length} of ${rows.length}`, tone: '' },
+          { label: tr('Items with a forecast'), value: trf('{shown} of {total}', { shown: used.length, total: rows.length }), tone: '' },
         ].map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-card p-5 shadow-xs">
             <div className="text-sm font-medium text-muted-foreground">{k.label}</div>
@@ -47,7 +50,7 @@ export function ForecastPage() {
             <td>{r.sku} · {r.name}</td>
             <td className="right">{fmt(r.available)} {r.uom}</td>
             <td className="right">{r.confidence === 'none' ? '—' : fmt(r.dailyRate)}</td>
-            <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={trf('{n} days', { n: r.daysOfCover ?? '' })} /> <span className="muted small">{r.runsOutOn}</span></> : <span className="muted">{tr('no usage in 90 days')}</span>}</td>
+            <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={trf('{n} days', { n: r.daysOfCover ?? '' })} /> <span className="muted small">{formatDay(r.runsOutOn, session.org)}</span></> : <span className="muted">{tr('no usage in 90 days')}</span>}</td>
             <td>{r.confidence === 'good' ? <Pill status="received" label={tr('High')} /> : r.confidence === 'thin' ? <span title={trf('{issues} issue(s) over {days} days', { issues: r.issuesCount, days: r.historyDays })}><Pill status="submitted" label={tr('Low (limited history)')} /></span> : ''}</td>
             <td className="right">{r.confidence === 'none' ? '' : trf('{n} days', { n: r.leadDays })}</td>
             <td className="right">{r.onOrder > 0 ? fmt(r.onOrder) : ''}</td>

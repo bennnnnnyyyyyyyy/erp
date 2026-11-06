@@ -41,6 +41,8 @@ const SOURCE_LABEL: Record<string, string> = {
   sales_note: 'Credit or debit note',
   manual_journal: 'Manual journal',
   cost_change: 'Cost change',
+  treasury_transfer: 'Treasury transfer',
+  stock_revaluation: 'Stock revaluation',
 };
 export const sourceLabel = (t: string) => tr(SOURCE_LABEL[t] ?? t);
 
@@ -59,11 +61,14 @@ export function sourcePath(type: string, id: string): string | null {
       return `/accounting/journals/${id}`;
     case 'stock_move':
       return '/inventory/ledger';
+    case 'treasury_transfer':
+      return '/treasury/transfers';
     default:
       return null;
   }
 }
 
+// Every event the posting functions write (sql/046-051); found missing in the live browser check of 6 Nov (raw codes showed).
 const EVENT_LABEL: Record<string, string> = {
   posted: 'Posted',
   issued: 'Issued',
@@ -73,8 +78,34 @@ const EVENT_LABEL: Record<string, string> = {
   received: 'Received',
   approved: 'Approved',
   revalued: 'Revalued',
+  invoiced: 'Invoiced',
+  billed: 'Billed',
+  expensed: 'Expense recorded',
+  paid_in: 'Money received',
+  paid_out: 'Money paid',
+  issued_sale: 'Issued for a sale',
+  issued_internal: 'Issued for internal use',
+  received_other: 'Received (not from a purchase order)',
+  returned_in: 'Returned by customer',
+  adjusted: 'Count difference',
+  credited: 'Credit note',
+  debited: 'Debit note',
+  transferred: 'Transferred',
 };
-export const eventLabel = (e: string) => tr(EVENT_LABEL[e] ?? e);
+/** A readable name for an event; an unknown one is shown with its underscores turned into spaces, never as a raw code. */
+export const eventLabel = (e: string) => (EVENT_LABEL[e] ? tr(EVENT_LABEL[e]) : e.replace(/_/g, ' '));
+
+/** Stock movement kinds (inv_stock_moves.kind) in words. */
+const MOVE_LABEL: Record<string, string> = {
+  receipt: 'Receipt',
+  issue: 'Issue',
+  adjust: 'Count adjustment',
+  transfer_in: 'Transfer in',
+  transfer_out: 'Transfer out',
+  return_in: 'Customer return',
+  revaluation: 'Revaluation',
+};
+export const moveLabel = (k: string) => (MOVE_LABEL[k] ? tr(MOVE_LABEL[k]) : k.replace(/_/g, ' '));
 
 export function useNotice() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -104,9 +135,9 @@ export function Notice({ message }: { message: { ok: boolean; text: string } | n
 }
 
 /** An account picker limited to postable accounts. */
-export function AccountSelect({ accounts, value, onChange, empty }: { accounts: Account[]; value: string; onChange: (id: string) => void; empty?: string }) {
+export function AccountSelect({ accounts, value, onChange, empty, label }: { accounts: Account[]; value: string; onChange: (id: string) => void; empty?: string; label?: string }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label ?? tr('Account')}>
       <option value="">{empty ?? tr('Choose…')}</option>
       {postable(accounts).map((a) => (
         <option key={a.id} value={a.id}>
