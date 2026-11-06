@@ -6,7 +6,7 @@ import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import type { DemoTransfer, InTransitRow, StockRow, TransferStatus } from '../../lib/demoInventory';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { usePeople } from '../../lib/people';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
@@ -46,7 +46,7 @@ function Steps({ status }: { status: TransferStatus }) {
         const cls = ended ? (i === 0 ? 'done' : i === 1 ? 'bad' : '') : i < at || (i === at && status === 'received') ? 'done' : i === at ? 'current' : '';
         return (
           <li key={text} className={`step ${cls}`} data-n={i + 1}>
-            {text}
+            {tr(text)}
           </li>
         );
       })}
@@ -67,7 +67,7 @@ export function TransfersList() {
   const columns: Column<DemoTransfer>[] = [
     { key: 'number', label: tr('Transfer'), value: (t) => t.number, render: (t) => <Link to={`/inventory/transfers/${t.id}`}><code>{t.number}</code></Link> },
     { key: 'route', label: tr('From → to'), value: (t) => `${cat.warehouseName(t.fromWarehouseId)} → ${cat.warehouseName(t.toWarehouseId)}` },
-    { key: 'items', label: tr('Items'), value: (t) => t.lines.map((l) => `${l.qty} x ${cat.itemName(l.itemId)}`).join(', ') },
+    { key: 'items', label: tr('Items'), value: (t) => t.lines.map((l) => qtyLine(l.qty, cat.itemName(l.itemId))).join(', '), render: (t) => <span>{t.lines.map((l) => ltrIsolate(qtyLine(l.qty, cat.itemName(l.itemId)))).join(', ')}</span> },
     { key: 'by', label: tr('Requested by'), value: (t) => who(t.requesterId) },
     { key: 'status', label: tr('Status'), value: (t) => t.status, render: (t) => <StatusPill status={t.status} /> },
     { key: 'when', label: tr('Requested'), value: (t) => t.createdAt, render: (t) => <span className="nowrap">{formatDateTime(t.createdAt, session.org)}</span> },

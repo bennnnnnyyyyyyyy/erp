@@ -118,7 +118,7 @@ export function AccountingSetupPage() {
               <td>{tr(ROLE_LABEL[r.role] ?? r.role)}</td>
               <td>
                 {canManage ? (
-                  <AccountSelect accounts={list} value={r.accountId ?? ''} onChange={(id) => id && run(async () => {
+                  <AccountSelect accounts={list} value={r.accountId ?? ''} label={tr(ROLE_LABEL[r.role] ?? r.role)} onChange={(id) => id && run(async () => {
                     await api(`/v1/accounting/roles/${r.role}`, { method: 'PUT', body: JSON.stringify({ accountId: id }) });
                     return tr('Saved.');
                   }, () => { roles.reload(); preview.reload(); })} />
@@ -141,7 +141,7 @@ export function AccountingSetupPage() {
               <td>{c.name}</td>
               <td>
                 {canManage ? (
-                  <AccountSelect accounts={list} value={c.accountId ?? ''} empty={tr('Default expense account')} onChange={(id) => run(async () => {
+                  <AccountSelect accounts={list} value={c.accountId ?? ''} empty={tr('Default expense account')} label={c.name} onChange={(id) => run(async () => {
                     await api(`/v1/accounting/category-accounts/${c.categoryId}`, { method: 'PUT', body: JSON.stringify({ accountId: id || null }) });
                     return tr('Saved.');
                   }, categories.reload)} />
@@ -272,6 +272,9 @@ export function AccountingSetupPage() {
 
 // ------------------------------------------------------------------ chart of accounts
 
+/** 'asset' is shown as "Asset" (or its Arabic), not the raw database value. */
+const kindLabel = (k: string) => tr(k.charAt(0).toUpperCase() + k.slice(1));
+
 export function ChartPage() {
   const session = useSession();
   const canManage = hasPermission(session.permissions, 'accounting.chart.manage');
@@ -314,7 +317,7 @@ export function ChartPage() {
             {!form.parentId || parent?.kind === 'equity' || parent?.kind === 'liability' ? (
               <label>{tr('Kind')}
                 <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-                  {ACCOUNT_KINDS.filter((k) => !parent || k === 'equity' || k === 'liability').map((k) => <option key={k} value={k}>{tr(k)}</option>)}
+                  {ACCOUNT_KINDS.filter((k) => !parent || k === 'equity' || k === 'liability').map((k) => <option key={k} value={k}>{kindLabel(k)}</option>)}
                 </select>
               </label>
             ) : null}
@@ -329,9 +332,9 @@ export function ChartPage() {
         </FormToggle>
       ) : null}
 
-      <label className="search">{tr('Search by code or name')}<input value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+      <label className="search">{tr('Search by code or name')}<input type="search" placeholder={tr('Search…')} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
       <div className="table-wrap"><table><thead><tr>
-        <th scope="col">{tr('Code')}</th><th scope="col">{tr('Name')}</th><th scope="col">{tr('Kind')}</th><th scope="col">{tr('Status')}</th>{canManage ? <th scope="col" /> : null}
+        <th scope="col">{tr('Code')}</th><th scope="col">{tr('Name')}</th><th scope="col">{tr('Kind')}</th><th scope="col">{tr('Status')}</th>{canManage ? <th scope="col"><span className="sr-only">{tr('Actions')}</span></th> : null}
       </tr></thead><tbody>
         {shown.map((a) => (
           <tr key={a.id} className={a.active ? undefined : 'muted'}>
@@ -345,10 +348,10 @@ export function ChartPage() {
                   <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>{tr('Cancel')}</Button>
                 </span>
               ) : (
-                <Link to={`/accounting/accounts/${a.id}`}>{a.isLeaf ? accountName(a) : <strong>{accountName(a)}</strong>}</Link>
+                <Link className="account-link" to={`/accounting/accounts/${a.id}`}>{a.isLeaf ? accountName(a) : <strong>{accountName(a)}</strong>}</Link>
               )}
             </td>
-            <td>{tr(a.kind)}</td>
+            <td>{kindLabel(a.kind)}</td>
             <td>{a.active ? (a.isLeaf ? tr('Detail') : tr('Group')) : tr('Inactive')}</td>
             {canManage ? (
               <td className="nowrap">

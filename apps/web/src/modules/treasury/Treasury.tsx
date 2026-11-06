@@ -269,7 +269,7 @@ export function TransfersPage() {
       ) : null}
 
       <div className="table-wrap"><table><thead><tr>
-        <th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('From')}</th><th scope="col">{tr('To')}</th><th scope="col">{tr('Note')}</th><th scope="col">{tr('By')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th><th scope="col" />
+        <th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('From')}</th><th scope="col">{tr('To')}</th><th scope="col">{tr('Note')}</th><th scope="col">{tr('By')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th>
       </tr></thead><tbody>
         {transfers.data.map((t) => (
           <tr key={t.id}>

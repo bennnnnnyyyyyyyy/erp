@@ -104,7 +104,7 @@ export function AlertsPage() {
 
       <h2 className="related">{tr('Rules')}</h2>
       <p className="muted small">{tr('Each rule is evaluated every five minutes against current stock, batches and invoices.')}</p>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Rule')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Recipients')}</th><th scope="col">{tr('Repeat interval')}</th><th scope="col">{tr('Times triggered')}</th><th scope="col">{tr('State')}</th><th scope="col"></th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Rule')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Recipients')}</th><th scope="col">{tr('Repeat interval')}</th><th scope="col">{tr('Times triggered')}</th><th scope="col">{tr('State')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
             <td>{ruleText(r)}</td>

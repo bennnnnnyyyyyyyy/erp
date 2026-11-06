@@ -69,7 +69,7 @@ export function EntriesPage() {
       </div>
       {!entries.data ? <Loading error={entries.error} /> : (
         <div className="table-wrap"><table><thead><tr>
-          <th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Document')}</th><th scope="col">{tr('Description')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col" />
+          <th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Document')}</th><th scope="col">{tr('Description')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th>
         </tr></thead><tbody>
           {entries.data.map((e) => (
             <ClickRow key={e.id} to={`/accounting/entries/${e.id}`}>
@@ -268,7 +268,7 @@ export function JournalEditPage() {
         {f.kind === 'opening' ? <p className="muted small">{tr('Opening balances are dated the first day of a fiscal year. Put the difference on the opening balances account.')}</p> : null}
         <label>{tr('Description')}<input value={f.memo} maxLength={500} onChange={(e) => set({ memo: e.target.value })} /></label>
         <div className="table-wrap"><table><thead><tr>
-          <th scope="col">{tr('Account')}</th><th scope="col" className="right">{tr('Debit')}</th><th scope="col" className="right">{tr('Credit')}</th><th scope="col">{tr('Customer or supplier (optional)')}</th><th scope="col">{tr('Note')}</th><th scope="col" />
+          <th scope="col">{tr('Account')}</th><th scope="col" className="right">{tr('Debit')}</th><th scope="col" className="right">{tr('Credit')}</th><th scope="col">{tr('Customer or supplier (optional)')}</th><th scope="col">{tr('Note')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th>
         </tr></thead><tbody>
           {f.lines.map((l, i) => (
             <tr key={i}>

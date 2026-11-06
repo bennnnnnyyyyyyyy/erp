@@ -133,9 +133,9 @@ export function Notice({ message }: { message: { ok: boolean; text: string } | n
 }
 
 /** An account picker limited to postable accounts. */
-export function AccountSelect({ accounts, value, onChange, empty }: { accounts: Account[]; value: string; onChange: (id: string) => void; empty?: string }) {
+export function AccountSelect({ accounts, value, onChange, empty, label }: { accounts: Account[]; value: string; onChange: (id: string) => void; empty?: string; label?: string }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label ?? tr('Account')}>
       <option value="">{empty ?? tr('Choose…')}</option>
       {postable(accounts).map((a) => (
         <option key={a.id} value={a.id}>

@@ -78,6 +78,8 @@ export function StatementsPage() {
       </div>
       {kind !== 'item' && !accountingOn ? <p className="muted small">{tr('Customer and supplier statements come from the books: switch accounting on first.')}</p> : null}
 
+      {!shown && (kind === 'item' || accountingOn) ? <p className="muted empty">{tr('Choose who or what to show, set the dates, then press Show.')}</p> : null}
+
       {shown && title ? (
         <h2>{title.code ? `${title.code} · ` : ''}{title.name} <span className="muted small">{formatDay(shown.from, session.org)} – {formatDay(shown.to, session.org)}</span></h2>
       ) : null}

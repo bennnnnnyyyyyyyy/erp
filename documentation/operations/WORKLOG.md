@@ -1920,3 +1920,30 @@ remove it before deleting the worktree (it is not tracked).
 
 **Safety Status.** `npm install` ok (0 vulnerabilities); `npm run typecheck` clean in shared, api and web; `npm test` passing (shared 4, api 11). Not browser-tested. No `.env` files, secrets, node_modules or git history copied. Open: product name and deciders placeholders, README, PRODUCT_BRIEF, ADR-0003, the db/audit rework.
 
+
+## 2026-11-06 (ui) — UI audit of the sample and live builds, and the fixes
+
+**Objective.** Ben asked for an extensive UI audit in the `ui-work` worktree, using the project skills and a browser.
+
+**Actions Completed.**
+- Created worktree `../ERP-ui` on new branch `ui-work` from main (002046c); `npm install` there.
+- Playwright + axe-core crawl of 21 sample-build pages in 6 viewport/language/theme configurations.
+- Second crawl of 40 live screens (English light and dark), signed in by Ben in a test browser; read-only, nothing clicked or submitted.
+- Fixes in `apps/web/src` (no api, shared or sql changes): list counter and quantity lines in Arabic (`components/views/ListView.tsx`,
+  `lib/format.ts`, inventory Inventory/Transfers), untranslated step labels, app descriptions and audit-log actions, labels on unlabelled
+  dropdowns and empty table headers (`sr-only`), bell label, forecast dates and numbers, chart-of-accounts kind/underline/search, statement
+  empty prompt, contrast tokens, 12px minimum text and 44px phone touch targets (`styles.css`).
+- New Arabic strings are in `lib/i18nAudit.ts` (merged in `lib/i18n.tsx`), not `i18nScreens.ts`, to avoid a merge conflict with the
+  integrations work. They can move into `SCREENS_AR` after merge. New tests: `lib/i18nAudit.test.ts`.
+- `ui-work` was moved (no commit authored) to the tip of `origin/integrations-wave1` (13f10e7), which already contains main, accounting
+  phase 1 and treasury phase 2; the fixes were re-applied on top as uncommitted changes, with no conflicts. Checked on the combined code:
+  typecheck, tests (shared 31, API 216, web 67), `biome ci` (no errors) and the smoke test (4/4).
+- Not touched (other session): `ConnectPhone.tsx` still has one empty `<th>`; `Messaging.tsx`, `registry.tsx`, `modules.ts`, Integrations.
+- The written findings file `documentation/reviews/2026-11-06-ui-audit.md` could not be saved (writes to it were blocked); the findings are in the chat report.
+
+**Database / System Result.** None.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` passing (web 67); smoke test 4/4; `biome ci` unchanged (it only covers api and shared).
+Re-crawl of the sample build after the fixes: no text under 12px, no unlabelled controls, no empty headers, no contrast failures once
+animations finish. Not verified: live Arabic (the account's saved language overrides the browser setting), live phone, any live screen after
+the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitignored) at Ben's request. Audit scripts are not in the repo.

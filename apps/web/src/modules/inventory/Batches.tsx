@@ -84,7 +84,7 @@ export function BatchesPage() {
       </tbody></table></div>
 
       <h2 className="related">{tr('All batches')}</h2>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Batch')}</th><th scope="col">{tr('Made')}</th><th scope="col">{tr('Expires')}</th><th scope="col">{tr('Stock')}</th><th scope="col">{tr('Status')}</th><th scope="col"></th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Batch')}</th><th scope="col">{tr('Made')}</th><th scope="col">{tr('Expires')}</th><th scope="col">{tr('Stock')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
         {batches.data.map((b) => (
           <tr key={b.id}><td>{item(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{formatDay(b.mfgDate, session.org) || '—'}</td><td>{formatDay(b.expiryDate, session.org) || '—'}</td>
             <td>{b.stock.filter((s) => s.qty > 0).map((s) => `${s.qty} in ${wh(s.warehouseId)}`).join(', ') || '0'}</td>
@@ -117,10 +117,10 @@ export function BatchesPage() {
         <>
           <h2 className="related">{tr('Batch tracking per item')}</h2>
           <p className="muted small">{tr('Switch on for items that expire (creams, oils, actives). Existing stock moves into an "UNBATCHED" lot that is issued last. Choose where the item must be kept.')}</p>
-          <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Tracking')}</th><th scope="col">{tr('Storage condition')}</th><th scope="col"></th></tr></thead><tbody>
+          <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Tracking')}</th><th scope="col">{tr('Storage condition')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
             {items.data.map((i) => (
               <tr key={i.id}><td>{i.sku} · {i.name}</td><td>{i.tracksBatches ? tr('On') : tr('Off')}</td>
-                <td><select value={i.storageConditionId ?? ''} onChange={(e) => run(async () => { await api(`/v1/inventory/items/${i.id}/batching`, { method: 'POST', body: JSON.stringify({ tracks: i.tracksBatches, conditionId: e.target.value }) }); return trf('Storage for {sku} saved.', { sku: i.sku }); }, () => items.reload())}>
+                <td><select value={i.storageConditionId ?? ''} aria-label={trf('Storage condition for {sku}', { sku: i.sku })} onChange={(e) => run(async () => { await api(`/v1/inventory/items/${i.id}/batching`, { method: 'POST', body: JSON.stringify({ tracks: i.tracksBatches, conditionId: e.target.value }) }); return trf('Storage for {sku} saved.', { sku: i.sku }); }, () => items.reload())}>
                   <option value="">{tr('No requirement')}</option>{(conditions.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></td>
                 <td><Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/inventory/items/${i.id}/batching`, { method: 'POST', body: JSON.stringify({ tracks: !i.tracksBatches, conditionId: i.storageConditionId ?? '' }) }); return trf(i.tracksBatches ? '{sku}: batch tracking off.' : '{sku}: batch tracking on.', { sku: i.sku }); }, () => items.reload())}>{i.tracksBatches ? tr('Turn off') : tr('Turn on')}</Button></td></tr>
             ))}
