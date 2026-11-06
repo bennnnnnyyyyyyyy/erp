@@ -8,8 +8,289 @@ gets an entry with these four headings:
 - **Database / System Result.** What happened in Supabase / Cloudflare / hosting, or "None".
 - **Safety Status.** Tests run, what was not verified, and manual steps still needed.
 
+## 2026-11-05 (review) — Accounting phase 1 design review: changes incorporated, pending pilot chart confirmation
+
+**Objective.** Review the unbuilt accounting phase-1 plan and ADR before acceptance, concentrating
+on irreversible posting, correction, migration, currency and permission decisions.
+
+**Actions Completed.** Updated `ACCOUNTING_PLAN.md` and the ADR draft to: permit only
+non-financial drafts without entries; require defined reversing events for every postable source;
+make uncosted receipts require an explicit value; send internal use to reason-based expense
+accounts; use clearing accounts rather than treating cards, cheques and `other` as bank cash; and
+record O3–O6. The ADR now defaults to history replay but permits an audited, accountant-approved
+opening-balance cutover for incomplete legacy history, with a no-double-count guard. It also
+requires per-currency reporting and refuses cross-currency settlement until conversion accounting
+exists. The ledger tables are explicitly exempt from soft deletion, because they are immutable
+evidence. The accountant handoff now requests an anonymised Miracle chart export and the still
+unconfirmed codes and placements.
+
+**Database / System Result.** None. Documentation only; no migration, application, production data
+or deployment changed.
+
+**Safety Status.** The plan remains a draft until the pilot accountant confirms the open chart
+questions. The ADR has not moved to `documentation/architecture/decisions/` and must not be treated
+as accepted yet. Manual browser review of PR #1 remains a human task under the repository rule.
+
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
+
+## 2026-11-06 (evening) — Accounting slices 4 and 5 written (`sql/048`, `sql/049`, tests 043 and 044) and an audit of 045–047 (branch `accounting-phase1`, 048 and 049 not applied)
+
+**Objective.** Ben: "continue to 048" and "keep auditing, checking for mistakes".
+
+**Actions Completed.**
+- **Audit of 045–047:**
+  - (a) **Bug found:** an account used by an expense category or an internal-use reason could be made inactive or given sub-accounts. That would make every later expense or issue using it fail to post, and the document with it. Fixed in 048 (`acc__account_in_use`; `acc_create_account` and `acc_update_account` replaced).
+  - (b) **Demo switch-on cross-checks** (rolled back), each against the documents:
+    - GRNI 0 = documents 0;
+    - suppliers −2,034,992.37 = documents;
+    - customers 3,522,920.09 = documents.
+
+    Bank −3,855,213.63 (more paid out by bank than received in the demo data) and opening balances −10,222,581.68 (demo opening stock) are data, not errors.
+  - (c) **REST schema refresh:** Supabase's `pgrst_ddl_watch` event trigger is on, and each re-created receive function exists once, so the API sees 046's versions.
+  - (d) **Function privileges on live:** every internal accounting function is closed to anonymous and signed-in users except `acc__append_only()` (a trigger function, harmless). Closed in 048.
+- `sql/048_accounting_manual_journals.sql` (new):
+  - `acc_manual_journals` and its lines;
+  - `acc_save_journal` (draft, or post directly), `acc_decide_journal`, `acc_cancel_journal`, `acc_reverse_journal`;
+  - a second person approves, enforced in the function **and** by check constraints; the owner and a head accountant post and reverse directly (Q5);
+  - opening balances only on a fiscal year's first day; lock date checked; accounting must be on.
+- `sql/049_accounting_reports.sql` (new, read-only):
+  - `acc_trial_balance(from, to, currency)`: opening, period and closing per account; parents roll up;
+  - `acc_account_lines(account, from, to, currency)`: running balance; a group includes its sub-accounts.
+- Tests 043 (J0–J7) and 044 (R1–R3); READMEs updated.
+
+**Database / System Result.** All rolled back on ggoerp:
+- 048 + 043, 048 + 040, 048 + 042 passed.
+- 048 + 049 with 044, 040, 041, 042 and 043 passed.
+- Deliberate breaks, each caught:
+  - self-approval check removed → "FAIL J2c" (the check constraint still blocked it);
+  - in-use check removed → "FAIL J6a";
+  - roll-up removed → "FAIL R1f".
+- Trial balance on a rolled-back demo switch-on: 12 accounts with entries, debits = credits = 94,704,908.09 EGP, closing balances sum to 0, 11 ms.
+- My own mistakes along the way, all found by the tests before anything was applied:
+  - 049's first version lacked `WITH RECURSIVE`, used a temporary table in a read-only function, and had a `UNION ... ORDER BY` on unnamed columns;
+  - test 044 first assumed the test company's currency was EGP.
+- A read-only check afterwards found nothing from 048 or 049 on live. **Neither is applied.**
+
+**Safety Status.**
+- 048 and 049 need Ben's yes. Neither changes any company's data; 048 replaces two 045 functions with stricter versions.
+- Phase 1 SQL is then complete. Still to do: the accounting API routes, the screens (chart, setup and switch-on, journal, manual entry, approvals, trial balance, uncosted receipts), permission keys in `packages/shared`, and the cost field on the receive screens.
+
+## 2026-11-06 — `sql/047_accounting_switch_on.sql` applied to live (Ben's yes)
+
+**Objective.** Ben: "yes apply 047 and continue to 048".
+
+**Actions Completed.** Applied `sql/047_accounting_switch_on.sql` to ggoerp with `npx supabase db query --linked -f`. No error.
+
+**Database / System Result.**
+- Verification: `accounting_on` = 0, so no company is switched on.
+- Tests on live, all "ALL TESTS PASSED (everything rolled back)": 042, 041, 040, 019, 038.
+
+**Safety Status.** Nothing posts until an owner calls `acc_switch_on`, and no screen calls it yet. Not deployed: no code change.
+
+## 2026-11-06 — Accounting slice 3 written: `sql/047_accounting_switch_on.sql` and test 042 (branch `accounting-phase1`, not applied)
+
+**Objective.** Ben: "continue to 047". Switching accounting on for a company with history.
+
+**Actions Completed.**
+- `sql/047_accounting_switch_on.sql` (new):
+  - `acc_uncosted_receipts` and `acc_set_receipt_cost`: the owner or head accountant enters a documented cost for an old receipt that has none. Append-only; a zero cost needs a reason; never taken from the current average.
+  - `acc_switch_on_preview`.
+  - `acc_switch_on`, owner only, in one transaction:
+    1. seeds the chart;
+    2. refuses with `ACCOUNT_ROLE_MISSING` or `UNCOSTED_RECEIPTS` if anything is missing;
+    3. turns the module on;
+    4. backfills every document oldest first, with the 046 rules, marked as backfill;
+    5. checks the books balance, and audits the counts, totals and time taken.
+  - It cannot run twice.
+  - **New rule P17:** a cost changed by hand (`inv_set_item_cost`) revalues the stock on hand (on hand × the change) between inventory and stock differences. Found while timing the demo switch-on. Old hand changes are not backfilled, because the quantity on hand at that moment isn't recorded.
+- `sql/tests/042_accounting_switch_on.sql` (new): S0–S6.
+- READMEs updated.
+
+**Database / System Result.** All rolled back on ggoerp:
+- 047 + test 042: "ALL TESTS PASSED".
+- 047 with tests 019, 038, 040, 041: all passed.
+- Deliberate break (stock backfill skipped) → "FAIL S4c".
+- **Rolled-back switch-on of Demo Cosmetics Factory, as its owner:**
+  - 2,673 documents → 2,673 entries in 3.3 s;
+  - debits = credits = 94,704,908.09 EGP;
+  - the customers account (3,522,920.09) equals invoices − payments − credit notes from the documents, exactly;
+  - the inventory account (3,723,858.67) is 582,100.59 above today's stock at average cost (3,141,758.08). Cause: the demo seed recorded receipt costs but set item average costs directly (0 cost-log rows), so sales were valued at averages that don't follow from those receipts. This is a demo-data artefact, not a posting error.
+- Read-only check afterwards: nothing from 047 on live. **Not applied.**
+
+**Safety Status.**
+- Applying 047 needs Ben's yes. Applying it switches no company on.
+- Other companies have uncosted receipts (read-only count): Gulf Global Outsourcing (`gulf-global-outsourcing-22ae`, **active**, which the 4 Nov entries don't cover) 19; Demo Trading 9; Concurrency Check 3. They would need costs entered before switching on.
+- Next: 048 (manual journals with approval, opening balances), 049 (trial balance), then the API and screens.
+
+## 2026-11-06 — `sql/046_accounting_posting.sql` applied to live (Ben's yes)
+
+**Objective.** Ben: "yes apply 046 and continue to 047".
+
+**Actions Completed.** Applied `sql/046_accounting_posting.sql` to ggoerp with `npx supabase db query --linked -f`. No error.
+
+**Database / System Result.**
+- 7 `acc_post_*` triggers exist.
+- 0 companies have accounting on and there are 0 entries, so nothing has posted.
+- Tests on live, all "ALL TESTS PASSED (everything rolled back)": 041, 040, 002, 013, 014, 019, 020, 022, 031, 038.
+
+**Safety Status.**
+- The receive functions accept an optional cost. The live API still calls them without one, which is fine while no company has accounting on.
+- Not deployed: no code change.
+
+## 2026-11-06 — Accounting slice 2 written: `sql/046_accounting_posting.sql` and test 041 (branch `accounting-phase1`, not applied)
+
+**Objective.** Ben: "cont". Build automatic posting (plan §7, rules P1–P16).
+
+**Actions Completed.**
+- `sql/046_accounting_posting.sql` (new):
+  - **Posting functions**, one per document type, each with a `p_backfill` flag so 047 can reuse them:
+    - `acc__post_move` (receipts, issues, adjustments and counts, customer returns; transfers post nothing);
+    - `acc__post_sal_invoice` and its void;
+    - `acc__post_pur_invoice`;
+    - `acc__post_expense` and its void;
+    - `acc__post_payment` and its void;
+    - `acc__post_note`.
+  - **Triggers** call them only for companies with accounting on. Invoice triggers are deferred to commit, because lines are inserted after the header.
+  - **Stock moves gain `purchase_order_id`**, and receipts carry their unit cost. With accounting on, a receipt without a cost is refused (`RECEIPT_COST_REQUIRED`). A cost given on a manual, opening or batch receipt also updates the average cost (cost-log source `manual_receipt`).
+  - **New tables:** `acc_receipt_costs` (append-only; no foreign key to stock moves, so `sql/tests/002` S14c's truncate message is unchanged) and `acc_issue_reasons`.
+  - **New columns:** `inv_requests.issue_reason_id`, `fin_categories.account_id`.
+  - **New functions:** `acc_set_category_account`, `acc_save_issue_reason`, `inv_set_request_reason`.
+  - **Payment methods:** cash, bank, card clearing, cheques by direction, other clearing; "other" needs a note.
+  - **Changed** (one optional parameter added, behaviour otherwise the same): `inv__receipt`, `inv__apply_cost`, `inv_create_item`, `inv_receive_stock`, `inv_receive_batch`, `pur_receive_order`.
+- `sql/tests/041_accounting_posting.sql` (new). It drives the real functions (create item, purchase, receive, sell, issue, invoice, bill, pay, void, credit note, count, internal issue with reason) and checks each entry. The books balance; customers (599.97), GRNI (0) and the inventory account tie out against the stock moves.
+- READMEs and the plan updated (`acc_receipt_costs` moved from 047 to 046; the price-difference line is zero in practice because supplier bills use the order's cost).
+
+**Database / System Result.** Dry runs on ggoerp, all rolled back:
+- 046 + test 041: "ALL TESTS PASSED".
+  - The first run failed in the **test**: `SET CONSTRAINTS ALL IMMEDIATE` forced a new entry's balance check before its lines existed. It now fires the invoice postings first, as a real commit does.
+  - Then the "other" payment check hit the overpayment rule first; it was moved earlier.
+- 046 with each older test that touches the changed functions: 002, 013, 014, 019, 020, 022, 031, 038 and 040 all passed. 002 first failed on S14c, caused by the foreign key on `acc_receipt_costs`; the key was removed.
+- Deliberate break (stock posting trigger made a no-op) → "FAIL P2a".
+- A read-only check afterwards found nothing from 046 on live. **Not applied.**
+
+**Safety Status.**
+- Applying 046 needs Ben's yes. With no company switched on, it posts nothing.
+- The API does not pass a cost to the receive functions yet, so receipts would be refused only for a company with accounting on. That cannot happen until 047 and the screens exist.
+- Next: 047 (cost old receipts, switch-on, backfill, timed on the demo company in a rolled-back run).
+
+## 2026-11-05 (late night, later) — `sql/045_accounting_core.sql` applied to live (Ben's yes)
+
+**Objective.** Ben: "yea" to applying 045 after its dry run.
+
+**Actions Completed.** Applied `sql/045_accounting_core.sql` to ggoerp with `npx supabase db query --linked -f`. No error.
+
+**Database / System Result.**
+- Read-only checks:
+  - 5 `acc_` tables, all with RLS on;
+  - 0 write grants for `anon` or `authenticated`;
+  - `memberships.is_head_accountant` exists;
+  - the `org_modules_accounting_guard` trigger exists;
+  - signed-in users cannot call `acc__post`, and anonymous users cannot call `acc_prepare`;
+  - 0 accounts and 0 companies with accounting on: nothing was seeded and no company is affected.
+- Tests on live, all "ALL TESTS PASSED (everything rolled back)": 040 (new), and 001, 017, 021, 035 (which touch memberships, module switches and the lock date).
+
+**Safety Status.**
+- No code uses 045 yet; nothing posts until a company switches accounting on (slice 047).
+- Not deployed: there is no API or screen for it yet.
+- The branch `accounting-phase1` is still uncommitted.
+
+## 2026-11-05 (late night) — Accounting slice 1 written: `sql/045_accounting_core.sql` and test 040; plan finalised without the pilot accountant (branch `accounting-phase1`, not applied)
+
+**Objective.** Ben: "work without his input" (the pilot accountant is unavailable). Settle the plan's open points with editable Egyptian defaults, then build the first slice.
+
+**Actions Completed.**
+- `ACCOUNTING_PLAN.md`:
+  - **Coding rule (Ben):** official codes come from official Egyptian sources (ETA item codes; customs tariff codes from customs.gov.eg, phase 4). Internal codes (accounts, SKUs, groups) are set by each company, with seeded defaults.
+  - **Default chart completed:** COGS 341, sales 411, sales returns 412, other income 42, capital 211, partners' current accounts 284, notes payable 285, cheques under collection 172, issued cheques not cashed 286, card and other clearing 193 and 194. Every role has an account, so a company can switch on without editing first.
+  - **Additions:**
+    - `acc_receipt_costs` for old receipts with no cost (they block switch-on until costed);
+    - `acc_issue_reasons`, mapping internal-use reasons to accounts;
+    - a cost on manual receipts when accounting is on;
+    - cheques split by direction;
+    - tests for all of these.
+  - O1 and O2 settled (GRNI kept).
+- `sql/045_accounting_core.sql` (new). Posts nothing and changes no existing company's data. It adds:
+  - `acc_accounts`, `acc_account_roles`, `acc_fiscal_years`;
+  - `acc_entries` and `acc_entry_lines`, append-only (update, delete and truncate refused even for the database owner);
+  - a balance check at commit (at least 2 lines, debits = credits), active leaf accounts only, the lock date unless backfill;
+  - `memberships.is_head_accountant`;
+  - the default chart seed (37 accounts, 19 roles);
+  - user functions `acc_prepare`, `acc_create_account`, `acc_update_account`, `acc_set_account_role`, `acc_set_head_accountant`, `acc_create_fiscal_year`, each audited;
+  - internal functions `acc__post` (idempotent per source event) and `acc__reverse`;
+  - a trigger so the `accounting` module can only be switched on by the coming switch-on function, and never off.
+- `sql/tests/040_accounting_core.sql` (new): T1–T12. It forces the deferred balance checks with `SET CONSTRAINTS ... IMMEDIATE`, because tests never commit.
+- `sql/README.md` and `sql/tests/README.md` updated.
+
+**Database / System Result.** Dry run on ggoerp, in one transaction (045 then test 040), rolled back: "ALL TESTS PASSED (everything rolled back)". Two deliberate breaks were each caught:
+- balance check removed → "FAIL T6c";
+- append-only trigger made a no-op → "FAIL T7a".
+
+A read-only check afterwards: no `acc_` tables, no `is_head_accountant` column and no module guard on live. **Not applied.**
+
+**Safety Status.**
+- Applying 045 needs Ben's yes. It adds tables, a column on `memberships` and a trigger on `org_modules`. It is safe to apply before the code, because nothing uses it until switch-on (slice 047).
+- Next slices: 046 (posting triggers P1–P16, issue reasons, cost on manual receipts) and 047 (uncosted receipts, switch-on and backfill), each with a dry run including the demo company.
+- The 040–044 rows in `sql/README.md` still say "not run anywhere yet"; they were applied on 5 Nov (see the entries below).
+
+## 2026-11-05 (night) — Accounting phase 1: Egyptian chart research, ADR-0004 draft and module plan (branch `accounting-phase1`, docs only)
+
+**Objective.** Ben: "start upgrading". Start roadmap phase 1, the general ledger. Ben's decisions:
+- Egypt first, Egyptian sources only (Q3);
+- manual journals need a second approver, except the head accountant and the owner (Q5).
+
+**Actions Completed.**
+- New branch `accounting-phase1` from `main` (`e8f0758`).
+- `documentation/reference/egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md`: the Egyptian unified chart (Presidential Decree 4723 of 1966).
+  - Groups 1 and 2 are documented from one Egyptian source.
+  - Groups 3 and 4 are incomplete; the official text was not found online.
+  - Non-Egyptian sources were removed at Ben's request.
+- `documentation/planning/DRAFT_ADR-0004-general-ledger.md`. Agents cannot write to `documentation/architecture/`; Ben moves it. The ADR decides:
+  - posting by database triggers in the same transaction (deferred for invoices and notes);
+  - append-only entries, corrected only by reversal;
+  - a balance check at commit;
+  - rounding per line;
+  - one currency per entry;
+  - account roles as settings;
+  - a backfill of existing documents when a company switches accounting on;
+  - a head-accountant flag on the membership.
+- `documentation/plans/ACCOUNTING_PLAN.md`:
+  - data model and seeded chart (third level is our proposal; group 3 and 4 codes marked unconfirmed);
+  - posting rules P1–P16 with a worked example that balances;
+  - permissions, API, screens, tests;
+  - rollout as migrations 045–049;
+  - open questions O1–O6.
+- Checklist and roadmap now point to the plan. Ben's decision on Q5 and the Egypt-only source rule are recorded in the roadmap.
+
+**Database / System Result.** None. No code, no SQL, nothing run or deployed.
+
+**Safety Status.**
+- Nothing is built until Ben approves the plan and the ADR (`agents.md`).
+- The chart's group 3 and 4 codes need the pilot accountant.
+- Uncommitted on the branch: these docs, plus the Miracle teardown Ben moved earlier (staged as a rename).
+
+## 2026-11-05 (evening) — PR #1 merged and deployed; branches tidied
+
+**Objective.** Ben: organise the branches and land PR #1.
+
+**Actions Completed.**
+- Ben merged PR #1 (`e8f0758`) into `main`. This brings in slices S1–S4 and S5a, the demo fixes and the roadmap.
+- Removed locally:
+  - worktrees `next-slices` and `onboarding-wizard`;
+  - local branches `superfix-workflow`, `thursday-ui-topbar`, `worktree-next-slices`, `worktree-onboarding-wizard` and `pr/next-slices`.
+- Checked first that every file in those worktrees was already in git, ignoring line endings.
+- Ben deleted `origin/superfix-workflow`.
+
+**Database / System Result.** GitHub Actions on `main`, both successful:
+- "CI and Cloudflare deploy" (run 42091780625);
+- "SQL tests (local Supabase)" (run 42091780661).
+
+The live app and the live database now match: both are at migration 044.
+
+**Safety Status.**
+- Browser check of the new screens by Ben is still needed.
+- `origin/pr/next-slices` still exists and can be deleted.
+- Next: phase 1 (accounting ledger). It waits on Ben's answers to roadmap Q3 (chart of accounts template) and Q5 (approval of manual journals).
 
 ## 2026-11-05 (later) — Migrations 040–044 applied to live by CLI (Ben's yes)
 
