@@ -6,6 +6,7 @@ import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
+import { createBostaDelivery, type ShipmentInfo } from '../../lib/shipping/bosta';
 import { billingFor } from './billing';
 import { registerNoteRoutes } from './notes';
 
@@ -344,3 +345,68 @@ salesRoutes.post('/orders/:id/cancel', requirePermission('sales.orders.manage'),
 });
 // ---- credit and debit notes with approval (sql/037); see ./notes.ts
 registerNoteRoutes(salesRoutes);
+
+// ---- Bosta shipments (sql/058). A courier update never changes stock or money; cash on delivery is settled in finance.
+const SHIP_COLS =
+  'id, order_id, provider, reference, tracking, status, state_code, cod_minor, currency, recipient_name, recipient_phone, city, address, simulated, note, created_at, updated_at';
+const str = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
+
+salesRoutes.get('/shipments', requirePermission('sales.orders.read'), async (c) => {
+  const order = c.req.query('orderId') ?? '';
+  if (order && !UUID_RE.test(order)) invalid('Invalid order');
+  let q = userDb(c)
+    .from('sal_shipments')
+    .select(SHIP_COLS)
+    .eq('org_id', c.var.tenant.orgId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (order) q = q.eq('order_id', order);
+  const { data, error } = await q;
+  if (error) throw error;
+  return ok(c, data ?? []);
+});
+
+salesRoutes.post('/shipments', requirePermission('sales.orders.fulfill'), async (c) => {
+  const b = await jsonBody(c);
+  const orderId = str(b.orderId);
+  const cod = b.codMinor === undefined || b.codMinor === null ? 0 : Number(b.codMinor);
+  if (
+    !UUID_RE.test(orderId) ||
+    !str(b.recipientName) ||
+    str(b.recipientPhone).length < 5 ||
+    !str(b.city) ||
+    str(b.address).length < 3 ||
+    !Number.isInteger(cod) ||
+    cod < 0
+  )
+    invalid('Order, recipient name, phone, city and address are required; cash on delivery must be zero or more');
+  const db = userDb(c);
+  const ship = await callRpc<ShipmentInfo>(db, 'sal_create_shipment', {
+    p_order_id: orderId,
+    p_recipient_name: str(b.recipientName),
+    p_recipient_phone: str(b.recipientPhone),
+    p_city: str(b.city),
+    p_address: str(b.address),
+    p_cod_minor: cod,
+  });
+  if (ship.simulated) return ok(c, ship, 201);
+  try {
+    const { tracking } = await createBostaDelivery(c.env, db, ship, new URL(c.req.url).origin);
+    return ok(c, { ...ship, tracking }, 201);
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : 'Bosta could not be reached';
+    await callRpc<void>(db, 'sal_shipment_fail', { p_shipment_id: ship.id, p_reason: reason }).catch(() => undefined);
+    throw new HttpError(502, reason, 'provider_error');
+  }
+});
+
+salesRoutes.post('/shipments/:id/cancel', requirePermission('sales.orders.fulfill'), async (c) => {
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'sal_cancel_shipment', { p_shipment_id: id });
+  return ok(c, { id, status: 'cancelled' });
+});
+
+salesRoutes.post('/shipments/:id/simulate-step', requirePermission('sales.orders.manage'), async (c) => {
+  const id = idParam(c);
+  return ok(c, await callRpc<{ result: string; status?: string }>(userDb(c), 'sal_simulate_shipment_step', { p_shipment_id: id }));
+});

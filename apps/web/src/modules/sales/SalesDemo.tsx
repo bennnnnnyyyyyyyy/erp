@@ -9,6 +9,7 @@ import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { Shipments } from './Shipments';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
 import { tr } from '../../lib/i18n';
@@ -188,6 +189,8 @@ export function SalesOrderPage() {
           <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</Button>
         </div>
       )}
+
+      {o.status !== 'cancelled' && <Shipments orderId={o.id} customerName={customer?.name ?? ''} customerPhone={(customer as { phone?: string } | undefined)?.phone ?? ''} customerCity={(customer as { city?: string } | undefined)?.city ?? ''} />}
 
       <h2 className="related">{tr('History')}</h2>
       <div className="table-wrap">

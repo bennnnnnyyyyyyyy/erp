@@ -44,6 +44,22 @@ run or deployed.
 
 **Safety Status.** No live retry, production schema change, commit or push was made. Apply 056 before 057 only after Ben's explicit approval.
 
+## 2026-11-06 (night) — Bosta shipments built; `sql/058` NOT applied
+
+**Objective.** Create a Bosta delivery from a sales order and follow its status, built in simulated mode until Bosta keys arrive.
+
+**Actions Completed.**
+- `sql/058_bosta_shipments.sql`, `sql/tests/053_bosta_shipments.sql`: shipments and event tables; create, cancel, simulate-step functions; `sal__apply_shipment_status` (service role) applies a Bosta state once, never reopens a finished shipment and never touches stock or money.
+- `apps/api/src/lib/shipping/bosta.ts`: create-delivery request and the webhook check. Bosta's webhook is unsigned, so `POST /webhooks/bosta` requires the secret header we ask Bosta to send, compared with the company's saved webhook secret (found through our own reference). Sales routes: list, create, cancel, simulate-step for shipments.
+- `apps/web`: `Shipments.tsx` on the sales order page (hidden in demo mode); Arabic strings.
+- Tests: `apps/api/test/bosta.test.ts`. The file is on the secret-key allowlist for the same reason and with the same limits as `lib/payments/links.ts`.
+- A "returned" status only tells a person to start a customer return; nothing is created automatically.
+- **Unconfirmed until a Bosta test delivery:** the request body field names (city, receiver, the per-delivery webhook header setting) and Bosta's state numbers beyond those in their documentation.
+
+**Database / System Result.** Dry run of 058 on live (ggoerp) inside a rolled-back transaction: passed; deliberate break (finished shipments reopen) caught. **Nothing applied to live.**
+
+**Safety Status.** `npm run typecheck`, `npx biome ci`, `npm test` (shared 31, API 242 + 7 skipped, web 67) and the smoke test pass. No keys exist; a simulated shipment contacts nobody. Apply 058 only on Ben's explicit yes. No commit made.
+
 ## 2026-11-06 (night) — Applied `sql/056` and `sql/057` to live (ggoerp) by Ben via `supabase db push`
 
 **Objective.** Put provider connections, the AI consent and cap tables, and payment links on the live database so the new Settings and invoice screens work.
