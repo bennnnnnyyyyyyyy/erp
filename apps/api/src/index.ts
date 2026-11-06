@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runFxPass } from './jobs/fx';
 import { runOutboxPass } from './jobs/outbox';
+import { processShopifyWebhook } from './lib/store/shopify';
 import { processBostaWebhook } from './lib/shipping/bosta';
 import { processFawryCallback, processPaymobCallback } from './lib/payments/links';
 import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
@@ -107,6 +108,19 @@ app.post('/webhooks/bosta', async (c) => {
   const raw = await c.req.text();
   if (raw.length > MAX_CALLBACK) return fail(c, 413, 'Too large', 'too_large');
   const r = await processBostaWebhook(c.env, raw, c.req.header('Authorization') ?? '');
+  return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
+});
+
+// Shopify orders (sql/059): signed by Shopify with the company's API secret; verified before anything is created.
+app.post('/webhooks/shopify', async (c) => {
+  const raw = await c.req.text();
+  if (raw.length > 1_000_000) return fail(c, 413, 'Too large', 'too_large');
+  const r = await processShopifyWebhook(c.env, raw, {
+    shop: c.req.header('X-Shopify-Shop-Domain') ?? '',
+    hmac: c.req.header('X-Shopify-Hmac-SHA256') ?? '',
+    topic: c.req.header('X-Shopify-Topic') ?? '',
+    webhookId: c.req.header('X-Shopify-Webhook-Id') ?? '',
+  });
   return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
 });
 

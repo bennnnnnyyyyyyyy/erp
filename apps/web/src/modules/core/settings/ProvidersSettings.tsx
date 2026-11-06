@@ -9,6 +9,7 @@ import { tr, trf } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 import { Notice, useNotice } from '../../accounting/common';
+import { OnlineOrders } from './OnlineOrders';
 
 // Settings > Integrations: payments, shipping, store and AI providers (sql/056). Secret fields are write-only: once saved they show as
 // "saved" and can only be replaced or removed. Every provider starts simulated. AI needs the owner's consent first.
@@ -173,7 +174,13 @@ export function ProvidersSettings() {
           {g === 'ai' ? <AiNotice status={status} canManage={canManage} onChanged={reload} /> : null}
           {PROVIDERS.filter((p) => p.group === g).map((def) => {
             const item = providers.find((x) => x.kind === def.kind);
-            return item ? <ProviderCard key={def.kind} def={def} item={item} canManage={canManage} consented={consented} onChanged={reload} /> : null;
+            if (!item) return null;
+            return (
+              <div key={def.kind} className="stack">
+                <ProviderCard def={def} item={item} canManage={canManage} consented={consented} onChanged={reload} />
+                {def.kind === 'shopify' && item.enabled ? <OnlineOrders canManage={canManage} simulated={item.mode === 'simulated'} /> : null}
+              </div>
+            );
           })}
         </div>
       ))}

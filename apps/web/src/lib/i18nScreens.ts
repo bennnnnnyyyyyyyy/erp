@@ -1181,4 +1181,13 @@ export const SCREENS_AR: Record<string, string> = {
   "Cash on delivery (leave empty if already paid)": "الدفع عند الاستلام (اتركه فارغًا إن كان مدفوعًا)",
   "Create shipment": "إنشاء شحنة",
   "New Bosta shipment": "شحنة بوسطة جديدة",
+  "Warehouse code for store orders (optional)": "كود المخزن لطلبات المتجر (اختياري)",
+  "Leave empty to use your oldest warehouse.": "اتركه فارغًا لاستخدام أقدم مخزن لديك.",
+  "Orders from the store": "طلبات المتجر",
+  "A test order was created in Sales.": "تم إنشاء طلب تجريبي في المبيعات.",
+  "Send a test order": "إرسال طلب تجريبي",
+  "Store order": "طلب المتجر",
+  "Imported as a sales order": "تم استيراده كأمر بيع",
+  "Needs a person": "يحتاج مراجعة شخص",
+  "No orders from the store yet.": "لا توجد طلبات من المتجر بعد.",
 };

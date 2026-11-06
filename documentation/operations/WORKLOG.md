@@ -44,6 +44,22 @@ run or deployed.
 
 **Safety Status.** No live retry, production schema change, commit or push was made. Apply 056 before 057 only after Ben's explicit approval.
 
+## 2026-11-06 (night) — Shopify orders in built; `sql/058` and `sql/059` NOT applied
+
+**Objective.** Shopify orders arrive as open sales orders (matched by SKU), built in simulated mode until Shopify keys arrive. Ben also asked for any SQL to be applied; the apply of 058 was blocked by the safety classifier and Ben interrupted, so nothing was applied.
+
+**Actions Completed.**
+- `sql/059_shopify_orders.sql`, `sql/tests/054_shopify_orders.sql`: `sal_shopify_orders`; `sal__ingest_shopify_order` creates one open sales order per Shopify order (customer by phone, warehouse by the optional `warehouse_code` setting else the oldest), or keeps the whole order as `review` with the reason (unknown SKU, other currency, one SKU at two prices, no lines); `sal_shopify_test_order` for simulated mode.
+- `apps/api/src/lib/store/shopify.ts` and `POST /webhooks/shopify`: the company is found by `X-Shopify-Shop-Domain`, the base64 HMAC-SHA256 of the raw body is checked against the company's API secret, only `orders/create` and `orders/paid` are used. Sales routes: list online orders, send a test order. The file is on the secret-key allowlist (webhook ingestion).
+- `apps/web`: "Orders from the store" under the Shopify card in Settings → Integrations (hidden in demo mode); Arabic strings; the optional warehouse code field.
+- Tests: `apps/api/test/shopify.test.ts`.
+- Stock and money are never touched: the order starts open and stock still needs the normal approved request. Pushing our stock levels to the store and publishing products are not built.
+- **Unconfirmed until a Shopify test order:** the exact payload fields (we read `id`, `name`, `currency`, `customer`, `shipping_address`, `line_items[].sku/quantity/price`).
+
+**Database / System Result.** Dry run of 059 on live (ggoerp) inside a rolled-back transaction: passed; deliberate break (two prices accepted) caught. **Nothing applied to live.**
+
+**Safety Status.** `npm run typecheck`, `npx biome ci`, `npm test` (shared 31, API 247 + 7 skipped, web 67) and the smoke test pass. No keys exist. Apply 058, then 059, only through Ben (a command Ben runs himself, or an explicit "apply"). No commit made.
+
 ## 2026-11-06 (night) — Bosta shipments built; `sql/058` NOT applied
 
 **Objective.** Create a Bosta delivery from a sales order and follow its status, built in simulated mode until Bosta keys arrive.

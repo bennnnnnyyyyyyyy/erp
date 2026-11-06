@@ -118,6 +118,14 @@ export const PROVIDERS: readonly ProviderDef[] = [
       { key: 'shop_domain', label: 'Shop domain', secret: false, required: true, placeholder: 'your-store.myshopify.com' },
       { key: 'access_token', label: 'Admin API access token', secret: true, required: true, placeholder: 'shpat_…' },
       { key: 'webhook_secret', label: 'API secret key (signs webhooks)', secret: true, required: true },
+      {
+        key: 'warehouse_code',
+        label: 'Warehouse code for store orders (optional)',
+        secret: false,
+        required: false,
+        placeholder: 'MAIN',
+        help: 'Leave empty to use your oldest warehouse.',
+      },
     ],
   },
   {
