@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runFxPass } from './jobs/fx';
 import { runOutboxPass } from './jobs/outbox';
+import { processBostaWebhook } from './lib/shipping/bosta';
 import { processFawryCallback, processPaymobCallback } from './lib/payments/links';
 import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
 import { processInbound } from './lib/whatsappInbound';
@@ -98,6 +99,14 @@ app.post('/webhooks/fawry', async (c) => {
   const raw = await c.req.text();
   if (raw.length > MAX_CALLBACK) return fail(c, 413, 'Too large', 'too_large');
   const r = await processFawryCallback(c.env, raw);
+  return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
+});
+
+// Bosta status webhook (sql/058): unsigned by Bosta, so it must carry the secret header we set when creating the delivery.
+app.post('/webhooks/bosta', async (c) => {
+  const raw = await c.req.text();
+  if (raw.length > MAX_CALLBACK) return fail(c, 413, 'Too large', 'too_large');
+  const r = await processBostaWebhook(c.env, raw, c.req.header('Authorization') ?? '');
   return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
 });
 
