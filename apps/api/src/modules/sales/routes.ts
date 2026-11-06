@@ -410,3 +410,19 @@ salesRoutes.post('/shipments/:id/simulate-step', requirePermission('sales.orders
   const id = idParam(c);
   return ok(c, await callRpc<{ result: string; status?: string }>(userDb(c), 'sal_simulate_shipment_step', { p_shipment_id: id }));
 });
+
+// ---- Shopify orders in (sql/059): what arrived, what is held for review, and a simulated test order.
+salesRoutes.get('/online-orders', requirePermission('core.integrations.view'), async (c) => {
+  const { data, error } = await userDb(c)
+    .from('sal_shopify_orders')
+    .select('id, shopify_order_id, shopify_name, status, review_reason, sales_order_id, simulated, total_minor, currency, created_at')
+    .eq('org_id', c.var.tenant.orgId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return ok(c, data ?? []);
+});
+
+salesRoutes.post('/online-orders/test', requirePermission('core.integrations.manage'), async (c) => {
+  return ok(c, await callRpc<{ result: string; orderNumber?: string; reason?: string }>(userDb(c), 'sal_shopify_test_order', {}), 201);
+});
