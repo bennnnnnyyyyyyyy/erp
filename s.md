@@ -1,75 +1,72 @@
-Understood. The attachment is the same overnight report I just summarized, and none of it affects tonight. Ignore it until Thursday.
+Task: collect official documentation for ERP integrations into documentation/reference, and make sure that folder is ignored by git. Docs and notes only. Do not write any integration code, do not sign up for anything, do not use or print any API keys or secrets.
 
-Your three priorities, in order:
+Step 1 (before saving anything): add documentation/reference/ to .gitignore, then prove it with `git check-ignore -v documentation/reference/test.txt`. Some of the docs have unknown licences and must not be committed. documentation/reference/eta-sdk already exists; check it is covered by the same rule. If you are blocked from editing .gitignore, print the exact lines for me to add and wait.
 
-1. Demo
+Step 2: for each integration below, create documentation/reference/<name>/ and save the official docs as markdown or text. Cover: authentication, the endpoints we would need, webhooks, rate limits, pricing or free tier, sandbox or test mode, and any account or business verification needed. Add a README.md in each folder with the source URLs, the date saved, and a 5-line summary of what the integration would do for our ERP. Use only official sources. If a page is blocked or needs a login, say so and move on. Do not copy whole websites; copy the pages that matter.
 
-Run the seven-step script on the live site with Chris, Joseph and Grant.
-Do one transfer end to end and leave one in transit.
-Confirm the “(sample data)” label is back on the company name.
-Confirm e-invoicing is off in the two demo companies.
-Check that the latest push is green in Actions.
-Hold the rollback ids (Worker e1cb6fc6…, Pages 36072048, plus newer ones from Claude Code) and have the fallback demo open: https://erp-demo-bas.pages.dev
+Order, easiest first:
 
-2. Tutorial
+1. Email sending: Resend, Postmark
+2. Exchange rates: Central Bank of Egypt published rates, plus one public rates API
+3. Slack and Microsoft Teams incoming webhooks
+4. Telegram Bot API
+5. SMS: Twilio, plus a provider that works well in Egypt (check which exist; note sender-name registration rules)
+6. Google Sheets and Drive API with OAuth
+7. OpenAI API (chat, embeddings)
+8. Speech: OpenAI Whisper, ElevenLabs
+9. WhatsApp Cloud API (Meta): business verification, templates, webhooks, 24-hour window
+10. Payment gateways: Paymob, Fawry, Kashier, PayTabs, Tap
+11. Couriers: Bosta, Aramex, Mylerz
+12. E-commerce: Shopify, WooCommerce, Salla, Zid
+13. Voice calls: Twilio Voice or SIP
+14. Egypt Tax Authority e-invoicing (reuse documentation/reference/eta-sdk, add what is missing)
+15. Saudi ZATCA and UAE e-invoicing
+16. Bank feeds and open banking in Egypt and the Gulf
 
-Run the full tour on the Cosmetics company with each of the three accounts.
-Run it once in English and once in Arabic.
-Confirm it starts, finishes, and doesn’t reappear when it shouldn’t.
+Step 3: write documentation/reference/INDEX.md with one row per integration: name, what it would do for us, difficulty (easy, medium, hard, hardest), what we need from outside (account, verification, budget, approval), and the folder. Then tell me which ones you could not fetch and why.
 
-3. Every app and Arabic
+Rules: no time or effort estimates. No secrets in any file. Keep each summary short and plain.
 
-Click through every screen in both languages.
-Look for English left over in Arabic mode, text cut off or overlapping, and layout that doesn’t flip right-to-left.
-Also check the numbers, dates and currency formats.
-Claude Code’s own report says Arabic is only verified for menus, the tutorial and the Guide. Judge the rest by eye, and have a native Arabic speaker (J or Caro) skim the demo screens if one is free.
+Claude Code can’t see my earlier prompt, so this one is self-contained. It also asks for an integrations plan, since your repo rules need an approved plan before a module is built. Send it after the screens work finishes, or as a separate session.
 
-Message for Claude Code (paste as is):
+Task: find and save the official documentation for the integrations we plan to add, then draft the integrations plan. Docs and a plan only. Do not write integration code, sign up for anything, or use or print any API key or secret. Do not commit. Do not touch the treasury work in progress.
 
-Freeze for the demo tonight. Do not touch main, do not push, do not apply any SQL to the live database. Keep the overnight slices (migrations 040–044 and their API changes) uncommitted or on a branch only. Until the demo, only do these things:
+Step 1: add documentation/reference/ to .gitignore and prove it with `git check-ignore -v documentation/reference/test.txt`. Some docs have unknown licences and must never be committed. documentation/reference/eta-sdk already exists; confirm it is covered. If you are blocked from editing .gitignore, print the exact lines for me to add and wait.
 
-Run the browser check on the live site as Chris, Joseph and Grant, in English and in Arabic, on every screen and the tutorial. Report anything broken, untranslated, cut off, or not flipped right-to-left, with the screen name.
-Report the live Worker and Pages rollback ids.
-Switch e-invoicing off in Demo Cosmetics Factory and Demo Trading Co., and tell me who switched it on.
-Fix only bugs that would show during the seven-step demo script, as small patches that I review before I commit.
+Step 2: for each integration below, create documentation/reference/<name>/ and save the official docs as markdown or text: authentication, the endpoints we would use, webhooks, rate limits, pricing or free tier, sandbox or test mode, and any account or business verification needed. Add a README.md in each folder with the source URLs, the date saved, and a 5-line summary of what it would do for our ERP. Use only official sources. If a page is blocked or needs a login, say so and move on. Copy the pages that matter, not whole websites.
 
-On whether the fixes serve the end goal: the overnight slices (lock date, due dates, stock counts, returns, units) are the right workflow gaps, but they only matter once the SQL is proven and they have screens. They are for Thursday, and nothing in them makes the demo better.
+Easiest first:
 
-Send me the screens Claude Code reports as broken in Arabic and I’ll help triage which are demo-critical.
+1. Email sending: Resend, Postmark
+2. Exchange rates: Central Bank of Egypt published rates, plus one public rates API
+3. Slack and Microsoft Teams incoming webhooks
+4. Telegram Bot API
+5. SMS: Twilio, plus a provider that works well in Egypt (note sender-name registration rules)
+6. Google Sheets and Drive API with OAuth
+7. OpenAI API (chat, embeddings)
+8. Speech: OpenAI Whisper, ElevenLabs
+9. WhatsApp Cloud API (Meta): business verification, templates, webhooks, 24-hour window
+10. Payment gateways: Paymob, Fawry, Kashier, PayTabs, Tap
+11. Couriers: Bosta, Aramex, Mylerz
+12. E-commerce: Shopify, WooCommerce, Salla, Zid
+13. Voice calls: Twilio Voice or SIP
+14. Egypt Tax Authority e-invoicing (reuse documentation/reference/eta-sdk and add what is missing)
+15. Saudi ZATCA and UAE e-invoicing
+16. Bank feeds and open banking in Egypt and the Gulf
 
-i alr pushed i wanna fix i can always rewind
+Step 3: write documentation/reference/INDEX.md: one row per integration with name, what it does for us, difficulty (easy, medium, hard, hardest), what we need from outside (account, verification, budget, approval), and the folder.
 
-Checking what the push actually deployed.
+Step 4: draft documentation/plans/INTEGRATIONS_PLAN.md following the repo's plan template, with status "Draft, awaiting Ben's approval". Include:
 
-Pushing is recoverable, as long as you check these in order.
+- the integrations in order, grouped into waves, with the reason for each wave;
+- for each one: the ERP feature it supports, how it fits our rules (channels never approve by themselves, secrets only as Worker secrets, every action audited, per-company credentials), and what could go wrong;
+- an "adapter" design so providers can be swapped, like the one planned for AI and for ETA (a simulated mode and a real mode);
+- a list of decisions Ben must make and accounts he must open;
+- open questions.
+  Do not add it to checklist.md as approved.
 
-1. See what the push did
+Finish with a short report: which docs you could not fetch and why, and anything in the docs that contradicts what we assumed.
 
-Open GitHub Actions for the latest run on main. CI runs lint, the smoke test of every screen, and the isolation SQL tests, and a failing step blocks the deploy.
-Red: nothing deployed and the live site is unchanged. Fix forward or revert at your leisure.
-Green: the new API code is live, and the database still lacks migrations 040–044. That is the risky case.
+Rules: no time or effort estimates. No secrets in any file. Plain language, short summaries.
 
-2. If it’s green, test the screens that code touches
-
-Finance → open items (the overdue list on the home page too)
-Invoice lists and invoice pages
-Customer and supplier pages
-Settings → org
-Credit notes
-
-If any of them show errors or blanks, rewind.
-
-3. How to rewind
-
-Fastest: roll back the Worker to the last good version (e1cb6fc6-ee48-41a4-bf14-8add5bc29b5d, or the newer id from Claude Code), and Pages to the one before the push (36072048).
-Clean: git revert the push on main and push again. This redeploys the old code through CI.
-The database is unaffected either way. Nothing was applied to it, so a code rewind brings you fully back.
-
-4. Don’t apply migrations 040–044 to live today. Applying them untested the day of the demo is the one thing that’s hard to undo.
-
-Tell me:
-
-Is the Actions run red or green?
-Did you push main or a branch?
-
-Then I can tell you whether to rewind or keep going.
+When it reports back, send me the INDEX and the plan’s decisions list.

@@ -281,7 +281,8 @@ export const APPS: AppDef[] = [
     pages: [
       { path: '', label: 'General', permission: 'core.org.read', component: GeneralSettings },
       { path: '/users', label: 'Users', permission: 'core.users.read', component: UsersSettings },
-      { path: '/branches', label: 'Branches', permission: 'core.org.read', component: BranchesSettings },
+      // Real API only: the sample-data demo has no branches (it stayed on the loading skeleton; found by the smoke test).
+      ...(demoMode ? [] : [{ path: '/branches', label: 'Branches', permission: 'core.org.read', component: BranchesSettings }]),
       { path: '/apps', label: 'Apps', permission: 'core.org.read', component: AppsSettings },
       { path: '/audit', label: 'Audit log', permission: 'core.audit.read', component: AuditLog },
     ],

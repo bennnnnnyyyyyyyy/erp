@@ -34,6 +34,30 @@ as accepted yet. Manual browser review of PR #1 remains a human task under the r
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-06 (evening) — Integrations research saved; integrations plan drafted
+
+**Objective.** Ben (`s.md`): collect official documentation for 16 integrations into `documentation/reference/`, ignored by git;
+write an index; draft an integrations plan.
+
+**Actions Completed.**
+- `.gitignore`: `documentation/reference/` is now ignored. It replaces the narrower `eta-sdk/` line. Proven with
+  `git check-ignore -v`: `test.txt` and `eta-sdk/` are both matched by line 59. The three files already tracked there stay tracked:
+  README, arabic-glossary and UNIFIED_CHART_OF_ACCOUNTS.
+- 16 folders `documentation/reference/01-email` … `16-open-banking`, each with a README:
+  - official sources and the date;
+  - a 5-line summary;
+  - notes on authentication, endpoints, webhooks, limits, pricing, sandbox and verification.
+
+  The notes are written in our own words, not copied pages: the third-party docs are under copyright.
+- `documentation/reference/INDEX.md`: one row per integration, plus a "could not fetch" table.
+- `documentation/plans/INTEGRATIONS_PLAN.md`: draft, awaiting Ben. Not added to `checklist.md` as approved.
+
+**Database / System Result.** None.
+
+**Safety Status.**
+- No sign-ups, no keys, no integration code. No secrets in any file.
+- The reference folder is not committed; only the plan and `.gitignore` are.
+
 ## 2026-11-06 (17:02) — Phase 2 API and screens (branch `treasury-phase2`, not deployed)
 
 **Objective.** Finish phase 2 above the database (TREASURY_PLAN.md §4–6).
