@@ -2,7 +2,7 @@
 
 Answer by writing next to each one, or just say "defaults". **I keep building on the default while you answer**, and change course if you pick something else. Nothing here blocks me for long.
 
-Why these matter: [documentation/plans/OWNER_INSIGHTS_PLAN.md](documentation/plans/OWNER_INSIGHTS_PLAN.md)
+Why these matter: [documentation/plans/OWNER_INSIGHTS_PLAN.md](../../plans/OWNER_INSIGHTS_PLAN.md)
 
 ## Decisions recorded from your answers (Claude, 2026-10-30)
 

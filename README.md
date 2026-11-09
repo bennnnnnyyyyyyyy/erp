@@ -1,6 +1,6 @@
 # {{PRODUCT_NAME}}
 
-A warehouse-first ERP for small and mid-size businesses in Egypt and the GCC that hold stock. Modules are switched on per company, prices are in Egyptian pounds, and the web app works in Arabic and English.
+A general-purpose ERP for small and mid-size businesses, Egypt first. It is built to cover every business track, one module at a time: warehouse and accounting are built, inventory and the work around it come next. Modules are switched on per company, prices are in Egyptian pounds by default, and the web app works in Arabic and English.
 
 Status (6 Nov 2026): a working early build, deployed at https://erp-live.pages.dev with invented sample data, **not production-ready**. What is built and live, what is only written, and what is not proven is kept in one place, [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (status overview); what was actually run and deployed is in [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md). In short: inventory, purchasing, sales, finance, accounting (general ledger), treasury and the integrations (payments, shipping, Shopify, AI, in simulated mode until keys are added) are built. Not yet proven: approvals by WhatsApp and voice on a real phone, any integration against a real provider, a real customer pilot. **Arabic:** every screen has Arabic text, but it is a machine draft that has not been reviewed by a native speaker yet. The clickable no-database demo still exists (below). See [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) for scope.
 

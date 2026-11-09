@@ -1,12 +1,15 @@
 # Agent Instructions — {{PRODUCT_NAME}}
 
-This repository is {{PRODUCT_NAME}}: a warehouse-first, modular, multi-tenant ERP for SMEs in Egypt and
-the GCC that hold stock. Its core ideas under test are: manager approval on outgoing stock that
-really blocks the stock movement, an append-only audit log, and a messaging layer so approvals and
-tasks can happen over WhatsApp and voice. It is sold to other companies from day one. Every design
-choice must survive the question "what happens when a second customer signs up?"
+This repository is {{PRODUCT_NAME}}: a general-purpose, modular, multi-tenant ERP for SMEs, Egypt first
+(other markets later, as settings). It is built to cover every business track, one module at a time:
+warehouse and accounting are built; inventory and the work around it come next. Its rules across all
+tracks: approvals that really block the action in the database, an append-only audit log, and a
+messaging layer so approvals and tasks can happen over WhatsApp and voice. It is sold to other
+companies from day one. Every design choice must survive the question "what happens when a second
+customer signs up?"
 
-It is **not** an internal tool: no CRM, time tracking, HR or payroll.
+It is **not** an internal tool for any one company. A new track (for example CRM or HR) is added as its
+own module, only once it has an approved plan.
 
 The live path is a Cloudflare Worker API in `apps/api/` and a React frontend in `apps/web/`, sharing
 types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `sql/`.
