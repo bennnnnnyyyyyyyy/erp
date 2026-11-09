@@ -2,8 +2,8 @@
 
 This repository is {{PRODUCT_NAME}}: a general-purpose, modular, multi-tenant ERP for SMEs, Egypt first
 (other markets later, as settings). It is built to cover every business track, one module at a time:
-warehouse (including core stock and inventory) and accounting are built; a deeper inventory track and
-the work around it come next. Its rules across all
+the first warehouse, stock and accounting capabilities are built; next come broader inventory workflows
+and the connected business tracks. Its rules across all
 tracks: approvals that really block the action in the database, an append-only audit log, and a
 messaging layer so approvals and tasks can happen over WhatsApp and voice. It is sold to other
 companies from day one. Every design choice must survive the question "what happens when a second

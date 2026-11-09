@@ -1,6 +1,6 @@
 # Plans Execution Status & Checklist
 
-**Last updated:** 2026-11-06 (night): status overview rewritten from the worklog (repo audit, finding 4). The 28 Oct "Task list by area" moved to [`../archive/checklist-2026-10-task-list.md`](../archive/checklist-2026-10-task-list.md); the "Detail" blocks below are dated and kept as history. **Where anything disagrees, the worklog wins.**
+**Last updated:** 2026-11-09: status overview reconciled with the worklog, including migration 061 and AI notice v2. The 28 Oct "Task list by area" moved to [`../archive/checklist-2026-10-task-list.md`](../archive/checklist-2026-10-task-list.md); the "Detail" blocks below are dated and kept as history. **Where anything disagrees, the worklog wins.**
 **Source of truth for what actually happened:** [`../operations/WORKLOG.md`](../operations/WORKLOG.md). Migration status per file: [`sql/README.md`](../../sql/README.md).
 
 ## Status overview
