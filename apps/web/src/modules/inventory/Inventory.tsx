@@ -112,6 +112,40 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
   );
 }
 
+// Decision D4 (sql/062): fix an item's name later. The SKU and unit stay (documents and quantities depend on them); the old and new
+// names are kept in the history.
+function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClose: () => void; onDone: () => void }) {
+  const [form, setForm] = useState({ name: item.name, nameAr: item.nameAr ?? '' });
+  const [error, setError] = useState<string | null>(null);
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api(`/v1/inventory/items/${item.id}`, { method: 'PUT', body: JSON.stringify(form) });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  return (
+    <Modal title={trf('Edit {name}', { name: item.name })} onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <p className="muted">
+          {tr('The SKU and unit stay the same, because documents and quantities depend on them. Every change is kept in the history.')}{' '}
+          <code>{item.sku}</code> · {item.uom}
+        </p>
+        <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
+        <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        {error && <p className="error">{error}</p>}
+        <div className="form-actions"><Button type="submit">{tr('Save changes')}</Button></div>
+      </form>
+    </Modal>
+  );
+}
+
 function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({ code: '', name: '', nameAr: '' });
   const [error, setError] = useState<string | null>(null);
@@ -151,8 +185,10 @@ export function StockPage() {
   const [warehouseId, setWarehouseId] = useState('all');
   const [adding, setAdding] = useState(false);
   const [addingWarehouse, setAddingWarehouse] = useState(false);
+  const [editing, setEditing] = useState<DemoItem | null>(null);
   const session = useSession();
   const canAdd = hasPermission(session.permissions, 'inventory.items.manage');
+  const canEdit = canAdd && !demoMode;
   const canAddWarehouse = hasPermission(session.permissions, 'inventory.warehouses.manage');
 
   const rows: StockLine[] = (cat.items.data ?? []).map((i) => {
@@ -177,6 +213,16 @@ export function StockPage() {
     { key: 'onHand', label: tr('On hand'), value: (r) => r.onHand, align: 'right', render: (r) => qty(r.onHand) },
     { key: 'reserved', label: tr('Reserved'), value: (r) => r.reserved, align: 'right', render: (r) => (r.reserved ? qty(r.reserved) : <span className="muted">0</span>) },
     { key: 'available', label: tr('Available'), value: (r) => r.available, align: 'right', render: (r) => <strong>{qty(r.available)}</strong> },
+    ...(canEdit
+      ? [{
+          key: 'edit',
+          label: tr('Actions'),
+          value: () => '',
+          render: (r: StockLine) => (
+            <Button variant="outline" size="sm" onClick={() => setEditing(r)} aria-label={trf('Edit {name}', { name: r.name })}>{tr('Edit')}</Button>
+          ),
+        }]
+      : []),
   ];
 
   // Totals of units are left out on purpose: they add kilograms, litres and pieces together (287,963.501 "units").
@@ -236,6 +282,7 @@ export function StockPage() {
         <p className="notice">{canAddWarehouse ? tr('Start by adding your first warehouse (any place you keep stock), then add items to it.') : tr('No warehouse exists yet. Ask an owner or admin to add one.')}</p>
       )}
       {addingWarehouse && <AddWarehouseModal onClose={() => setAddingWarehouse(false)} onDone={() => { setAddingWarehouse(false); cat.warehouses.reload(); stock.reload(); }} />}
+      {editing && <EditItemModal item={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); cat.items.reload(); }} />}
       {adding && cat.warehouses.data && (
         <AddItemModal warehouses={cat.warehouses.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); cat.items.reload(); stock.reload(); }} />
       )}
@@ -680,13 +727,14 @@ export function RequestPage() {
 
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
 
-      {/* The person who asked can never approve their own request (a database rule); say so instead of offering Approve (UX audit). */}
-      {r.status === 'submitted' && isManager && mine && !demoMode && (
-        <p className="notice">{tr('You made this request, so someone else must approve it: another owner or manager.')}</p>
-      )}
-      {r.status === 'submitted' && isManager && (!mine || demoMode) && (
+      {/* Decision D1 (sql/063): your own request can be approved only when the company has no other active owner or manager. The
+          database decides; Approve is offered and refused with a clear message when someone else must approve it. */}
+      {r.status === 'submitted' && isManager && (
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
+          {mine && !demoMode && (
+            <p className="muted small">{tr('You made this request. If you are the only owner or manager, you can approve it yourself and the history marks it as self-approved. Otherwise another owner or manager must approve it.')}</p>
+          )}
           <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
             <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>{tr('Approve')}</Button>

@@ -8,7 +8,11 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   FORBIDDEN: { status: 403, message: "You don't have permission to do that", code: 'forbidden' },
   INVALID_INPUT: { status: 400, message: 'That value is not valid', code: 'invalid_input' },
   APPROVAL_REQUIRED: { status: 409, message: 'This needs an approved request first', code: 'approval_required' },
-  SELF_APPROVAL: { status: 403, message: 'You cannot approve your own request', code: 'self_approval' },
+  SELF_APPROVAL: {
+    status: 403,
+    message: 'You cannot approve your own request: another owner or manager must approve it',
+    code: 'self_approval',
+  },
   INSUFFICIENT_AVAILABLE: { status: 409, message: 'Not enough stock available', code: 'insufficient_available' },
   STORAGE_MISMATCH: {
     status: 409,

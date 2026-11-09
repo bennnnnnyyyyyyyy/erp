@@ -39,4 +39,34 @@ export const DECISIONS_AR: Record<string, string> = {
     'ترحيل قيد واحد بقيمة {diff} لجعل المخزون بمتوسط التكلفة؟ يتغير ربح هذا الشهر بالمبلغ نفسه. لا يمكن تعديله بعد ذلك، فقط عكسه بقيد آخر.',
   // D2 wording
   'Only for you, on every device you sign in on.': 'لك وحدك، على كل جهاز تسجّل الدخول منه.',
+  // Batch 3: D4 editing records (sql/062)
+  'Edit {name}': 'تعديل {name}',
+  'The SKU and unit stay the same, because documents and quantities depend on them. Every change is kept in the history.':
+    'يبقى رمز الصنف والوحدة كما هما، لأن المستندات والكميات تعتمد عليهما. يُحفظ كل تغيير في السجل.',
+  'The code stays the same, because it is printed on documents. Every change is kept in the history.':
+    'يبقى الكود كما هو، لأنه مطبوع على المستندات. يُحفظ كل تغيير في السجل.',
+  'customer updated': 'تم تعديل العميل',
+  'supplier updated': 'تم تعديل المورد',
+  'item updated': 'تم تعديل الصنف',
+  // D1 sole approver (sql/063)
+  'You made this request. If you are the only owner or manager, you can approve it yourself and the history marks it as self-approved. Otherwise another owner or manager must approve it.':
+    'أنت من قدّم هذا الطلب. إن كنت المالك أو المدير الوحيد، يمكنك اعتماده بنفسك ويُسجَّل في السجل أنه اعتماد ذاتي. وإلا فيجب أن يعتمده مالك أو مدير آخر.',
+  'request self approved': 'تم اعتماد الطلب ذاتيًا',
+  // D3 partial receipts (sql/064)
+  'Partly received': 'مستلم جزئيًا',
+  'order partly received': 'تم استلام الأمر جزئيًا',
+  'What arrived?': 'ما الذي وصل؟',
+  'Still to come': 'المتبقي',
+  'Arrived now': 'وصل الآن',
+  'Arrived now: {item}': 'وصل الآن: {item}',
+  'Is the rest still coming?': 'هل سيصل الباقي؟',
+  'Yes, keep the order open for the rest': 'نعم، أبقِ الأمر مفتوحًا للباقي',
+  'No, close the order: the rest will not come': 'لا، أغلق الأمر: الباقي لن يصل',
+  'Close the order': 'إغلاق الأمر',
+  'Receive into stock': 'استلام في المخزون',
+  'Receive every line of this order in full?': 'استلام كل أسطر هذا الأمر بالكامل؟',
+  'Check the quantity for {item}: from 0 up to {n}.': 'راجع الكمية لـ {item}: من 0 حتى {n}.',
+  'Say whether the rest is still coming.': 'حدّد إن كان الباقي سيصل.',
+  'Received what arrived. The order stays open for the rest.': 'تم استلام ما وصل. يبقى الأمر مفتوحًا للباقي.',
+  'Received what arrived. The order is closed; the rest will not come.': 'تم استلام ما وصل. أُغلق الأمر؛ الباقي لن يصل.',
 };
