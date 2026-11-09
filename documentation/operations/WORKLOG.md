@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Whole-app redesign, step 1: a left menu in every app
+
+**Objective.** Ben liked the Integrations redesign and asked to revise every menu the same way. His choices: a left list in every app;
+record lists stay full-width tables that open a full page; an overview for the big apps (Inventory, Sales, Purchasing, Finance,
+Accounting, Treasury); Inventory first. This is the shared first step; each app then gets its own pull request.
+
+**Actions Completed.** The dropdown menu in the top bar is gone. `components/AppMenu.tsx` is now one `AppSideMenu`: the left list on a
+desktop (stays in view, scrolls on its own) and the same list as the drawer on a phone. `Shell.tsx` uses it, `styles.css` drops the old
+top-bar menu styles and hides the list when printing, and the smoke test finds pages through it. Integrations' own list sits below the
+top bar and is a little narrower beside the new menu.
+
+**Database / System Result.** None.
+
+**Safety Status.** See the pull request for checks. The look needs Ben's check in a browser: every app changes at once.
+
 ## 2026-11-09 — Settings > Integrations redesigned (Ben's choices); Online orders moved to Sales
 
 **Objective.** Ben found the page ugly and chose a new design through interactive options: a list on the left and one integration on

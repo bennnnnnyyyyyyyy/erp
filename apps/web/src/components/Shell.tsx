@@ -6,7 +6,7 @@ import { useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
 import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
-import { AppMenu, DrawerMenu } from './AppMenu';
+import { AppSideMenu } from './AppMenu';
 import { AppIcon } from './icons';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
@@ -108,14 +108,14 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   const Page = route?.page?.component;
 
   return (
-    <div className="shell">
+    <div className={route ? 'shell with-sidebar' : 'shell'}>
       <TourHost />
       <TableLabels />
       {!demoMode && ready && !asked && <FirstRunLanguage />}
       {/* Keyboard users jump past the top bar and the sidebar straight to the page (visible only when focused). */}
       <a href="#main" className="skip-link">{t('Skip to content')}</a>
-      {/* Odoo-style top bar: apps grid, the current app (icon and name), its menu across the bar; company and account at the end.
-          On a phone the menu moves into a drawer opened with the menu button. */}
+      {/* Top bar: apps grid, the current app (icon and name); company and account at the end. The app's own menu is the left list
+          (AppSideMenu); on a phone it is a drawer opened with the menu button. */}
       <header className="topbar">
         {route && (
           <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')} aria-expanded={drawerOpen}>
@@ -134,7 +134,6 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         ) : (
           <span className="topbar-org"><bdi>{session.org?.name}</bdi></span>
         )}
-        {route && <AppMenu app={route.app} current={route.page ?? undefined} />}
         <span className="spacer" />
         {route && <span className="topbar-org-end"><bdi>{session.org?.name}</bdi></span>}
         <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
@@ -144,7 +143,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
         <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
       </header>
 
-      {route && <DrawerMenu app={route.app} current={route.page ?? undefined} open={drawerOpen} />}
+      {route && <AppSideMenu app={route.app} current={route.page ?? undefined} open={drawerOpen} />}
 
       <main className="content" id="main" tabIndex={-1}>
         {atHome ? (
