@@ -10,6 +10,10 @@ problems. Everything that did not need a decision from you is fixed below; every
 
 ## Your decisions
 
+> **Answered by Ben on 9 Nov 2026** (in chat, recorded here). Follow-ups he also chose: long dropdowns become type-to-search
+> boxes (name, code or phone, Arabic or English), and each record's History box asks the server for its own complete history with
+> readable labels. Build order and status: see the worklog.
+
 ### D1. A company with only one owner can never issue stock
 
 The rule "the person who asks for stock cannot approve it" is enforced by the database (agents.md, non-negotiable). A one-person
@@ -21,16 +25,16 @@ someone else must approve it"), but a solo owner still has no way forward.
       log as "self-approved, no second approver". (Changes a non-negotiable rule: needs your explicit yes.)
 - [ ] **C.** Make it a company setting, off by default: "allow the owner to approve their own requests".
 
-Your answer:
+Your answer: B, only while the company has **no other active owner or manager**. As soon as one is added, the normal rule returns. Each self-approval is marked in the audit log ("self-approved: no second approver in the company"). Ben gave the explicit yes this rule change needs.
 
 ### D2. Arabic text: say it is still being reviewed, or not?
 
 All screens now say "Some wording is still being reviewed" (it used to say large parts were English only, which was no longer true).
 
 - [ ] **A.** Keep that one short line until you have reviewed the Arabic.
-- [ ] **B.** Remove it now.
+- [x] **B.** Remove it now.
 
-Your answer:
+Your answer: B: remove the "still being reviewed" line now.
 
 ### D3. Receiving a short delivery
 
@@ -40,7 +44,7 @@ batch and expiry at the same time) needs a database change.
 - [x] **A.** Build partial receipts (enter the received quantity per line; the order stays open for the rest).
 - [ ] **B.** Not now.
 
-Your answer:
+Your answer: A, and after a part delivery **ask each time**: "Is the rest still coming?" Yes keeps the order open ("Partly received, 40 to come"); No closes it at what came.
 
 ### D4. Editing customers, suppliers and items
 
@@ -49,7 +53,7 @@ Today a typo in a customer's name or phone cannot be fixed: there is no edit scr
 - [x] **A.** Build edit screens for customers, suppliers and items (name, phone, city; changes recorded in the audit log).
 - [ ] **B.** Not now.
 
-Your answer:
+Your answer: A: everything except codes is editable (name, phone, city, address, payment terms, contact). Customer and supplier codes and item SKUs stay fixed. Every change is recorded with the old and new value.
 
 ### D5. Adding a customer or supplier while making an order
 
@@ -58,7 +62,7 @@ Today you must leave the order (losing what you typed) to add a new customer or 
 - [x] **A.** Add a "New customer" / "New supplier" button inside the order form.
 - [ ] **B.** Not now.
 
-Your answer:
+Your answer: A: a small pop-up asking for **name and phone** only; the new customer or supplier is selected in the order straight away and nothing typed is lost.
 
 ### D6. Who sees Online orders (Sales)
 
@@ -67,7 +71,7 @@ It needs the same permission as its API route today, so only owners and admins s
 - [x] **A.** Keep it to owners and admins.
 - [ ] **B.** Let sales staff (members) see it too (a permission change on the server).
 
-Your answer:
+Your answer: A: owners and admins only.
 
 ### D7. Recording an expense that is paid on the spot
 
@@ -76,7 +80,7 @@ Today you record the expense, then go to Payments, find it in a list of "Expense
 - [x] **A.** Add "Paid now from [cash box]" to the expense form, and show category and supplier in the payment list.
 - [ ] **B.** Not now.
 
-Your answer:
+Your answer: A: "Paid now from [cash box or bank]", starting on the box this person used last; the payment is recorded at the same moment and linked to the expense.
 
 ### D8. Stock value correction: where it lives
 
@@ -85,7 +89,7 @@ It is inside Accounting setup today, which is where it was found. It is a tool y
 - [x] **A.** Move it to Accounting as its own page ("Stock value"), with the profit effect shown before posting.
 - [ ] **B.** Leave it in Accounting setup.
 
-Your answer:
+Your answer: A: its own Accounting page, "Stock value", showing the profit effect before posting. Only the owner and the head accountant can post (as today); everyone with accounting access can see the check.
 
 ### D9. Setup wizard length
 
@@ -94,7 +98,7 @@ The first-run wizard has 11 steps, asks for language a third time, and has a col
 - [ ] **A.** Shorten it: drop the language step and move storage conditions out (to Batches and expiry).
 - [ ] **B.** Leave it.
 
-Your answer:
+Your answer: Neither A nor B: the wizard first asks **"What do you sell?"** (shop, food or drinks, medicine, cosmetics, building materials, something else) and shows only the steps that fit; the storage-conditions step appears only for food, medicine and cosmetics. Drop the language step (already asked twice before).
 
 ### D10. Settings for staff
 
@@ -103,16 +107,16 @@ Workers open Settings and see greyed-out company, users, apps and audit pages th
 - [x] **A.** Show staff only "My language" (and their own account) in Settings.
 - [ ] **B.** Leave it.
 
-Your answer:
+Your answer: A, and staff Settings holds: **My language, My account** (name, email, change password), **My notifications**, and **Connect my phone**. Nothing else.
 
 ### D11. Dates around midnight
 
 Default dates on forms come from the computer's clock in UTC, so just after midnight in Egypt they show yesterday.
 
-- [ ] **A.** Use the company's time zone everywhere (small change, touches many forms).
+- [x] **A.** Use the company's time zone everywhere (small change, touches many forms).
 - [ ] **B.** Not now.
 
-Your answer:
+Your answer: A: use the company's time zone for every default date.
 
 ---
 
