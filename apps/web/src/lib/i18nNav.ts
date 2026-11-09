@@ -62,6 +62,7 @@ export const NAV_AR: Record<string, string> = {
   'Sales invoices': 'فواتير المبيعات',
   'Online orders': 'الطلبات الإلكترونية',
   'My settings': 'إعداداتي',
+  'Stock value': 'قيمة المخزون',
   'Sales invoice': 'فاتورة مبيعات',
   Task: 'مهمة',
   Notifications: 'الإشعارات',

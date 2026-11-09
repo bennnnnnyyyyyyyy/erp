@@ -259,7 +259,10 @@ export function AccountingSetupPage() {
           ) : <p className="muted small">{tr('Only an owner can switch accounting on.')}</p>}
         </div>
       ) : null}
-      {p.accountingOn ? <StockValueCard canRevalue={canManage} /> : null}
+      {/* The stock value check is its own page now (decision D8, 9 Nov 2026). */}
+      {p.accountingOn ? (
+        <p className="small"><Link to="/accounting/stock-value">{tr('Stock value check')} →</Link></p>
+      ) : null}
       {result ? (
         <div className="form-card stack">
           <h2>{tr('Switch-on result')}</h2>
@@ -274,6 +277,17 @@ export function AccountingSetupPage() {
 // ------------------------------------------------------------------ stock value check (sql/055)
 
 type StockValueRow = { itemId: string; sku: string; name: string; onHand: number; avgCostMinor: number | null; bookMinor: number; targetMinor: number; differenceMinor: number };
+
+/** Accounting > Stock value (decision D8, 9 Nov 2026): its own page, so it is found again when needed. */
+export function StockValuePage() {
+  const canRevalue = useChartManager();
+  return (
+    <section className="page wide">
+      <h1>{tr('Stock value')}</h1>
+      <StockValueCard canRevalue={canRevalue} />
+    </section>
+  );
+}
 
 /** Books vs quantity × average cost; the owner or head accountant can post one correcting entry. */
 function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
@@ -304,11 +318,14 @@ function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
                 <td className="right">{money(r.bookMinor, currency)}</td><td className="right">{money(r.targetMinor, currency)}</td><td className="right">{money(r.differenceMinor, currency)}</td></tr>
             ))}
           </tbody></table></div>
+          {off.length > 50 ? <p className="muted small">{trf('{n} more items are not shown; all of them are corrected together.', { n: off.length - 50 })}</p> : null}
+          {/* The effect on profit is said before posting (decision D8): a correction moves the difference into this month's results. */}
+          <p className="small"><strong>{trf('Effect on profit this month: {diff}.', { diff: money(sum('differenceMinor'), currency) })}</strong> {tr('The difference is booked as a stock adjustment, which changes this month\'s profit by the same amount.')}</p>
           {canRevalue ? (
             <div className="form-row">
               <label>{tr('Reason')}<input value={note} maxLength={300} placeholder={tr('e.g. Correct sample-data costs')} onChange={(e) => setNote(e.target.value)} /></label>
               <ConfirmButton label={tr('Revalue stock to average cost')} confirmLabel={tr('Yes, post the correction')} disabled={busy || !note.trim()}
-                question={trf('Post one entry of {diff} to bring stock to average cost? It cannot be edited afterwards, only reversed by another entry.', { diff: money(sum('differenceMinor'), currency) })}
+                question={trf('Post one entry of {diff} to bring stock to average cost? Profit this month changes by the same amount. It cannot be edited afterwards, only reversed by another entry.', { diff: money(sum('differenceMinor'), currency) })}
                 onConfirm={() => run(async () => {
                   const r = await api<{ items: number; netMinor: number }>('/v1/accounting/stock-value/revalue', { method: 'POST', body: JSON.stringify({ date: today(), note }) });
                   return trf('{n} items revalued; net {amount}.', { n: r.items, amount: money(r.netMinor, currency) });

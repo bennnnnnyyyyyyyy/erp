@@ -26,6 +26,17 @@ export const DECISIONS_AR: Record<string, string> = {
   'Choosing which messages you get is coming later.': 'اختيار الرسائل التي تصلك سيتاح لاحقًا.',
   'Connect my phone': 'ربط هاتفي',
   'Link your Telegram so messages reach you on your phone. Decisions are still made in the app.': 'اربط Telegram لتصلك الرسائل على هاتفك. تظل القرارات داخل التطبيق.',
+  // D7 paid now
+  'Paid now': 'دُفع الآن',
+  'Record expense and payment': 'سجّل المصروف والدفع',
+  'Expense {number} recorded and paid.': 'سُجّل المصروف {number} ودُفع.',
+  'Expense {number} recorded, but the payment was not: {reason}. Pay it from Payments.': 'سُجّل المصروف {number}، لكن لم يُسجَّل الدفع: {reason}. ادفعه من صفحة المدفوعات.',
+  // D8 stock value page
+  '{n} more items are not shown; all of them are corrected together.': 'لا يظهر {n} صنفًا آخر؛ وتُصحَّح كلها معًا.',
+  'Effect on profit this month: {diff}.': 'الأثر على ربح هذا الشهر: {diff}.',
+  "The difference is booked as a stock adjustment, which changes this month's profit by the same amount.": 'يُسجَّل الفرق كتسوية مخزون، فيتغير ربح هذا الشهر بالمبلغ نفسه.',
+  'Post one entry of {diff} to bring stock to average cost? Profit this month changes by the same amount. It cannot be edited afterwards, only reversed by another entry.':
+    'ترحيل قيد واحد بقيمة {diff} لجعل المخزون بمتوسط التكلفة؟ يتغير ربح هذا الشهر بالمبلغ نفسه. لا يمكن تعديله بعد ذلك، فقط عكسه بقيد آخر.',
   // D2 wording
   'Only for you, on every device you sign in on.': 'لك وحدك، على كل جهاز تسجّل الدخول منه.',
 };

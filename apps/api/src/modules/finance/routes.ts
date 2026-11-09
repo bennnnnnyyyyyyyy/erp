@@ -264,6 +264,8 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     dueDate: string;
     daysOverdue: number;
     ageBucket: AgeBucket;
+    /** For expenses: category and note, so unpaid expenses can be told apart in the payment list (decision D7, 9 Nov 2026). */
+    detail?: string;
   };
   const today = todayUtc();
   const items: Item[] = [];
@@ -345,16 +347,25 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
       currency: string;
       amount_minor: number;
       expense_date: string;
+      category_id: string;
+      note: string | null;
     }>((from, to) =>
       db()
         .from('fin_expenses')
-        .select('id, number, supplier_id, currency, amount_minor, expense_date')
+        .select('id, number, supplier_id, currency, amount_minor, expense_date, category_id, note')
         .eq('org_id', org)
         .eq('status', 'recorded')
         .order('id')
         .range(from, to),
     );
-    for (const e of expenses) push('expense', 'e', e.id, e.number, e.supplier_id, e.currency, Number(e.amount_minor), e.expense_date);
+    const { data: cats } = await db().from('fin_categories').select('id, name').eq('org_id', org);
+    const catName = new Map(((cats ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]));
+    for (const e of expenses) {
+      const before = items.length;
+      push('expense', 'e', e.id, e.number, e.supplier_id, e.currency, Number(e.amount_minor), e.expense_date);
+      const added = items[before];
+      if (added) added.detail = [catName.get(e.category_id) ?? '', e.note ?? ''].filter(Boolean).join(' · ');
+    }
   }
   items.sort((a, b) => b.number.localeCompare(a.number));
   return ok(c, items);

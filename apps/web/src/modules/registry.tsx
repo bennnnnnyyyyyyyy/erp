@@ -61,6 +61,7 @@ const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'Statemen
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/Setup'), 'AccountingSetupPage');
+const StockValuePage = lazyNamed(() => import('./accounting/Setup'), 'StockValuePage');
 const ChartPage = lazyNamed(() => import('./accounting/Setup'), 'ChartPage');
 const EntriesPage = lazyNamed(() => import('./accounting/Ledger'), 'EntriesPage');
 const EntryPage = lazyNamed(() => import('./accounting/Ledger'), 'EntryPage');
@@ -239,6 +240,8 @@ export const APPS: AppDef[] = [
       { path: '/journals/:id/edit', label: 'Change draft', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
       { path: '/accounts', label: 'Chart of accounts', permission: 'accounting.ledger.view', component: ChartPage, beforeEnabled: true },
       { path: '/accounts/:id', label: 'Account', permission: 'accounting.ledger.view', component: AccountLinesPage, nav: false, parent: '/accounts' },
+      // Decision D8 (9 Nov 2026): the stock value check has its own page; only the owner or head accountant can post from it.
+      { path: '/stock-value', label: 'Stock value', permission: 'accounting.ledger.view', component: StockValuePage },
       { path: '/setup', label: 'Accounting setup', permission: 'accounting.ledger.view', component: AccountingSetupPage, beforeEnabled: true },
     ],
   } satisfies AppDef]),

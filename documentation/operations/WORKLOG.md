@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — UX decisions, batch 2 (no database change): complete record history, Stock value page, "Paid now" on expenses
+
+**Objective.** Ben's decisions D7, D8 and the record-history follow-up (`documentation/planning/2026-11-09-ux-decisions.md`). D4 (editing
+customers, suppliers and items) needs new database functions, so it moves to the migrations batch with D1 and D3.
+
+**Actions Completed.** Branch `ux/batch2-decisions`.
+- **History:** stock requests, transfers, purchase orders, sales orders and tasks use `RecordHistory`, which asks the server for that
+  record only (`/v1/core/audit?entity=`), so older records no longer show "No history yet"; it reloads when the record's status changes.
+- **D8:** Accounting → Stock value is its own page (Accounting setup links to it); it states the effect on this month's profit before
+  posting, and says how many items are not shown when more than 50 differ. Posting stays owner or head accountant.
+- **D7:** "Paid now" on the expense form records the payment at once, from the cash box or bank account last used (or cash/bank without
+  treasury). If the payment is refused, the expense stays recorded and the message says to pay it from Payments. Unpaid expenses in the
+  payment list now show category, note and supplier (`/v1/finance/open-items` returns `detail`).
+
+**Database / System Result.** None.
+
+**Safety Status.** Lint, typecheck, `npm test` (shared 32 + 1 skipped, API 285 + 7 skipped, web 85) pass. Not viewed in a browser.
+"Paid now" is two server calls, not one transaction: a refused payment leaves an unpaid expense, which the message reports.
+
 ## 2026-11-09 — UX decisions, batch 1 (no database change): time zone dates, no draft note, quick-add, My settings, searchable lists
 
 **Objective.** Build the decisions Ben answered in `documentation/planning/2026-11-09-ux-decisions.md` that need no database change.
