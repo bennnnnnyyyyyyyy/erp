@@ -26,9 +26,10 @@ import { HttpError } from './errors';
 // them otherwise; Ollama sends data to an internet host the company typed, so it is an outside provider too).
 // A company's own key is not capped by us. Our key is capped: USD 100 a month across companies (AI_MONTHLY_CAP_USD) and a share for
 // each company (AI_COMPANY_CAP_USD, default 25) so one company cannot use it all. Cost figures are estimates, rounded up.
-// The cap is SOFT (repo audit N11): spend is checked before a call and recorded after it, so requests running at the same moment can
-// each pass the check; the overrun is bounded by one request each (800 output tokens or 5 MB of audio). The hard stop is the monthly
-// spending limit set on our OpenAI and ElevenLabs accounts.
+// The cap is SOFT (repo audit N11): spend is checked before a call and recorded after it, so every request in flight at that moment can
+// pass the check, and the overrun grows with how many there are (each is limited to 800 output tokens or 5 MB of audio). Speech cost is
+// an estimate from file size, so low-bitrate recordings are under-counted. A real hard stop needs a monthly spending limit on our OpenAI
+// and ElevenLabs accounts: none is set yet (no keys on live, 9 Nov 2026); set one before adding our keys.
 
 export type AiCaller = { orgId: string; userId: string };
 export type AiAnswer = { text: string; provider: 'openai' | 'ollama' | 'elevenlabs' | 'simulated'; simulated: boolean; ownKey: boolean };

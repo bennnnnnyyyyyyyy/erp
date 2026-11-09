@@ -5,7 +5,7 @@
 
 ## What it is
 
-A general-purpose ERP for SMEs, Egypt first (the GCC and other markets later, as settings). It is built to cover every business track, one module at a time: warehouse and accounting are built; inventory and the work around it come next. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default.
+A general-purpose ERP for SMEs, Egypt first (the GCC and other markets later, as settings). It is built to cover every business track, one module at a time: warehouse (including core stock and inventory) and accounting are built; a deeper inventory track and the work around it come next. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default.
 
 It is **not** an internal tool for any one company. A new track (for example CRM or HR) is added as its own module once it has an approved plan.
 

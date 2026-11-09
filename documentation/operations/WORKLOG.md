@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Second review of the audit fixes: findings checked and small fixes
+
+**Objective.** A reviewer's report (`documentation/reviews/2026-11-09-audit-fix-audit.md`) audited the fixes. Each finding was checked
+before acting on it.
+
+**Actions Completed.**
+- **"061's regex rejects hosts starting with s": not a defect.** The file holds one backslash (`[^\s/]`; byte dump of `main`). Tested on
+  live's Postgres read-only: `https://server.example` is accepted by that pattern and rejected only by a doubled backslash, which is not
+  what the file or live has. `sql/061` needs no change. `sql/tests/056` gains a host starting with `s` and an address with no host.
+- **Under-declared `Content-Length`: tested, not a bypass locally.** Raw socket to `wrangler dev`, `/webhooks/fawry`: declares 200 KB and
+  sends 200 KB gives 413; declares 10 and sends 200 KB gives 400, so the handler saw only the declared bytes. Local Workers runtime
+  only, not checked on Cloudflare's edge.
+- **Inventory wording fixed** in README, PRODUCT_BRIEF and agents.md: core stock and inventory are built; a deeper inventory track is
+  next.
+- **AI cap comment fixed** (`aiService.ts`): overrun grows with requests in flight; speech cost is an estimate; provider spending
+  limits are not set, and must be before our keys are added. Comment only.
+- **No action, by Ben's decision:** personal files in the public repository (accepted 6 Nov), branch protection and provider limits
+  (skipped 9 Nov). **Still open:** the two ADR-0004 links (folder blocked for agents).
+
+**Database / System Result.** None changed. One read-only query on live.
+
+**Safety Status.** Lint, typecheck, `npm test` and doc links: see the pull request. The updated SQL test runs in CI on the pull request.
+
 ## 2026-11-09 — Positioning: general-purpose ERP; root files archived
 
 **Objective.** Ben set the positioning (9 Nov): the ERP is general-purpose and will cover every track; warehouse and accounting are

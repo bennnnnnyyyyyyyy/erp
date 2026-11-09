@@ -43,6 +43,9 @@ begin
   set local role authenticated;
   ok := false; begin perform public.core_save_provider_fields('ollama', '{"base_url": "http://ai.example.com", "model": "m"}'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL U1: an http Ollama address saved'; end if;
+  ok := false; begin perform public.core_save_provider_fields('ollama', '{"base_url": "https://", "model": "m"}'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
+  if not ok then raise exception 'FAIL U1b: an Ollama address with no host saved'; end if;
+  perform public.core_save_provider_fields('ollama', '{"base_url": "https://server.example.com", "model": "m"}');   -- a host starting with s (reviewer's 9 Nov question)
   perform public.core_save_provider_fields('ollama', '{"base_url": "https://ai.example.com", "model": "m"}');
   perform public.core_save_integration('ollama', true, 'live', null);
   reset role;
