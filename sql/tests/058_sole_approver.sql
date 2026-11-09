@@ -3,7 +3,7 @@
 -- Covers: with no other owner or admin, the owner approves their own request, it is marked "self-approved" in the audit log, and the
 -- stock can be issued; a second admin brings the strict rule back (SELF_APPROVAL); disabling that admin relaxes it again; a member
 -- still cannot approve anything; an approval policy asking for several approvers does not block a sole owner; another company is not
--- affected.
+-- affected; the table refuses a self-decision that is not flagged self_decided.
 
 do $$
 declare
@@ -32,6 +32,15 @@ begin
   if not exists (select 1 from public.audit_log where org_id = o and entity_id = r1::text and action = 'inventory.request.self_approved' and summary like '%self-approved%') then
     raise exception 'FAIL S1b: self-approval not marked in the audit log';
   end if;
+  if not (select self_decided from public.inv_requests where id = r1) then raise exception 'FAIL S1d: request not flagged self_decided'; end if;
+  -- T1: the table still refuses a self-decision that is not flagged, even from a direct update.
+  r2 := (select id from public.inv_requests where id = r1);
+  ok := false;
+  begin
+    update public.inv_requests set self_decided = false where id = r2;
+  exception when check_violation then ok := true;
+  end;
+  if not ok then raise exception 'FAIL T1: an unflagged self-decision was accepted by the table'; end if;
   set local role authenticated;
   perform public.inv_post_issue(r1);
   select status into st from public.inv_requests where id = r1;

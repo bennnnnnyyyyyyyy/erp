@@ -10,6 +10,13 @@
 
 begin;
 
+-- The table itself also refused a decision by the requester (sql/006 check constraint). It now allows one only when the row says so:
+-- self_decided is set by inv_decide_request alone, and only for a sole approver. Every other decision must still come from someone else.
+alter table public.inv_requests add column if not exists self_decided boolean not null default false;
+alter table public.inv_requests drop constraint if exists inv_requests_decider_not_requester;
+alter table public.inv_requests add constraint inv_requests_decider_not_requester
+  check (decided_by is null or decided_by <> requester_id or self_decided);
+
 -- True when the caller is an active owner or admin and nobody else in the company is.
 create or replace function public.core__sole_approver(p_org uuid) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -50,7 +57,7 @@ begin
   values (v_org, r.id, p_decision, auth.uid(), nullif(trim(p_comment), ''), p_channel);
 
   if p_decision = 'rejected' then
-    update public.inv_requests q set status = 'rejected', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), '') where q.id = r.id;
+    update public.inv_requests q set status = 'rejected', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), ''), self_decided = v_self where q.id = r.id;
     perform public.inv__release(r);
     insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
     values (v_org, auth.uid(), 'inventory.request.rejected', 'stock_request', r.id::text, format('%s rejected; reserved stock released', r.number), p_channel);
@@ -64,7 +71,7 @@ begin
   select count(distinct a.approver_id) into v_have from public.inv_approvals a where a.request_id = r.id and a.decision = 'approved';
 
   if v_have >= v_required then
-    update public.inv_requests q set status = 'approved', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), '') where q.id = r.id;
+    update public.inv_requests q set status = 'approved', decided_by = auth.uid(), decided_at = now(), decision_comment = nullif(trim(p_comment), ''), self_decided = v_self where q.id = r.id;
     insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, channel)
     values (v_org, auth.uid(), case when v_self then 'inventory.request.self_approved' else 'inventory.request.approved' end, 'stock_request', r.id::text,
             format('%s approved%s%s', r.number, case when v_required > 1 then format(' (%s of %s approvals)', v_have, v_required) else '' end, v_mark), p_channel);
@@ -81,5 +88,6 @@ grant execute on function public.inv_decide_request(uuid, text, text, text) to a
 commit;
 
 -- Verification (read-only).
-select has_function_privilege('authenticated', 'public.core__sole_approver(uuid)', 'execute') as users_call_helper,
+select (select pg_get_constraintdef(oid) from pg_constraint where conname = 'inv_requests_decider_not_requester') as decider_rule,
+       has_function_privilege('authenticated', 'public.core__sole_approver(uuid)', 'execute') as users_call_helper,
        has_function_privilege('anon', 'public.inv_decide_request(uuid, text, text, text)', 'execute') as anon_decides;

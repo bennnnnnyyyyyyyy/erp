@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Migrations 062 and 064 applied to live; 063 fixed
+
+**Objective.** PR #27 was merged while its SQL tests were still running. The tests then failed on 058 (sole-owner approval), and the
+deployed API reads `pur_order_lines.received_qty`, which only exists after 064.
+
+**Actions Completed.**
+- Rolled-back dry runs of 062 and 064 on live (each file with `commit` replaced by `rollback`): both ran without error.
+- **063 fix** (branch `db/fix-063-self-approval`): the table rule `inv_requests_decider_not_requester` from sql/006 still refused a
+  decision by the requester. 063 now adds `inv_requests.self_decided` and changes the rule to
+  `decided_by is null or decided_by <> requester_id or self_decided`; only `inv_decide_request` sets the flag, for a sole approver.
+  Test 058 also checks that an unflagged self-decision is refused by the table.
+
+**Database / System Result.** 062 and 064 applied to live by Ben via `supabase db query --linked -f`, from the main checkout. Read-only
+verification: `anon_edits_customers` false, `users_edit_items` true, `anon_receives` false, 4 new functions, received-quantity check
+present, 0 received orders not marked full, 0 open orders with receipts. 063 not applied.
+
+**Safety Status.** 063 to be applied only after test 058 passes in CI on the fix PR, then verified (`decider_rule` shows `self_decided`).
+Between the merge of #27 (20:15) and the applies, purchase order pages could fail on the live app.
+
 ## 2026-11-09 — UX decisions, batch 3 (migrations 062-064): editing records, sole-owner approval, partial receipts
 
 **Objective.** Ben's decisions D4, D1 and D3 (`documentation/planning/2026-11-09-ux-decisions.md`), which need database changes.
