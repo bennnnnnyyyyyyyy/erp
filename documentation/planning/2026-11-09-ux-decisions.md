@@ -17,7 +17,7 @@ company therefore gets stuck: the owner's own requests can never be approved. Th
 someone else must approve it"), but a solo owner still has no way forward.
 
 - [ ] **A.** Keep the rule. Tell new owners during setup: "you need a second manager to issue stock".
-- [ ] **B.** Let an owner approve their own request **only when nobody else in the company can approve**, and mark it in the audit
+- [x] **B.** Let an owner approve their own request **only when nobody else in the company can approve**, and mark it in the audit
       log as "self-approved, no second approver". (Changes a non-negotiable rule: needs your explicit yes.)
 - [ ] **C.** Make it a company setting, off by default: "allow the owner to approve their own requests".
 
@@ -37,7 +37,7 @@ Your answer:
 "Receive goods" on a purchase order receives every line in full; it now warns before doing so. Receiving part of an order (and entering
 batch and expiry at the same time) needs a database change.
 
-- [ ] **A.** Build partial receipts (enter the received quantity per line; the order stays open for the rest).
+- [x] **A.** Build partial receipts (enter the received quantity per line; the order stays open for the rest).
 - [ ] **B.** Not now.
 
 Your answer:
@@ -46,7 +46,7 @@ Your answer:
 
 Today a typo in a customer's name or phone cannot be fixed: there is no edit screen and no API for it.
 
-- [ ] **A.** Build edit screens for customers, suppliers and items (name, phone, city; changes recorded in the audit log).
+- [x] **A.** Build edit screens for customers, suppliers and items (name, phone, city; changes recorded in the audit log).
 - [ ] **B.** Not now.
 
 Your answer:
@@ -55,7 +55,7 @@ Your answer:
 
 Today you must leave the order (losing what you typed) to add a new customer or supplier.
 
-- [ ] **A.** Add a "New customer" / "New supplier" button inside the order form.
+- [x] **A.** Add a "New customer" / "New supplier" button inside the order form.
 - [ ] **B.** Not now.
 
 Your answer:
@@ -64,7 +64,7 @@ Your answer:
 
 It needs the same permission as its API route today, so only owners and admins see it.
 
-- [ ] **A.** Keep it to owners and admins.
+- [x] **A.** Keep it to owners and admins.
 - [ ] **B.** Let sales staff (members) see it too (a permission change on the server).
 
 Your answer:
@@ -73,7 +73,7 @@ Your answer:
 
 Today you record the expense, then go to Payments, find it in a list of "Expense EXP-…" lines and pay it.
 
-- [ ] **A.** Add "Paid now from [cash box]" to the expense form, and show category and supplier in the payment list.
+- [x] **A.** Add "Paid now from [cash box]" to the expense form, and show category and supplier in the payment list.
 - [ ] **B.** Not now.
 
 Your answer:
@@ -82,7 +82,7 @@ Your answer:
 
 It is inside Accounting setup today, which is where it was found. It is a tool you will use again.
 
-- [ ] **A.** Move it to Accounting as its own page ("Stock value"), with the profit effect shown before posting.
+- [x] **A.** Move it to Accounting as its own page ("Stock value"), with the profit effect shown before posting.
 - [ ] **B.** Leave it in Accounting setup.
 
 Your answer:
@@ -100,7 +100,7 @@ Your answer:
 
 Workers open Settings and see greyed-out company, users, apps and audit pages they cannot use.
 
-- [ ] **A.** Show staff only "My language" (and their own account) in Settings.
+- [x] **A.** Show staff only "My language" (and their own account) in Settings.
 - [ ] **B.** Leave it.
 
 Your answer:
@@ -119,6 +119,7 @@ Your answer:
 ## Fixed on this branch (no decision needed)
 
 **Broken**
+
 - Orders: the warehouse started on a placeholder, so an order for the first (or only) warehouse could not be saved. It now starts on the first real warehouse.
 - Money and quantities: "1,500", "1,500.75" and Arabic digits ("١٥٠٠", "١٬٥٠٠٫٥") are read correctly (they became 0 before). Blank prices are refused with a message ("Type 0 if it is free") instead of saving a free order. Decimal quantities (2.5 kg) are accepted on orders and stock requests.
 - Finance: Expenses and Payments no longer load forever when Sales or Purchasing is switched off.
@@ -129,6 +130,7 @@ Your answer:
 - Setup wizard: "Not now" lasted only for one browser tab; it now sticks on that device.
 
 **Buttons people cannot use**
+
 - Orders, invoices, suppliers, stock requests, cycle counts, receiving and cancelling now show only to people the server allows (they used to show to everyone except viewers, who were then refused after filling the form).
 - Accounting setup, the chart of accounts and Treasury: admins who are not the head accountant now see them read-only instead of being refused after clicking.
 - Getting started: workers no longer see the setup wizard or checklist steps that lead to "Page not found".
@@ -137,6 +139,7 @@ Your answer:
 **Permanent actions now confirm first** (harmless ones were confirming while these did not): posting a journal, approving and posting a journal, issuing stock, cancelling a request, an order or a task, receiving a purchase order (with "for a short delivery, do not receive it here yet"), changing someone's role, setting the lock date.
 
 **Dead ends**
+
 - A sales order whose stock request was rejected now says so, links to the reason, and lets you request again (it silently went back to "New").
 - A delivered sales order has "Create invoice", which opens the invoice form with that order chosen and every quantity filled with what is left to invoice.
 - "Orders to invoice" no longer lists orders that are not delivered yet.
@@ -147,6 +150,7 @@ Your answer:
 - Batch receipts list only items that track batches.
 
 **Wording**
+
 - AI: "The owner must accept the AI notice below first" (said to the owner, about a notice that was not below) is now "Accept the AI notice first" with a link that opens it. The cross-company "USD 100 across all companies" line is gone. The "Try it" box shows only when an AI provider is on, and its example no longer mentions cooking oil.
 - Integrations: one word, "Test mode", instead of "simulated" and "Test mode"; the test-mode line shows only when the integration is on; the payment and shipping callback is a full address to copy; "Frankfurter" is gone; Telegram and email no longer tell you to save a webhook they do not have.
 - Owner home and Profit: "COGS", "operating expenses", "supplier concentration" and "not statutory" are plain words. The supplier card is information, not a permanent red "Action required".
