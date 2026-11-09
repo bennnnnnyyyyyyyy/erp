@@ -69,4 +69,11 @@ export const DECISIONS_AR: Record<string, string> = {
   'Say whether the rest is still coming.': 'حدّد إن كان الباقي سيصل.',
   'Received what arrived. The order stays open for the rest.': 'تم استلام ما وصل. يبقى الأمر مفتوحًا للباقي.',
   'Received what arrived. The order is closed; the rest will not come.': 'تم استلام ما وصل. أُغلق الأمر؛ الباقي لن يصل.',
+  // Central Bank of Egypt rates, simulated (9 Nov). MACHINE DRAFT: listed in documentation/plans/2026-11-09-arabic-review-sheet.md.
+  'Central Bank of Egypt': 'البنك المركزي المصري',
+  SIMULATED: 'تجريبي',
+  'Practice numbers only: worked out from the daily rate above, not the Central Bank’s own figures. They are not saved and nothing is converted with them. Live rates come later.':
+    'أرقام للتجربة فقط: محسوبة من السعر اليومي أعلاه، وليست أرقام البنك المركزي نفسه. لا تُحفظ ولا يُحوَّل بها أي مبلغ. الأسعار الفعلية لاحقًا.',
+  'Buy (EGP)': 'شراء (ج.م)',
+  'Sell (EGP)': 'بيع (ج.م)',
 };

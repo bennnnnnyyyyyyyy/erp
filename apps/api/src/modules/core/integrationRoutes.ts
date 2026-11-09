@@ -7,6 +7,7 @@ import {
   PROVIDER_KINDS,
   PROVIDERS,
   type AiStatus,
+  type CbeRate,
   type FxRate,
   type IntegrationKind,
   type IntegrationSettings,
@@ -19,6 +20,7 @@ import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
+import { CBE_CURRENCIES, cbeRates, type MidRate } from '../../lib/rates/cbe';
 import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
 
@@ -215,6 +217,22 @@ fxRoutes.get('/rate', requirePermission('core.org.read'), async (c) => {
   });
   const r = rows?.[0];
   return ok<FxRate | null>(c, r ? { from, to, rate: Number(r.rate), rateDate: r.rate_date, source: r.source } : null);
+});
+
+// Central Bank of Egypt rates, SIMULATED (lib/rates/cbe.ts): Egyptian pounds per unit, buy and sell, worked out from the stored daily
+// mid rate. Not saved and never used to convert anything.
+fxRoutes.get('/cbe', requirePermission('core.org.read'), async (c) => {
+  const date = new Date().toISOString().slice(0, 10);
+  const mids: MidRate[] = [];
+  for (const currency of CBE_CURRENCIES) {
+    const rows = await callRpc<{ rate: number; rate_date: string; source: string }[]>(userDb(c), 'core_fx_rate', {
+      p_on: date,
+      p_from: currency,
+      p_to: 'EGP',
+    });
+    if (rows?.[0]) mids.push({ currency, mid: Number(rows[0].rate), rateDate: rows[0].rate_date });
+  }
+  return ok<CbeRate[]>(c, cbeRates('simulated', mids));
 });
 
 // Today's rates of the usual currencies into the company's currency, for the settings screen.

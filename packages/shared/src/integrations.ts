@@ -33,6 +33,10 @@ export type IntegrationSettings = {
 
 export type FxRate = { from: string; to: string; rate: number; rateDate: string; source: string };
 
+/** Central Bank of Egypt rates: Egyptian pounds per unit of a currency (buy, sell and mid). Simulated only for now: the numbers are
+ *  worked out from the stored daily mid rate and are NOT the Central Bank's. They are never stored and never used to convert anything. */
+export type CbeRate = { currency: string; buy: number; sell: number; mid: number; rateDate: string; simulated: true };
+
 // ------------------------------------------------------------------ providers (sql/056; Ben's choices, 6 Nov)
 
 export const PROVIDER_KINDS = ['paymob', 'fawry', 'bosta', 'shopify', 'openai', 'elevenlabs', 'ollama'] as const;

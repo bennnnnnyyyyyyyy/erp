@@ -7,6 +7,7 @@ import type { Bindings } from '../src/env';
 import type { OutboxMessage } from '../src/lib/channels';
 import { type IntegrationDeps, type IntegrationState, makeIntegrationAdapters } from '../src/lib/channels/integrations';
 import { groupRates } from '../src/jobs/fx';
+import { CBE_SIMULATED_SPREAD, cbeRates, simulateCbe } from '../src/lib/rates/cbe';
 import { parseUpdate, startLink } from '../src/lib/telegram';
 
 // Integrations wave 1 (INTEGRATIONS_PLAN.md; sql/053, proved by sql/tests/048). Adapters run against fakes here: nothing real is sent.
@@ -167,6 +168,42 @@ describe('exchange rates', () => {
   });
 });
 
+describe('Central Bank of Egypt rates (simulated)', () => {
+  it('gives buy below and sell above mid, labelled simulated, rounded to 4 places', () => {
+    const [usd] = simulateCbe([{ currency: 'USD', mid: 50, rateDate: '2026-11-09' }]);
+    expect(usd).toEqual({
+      currency: 'USD',
+      buy: 50 * (1 - CBE_SIMULATED_SPREAD),
+      sell: 50 * (1 + CBE_SIMULATED_SPREAD),
+      mid: 50,
+      rateDate: '2026-11-09',
+      simulated: true,
+    });
+    expect(simulateCbe([{ currency: 'EUR', mid: 54.123456, rateDate: '2026-11-09' }])[0]?.mid).toBe(54.1235);
+  });
+  it('drops EGP itself, bad codes, bad dates and non-positive rates', () => {
+    expect(
+      simulateCbe([
+        { currency: 'EGP', mid: 1, rateDate: '2026-11-09' },
+        { currency: 'usd', mid: 50, rateDate: '2026-11-09' },
+        { currency: 'GBP', mid: 0, rateDate: '2026-11-09' },
+        { currency: 'SAR', mid: Number.NaN, rateDate: '2026-11-09' },
+        { currency: 'AED', mid: 13, rateDate: 'today' },
+      ]),
+    ).toEqual([]);
+  });
+  it('refuses live mode instead of guessing', () => {
+    expect(() => cbeRates('live', [{ currency: 'USD', mid: 50, rateDate: '2026-11-09' }])).toThrow(/not available yet/);
+  });
+  it('is never saved: neither the route nor the daily rates job writes CBE rates', () => {
+    const route = readFileSync(join(__dirname, '../src/modules/core/integrationRoutes.ts'), 'utf8');
+    const cbeRoute = route.slice(route.indexOf("fxRoutes.get('/cbe'"), route.indexOf("fxRoutes.get('/today'"));
+    expect(cbeRoute.length).toBeGreaterThan(0);
+    expect(cbeRoute).not.toMatch(/core__save_fx_rates|\.insert\(|\.upsert\(/);
+    expect(readFileSync(join(__dirname, '../src/jobs/fx.ts'), 'utf8')).not.toMatch(/cbe/i);
+  });
+});
+
 describe('integration routes', () => {
   const ID = 'email';
   const routes: [string, string][] = [
@@ -182,6 +219,7 @@ describe('integration routes', () => {
     ['PUT', '/v1/core/integrations/ai/consent'],
     ['GET', '/v1/core/fx/rate?from=USD&to=EGP'],
     ['GET', '/v1/core/fx/today'],
+    ['GET', '/v1/core/fx/cbe'],
   ];
   it.each(routes)('%s %s needs a signed-in user', async (method, path) => {
     expect((await app.request(path, { method }, env)).status).toBe(401);
