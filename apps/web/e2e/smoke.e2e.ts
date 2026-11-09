@@ -40,8 +40,8 @@ test('every screen of the sample build renders without errors', async ({ page },
   for (const app of apps) {
     await checkPage(page, app, problems, phone);
     seen.add(app);
-    // The app's menu: the top bar (dropdown links stay in the page while closed) and the phone drawer.
-    const pages = await hrefs(page, '.appmenu a, .sidebar a');
+    // The app's menu: the left list (on a phone, the drawer; its links stay in the page while it is closed).
+    const pages = await hrefs(page, '.sidebar a');
     for (const p of pages) {
       if (seen.has(p)) continue;
       seen.add(p);

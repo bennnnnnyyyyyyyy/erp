@@ -298,8 +298,8 @@ export const APPS: AppDef[] = [
 export const SUITE_ORDER: AppDef['suite'][] = ['Warehouse', 'Sales & Purchasing', 'Finance', 'Core'];
 
 /**
- * Menu groups for apps with many pages, Odoo style: the top bar shows each group as one dropdown, placed where its first page would
- * be. Pages not listed are single menu items. Keyed by app key, then by page path.
+ * Menu groups for apps with many pages: the left list shows each group under its heading, after the single pages. Pages not listed are
+ * single menu items. Keyed by app key, then by page path.
  */
 export const MENU_GROUPS: Record<string, Record<string, string>> = {
   inventory: {
