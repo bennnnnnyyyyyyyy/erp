@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry } from '@erp/shared';
@@ -182,7 +183,6 @@ export function TransferPage() {
   const session = useSession();
   const cat = useCatalog();
   const transfer = useLoad(() => api<DemoTransfer>(`/v1/inventory/transfers/${id}`));
-  const audit = useLoad(() => api<AuditEntry[]>('/v1/core/audit?limit=200'));
   const [comment, setComment] = useState('');
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -202,14 +202,12 @@ export function TransferPage() {
     } finally {
       setBusy(false);
       transfer.reload();
-      audit.reload();
     }
   }
 
   if (transfer.error) return <section className="page"><p className="error">{transfer.error}</p></section>;
   if (!t || !cat.ready) return <section className="page"><Loading /></section>;
 
-  const history = (audit.data ?? []).filter((a) => a.entity_id === t.id);
   const open = t.status === 'submitted' || t.status === 'approved';
   const mine = t.requesterId === session.userId;
 
@@ -289,24 +287,7 @@ export function TransferPage() {
       {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">{tr('Approved. Awaiting dispatch from the source warehouse.')}</p>}
       {t.status === 'dispatched' && !can('inventory.transfers.receive') && <p className="notice">{tr('In transit. Awaiting receipt at the destination warehouse.')}</p>}
 
-      <h2 className="related">{tr('History')}</h2>
-      <p className="muted small">{tr('Written by the system in the same step as each change.')}</p>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('User')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
-          <tbody>
-            {history.map((a) => (
-              <tr key={a.id}>
-                <td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td>
-                <td>{who(a.actor_user_id)}</td>
-                <td><code>{a.action}</code></td>
-                <td>{a.summary}</td>
-              </tr>
-            ))}
-            {history.length === 0 && <tr><td colSpan={4} className="muted empty">{tr('No history yet.')}</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <RecordHistory key={`${t.id}:${t.status}`} id={t.id} />
     </section>
   );
 }

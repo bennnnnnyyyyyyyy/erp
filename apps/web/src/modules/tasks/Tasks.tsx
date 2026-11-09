@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
@@ -146,7 +147,6 @@ export function TaskPage() {
   const session = useSession();
   const who = usePeople();
   const task = useLoad(() => api<Task>(`/v1/tasks/${id}`));
-  const audit = useLoad(() => api<AuditEntry[]>('/v1/core/audit?limit=200'));
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const t = task.data;
@@ -163,7 +163,6 @@ export function TaskPage() {
     } finally {
       setBusy(false);
       task.reload();
-      audit.reload();
     }
   }
 
@@ -173,7 +172,6 @@ export function TaskPage() {
   const open = t.status === 'open' || t.status === 'in_progress';
   const canAct = open && (t.assigneeId === session.userId || t.createdBy === session.userId || isManager);
   const late = Boolean(t.dueAt) && open && new Date(t.dueAt as string).getTime() < Date.now();
-  const history = (audit.data ?? []).filter((a) => a.entity_id === t.id);
 
   return (
     <section className="page">
@@ -203,23 +201,7 @@ export function TaskPage() {
         </div>
       )}
 
-      <h2 className="related">{tr('History')}</h2>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('User')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
-          <tbody>
-            {history.map((a) => (
-              <tr key={a.id}>
-                <td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td>
-                <td>{who(a.actor_user_id)}</td>
-                <td><code>{a.action}</code></td>
-                <td>{a.summary}</td>
-              </tr>
-            ))}
-            {history.length === 0 && <tr><td colSpan={4} className="muted empty">{tr('No history yet.')}</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <RecordHistory key={`${t.id}:${t.status}`} id={t.id} />
     </section>
   );
 }

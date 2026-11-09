@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
@@ -84,7 +85,6 @@ export function PurchaseOrderPage() {
   const cat = useCatalog();
   const order = useLoad(() => api<PurchaseOrder>(`/v1/purchasing/orders/${id}`));
   const suppliers = useLoad(() => api<Party[]>('/v1/purchasing/suppliers'));
-  const audit = useLoad(() => api<{ id: number; occurred_at: string; action: string; summary: string | null; entity_id: string | null }[]>('/v1/core/audit?limit=200'));
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const o = order.data;
@@ -102,7 +102,6 @@ export function PurchaseOrderPage() {
     } finally {
       setBusy(false);
       order.reload();
-      audit.reload();
     }
   }
 
@@ -110,7 +109,6 @@ export function PurchaseOrderPage() {
   if (!o || !cat.ready || !suppliers.data) return <section className="page"><Loading /></section>;
 
   const supplier = suppliers.data.find((s) => s.id === o.supplierId);
-  const history = (audit.data ?? []).filter((a) => a.entity_id === o.id);
 
   return (
     <section className="page">
@@ -169,18 +167,7 @@ export function PurchaseOrderPage() {
         <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory">{tr('check stock on hand')}</Link>.</p>
       )}
 
-      <h2 className="related">{tr('History')}</h2>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th scope="col">{tr('When')}</th><th scope="col">{tr('Action')}</th><th scope="col">{tr('Details')}</th></tr></thead>
-          <tbody>
-            {history.map((a) => (
-              <tr key={a.id}><td className="nowrap">{formatDateTime(a.occurred_at, session.org)}</td><td><code>{a.action}</code></td><td>{a.summary}</td></tr>
-            ))}
-            {history.length === 0 && <tr><td colSpan={3} className="muted empty">{tr('No history yet.')}</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <RecordHistory key={`${o.id}:${o.status}`} id={o.id} />
     </section>
   );
 }

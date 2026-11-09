@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
-import { formatMoney, type TreasuryAccount } from '@erp/shared';
+import { formatMoney, hasPermission, type TreasuryAccount } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
@@ -19,7 +19,7 @@ type Category = { id: string; name: string };
 type Expense = { id: string; number: string; date: string; categoryId: string; supplierId: string | null; amountMinor: number; currency: string; note: string | null; status: 'recorded' | 'void' };
 type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; targetNumber: string | null; note: string | null; status: 'recorded' | 'void' };
 /** An invoice or expense with money still outstanding (GET /v1/finance/open-items). */
-type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' | 'expense'; id: string; number: string; partyId: string | null; currency: string; totalMinor: number; paidMinor: number; leftMinor: number };
+type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' | 'expense'; id: string; number: string; partyId: string | null; currency: string; totalMinor: number; paidMinor: number; leftMinor: number; detail?: string };
 type Named = { id: string; name: string };
 
 const today = () => todayIn();   // company time zone (decision D11)
@@ -63,10 +63,20 @@ export function ExpensesPage() {
   const [supplierId, setSupplierId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  // "Paid now" (decision D7, 9 Nov 2026): record the payment with the expense. With treasury on, the money comes from a cash box or bank
+  // account, starting on the one this person used last; without treasury, from cash or bank.
+  const canPay = hasPermission(session.permissions, 'finance.entries.manage');
+  const treasuryOn = session.modules.includes('treasury');
+  const boxes = useLoad(() => (treasuryOn ? api<TreasuryAccount[]>('/v1/treasury/accounts').catch(() => [] as TreasuryAccount[]) : Promise.resolve([] as TreasuryAccount[])));
+  const [paidNow, setPaidNow] = useState(false);
+  const [payFrom, setPayFrom] = useState(() => lastBox('expense') || 'cash');
 
   if (!categories.data || !expenses.data || !suppliers.data) return <section className="page"><Loading error={categories.error ?? expenses.error} /></section>;
   const category = (id: string) => categories.data?.find((c) => c.id === id)?.name ?? '—';
   const supplier = (id: string | null) => (id ? suppliers.data?.find((s) => s.id === id)?.name ?? '—' : '');
+  // With treasury on, "Paid from" is a box: start on the remembered one if it still exists, else the first.
+  const payBoxes = (boxes.data ?? []).filter((b) => b.active && (b.kind === 'cash' || b.kind === 'bank'));
+  const fromValue = treasuryOn && !payBoxes.some((b) => b.id === payFrom) ? (payBoxes[0]?.id ?? '') : payFrom;
   const total = expenses.data.filter((e) => e.status === 'recorded').reduce((n, e) => n + e.amountMinor, 0);
   const currency = expenses.data[0]?.currency ?? session.org?.defaultCurrency ?? 'EGP';
 
@@ -94,11 +104,37 @@ export function ExpensesPage() {
           </label>
         </div>
         <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
+        {canPay ? (
+          <div className="form-row">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={paidNow} onChange={(e) => setPaidNow(e.target.checked)} />{tr('Paid now')}</label>
+            {paidNow ? (
+              <label>{tr('Paid from')}
+                <select value={fromValue} onChange={(e) => setPayFrom(e.target.value)}>
+                  {treasuryOn
+                    ? payBoxes.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)
+                    : (['cash', 'bank'] as const).map((m) => <option key={m} value={m}>{tr(m)}</option>)}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        ) : null}
         <div className="form-row">
           <Button disabled={busy || !categoryId || toMinor(amount) <= 0} onClick={() => run(async () => {
-            const made = await api<{ number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note }) });
-            return trf('Expense {number} recorded.', { number: made.number });
-          }, () => { setAmount(''); setNote(''); expenses.reload(); })}>{busy ? tr('Saving…') : tr('Record expense')}</Button>
+            const made = await api<{ id: string; number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note }) });
+            if (!paidNow) return trf('Expense {number} recorded.', { number: made.number });
+            // The payment is a second step: if it is refused, the expense stays recorded and unpaid, and the message says so.
+            const box = treasuryOn ? payBoxes.find((b) => b.id === fromValue) : undefined;
+            const method = box ? box.kind : fromValue === 'bank' ? 'bank' : 'cash';
+            try {
+              await api('/v1/finance/payments', { method: 'POST', body: JSON.stringify({
+                direction: 'out', amountMinor: toMinor(amount), paidOn: date, method, expenseId: made.id, treasuryAccountId: box?.id,
+              }) });
+            } catch (err) {
+              return trf('Expense {number} recorded, but the payment was not: {reason}. Pay it from Payments.', { number: made.number, reason: (err as Error).message });
+            }
+            rememberBox('expense', fromValue);
+            return trf('Expense {number} recorded and paid.', { number: made.number });
+          }, () => { setAmount(''); setNote(''); expenses.reload(); })}>{busy ? tr('Saving…') : paidNow ? tr('Record expense and payment') : tr('Record expense')}</Button>
           <label>{tr('New category')}<input placeholder={tr('e.g. Rent')} value={newCategory} onChange={(e) => setNewCategory(e.target.value)} /></label>
           <Button variant="outline" disabled={busy || !newCategory.trim()} onClick={() => run(async () => {
             await api('/v1/finance/categories', { method: 'POST', body: JSON.stringify({ name: newCategory }) });
@@ -160,7 +196,8 @@ export function PaymentsPage() {
     value: t.value,
     label: t.kind === 'customer_invoice' ? `${t.number} · ${name(customers.data, t.partyId)}`
       : t.kind === 'supplier_invoice' ? `${trf('Purchase invoice {number}', { number: t.number })} · ${name(suppliers.data, t.partyId)}`
-      : trf('Expense {number}', { number: t.number }),
+      // Category, note and supplier, so unpaid expenses can be told apart (decision D7).
+      : [trf('Expense {number}', { number: t.number }), t.detail, name(suppliers.data, t.partyId)].filter(Boolean).join(' · '),
     left: t.leftMinor,
     currency: t.currency,
   }));
