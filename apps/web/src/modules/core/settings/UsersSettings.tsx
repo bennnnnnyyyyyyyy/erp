@@ -21,7 +21,7 @@ const ROLE_HELP: Record<Role, string> = {
   viewer: 'Read only',
 };
 
-function InviteLinkBox({ email, link, onClose }: { email: string; link: string; onClose: () => void }) {
+export function InviteLinkBox({ email, link, onClose }: { email: string; link: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="notice stack">

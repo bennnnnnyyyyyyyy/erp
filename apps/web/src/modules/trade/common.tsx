@@ -9,6 +9,7 @@ import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import type { Party } from '../../lib/demoTrade';
 import { Link, navigate } from '../../lib/router';
+import { parseAmount, toMinor } from '../../lib/numbers';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { hasPermission } from '@erp/shared';
@@ -35,8 +36,8 @@ export function Pill({ status, label }: { status: string; label?: string }) {
   return <Badge variant={PILL_VARIANT[status] ?? 'neutral'} className={label ? undefined : 'capitalize'}>{label ?? status.replace('_', ' ')}</Badge>;
 }
 
-/** "18.50" typed by a person becomes 1850 minor units. */
-export const toMinor = (text: string) => Math.round((Number(text) || 0) * 100);
+/** "18.50", "1,500" or Arabic digits typed by a person become minor units (lib/numbers.ts). */
+export { toMinor } from '../../lib/numbers';
 
 // ------------------------------------------------------------------ suppliers and customers
 
@@ -181,17 +182,29 @@ export function NewOrderForm(props: {
   backLabel: string;
   submitLabel: string;
 }) {
+  const session = useSession();
   const cat = useCatalog();
   const parties = useLoad(() => api<Party[]>(props.partyEndpoint));
   const [partyId, setPartyId] = useState('');
-  const [warehouseId, setWarehouseId] = useState('w1');
+  const [warehouseId, setWarehouseId] = useState('');
   const [lines, setLines] = useState<Line[]>([{ itemId: '', qty: '1', price: '' }]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
+  // Start on the first real warehouse (UX audit: it started on a placeholder, so an order for the first warehouse could not be saved).
+  const warehouses = cat.warehouses.data;
+  useEffect(() => {
+    if (warehouses?.length && !warehouses.some((w) => w.id === warehouseId)) setWarehouseId(warehouses[0]?.id ?? '');
+  }, [warehouses, warehouseId]);
+  const currency = session.org?.defaultCurrency ?? 'EGP';
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    const chosen = lines.filter((l) => l.itemId);
+    // Say what is wrong instead of saving a free order or sending a bad quantity (UX audit).
+    if (!chosen.length) return setError(tr('Add at least one item.'));
+    if (chosen.some((l) => !(parseAmount(l.qty) > 0))) return setError(tr('Each item needs a quantity above zero.'));
+    if (chosen.some((l) => !Number.isFinite(parseAmount(l.price)))) return setError(tr('Each item needs a price. Type 0 if it is free.'));
     setBusy(true);
     setError(null);
     try {
@@ -200,7 +213,7 @@ export function NewOrderForm(props: {
         body: JSON.stringify({
           [props.partyField]: partyId,
           warehouseId,
-          lines: lines.filter((l) => l.itemId).map((l) => ({ itemId: l.itemId, qty: Number(l.qty), [props.priceField]: toMinor(l.price) })),
+          lines: chosen.map((l) => ({ itemId: l.itemId, qty: parseAmount(l.qty), [props.priceField]: toMinor(l.price) })),
         }),
       });
       navigate(`${props.backTo}/${order.id}`);
@@ -243,8 +256,8 @@ export function NewOrderForm(props: {
                 {cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}
               </select>
             </label>
-            <label>{tr('Quantity')}<input type="number" min="1" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
-            <label>{props.priceLabel} {tr('(EGP)')}<input type="number" min="0" step="0.01" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
+            <label>{tr('Quantity')}<input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
+            <label>{props.priceLabel} ({currency})<input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
           </div>
         ))}
         <div className="form-actions">

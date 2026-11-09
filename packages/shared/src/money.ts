@@ -9,10 +9,16 @@ export function minorUnitsFor(currency: string): number {
 
 export function formatMoney(money: Money, locale = 'en-US'): string {
   const digits = minorUnitsFor(money.currency);
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: money.currency,
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(money.amountMinor / 10 ** digits);
+  const amount = money.amountMinor / 10 ** digits;
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: money.currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(amount);
+  } catch {
+    // An unknown or half-typed code must never take a screen down: show the number and the code as given.
+    return `${amount.toFixed(digits)} ${money.currency}`.trim();
+  }
 }

@@ -103,8 +103,8 @@ const EN: OnboardingContent = {
     fullName: 'Full name',
     role: 'Role',
     roles: { admin: 'Manager (approves)', member: 'Member (requests and receives)', viewer: 'Viewer (read only)' },
-    invite: 'Invite',
-    invited: (email) => `Invitation sent to ${email}`,
+    invite: 'Add and get their link',
+    invited: (email) => `Added ${email}. Send them their sign-in link (shown above).`,
     existing: (n) => `Your company has ${n} person(s).`,
   },
   approval: {
@@ -204,8 +204,8 @@ const AR: OnboardingContent = {
     fullName: 'الاسم الكامل',
     role: 'الدور',
     roles: { admin: 'مدير (يوافق)', member: 'عضو (يطلب ويستلم)', viewer: 'مشاهد (قراءة فقط)' },
-    invite: 'إرسال الدعوة',
-    invited: (email) => `أُرسلت الدعوة إلى ${email}`,
+    invite: 'إضافة',
+    invited: (email) => `أُضيف ${email}. أرسل له رابط الدخول (الظاهر أعلاه).`,
     existing: (n) => `في شركتك ${n} شخص.`,
   },
   approval: {
