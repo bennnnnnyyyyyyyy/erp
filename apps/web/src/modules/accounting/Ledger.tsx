@@ -36,6 +36,8 @@ function usePostsDirect(): boolean {
   if (!hasPermission(session.permissions, 'accounting.journal.post_direct')) return false;
   return session.role === 'owner' || (heads.data ?? []).some((h) => h.userId === session.userId && h.isHeadAccountant);
 }
+/** Currencies offered for a manual journal, after the company's own (UX audit: a typed code blanked the page while half-typed). */
+const COMMON_CURRENCIES = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'CNY'];
 const byId = (list: Account[] | null) => new Map((list ?? []).map((a) => [a.id, a]));
 const query = (name: string) => new URLSearchParams(window.location.search).get(name) ?? '';
 
@@ -151,7 +153,8 @@ const STATUS_LABEL: Record<ManualJournal['status'], string> = { draft: 'Waiting 
 export function JournalsPage() {
   const session = useSession();
   const person = usePeople();
-  const [status, setStatus] = useState('draft');
+  // Opens on everything, newest first (UX audit: it opened on "Waiting for approval", so posted work looked missing).
+  const [status, setStatus] = useState('');
   const journals = useLoad(() => api<ManualJournal[]>(`/v1/accounting/journals${status ? `?status=${status}` : ''}`));
   const canCreate = hasPermission(session.permissions, 'accounting.journal.create');
   return (
@@ -263,10 +266,14 @@ export function JournalEditPage() {
               <option value="opening">{tr('Opening balances')}</option>
             </select>
           </label>
-          <label>{tr('Currency')}<input value={f.currency} maxLength={3} onChange={(e) => set({ currency: e.target.value.toUpperCase() })} /></label>
+          <label>{tr('Currency')}
+            <select value={f.currency} onChange={(e) => set({ currency: e.target.value })}>
+              {[...new Set([currencyDefault, f.currency, ...COMMON_CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
         </div>
         {f.kind === 'opening' ? <p className="muted small">{tr('Opening balances are dated the first day of a fiscal year. Put the difference on the opening balances account.')}</p> : null}
-        <label>{tr('Description')}<input value={f.memo} maxLength={500} onChange={(e) => set({ memo: e.target.value })} /></label>
+        <label>{tr('Description')} *<input required value={f.memo} maxLength={500} onChange={(e) => set({ memo: e.target.value })} /></label>
         <div className="table-wrap"><table><thead><tr>
           <th scope="col">{tr('Account')}</th><th scope="col" className="right">{tr('Debit')}</th><th scope="col" className="right">{tr('Credit')}</th><th scope="col">{tr('Customer or supplier (optional)')}</th><th scope="col">{tr('Note')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th>
         </tr></thead><tbody>
@@ -293,10 +300,16 @@ export function JournalEditPage() {
             <td colSpan={3}>{problemText ? <span className="error small">{problemText}</span> : <span className="muted small">{tr('Balanced.')}</span>}</td>
           </tr>
         </tbody></table></div>
+        {/* Say what is missing instead of only greying the buttons out (UX audit). */}
+        {!problem && !f.memo.trim() ? <p className="error small">{tr('Add a description to save.')}</p> : null}
         <div className="form-row">
           <Button variant="outline" onClick={() => set({ lines: [...f.lines, blankLine()] })}>{tr('Add a line')}</Button>
           <Button disabled={busy || !!problem || !f.memo.trim() || !f.entryDate} onClick={() => save(false)}>{tr('Save for approval')}</Button>
-          {canPost ? <Button variant="outline" disabled={busy || !!problem || !f.memo.trim() || !f.entryDate} onClick={() => save(true)}>{tr('Post now')}</Button> : null}
+          {/* Posting is permanent, so it asks first (UX audit: withdrawing a harmless draft asked, posting did not). */}
+          {canPost ? (
+            <ConfirmButton label={tr('Post now')} confirmLabel={tr('Yes, post')} disabled={busy || !!problem || !f.memo.trim() || !f.entryDate}
+              question={trf('Post {amount} now? A posted entry cannot be changed, only reversed.', { amount: money(dr, f.currency) })} onConfirm={() => save(true)} />
+          ) : null}
         </div>
         <p className="muted small">{canPost ? tr('You may post without approval (owner or head accountant).') : tr('Someone else has to approve your journal.')}</p>
       </div>
@@ -357,10 +370,12 @@ export function JournalPage() {
           <h2>{tr('Decide')}</h2>
           <label>{tr('Comment (optional)')}<input value={comment} maxLength={500} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-row">
-            <Button disabled={busy} onClick={() => run(async () => {
-              await api(`/v1/accounting/journals/${j.id}/approve`, { method: 'POST', body: JSON.stringify({ comment }) });
-              return trf('{number} approved and posted.', { number: j.number });
-            }, journal.reload)}>{tr('Approve and post')}</Button>
+            <ConfirmButton label={tr('Approve and post')} confirmLabel={tr('Yes, post')} disabled={busy}
+              question={trf('Post {amount} now? A posted entry cannot be changed, only reversed.', { amount: money(j.totalMinor, j.currency) })}
+              onConfirm={() => run(async () => {
+                await api(`/v1/accounting/journals/${j.id}/approve`, { method: 'POST', body: JSON.stringify({ comment }) });
+                return trf('{number} approved and posted.', { number: j.number });
+              }, journal.reload)} />
             <ConfirmButton label={tr('Reject')} confirmLabel={tr('Yes, reject')} question={tr('Reject this journal? This is final.')} disabled={busy}
               onConfirm={() => run(async () => {
                 await api(`/v1/accounting/journals/${j.id}/reject`, { method: 'POST', body: JSON.stringify({ comment }) });
@@ -422,7 +437,7 @@ export function TrialBalancePage() {
       </div>
       {!rows.data ? <Loading error={rows.error} /> : (
         <>
-          <p className={balanced ? 'muted small' : 'error small'}>{balanced ? tr('The books balance: debits equal credits.') : tr('The books do not balance. Tell the owner: this should never happen.')}</p>
+          <p className={balanced ? 'muted small' : 'error small'}>{balanced ? tr('The books balance: debits equal credits.') : tr('The books do not balance. This is a system fault: contact support and do not post until it is fixed.')}</p>
           <div className="table-wrap"><table><thead><tr>
             <th scope="col">{tr('Code')}</th><th scope="col">{tr('Account')}</th><th scope="col" className="right">{tr('Opening')}</th><th scope="col" className="right">{tr('Debit')}</th><th scope="col" className="right">{tr('Credit')}</th><th scope="col" className="right">{tr('Closing')}</th>
           </tr></thead><tbody>

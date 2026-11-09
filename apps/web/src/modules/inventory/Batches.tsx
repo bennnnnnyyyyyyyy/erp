@@ -60,7 +60,7 @@ export function BatchesPage() {
       {canReceive && (
         <FormToggle label={tr('Receive a batch')}>
           <div className="form-row">
-            <label>{tr('Item')}<select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Choose…')}</option>{items.data.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
+            <label>{tr('Item')}<select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Choose…')}</option>{items.data.filter((i) => i.tracksBatches).map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
             <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
             <label>{tr('Batch number')}<input value={f.batchNo} onChange={(e) => setF({ ...f, batchNo: e.target.value })} /></label>
             <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
@@ -116,7 +116,7 @@ export function BatchesPage() {
       {canManage && (
         <>
           <h2 className="related">{tr('Batch tracking per item')}</h2>
-          <p className="muted small">{tr('Switch on for items that expire (creams, oils, actives). Existing stock moves into an "UNBATCHED" lot that is issued last. Choose where the item must be kept.')}</p>
+          <p className="muted small">{tr('Switch on for items that expire. Existing stock moves into an "UNBATCHED" lot that is issued last. Choose where the item must be kept.')}</p>
           <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Tracking')}</th><th scope="col">{tr('Storage condition')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
             {items.data.map((i) => (
               <tr key={i.id}><td>{i.sku} · {i.name}</td><td>{i.tracksBatches ? tr('On') : tr('Off')}</td>

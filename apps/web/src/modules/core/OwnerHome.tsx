@@ -82,18 +82,20 @@ export function OwnerSummary() {
   const stockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
   const hasMoney = s.owedToMeMinor !== 0 || s.iOweMinor !== 0;
   const moneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
-  const supplierTone: Tone | undefined = s.topSuppliers.length === 0 ? undefined : (s.topSuppliers[0]?.sharePercent ?? 0) > 40 ? 'bad' : s.singleSourceItems > 0 ? 'watch' : 'good';
+  // Information, not a status: one big supplier is normal for a small firm and there is nothing to act on (UX audit: it was a permanent red
+  // "Action required").
+  const supplierTone: Tone | undefined = undefined;
   const count = (n: number, one: string, many: string) => trf(n === 1 ? one : many, { n });
 
   return (
     <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 21rem), 1fr))' }} aria-label={tr('Business summary')}>
-      <Card to="/finance/overview" title={tr('Profit and loss')} subtitle={tr('Net profit after cost of goods sold and operating expenses')} period={last ? trf('{month}, and the last 12 months', { month: monthName(last.month) }) : tr('last 12 months')} tone={profitTone}>
+      <Card to="/finance/overview" title={tr('Profit and loss')} subtitle={tr('What is left from sales after the cost of goods sold and running costs')} period={last ? trf('{month}, and the last 12 months', { month: monthName(last.month) }) : tr('last 12 months')} tone={profitTone}>
         {active && last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
               {trf(last.net < 0 ? 'Net loss {amount}' : 'Net profit {amount}', { amount: money(Math.abs(last.net)) })}
             </span>
-            <span className="text-sm text-muted-foreground">{trf('{month}: revenue {revenue}, COGS {cogs}, operating expenses {expenses}.', { month: monthName(last.month), revenue: money(last.revenue), cogs: money(last.cogs), expenses: money(last.expenses) })}</span>
+            <span className="text-sm text-muted-foreground">{trf('{month}: sales {revenue}, cost of goods sold {cogs}, running costs {expenses}.', { month: monthName(last.month), revenue: money(last.revenue), cogs: money(last.cogs), expenses: money(last.expenses) })}</span>
             <div className="flex h-12 items-end gap-1" aria-hidden="true">
               {s.months.map((m) => (
                 <span key={m.month} title={`${monthName(m.month)}: ${money(m.net)}`} className={cn('flex-1 rounded-sm', m.net < 0 ? 'bg-destructive' : 'bg-success')} style={{ height: `${Math.max(6, (Math.abs(m.net) / peak) * 100)}%` }} />
@@ -140,7 +142,7 @@ export function OwnerSummary() {
         )}
       </Card>
 
-      <Card to="/purchasing/suppliers" title={tr('Supplier concentration')} subtitle={tr('Share of purchase spend by supplier')} period={tr('last 12 months')} tone={supplierTone}>
+      <Card to="/purchasing/suppliers" title={tr('Your main suppliers')} subtitle={tr('Who you buy from most, by amount spent')} period={tr('last 12 months')} tone={supplierTone}>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
           {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{trf('{pct}% of purchases', { pct: p.sharePercent })}</b></li>)}
           {s.topSuppliers.length === 0 && <li className="text-muted-foreground">{tr('No purchases yet.')}</li>}
@@ -149,7 +151,7 @@ export function OwnerSummary() {
       </Card>
 
       <p className="text-xs text-muted-foreground sm:col-span-2 xl:col-span-3">
-        {trf('As of {datetime}. Management accounts: excludes VAT; COGS at weighted average cost; overdue means unpaid after 30 days. Not statutory financial statements.', { datetime: new Date(s.asOf).toLocaleString(dateLocale(), { timeZone: session.org?.timezone ?? 'UTC' }) })}
+        {trf('As of {datetime}. For managing the business: excludes VAT; goods are costed at their average purchase cost; overdue means unpaid after 30 days. Not official financial statements.', { datetime: new Date(s.asOf).toLocaleString(dateLocale(), { timeZone: session.org?.timezone ?? 'UTC' }) })}
       </p>
     </div>
   );

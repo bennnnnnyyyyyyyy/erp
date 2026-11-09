@@ -1,8 +1,9 @@
 import type { ApiResponse } from '@erp/shared';
 import { demoApi, demoMode } from './demo';
+import { tr } from './i18n';
 import { supabase } from './supabase';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
 const ORG_KEY = 'erp.activeOrgId';
 
 export class ApiError extends Error {
@@ -62,9 +63,29 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   // a file upload sets its own multipart type; everything else is JSON
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  } catch {
+    // The browser's own "Failed to fetch" means nothing to a person (UX audit).
+    throw new ApiError(0, tr('Cannot reach the server. Check your internet connection and try again.'), 'offline');
+  }
   const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
-  if (!body) throw new ApiError(res.status, 'The server sent an unreadable response');
-  if (!body.success) throw new ApiError(body.status, body.error, body.code);
+  if (!body) throw new ApiError(res.status, tr('The server sent an unreadable response'));
+  if (!body.success) throw new ApiError(body.status, translateServerError(body.error), body.code);
   return body.data;
+}
+
+/**
+ * Server messages are English sentences (apps/api/src/lib/rpc.ts), sometimes followed by ": " and details. The sentence is translated
+ * here, once, for every screen (UX audit: every Arabic user saw errors in English); the details (numbers, names) are kept as sent.
+ */
+export function translateServerError(message: string): string {
+  const whole = tr(message);
+  if (whole !== message) return whole;
+  const cut = message.indexOf(': ');
+  if (cut < 0) return message;
+  const head = message.slice(0, cut);
+  const translated = tr(head);
+  return translated === head ? message : `${translated}: ${message.slice(cut + 2)}`;
 }

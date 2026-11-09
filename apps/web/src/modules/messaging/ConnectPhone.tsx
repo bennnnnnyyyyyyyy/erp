@@ -43,7 +43,7 @@ export function ConnectPhonePage() {
         <div><Button disabled={busy || phone.replace(/\D/g, '').length < 8} onClick={() => run(async () => {
           await api('/v1/messaging/identities', { method: 'POST', body: JSON.stringify({ channel: 'whatsapp', address: phone }) });
           setPhone('');
-          return 'A 6-digit code was queued for that number. Type it below when it arrives (valid 10 minutes, 5 tries).';
+          return tr('A 6-digit code was queued for that number. Type it below when it arrives (valid 10 minutes, 5 tries).');
         })}>{tr('Send me a code')}</Button></div>
       </div>
 
@@ -78,7 +78,9 @@ export function ConnectPhonePage() {
                 <input aria-label={tr('6-digit code')} inputMode="numeric" maxLength={6} placeholder="123456" value={codes[i.id] ?? ''} onChange={(e) => setCodes((c) => ({ ...c, [i.id]: e.target.value }))} />
                 <Button size="sm" disabled={busy || (codes[i.id] ?? '').length !== 6} onClick={() => run(async () => {
                   const r = await api<{ confirmed: boolean }>(`/v1/messaging/identities/${i.id}/confirm`, { method: 'POST', body: JSON.stringify({ code: codes[i.id] }) });
-                  return r.confirmed ? 'Number confirmed.' : 'That code is not right. Check it and try again.';
+                  // A wrong code is an error, not a green success (UX audit).
+                  if (!r.confirmed) throw new Error(tr('That code is not right. Check it and try again.'));
+                  return tr('Number confirmed.');
                 })}>{tr('Confirm')}</Button>
               </span>
             )}</td>

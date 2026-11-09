@@ -54,7 +54,7 @@ export function ExpensesPage() {
   const session = useSession();
   const categories = useLoad(() => api<Category[]>('/v1/finance/categories'));
   const expenses = useLoad(() => api<Expense[]>('/v1/finance/expenses'));
-  const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers'));
+  const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));   // purchasing may be off
   const { message, busy, run } = useNotice();
   const [date, setDate] = useState(today());
   const [categoryId, setCategoryId] = useState('');
@@ -125,8 +125,8 @@ export function PaymentsPage() {
   // directions are loaded once, so switching the direction needs no second request.
   const openIn = useLoad(() => api<OpenItem[]>('/v1/finance/open-items?direction=in'));
   const openOut = useLoad(() => api<OpenItem[]>('/v1/finance/open-items?direction=out'));
-  const customers = useLoad(() => api<Named[]>('/v1/sales/customers'));
-  const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers'));
+  const customers = useLoad(() => api<Named[]>('/v1/sales/customers').catch(() => [] as Named[]));   // sales may be off
+  const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));   // purchasing may be off
   const { message, busy, run } = useNotice();
   // "Record a payment →" on an invoice or expense page links here with ?for=c:<id> (customer invoice), s:<id> (supplier invoice) or
   // e:<id> (expense): the form opens already pointing at it, with what is still owed as the amount.

@@ -43,6 +43,8 @@ export type SalesOrder = {
   currency: string;
   requestId: string | null;
   requestStatus: RequestStatus | null;
+  /** The stock request's own number (OUT-...), shown instead of an id. */
+  requestNumber?: string | null;
   createdBy: string;
   createdAt: string;
 };
@@ -98,7 +100,7 @@ function view(so: SalesOrder): SalesOrder {
     else if (requestStatus === 'approved') status = 'approved';
     else status = 'stock_requested';
   }
-  return { ...so, status, requestStatus };
+  return { ...so, status, requestStatus, requestNumber: req?.number ?? null };
 }
 
 function validLines<T extends { itemId: string; qty: number }>(raw: T[] | undefined): T[] {

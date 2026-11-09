@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AI_NOTICE_VERSION, type AiStatus, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Button } from '../../../components/ui/button';
-import { api } from '../../../lib/api';
+import { API_BASE_URL, api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
 import { tr, trf } from '../../../lib/i18n';
 import { useSession } from '../../../session';
@@ -32,7 +32,7 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
   return (
     <div className="form-card stack intg-detail">
       <IntegrationHeader kind={def.kind} name={tr(def.name)} summary={tr(def.summary)} status={connectionStatus(item)} />
-      {item.mode === 'simulated' ? <p className="muted small">{tr('Simulated: nothing is really sent')}</p> : null}
+      {item.enabled && item.mode === 'simulated' ? <p className="muted small">{tr('Test mode: nothing is really sent.')}</p> : null}
       <Notice message={message} />
       <fieldset className="stack" disabled={!canManage || busy}>
         {def.fields.map((f) => {
@@ -81,14 +81,20 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
             />
           ) : (
             <Button variant="outline" disabled={busy} onClick={() => setMode({ mode: 'simulated' })}>
-              {tr('Back to simulated')}
+              {tr('Back to test mode')}
             </Button>
           )}
         </div>
       ) : null}
-      {needsConsent ? <p className="muted small">{tr('The owner must accept the AI notice below first.')}</p> : null}
+      {/* UX audit: this told the owner, in the third person, to accept a notice "below" that is a separate item in the list. */}
+      {needsConsent ? (
+        <p className="muted small">
+          {session.role === 'owner' ? tr('Accept the AI notice first.') : tr('The company owner must accept the AI notice first.')}{' '}
+          <a href="#ai-notice">{tr('Open the AI notice')}</a>
+        </p>
+      ) : null}
       {missing.length ? <p className="muted small">{trf('To go live, fill in: {fields}', { fields: missing.map((f) => tr(f.label)).join(', ') })}</p> : null}
-      {def.webhookPath ? <p className="muted small">{trf('Provider callback path: {path} (on your API address).', { path: def.webhookPath })}</p> : null}
+      {def.webhookPath ? <p className="muted small">{trf('Address to give {name} for its notifications: {url}', { name: tr(def.name), url: `${API_BASE_URL}${def.webhookPath}` })}</p> : null}
       {item.lastStatus ? (
         <p className={item.lastStatus === 'failed' ? 'error small' : 'muted small'}>
           {item.lastStatus === 'sent' ? tr('Last call worked') : tr('Last call failed')}
@@ -119,10 +125,7 @@ export function AiNotice({ status, canManage, onChanged }: { status: AiStatus; c
         )}
       </p>
       <p className="muted small">
-        {trf('Shared AI service: limited to USD {cap} a month across all companies. This month your company made {calls} AI calls. A company that adds its own key is not limited by this.', {
-          cap: status.serviceCapUsd,
-          calls: status.monthCalls,
-        })}
+        {trf('This month your company made {calls} AI calls. Without your own key, AI use is included up to a monthly limit.', { calls: status.monthCalls })}
       </p>
       <Notice message={message} />
       {status.consent ? (

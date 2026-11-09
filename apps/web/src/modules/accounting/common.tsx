@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { formatMoney, type Account } from '@erp/shared';
+import { formatMoney, hasPermission, type Account } from '@erp/shared';
+import { api } from '../../lib/api';
+import { useLoad } from '../../lib/useLoad';
+import { useSession } from '../../session';
 import { currentLanguage, tr } from '../../lib/i18n';
 
 // Shared bits of the accounting screens (documentation/plans/ACCOUNTING_PLAN.md section 6).
@@ -106,6 +109,19 @@ const MOVE_LABEL: Record<string, string> = {
   revaluation: 'Revaluation',
 };
 export const moveLabel = (k: string) => (MOVE_LABEL[k] ? tr(MOVE_LABEL[k]) : k.replace(/_/g, ' '));
+
+/**
+ * True for the owner and the head accountant: the only people the database lets change the chart, account roles and stock value
+ * (sql/045 acc__guard 'chart'). Other admins see these screens read-only instead of being refused after clicking (UX audit).
+ */
+export function useChartManager(): boolean {
+  const session = useSession();
+  const heads = useLoad(() =>
+    api<{ userId: string; isHeadAccountant: boolean }[]>('/v1/accounting/setup/head-accountants').catch(() => [] as { userId: string; isHeadAccountant: boolean }[]),
+  );
+  if (!hasPermission(session.permissions, 'accounting.chart.manage')) return false;
+  return session.role === 'owner' || (heads.data ?? []).some((h) => h.userId === session.userId && h.isHeadAccountant);
+}
 
 export function useNotice() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);

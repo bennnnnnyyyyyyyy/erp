@@ -21,11 +21,11 @@ function today(timeZone: string, lang: 'en' | 'ar'): string {
 }
 
 // First run: in a brand-new company (tutorial flag on, no warehouse yet), someone who can manage the company is taken to the setup wizard
-// once. "Not now" or "Leave setup" stops it for this browser session; finishing it stops it for good (onboardingContent.ts).
+// once. "Not now" or "Leave setup" stops it on this device (UX audit: it came back in every new tab); finishing stops it for good.
 function useFirstRunSetup(orgId: string | null, showTutorial: boolean, canManage: boolean) {
   useEffect(() => {
     if (!orgId || !showTutorial || !canManage) return;
-    const dismissed = sessionStorage.getItem(`erp.onboarding.dismissed.${orgId}`) === '1';
+    const dismissed = localStorage.getItem(`erp.onboarding.dismissed.${orgId}`) === '1';
     const progress = readProgress(orgId);
     if (progress.done || dismissed) return;
     let live = true;

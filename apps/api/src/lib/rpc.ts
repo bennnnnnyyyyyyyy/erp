@@ -84,6 +84,17 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   HAS_BALANCE: { status: 409, message: 'That account still holds money: transfer it out first', code: 'has_balance' },
   RATE_LIMITED: { status: 429, message: 'Too many tries; wait a while and try again', code: 'rate_limited' },
   OVERPAYMENT: { status: 409, message: 'That is more than is still owed', code: 'overpayment' },
+  // UX audit 9 Nov 2026: codes the database raised that had no message, so people saw "Something went wrong on our side".
+  HAS_PAYMENTS: { status: 409, message: 'This expense has payments: void its payments first', code: 'has_payments' },
+  NOT_DELIVERED: { status: 409, message: 'Only delivered orders can be invoiced', code: 'not_delivered' },
+  INVOICE_QTY_EXCEEDS_DELIVERED: {
+    status: 409,
+    message: 'You cannot invoice more than was delivered',
+    code: 'invoice_qty_exceeds_delivered',
+  },
+  EMAIL_NOT_CONFIRMED: { status: 403, message: 'Confirm your email address first, then try again', code: 'email_not_confirmed' },
+  LIMIT_REACHED: { status: 409, message: 'You have reached the limit of companies you can create', code: 'limit_reached' },
+  NOT_SIGNED_IN: { status: 401, message: 'Your session has ended: sign in again', code: 'not_signed_in' },
 };
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */

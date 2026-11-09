@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
-import { formatMoney } from '@erp/shared';
+import { formatMoney, hasPermission } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { Party, PurchaseOrder } from '../../lib/demoTrade';
@@ -10,6 +10,7 @@ import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
+import { ConfirmButton } from '../../components/FormToggle';
 
 import { tr } from '../../lib/i18n';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
@@ -18,7 +19,7 @@ const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: mi
 const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Awaiting receipt', received: 'Received', cancelled: 'Cancelled' };
 
 export function Suppliers() {
-  return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" />;
+  return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" addPermission="purchasing.suppliers.manage" />;
 }
 
 export function PurchaseOrders() {
@@ -49,7 +50,7 @@ export function PurchaseOrders() {
           rowKey={(o) => o.id}
           rowHref={(o) => `/purchasing/orders/${o.id}`}
           empty={tr('No purchase orders yet.')}
-          toolbar={session.role !== 'viewer' ? <Button type="submit" onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</Button> : undefined}
+          toolbar={hasPermission(session.permissions, 'purchasing.orders.create') ? <Button type="submit" onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</Button> : undefined}
         />
       ) : (
         <Loading />
@@ -86,13 +87,15 @@ export function PurchaseOrderPage() {
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const o = order.data;
+  const canReceive = hasPermission(session.permissions, 'purchasing.orders.receive');
+  const canManageOrder = hasPermission(session.permissions, 'purchasing.orders.manage');
 
   async function act(action: 'receive' | 'cancel', done: string) {
     setBusy(true);
     setResult(null);
     try {
       await api(`/v1/purchasing/orders/${id}/${action}`, { method: 'POST' });
-      setResult({ ok: true, text: done });
+      setResult({ ok: true, text: tr(done) });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -147,10 +150,18 @@ export function PurchaseOrderPage() {
 
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
 
-      {o.status === 'ordered' && session.role !== 'viewer' && (
+      {o.status === 'ordered' && (canReceive || canManageOrder) && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
-          <Button type="submit" disabled={busy} onClick={() => act('receive', 'Goods received. The quantities were added to stock and the ledger.')}>{tr('Receive goods')}</Button>
-          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</Button>
+          {/* Receiving takes every line in full (partial receipts are not built yet), so say so before it happens (UX audit). */}
+          {canReceive && (
+            <ConfirmButton label={tr('Receive goods')} confirmLabel={tr('Yes, receive all')} disabled={busy}
+              question={tr('Receive every line of this order in full? For a short delivery, do not receive it here yet.')}
+              onConfirm={() => act('receive', 'Goods received. The quantities were added to stock and the ledger.')} />
+          )}
+          {canManageOrder && (
+            <ConfirmButton label={tr('Cancel order')} confirmLabel={tr('Yes, cancel it')} disabled={busy} question={tr('Cancel this order?')}
+              onConfirm={() => act('cancel', 'Order cancelled.')} />
+          )}
         </div>
       )}
       {o.status === 'received' && (

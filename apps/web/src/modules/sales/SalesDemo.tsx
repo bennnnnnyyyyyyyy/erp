@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
-import { formatMoney } from '@erp/shared';
+import { formatMoney, hasPermission } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
@@ -10,6 +10,7 @@ import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Shipments } from './Shipments';
+import { ConfirmButton } from '../../components/FormToggle';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
 import { tr } from '../../lib/i18n';
@@ -57,7 +58,7 @@ export function SalesOrders() {
           rowKey={(o) => o.id}
           rowHref={(o) => `/sales/orders/${o.id}`}
           empty={tr('No sales orders yet.')}
-          toolbar={session.role !== 'viewer' ? <Button type="submit" onClick={() => navigate('/sales/orders/new')}>{tr('New sales order')}</Button> : undefined}
+          toolbar={hasPermission(session.permissions, 'sales.orders.create') ? <Button type="submit" onClick={() => navigate('/sales/orders/new')}>{tr('New sales order')}</Button> : undefined}
         />
       ) : (
         <Loading />
@@ -115,13 +116,15 @@ export function SalesOrderPage() {
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const o = order.data;
+  const canFulfil = hasPermission(session.permissions, 'sales.orders.fulfill');
+  const canManageOrder = hasPermission(session.permissions, 'sales.orders.manage');
 
   async function act(action: 'request-stock' | 'cancel', done: string) {
     setBusy(true);
     setResult(null);
     try {
       await api(`/v1/sales/orders/${id}/${action}`, { method: 'POST' });
-      setResult({ ok: true, text: done });
+      setResult({ ok: true, text: tr(done) });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -178,15 +181,31 @@ export function SalesOrderPage() {
 
       {o.requestId && o.status !== 'open' && (
         <p className="notice">
-          {tr('Stock request')} <Link to={`/inventory/requests/${o.requestId}`}><code>{`OUT-${o.requestId.slice(1).padStart(4, '0')}`}</code></Link>
+          {tr('Stock request')} <Link to={`/inventory/requests/${o.requestId}`}><code>{o.requestNumber ?? tr('Open it')}</code></Link>
           {o.status === 'delivered' ? tr(' has been issued.') : tr(' needs a manager to approve it and the warehouse to issue it. Open it to continue.')}
         </p>
       )}
+      {/* A rejected request used to drop the order back to "New" without a word (UX audit). */}
+      {o.requestId && o.status === 'open' && (o.requestStatus === 'rejected' || o.requestStatus === 'cancelled') && (
+        <p className="error notice">
+          {o.requestStatus === 'rejected' ? tr('The stock request for this order was rejected.') : tr('The stock request for this order was cancelled.')}{' '}
+          <Link to={`/inventory/requests/${o.requestId}`}>{tr('See why')}</Link>
+          {' · '}{tr('You can request stock again below.')}
+        </p>
+      )}
 
-      {o.status === 'open' && session.role !== 'viewer' && (
+      {o.status === 'open' && (canFulfil || canManageOrder) && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
-          <Button type="submit" disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</Button>
-          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Order cancelled.')}>{tr('Cancel order')}</Button>
+          {canFulfil && <Button type="submit" disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</Button>}
+          {canManageOrder && (
+            <ConfirmButton label={tr('Cancel order')} confirmLabel={tr('Yes, cancel it')} disabled={busy} question={tr('Cancel this order?')}
+              onConfirm={() => act('cancel', 'Order cancelled.')} />
+          )}
+        </div>
+      )}
+      {o.status === 'delivered' && hasPermission(session.permissions, 'sales.invoices.manage') && (
+        <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
+          <Button onClick={() => navigate(`/sales/invoices?order=${o.id}`)}>{tr('Create invoice')}</Button>
         </div>
       )}
 

@@ -76,7 +76,7 @@ export function ProfitOverviewPage() {
         {[
           { label: tr('Net profit, last 12 months'), value: trf(net < 0 ? 'Net loss {amount}' : 'Net profit {amount}', { amount: whole(Math.abs(net)) }), tone: net < 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: trf('{pct}% of sales', { pct: margin.toFixed(1) }) },
           { label: tr('Revenue, last 12 months'), value: whole(revenue), tone: '', note: tr('invoiced to customers') },
-          { label: tr('Total costs, last 12 months'), value: whole(costs), tone: '', note: trf('{cogs} COGS + {expenses} operating expenses', { cogs: whole(sum('cogs')), expenses: whole(sum('expenses')) }) },
+          { label: tr('Total costs, last 12 months'), value: whole(costs), tone: '', note: trf('{cogs} cost of goods sold + {expenses} running costs', { cogs: whole(sum('cogs')), expenses: whole(sum('expenses')) }) },
           { label: tr('Loss-making months, last 12 months'), value: trf('{n} of {total}', { n: lossMonths, total: months.length }), tone: lossMonths > 0 ? 'text-destructive-foreground' : 'text-success-foreground', note: trf('Best {best}, weakest {worst}', { best: monthLong(best.month), worst: monthLong(worst.month) }) },
         ].map((k) => (
           <div key={k.label} className="min-w-0 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
