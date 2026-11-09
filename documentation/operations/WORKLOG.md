@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — `sql/061` applied to live; record of the 6 Nov UI merge and revert and the audit deploy
+
+**Objective.** Record what reached live on 6 Nov night and on 9 Nov, which the entries below do not (they were written before it
+happened).
+
+**Actions Completed.**
+- **UI redesign merged, then reverted (6 Nov).** PR #11 (`integrations-all` → `main`, merged 20:52, deploy run green) carried the
+  other session's UI redesign (`7ccf4c8`, `3930e0d`: shell, side menu, icons, Home, integration settings, `styles.css`, `theme.css`,
+  `scripts/dev.mjs`) with three docs commits. The new look did not meet our standard, so Ben reverted the two UI commits in PR #12
+  (`0f70d20`, `a439c4b`, merged 20:56, deploy green); the docs commits stayed. The redesign is dropped: it will be redone from `main` in
+  small separate changes. `integrations-all` now holds only one more UI commit (`2e4aaf8`) not on `main` and is abandoned.
+- **Repo audit fixes deployed (6 Nov).** PR #13 merged 21:06 (deploy green 21:07); PR #14 (SQL test start fix) merged 21:17 (deploy and
+  SQL tests green; all 56 SQL tests, including 061 and test 056, passed). `DEMO_AUTOFILL_EMAILS` set by Ben at 21:07, so the 21:17
+  deploy shows "Fill with sample data" again.
+- **`sql/061` applied to live (9 Nov) by Ben**: `npx supabase db query --linked -f sql/061_ai_notice_version.sql` (from the worktree
+  copy, identical to `main`). Updated `sql/README.md` and the checklist to say so.
+
+**Database / System Result.** `sql/061` on live (ggoerp): `core__ai_notice_version()`, `core__ai_consent_current(uuid)` and the trigger
+`core_integrations_ollama_url` exist (read-only check); its verification printed `users_check_consent = false`,
+`users_read_state = false`, `anon_consents = false`. The one active AI consent is for notice `v1`, which no longer counts: **AI is off
+on live until the owner accepts notice v2** in Settings → Integrations.
+
+**Safety Status.** No data changed by 061. Not done: the owner's acceptance of notice v2; a browser check of the AI settings screen.
+Docs-only change in this entry's pull request.
+
 ## 2026-11-06 (night) — SQL tests in CI could not start since 20:26; fixed in the workflow
 
 **Objective.** The SQL workflow on PR #13 and on `main` failed with "the local database could not start".
@@ -27,6 +52,9 @@ inside the throwaway runner before starting; `scripts/ci-sql-tests.sh` applies `
 `sql/061` and test 056. Do not apply `sql/061` to live before it.
 
 ## 2026-11-06 (night) — Repo audit fixes: webhook body caps, outbox retry, AI notice v2 (`sql/061` written, NOT applied), CI and docs
+
+> **Superseded (marked 9 Nov):** committed (`b925d51`, at Ben's request) and deployed through PR #13 on 6 Nov; `sql/061` applied to
+> live on 9 Nov. See the 2026-11-09 entry above. Kept as it was written.
 
 **Objective.** Ben asked to check `REPO_AUDIT_REPORT.md`, find more, review the fixes critically, then "do all fixes needed" without
 touching the UI work another session is doing. The audit, its addendum (N1–N12) and the reverse review are now in
