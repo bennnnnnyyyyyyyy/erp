@@ -18,7 +18,7 @@ export function AiTry({ canManage }: { canManage: boolean }) {
   return (
     <div className="form-card stack">
       <h3>{tr('Try it')}</h3>
-      <p className="muted small">{tr('Ask about your stock in plain words, for example "how many cooking oil do we have?". The assistant only answers; it cannot change anything.')}</p>
+      <p className="muted small">{tr('Ask about your stock in plain words, for example "how many of this item do we have in the main warehouse?". The assistant only answers; it cannot change anything.')}</p>
       <Notice message={message} />
       <label>
         {tr('Your question')}

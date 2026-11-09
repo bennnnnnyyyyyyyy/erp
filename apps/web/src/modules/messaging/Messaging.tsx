@@ -64,6 +64,15 @@ type OutboxRow = {
 };
 type PassResult = { reminders: number; escalations: number; lowStock: number; alerts: number; claimed: number; sent: number; failed: number; auditCheck: string };
 
+// Plain words for the outbox's stored codes (UX audit: the list showed `approval_request` and `pending`).
+const KIND_LABEL: Record<string, string> = {
+  approval_request: 'Approval request', decision: 'Decision', task_assigned: 'Task assigned', task_update: 'Task update',
+  reminder: 'Reminder', escalation: 'Escalation', alert: 'Alert', info: 'Notice',
+};
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Waiting', sending: 'Sending', sent: 'Sent', failed: 'Failed', expired: 'Expired', cancelled: 'Cancelled',
+};
+
 export function OutboxPage() {
   const session = useSession();
   const who = usePeople();
@@ -76,7 +85,7 @@ export function OutboxPage() {
     setResult(null);
     try {
       const r = await api<PassResult>('/v1/messaging/process', { method: 'POST' });
-      setResult({ ok: true, text: trf('Reminders queued: {reminders}. Escalations queued: {escalations}. Low-stock messages: {lowStock}. Alert rules fired: {alerts}. Audit check: {auditCheck}. Messages delivered: {sent}.', { reminders: r.reminders, escalations: r.escalations, lowStock: r.lowStock, alerts: r.alerts, auditCheck: r.auditCheck, sent: r.sent }) + (r.failed ? ` ${trf('Failed: {n}.', { n: r.failed })}` : '') });
+      setResult({ ok: true, text: trf('Done. {sent} messages sent; {queued} reminders and alerts added to the queue.', { sent: r.sent, queued: r.reminders + r.escalations + r.lowStock + r.alerts }) + (r.failed ? ` ${trf('{n} could not be sent; they will be tried again.', { n: r.failed })}` : '') });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -88,10 +97,10 @@ export function OutboxPage() {
   const columns: Column<OutboxRow>[] = [
     { key: 'when', label: tr('Queued'), value: (m) => m.createdAt, render: (m) => <span className="nowrap">{formatDateTime(m.createdAt, session.org)}</span> },
     { key: 'to', label: tr('To'), value: (m) => (m.recipientId ? who(m.recipientId) : tr('Company channel')) },
-    { key: 'kind', label: tr('Kind'), value: (m) => m.kind, render: (m) => <code>{m.kind}</code> },
+    { key: 'kind', label: tr('Kind'), value: (m) => m.kind, render: (m) => tr(KIND_LABEL[m.kind] ?? m.kind) },
     { key: 'subject', label: tr('Message'), value: (m) => m.subject, render: (m) => (<>{m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>) },
     { key: 'channel', label: tr('Channel'), value: (m) => m.channel, render: (m) => (<>{m.channel}{m.deliveredVia && m.deliveredVia !== m.channel ? <div className="muted small">{m.deliveredVia}</div> : null}</>) },
-    { key: 'status', label: tr('Status'), value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{m.status}</span> },
+    { key: 'status', label: tr('Status'), value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{tr(STATUS_LABEL[m.status] ?? m.status)}</span> },
     { key: 'attempts', label: tr('Attempts'), value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
   ];
 
@@ -107,7 +116,7 @@ export function OutboxPage() {
           columns={columns}
           rowKey={(m) => m.id}
           empty={tr('No messages yet.')}
-          toolbar={<Button type="submit" onClick={run} disabled={busy}>{busy ? tr('Running…') : tr('Run delivery and reminders now')}</Button>}
+          toolbar={<Button type="submit" onClick={run} disabled={busy}>{busy ? tr('Sending…') : tr('Send waiting messages now')}</Button>}
         />
       ) : (
         <Loading error={outbox.error} />

@@ -23,7 +23,7 @@ const KIND: Record<Kind, { label: string; hint: string; unit?: string }> = {
   stock_below: { label: 'Stock below reorder level', hint: 'Leave blank to use each item\'s reorder level.', unit: 'units or fewer available' },
   expiry_within: { label: 'Batch nearing expiry', hint: 'Includes batches that have already expired.', unit: 'days before expiry' },
   receivable_overdue: { label: 'Customer invoice overdue', hint: 'Counted from the invoice date.', unit: 'days after the invoice date' },
-  profit_negative: { label: 'Month-to-date net loss', hint: 'Revenue less COGS and operating expenses, month to date.' },
+  profit_negative: { label: 'Month-to-date net loss', hint: 'Sales minus the cost of goods sold and running costs, this month so far.' },
   forecast_stockout: { label: 'Forecast stock-out', hint: 'Based on the stock forecast: reports days of cover and forecast confidence. Items with no usage in 90 days are excluded.', unit: 'days of stock left, or fewer' },
 };
 const ROLE_LABEL: Record<string, string> = { owner: 'All owners', admin: 'All admins', member: 'All members', viewer: 'All viewers' };
@@ -75,7 +75,7 @@ export function AlertsPage() {
       {canManage && (
         <FormToggle label={tr('Add a rule')}>
           <div className="form-row">
-            <label>{tr('Name')}<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={tr('e.g. Glycerin running low')} /></label>
+            <label>{tr('Name')}<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={tr('e.g. Main item running low')} /></label>
             <label>{tr('Trigger')}
               <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Kind, threshold: '' })}>
                 {(Object.keys(KIND) as Kind[]).map((k) => <option key={k} value={k}>{tr(KIND[k].label)}</option>)}

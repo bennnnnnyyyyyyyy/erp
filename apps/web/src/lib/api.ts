@@ -3,7 +3,7 @@ import { demoApi, demoMode } from './demo';
 import { tr } from './i18n';
 import { supabase } from './supabase';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
 const ORG_KEY = 'erp.activeOrgId';
 
 export class ApiError extends Error {

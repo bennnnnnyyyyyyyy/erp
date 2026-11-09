@@ -436,7 +436,7 @@ export function TrialBalancePage() {
       </div>
       {!rows.data ? <Loading error={rows.error} /> : (
         <>
-          <p className={balanced ? 'muted small' : 'error small'}>{balanced ? tr('The books balance: debits equal credits.') : tr('The books do not balance. Tell the owner: this should never happen.')}</p>
+          <p className={balanced ? 'muted small' : 'error small'}>{balanced ? tr('The books balance: debits equal credits.') : tr('The books do not balance. This is a system fault: contact support and do not post until it is fixed.')}</p>
           <div className="table-wrap"><table><thead><tr>
             <th scope="col">{tr('Code')}</th><th scope="col">{tr('Account')}</th><th scope="col" className="right">{tr('Opening')}</th><th scope="col" className="right">{tr('Debit')}</th><th scope="col" className="right">{tr('Credit')}</th><th scope="col" className="right">{tr('Closing')}</th>
           </tr></thead><tbody>

@@ -87,7 +87,11 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   // UX audit 9 Nov 2026: codes the database raised that had no message, so people saw "Something went wrong on our side".
   HAS_PAYMENTS: { status: 409, message: 'This expense has payments: void its payments first', code: 'has_payments' },
   NOT_DELIVERED: { status: 409, message: 'Only delivered orders can be invoiced', code: 'not_delivered' },
-  INVOICE_QTY_EXCEEDS_DELIVERED: { status: 409, message: 'You cannot invoice more than was delivered', code: 'invoice_qty_exceeds_delivered' },
+  INVOICE_QTY_EXCEEDS_DELIVERED: {
+    status: 409,
+    message: 'You cannot invoice more than was delivered',
+    code: 'invoice_qty_exceeds_delivered',
+  },
   EMAIL_NOT_CONFIRMED: { status: 403, message: 'Confirm your email address first, then try again', code: 'email_not_confirmed' },
   LIMIT_REACHED: { status: 409, message: 'You have reached the limit of companies you can create', code: 'limit_reached' },
   NOT_SIGNED_IN: { status: 401, message: 'Your session has ended: sign in again', code: 'not_signed_in' },
