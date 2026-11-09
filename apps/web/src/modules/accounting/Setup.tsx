@@ -20,7 +20,7 @@ import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useReloadSession, useSession } from '../../session';
 import { toMinor } from '../trade/common';
-import { AccountSelect, Notice, accountLabel, accountName, depths, firstOfYear, money, useChartManager, useNotice } from './common';
+import { AccountSelect, Notice, accountLabel, accountName, depths, firstOfYear, money, today, useChartManager, useNotice } from './common';
 
 // Accounting set-up (plan section 6): everything a company prepares before switching accounting on, and the switch itself. Works
 // before accounting is on (the API's set-up routes are open then). The database decides who may change what: the chart, roles and
@@ -310,7 +310,7 @@ function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
               <ConfirmButton label={tr('Revalue stock to average cost')} confirmLabel={tr('Yes, post the correction')} disabled={busy || !note.trim()}
                 question={trf('Post one entry of {diff} to bring stock to average cost? It cannot be edited afterwards, only reversed by another entry.', { diff: money(sum('differenceMinor'), currency) })}
                 onConfirm={() => run(async () => {
-                  const r = await api<{ items: number; netMinor: number }>('/v1/accounting/stock-value/revalue', { method: 'POST', body: JSON.stringify({ date: new Date().toISOString().slice(0, 10), note }) });
+                  const r = await api<{ items: number; netMinor: number }>('/v1/accounting/stock-value/revalue', { method: 'POST', body: JSON.stringify({ date: today(), note }) });
                   return trf('{n} items revalued; net {amount}.', { n: r.items, amount: money(r.netMinor, currency) });
                 }, rows.reload)} />
             </div>

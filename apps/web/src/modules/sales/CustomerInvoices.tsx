@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { todayIn } from '../../lib/dates';
 import { Button } from '../../components/ui/button';
 import { ClickRow } from '../../components/ClickRow';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
@@ -41,7 +42,7 @@ export function CustomerInvoices() {
   // "Create invoice" on a delivered order opens this page with ?order=… already chosen (UX audit: the order page had no way here).
   const preset = new URLSearchParams(window.location.search).get('order') ?? '';
   const [orderId, setOrderId] = useState(preset);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayIn());   // company time zone (decision D11)
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);

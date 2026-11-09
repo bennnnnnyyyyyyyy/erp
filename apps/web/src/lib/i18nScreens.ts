@@ -677,7 +677,7 @@ export const SCREENS_AR: Record<string, string> = {
   // Polish round 3: forms behind buttons, empty profit page, settings sections, users
   "No rules yet.": "لا قواعد بعد.",
   "Your language": "لغتك",
-  "Only for you, on every device you sign in on. The Arabic wording is still being reviewed.": "لك وحدك، على كل جهاز تسجّل الدخول منه. ما زالت الصياغة العربية قيد المراجعة.",
+  "Only for you, on every device you sign in on.": "لك وحدك، على كل جهاز تسجّل الدخول منه.",
   "Company": "الشركة",
   "English (left to right)": "الإنجليزية (من اليسار إلى اليمين)",
   "Arabic (right to left)": "العربية (من اليمين إلى اليسار)",

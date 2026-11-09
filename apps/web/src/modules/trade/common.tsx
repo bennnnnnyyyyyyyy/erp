@@ -10,6 +10,7 @@ import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import type { Party } from '../../lib/demoTrade';
 import { Link, navigate } from '../../lib/router';
 import { parseAmount, toMinor } from '../../lib/numbers';
+import { SearchSelect } from '../../components/SearchSelect';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { hasPermission } from '@erp/shared';
@@ -181,11 +182,15 @@ export function NewOrderForm(props: {
   backTo: string;
   backLabel: string;
   submitLabel: string;
+  /** Who may add a new customer or supplier from inside the order (decision D5). Omit to hide the quick-add. */
+  partyAddPermission?: string;
 }) {
   const session = useSession();
   const cat = useCatalog();
   const parties = useLoad(() => api<Party[]>(props.partyEndpoint));
   const [partyId, setPartyId] = useState('');
+  const [quickAdd, setQuickAdd] = useState(false);
+  const canQuickAdd = Boolean(props.partyAddPermission && hasPermission(session.permissions, props.partyAddPermission));
   const [warehouseId, setWarehouseId] = useState('');
   const [lines, setLines] = useState<Line[]>([{ itemId: '', qty: '1', price: '' }]);
   const [error, setError] = useState<string | null>(null);
@@ -233,11 +238,17 @@ export function NewOrderForm(props: {
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
           <label>
-            {props.partyLabel}
-            <select required value={partyId} onChange={(e) => setPartyId(e.target.value)}>
-              <option value="">{tr('Choose…')}</option>
-              {parties.data.map((p) => <option key={p.id} value={p.id}>{p.code ? `${p.code} · ${p.name}` : p.name}</option>)}
-            </select>
+            {tr(props.partyLabel)}
+            <span className="flex items-center gap-2">
+              <SearchSelect
+                required
+                value={partyId}
+                onChange={setPartyId}
+                label={tr(props.partyLabel)}
+                options={parties.data.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name, keywords: `${p.phone ?? ''} ${p.city ?? ''} ${p.contact ?? ''}` }))}
+              />
+              {canQuickAdd ? <Button type="button" variant="outline" size="sm" onClick={() => setQuickAdd(true)}>{tr('+ New')}</Button> : null}
+            </span>
           </label>
           <label>
             {tr('Warehouse')}
@@ -251,10 +262,13 @@ export function NewOrderForm(props: {
           <div className="form-row three" key={i}>
             <label>
               {tr('Item')}
-              <select value={l.itemId} onChange={(e) => setLine(i, { itemId: e.target.value })}>
-                <option value="">{tr('Choose an item…')}</option>
-                {cat.items.data?.map((it) => <option key={it.id} value={it.id}>{it.sku} · {it.name}</option>)}
-              </select>
+              <SearchSelect
+                value={l.itemId}
+                onChange={(v) => setLine(i, { itemId: v })}
+                label={tr('Item')}
+                placeholder={tr('Choose an item…')}
+                options={(cat.items.data ?? []).map((it) => ({ value: it.id, label: `${it.sku} · ${it.name}`, keywords: it.nameAr ?? '' }))}
+              />
             </label>
             <label>{tr('Quantity')}<input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
             <label>{props.priceLabel} ({currency})<input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
@@ -266,6 +280,51 @@ export function NewOrderForm(props: {
         {error && <p className="error">{error}</p>}
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
       </form>
+      {quickAdd ? (
+        <QuickAddParty
+          title={props.partyField === 'customerId' ? tr('New customer') : tr('New supplier')}
+          endpoint={props.partyEndpoint}
+          onClose={() => setQuickAdd(false)}
+          onAdded={(id) => { setQuickAdd(false); setPartyId(id); parties.reload(); }}
+        />
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * Adds a customer or supplier without leaving the order, so nothing typed is lost (decision D5, 9 Nov 2026): name and phone only; the
+ * rest can be filled in later. The new one is chosen in the order straight away. Outside the order's <form>, so Enter here does not
+ * submit the order.
+ */
+function QuickAddParty({ title, endpoint, onClose, onAdded }: { title: string; endpoint: string; onClose: () => void; onAdded: (id: string) => void }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function add(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const made = await api<{ id: string }>(endpoint, { method: 'POST', body: JSON.stringify({ name: name.trim(), phone: phone.trim() }) });
+      onAdded(made.id);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title={title} onClose={onClose}>
+      <form className="stack" onSubmit={add}>
+        <label>{tr('Name')}<input required autoFocus maxLength={200} value={name} onChange={(e) => setName(e.target.value)} /></label>
+        <label>{tr('Phone')}<input inputMode="tel" maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+        {error ? <p className="error">{error}</p> : null}
+        <div className="form-actions">
+          <Button type="submit" disabled={busy || !name.trim()}>{busy ? tr('Saving…') : tr('Add and use')}</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('Cancel')}</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

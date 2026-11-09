@@ -87,7 +87,7 @@ export function GeneralSettings() {
             <option value="en">{t('English (left to right)')}</option>
             <option value="ar">{t('Arabic (right to left)')}</option>
           </select>
-          <span className="hint muted">{tr('Only for you, on every device you sign in on. The Arabic wording is still being reviewed.')}</span>
+          <span className="hint muted">{tr('Only for you, on every device you sign in on.')}</span>
         </label>
       </div>
       <form className="form-card stack" onSubmit={save}>

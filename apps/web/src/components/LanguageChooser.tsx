@@ -63,8 +63,8 @@ export function LanguageChooser({ withDefault = false }: { withDefault?: boolean
         </div>
       )}
       <p className="mt-4 text-xs text-muted-foreground">
-        <span lang="en" dir="ltr" className="block">Every screen is available in Arabic. Some wording is still being reviewed.</span>
-        <span lang="ar" dir="rtl" className="mt-1 block">كل الشاشات متاحة بالعربية. ما زالت بعض الصياغات قيد المراجعة.</span>
+        <span lang="en" dir="ltr" className="block">Every screen is available in Arabic and English.</span>
+        <span lang="ar" dir="rtl" className="mt-1 block">كل الشاشات متاحة بالعربية والإنجليزية.</span>
       </p>
     </div>
   );

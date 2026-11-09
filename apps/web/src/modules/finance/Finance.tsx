@@ -9,6 +9,7 @@ import { api } from '../../lib/api';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { todayIn } from '../../lib/dates';
 import { Pill, toMinor } from '../trade/common';
 
 import { tr, trf } from '../../lib/i18n';
@@ -21,7 +22,7 @@ type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMino
 type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' | 'expense'; id: string; number: string; partyId: string | null; currency: string; totalMinor: number; paidMinor: number; leftMinor: number };
 type Named = { id: string; name: string };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIn();   // company time zone (decision D11)
 /** The cash box or bank account this browser last used for a payment method (a convenience only; the database checks the choice). */
 const lastBox = (method: string) => {
   try {

@@ -5,6 +5,7 @@ import { api } from '../../../lib/api';
 import { tr, trf } from '../../../lib/i18n';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { useSession } from '../../../session';
+import { todayIn } from '../../../lib/dates';
 
 // Settings > General: the closed-period lock date (sql/040, owners only) and the company's default payment terms (sql/041, owners and
 // admins). Each saves through its own route; the database checks the role again and writes the audit row.
@@ -38,7 +39,7 @@ export function PeriodSettings({ org, onSaved }: { org: OrgSettings; onSaved: ()
     setBusy(null);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIn();   // company time zone (decision D11)
   const daysNum = Number(days);
   const daysOk = days !== '' && Number.isInteger(daysNum) && daysNum >= 0 && daysNum <= 365;
 

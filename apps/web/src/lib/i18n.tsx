@@ -8,6 +8,7 @@ import { SCREENS_AR } from './i18nScreens';
 import { AUDIT_AR } from './i18nAudit';
 import { ERRORS_AR } from './i18nErrors';
 import { UX_AUDIT_AR } from './i18nUxAudit';
+import { DECISIONS_AR } from './i18nDecisions';
 
 export type Lang = 'en' | 'ar';
 
@@ -29,7 +30,7 @@ const AR: Record<string, string> = {
   'Arabic (right to left)': 'العربية (من اليمين إلى اليسار)',
 };
 
-Object.assign(AR, NAV_AR, SCREENS_AR, AUDIT_AR, ERRORS_AR, UX_AUDIT_AR);
+Object.assign(AR, NAV_AR, SCREENS_AR, AUDIT_AR, ERRORS_AR, UX_AUDIT_AR, DECISIONS_AR);
 
 // The language in use right now, readable from anywhere (including plain functions and column definitions that are not React components).
 // The provider sets it while rendering, before any child renders; the page is re-mounted when the language changes, so nothing keeps a stale text.

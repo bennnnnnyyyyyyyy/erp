@@ -103,9 +103,9 @@ describe('tour content', () => {
     expect(ar.stepOf(2, 7)).toContain('2');
     expect(ar.stepOf(2, 7)).toContain('7');
   });
-  it('says honestly that Arabic is a draft and most screens are English; English needs neither note', () => {
-    expect(ar.draftNote).toBeTruthy();
-    expect(ar.screenNote).toBeTruthy();
+  it('shows neither the draft nor the English-screens note (decision D2: every screen is translated)', () => {
+    expect(ar.draftNote).toBeNull();
+    expect(ar.screenNote).toBeNull();
     expect(en.draftNote).toBeNull();
     expect(en.screenNote).toBeNull();
   });

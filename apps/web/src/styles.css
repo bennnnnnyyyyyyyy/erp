@@ -543,3 +543,15 @@ td input { margin-top: 0; }
   .intg-back { display: inline-flex; margin-block-end: 0.5rem; }
   .intg-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---- type-to-search lists (components/SearchSelect.tsx) ---- */
+.search-select { position: relative; display: block; min-width: 0; flex: 1; }
+.search-select > input { width: 100%; }
+.search-select-list {
+  position: absolute; z-index: 30; inset-inline: 0; inset-block-start: calc(100% + 4px); max-height: 18rem; overflow-y: auto;
+  margin: 0; padding: 0.25rem; list-style: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-md);
+}
+.search-select-list li { padding: 0.45rem 0.6rem; border-radius: calc(var(--radius) * 0.7); cursor: pointer; font-size: 0.9rem; }
+.search-select-list li.is-active, .search-select-list li[aria-selected='true'] { background: var(--accent); }
+.search-select-list li.search-select-none { cursor: default; background: none; }

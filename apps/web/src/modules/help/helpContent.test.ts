@@ -36,8 +36,8 @@ describe('tutorial content', () => {
     const digits = (s: string) => (s.match(/\d+/g) ?? []).join(',');
     en.steps.forEach((s, i) => expect(digits(ar.steps[i]!.body)).toBe(digits(s.body)));
   });
-  it('the Arabic draft says it is a draft; the English does not need to', () => {
-    expect(ar.draftNote).toBeTruthy();
+  it('shows no draft note in either language (decision D2, 9 Nov 2026)', () => {
+    expect(ar.draftNote).toBeNull();
     expect(en.draftNote).toBeNull();
   });
   it('formats counts and names in both languages', () => {
@@ -66,7 +66,7 @@ describe('guide content', () => {
       }
     }
     for (const s of [ar.title, ar.intro, ...ar.steps.map((x) => x.body), ...ar.notReady]) expect(ARABIC_LETTERS.test(s)).toBe(true);
-    expect(ar.draftNote).toBeTruthy();
+    expect(ar.draftNote).toBeNull();
   });
   it('highlights the same number of things in each item', () => {
     en.notReady.forEach((s, i) => expect(bold(ar.notReady[i]!)).toBe(bold(s)));
