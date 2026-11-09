@@ -22,3 +22,10 @@ in [`../../plans/checklist.md`](../../plans/checklist.md) and [`../../operations
 | `ERP_integrations_table.pdf` | The integrations table the integrations plan was built from |
 | `Trial_capture_workbook_v13.xlsx` | Competitor trial capture workbook |
 | `email updates for grant.zip` | Copies of the daily update emails (30 Oct to 3 Nov) |
+
+## Later documentation snapshots
+
+These are subsequent cleanups of active documents, kept separately from the original root-file move:
+
+- [`../checklist-detail-2026-11-09.md`](../checklist-detail-2026-11-09.md): dated plan-by-plan checklist notes superseded by the concise current status page.
+- [`../product-brief-phase-0-2026-10.md`](../product-brief-phase-0-2026-10.md): the original phase-one product thesis and module sequence, retained as historical context.

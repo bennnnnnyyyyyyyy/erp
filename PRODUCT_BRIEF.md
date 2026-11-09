@@ -1,68 +1,36 @@
-# {{PRODUCT_NAME}}: product brief
+# {{PRODUCT_NAME}} — product brief
 
-**Status:** draft, originally written 2026-10-29 and repositioned 2026-11-09. Demand is untested; scope below changes if the trials and customer interviews say so.
-**Longer plans:** [`TECHNICAL_PLAN.md`](documentation/plans/TECHNICAL_PLAN.md) (engineering), [`MANAGEMENT_PLAN.md`](documentation/planning/MANAGEMENT_PLAN.md) (management).
+**Status:** Current positioning, 9 November 2026. Customer demand is not yet confirmed. The first draft and phase-one strategy are preserved in the [archive](documentation/archive/product-brief-phase-0-2026-10.md).
 
-## What it is
+## Product
 
-A general-purpose ERP for SMEs, Egypt first (the GCC and other markets later, as settings). It is built to cover every business track, one module at a time: the first warehouse, stock and accounting capabilities are built; next comes broader inventory workflows and the connected business tracks. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default.
+A general-purpose ERP for small and mid-size businesses, Egypt first. The first warehouse, stock and accounting capabilities are built. The product will broaden inventory workflows and add other business tracks as separate modules, each with an approved plan. The GCC and other markets can follow through company settings rather than customer-specific code.
 
-It is **not** an internal tool for any one company. A new track (for example CRM or HR) is added as its own module once it has an approved plan.
+It is a multi-company product: each company's data is isolated, and each company turns on the modules it uses. EGP is the default currency, not a hard-coded rule.
 
-(Positioning updated 9 Nov 2026 by Ben: general-purpose, all tracks. The sections below were written on 29 Oct for the first, warehouse-only phase and are kept as its history.)
+## Product principles
 
-## Why it might win (from the market research)
+- Outgoing stock requiring approval cannot move until the database records an eligible manager's decision.
+- Stock quantities come from an append-only movement ledger.
+- Each stock movement and approval is recorded in the append-only audit log in the same transaction.
+- In-app, WhatsApp and voice approvals use the same decision path; a channel cannot change stock by itself.
+- New business tracks are separate modules with organization-level permissions and settings.
+- Competitor research informs behavior and requirements; competitor code, assets and copy are never reused.
 
-- Approvals, audit logs and approval-gated AI exist at several competitors, so they are table stakes, not the edge.
-- No ERP reviewed lets warehouse staff and managers approve or assign stock work by WhatsApp or voice. This is the main hypothesis.
-- Almost no vendor prices in Egyptian pounds; warehouse features are often held back in higher plans or add-ons.
-- Not an open gap: being cheap (local price floor is about USD 35-70 a month for a small team), Egypt e-invoicing breadth, or having approvals and audit at all.
+The full implementation rules are in [`agents.md`](agents.md). The current shipped, in-progress and unproven status is in the [checklist](documentation/plans/checklist.md); dated evidence is in the [worklog](documentation/operations/WORKLOG.md).
 
-Evidence level: public sources only. Hands-on trials of six competitors and 8-10 customer interviews are still to do.
+## Validation still needed
 
-## The first vertical slice
+- Customer demand and product-market fit are unconfirmed; customer interviews and hands-on competitor trials remain to be done.
+- WhatsApp and voice approvals have not been proven on a real phone.
+- Integrations have not been proven through real provider transactions.
+- Arabic wording is a machine draft and needs native-speaker review.
+- A real customer pilot has not happened.
 
-> Add an item, a staff member requests stock to go out, the manager approves, the stock is issued, and an audit entry is written.
+## Scope decisions
 
-Rules the slice must prove:
-- The request reserves the stock when submitted, so it cannot be promised twice.
-- Only an approved request can be issued, enforced in the database. A direct write that skips approval is refused.
-- The requester cannot approve their own request.
-- Every step writes to the append-only audit log in the same transaction.
-- The approval channel is abstracted: the first version approves in the web app; WhatsApp and voice plug into the same decision function later, without redoing the flow.
+CRM, HR, payroll and similar tracks are not planned yet. Each requires its own approved module plan before implementation. The product is web-first; a native phone app is not in the current release plan.
 
-A clickable demo of this slice on sample data exists (see the README). It imitates the rules in the browser; the real implementation lives in Postgres.
+## Open item
 
-## Modules
-
-The "When" column was the 29 Oct plan. What is actually built and live is kept in one place: the status overview in [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (updated 9 Nov 2026).
-
-| Module | Purpose | When (29 Oct plan) |
-|---|---|---|
-| Core | Organization, users, roles, settings, audit log | Built (foundation) |
-| Inventory | Items, warehouses, stock ledger, requests, approvals | Wave 1 (since built) |
-| Messaging | Channel adapters, outbox, identity binding, WhatsApp, later voice | Interface in wave 1, WhatsApp only if interviews say yes |
-| Tasks | Assignable warehouse tasks over the same channels | Wave 2 |
-| Parties, Purchasing, Sales | Customers, suppliers, purchase orders, sales orders and delivery | Wave 2 (since built) |
-| Invoicing, E-invoicing, Accounting | Invoices, Egypt/Saudi e-invoicing; since Nov 2026 a general ledger and treasury (see below) | Wave 3 |
-| Billing | Our own plans and EGP billing | Before the first paying customer |
-
-## Out of scope
-
-- Not planned yet (each would be its own module with an approved plan): CRM, time and attendance, HR, payroll.
-- ~~A full general ledger and statutory accounting (we export to the customer's accounting tool instead).~~ Changed in Nov 2026: a general ledger, treasury and statements are built ([`ROADMAP_ACCOUNTING_SUITE.md`](documentation/plans/ROADMAP_ACCOUNTING_SUITE.md)), and the product is now general-purpose (see "What it is").
-- A native phone app at first: the product is a web app now, with a phone app later on the same back end.
-- Point of sale and manufacturing, unless customers ask.
-- Per-customer custom code. Variation lives in settings, custom fields and approval policies.
-
-## Decisions still open
-
-- Product name (placeholder `{{PRODUCT_NAME}}`).
-- Egypt e-invoicing: needed from day one, later, or through a provider.
-- WhatsApp provider, payment gateway and billing entity.
-- Order of waves 2 and 3, pending interview results.
-- Hosting region for the first customers and support model for the pilot.
-
-## Non-negotiable rules
-
-Every business table has `org_id`, row level security and isolation tests. Money is integer minor units plus a currency code. Stock is an append-only ledger. Approvals and audit are enforced in the database. Arabic and right-to-left from the first screen. Competitors are studied for behaviour only; their code is never copied. Full list: [`agents.md`](agents.md).
+The product name is still `{{PRODUCT_NAME}}`. Other operational choices belong in the relevant plan or decision record so this brief stays focused on the product.
