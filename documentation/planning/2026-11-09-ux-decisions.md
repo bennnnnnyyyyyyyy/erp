@@ -36,7 +36,8 @@ credit notes and manual journals. A solo owner is still stuck on those. Should t
 - [ ] **B.** Only stock ones (adjustments, transfers, counts); keep money ones (credit notes, journals) strict.
 - [ ] **C.** No, stock requests only.
 
-Your answer:
+Your answer: A. Built in `sql/065_sole_approver_more.sql` for stock adjustments, transfers, counts and credit/debit notes. Manual
+journals are left as they are: the owner can already post a journal directly (decision of 5 Nov), so a solo owner is not stuck there.
 
 ### D2. Arabic text: say it is still being reviewed, or not?
 

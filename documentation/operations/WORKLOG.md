@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — 063 applied to live; sole-approver exception for the other approvals (065); stray root files removed
+
+**Objective.** Record Ben's apply of 063; build decision D1b ("A, all of them"); remove three scratch files committed to `main` by a
+`git add .` (commit `5c5e556`).
+
+**Actions Completed.** Branch `db/d1b-self-approval`.
+- `sql/065_sole_approver_more.sql`, generated from the latest definitions of `inv_decide_adjustment` (sql/025), `inv_decide_transfer`
+  (033), `sal_decide_note` (037) and `inv_decide_count` (042) with only the sole-approver change; `self_decided` columns and the four
+  `*_decider_not_requester` rules. Manual journals unchanged (owner can post directly). Test `sql/tests/060_sole_approver_more.sql`.
+- No web change: those screens already offer Approve by permission; the database refuses when someone else must decide.
+- `agents.md` exception text, decisions file D1b answer, `sql/README.md` rows 063 and 065.
+- Removed `Untitled-1.ps1`, `test.py` (API network checks, no secrets) and `sasas.md` (a pasted note) from the repo root; `.gitignore`
+  lists them and the other root scratch notes.
+
+**Database / System Result.** 063 applied to live by Ben via CLI after CI passed test 058 on PR #28. Verified read-only: rule
+`decided_by IS NULL OR decided_by <> requester_id OR self_decided`, `self_decided` column present, `users_call_helper` and
+`anon_decides` false, 0 self-decided rows. 065 not applied.
+
+**Safety Status.** 065 to be applied only after test 060 passes in CI. After this is merged, `git pull` deletes the three removed files
+from the local checkout too (Ben agreed).
+
 ## 2026-11-09 — Migrations 062 and 064 applied to live; 063 fixed
 
 **Objective.** PR #27 was merged while its SQL tests were still running. The tests then failed on 058 (sole-owner approval), and the
