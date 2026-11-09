@@ -1,5 +1,5 @@
 // Arabic for the wording added or changed by the 9 Nov 2026 UX audit fixes. Machine drafts for Ben's review
-// (documentation/reviews/2026-11-09-ux-audit-decisions.md).
+// (documentation/planning/2026-11-09-ux-decisions.md).
 
 export const UX_AUDIT_AR: Record<string, string> = {
   // journals

@@ -12,6 +12,7 @@ import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { parseAmount } from '../../lib/numbers';
 import { Pill } from '../trade/common';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 
@@ -558,7 +559,7 @@ export function NewRequest() {
     try {
       const r = await api<DemoRequest>('/v1/inventory/requests', {
         method: 'POST',
-        body: JSON.stringify({ warehouseId, reason, lines: lines.filter((l) => l.itemId).map((l) => ({ itemId: l.itemId, qty: Number(l.qty) })) }),
+        body: JSON.stringify({ warehouseId, reason, lines: lines.filter((l) => l.itemId).map((l) => ({ itemId: l.itemId, qty: parseAmount(l.qty) })) }),
       });
       try { localStorage.setItem(lastKey, warehouseId); } catch { /* storage blocked: next time falls back to the fullest warehouse */ }
       navigate(`/inventory/requests/${r.id}`);
@@ -597,7 +598,7 @@ export function NewRequest() {
             </label>
             <label>
               {tr('Quantity')} {l.itemId && <span className="muted small">{trf('({n} available)', { n: available(l.itemId) })}</span>}
-              <input type="number" min="1" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
+              <input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
             </label>
           </div>
         ))}

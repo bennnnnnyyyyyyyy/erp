@@ -153,7 +153,8 @@ const STATUS_LABEL: Record<ManualJournal['status'], string> = { draft: 'Waiting 
 export function JournalsPage() {
   const session = useSession();
   const person = usePeople();
-  const [status, setStatus] = useState('draft');
+  // Opens on everything, newest first (UX audit: it opened on "Waiting for approval", so posted work looked missing).
+  const [status, setStatus] = useState('');
   const journals = useLoad(() => api<ManualJournal[]>(`/v1/accounting/journals${status ? `?status=${status}` : ''}`));
   const canCreate = hasPermission(session.permissions, 'accounting.journal.create');
   return (
