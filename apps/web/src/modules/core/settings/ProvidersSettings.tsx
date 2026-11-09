@@ -1,25 +1,22 @@
 import { useState } from 'react';
-import { AI_NOTICE_VERSION, hasPermission, PROVIDERS, type AiStatus, type ProviderDef, type ProviderSettings } from '@erp/shared';
+import { AI_NOTICE_VERSION, type AiStatus, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
-import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
 import { tr, trf } from '../../../lib/i18n';
-import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 import { Notice, useNotice } from '../../accounting/common';
-import { AiTry } from './AiTry';
-import { OnlineOrders } from './OnlineOrders';
+import { IntegrationHeader } from './IntegrationHeader';
+import { connectionStatus } from './integrationStatus';
 
-// Settings > Integrations: payments, shipping, store and AI providers (sql/056). Secret fields are write-only: once saved they show as
+// Settings > Integrations: one payment, shipping, store or AI provider (sql/056). Secret fields are write-only: once saved they show as
 // "saved" and can only be replaced or removed. Every provider starts simulated. AI needs the owner's consent first.
 
-const GROUP_TITLE: Record<ProviderDef['group'], string> = { payments: 'Payments', shipping: 'Shipping', store: 'Online store', ai: 'AI and voice' };
 // Every AI provider needs the current AI notice, Ollama included (sql/061; repo audit N10).
 const AI_KINDS = new Set(['openai', 'elevenlabs', 'ollama']);
 
-function ProviderCard({ def, item, canManage, consented, onChanged }: { def: ProviderDef; item: ProviderSettings; canManage: boolean; consented: boolean; onChanged: () => void }) {
+export function ProviderCard({ def, item, canManage, consented, onChanged }: { def: ProviderDef; item: ProviderSettings; canManage: boolean; consented: boolean; onChanged: () => void }) {
   const session = useSession();
   const { message, busy, run } = useNotice();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -33,13 +30,9 @@ function ProviderCard({ def, item, canManage, consented, onChanged }: { def: Pro
   const dirty = Object.values(values).some((v) => v !== '');
 
   return (
-    <div className="form-card stack">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3>{tr(def.name)}</h3>
-        <span className={`pill st-${item.enabled ? 'sent' : 'cancelled'}`}>{item.enabled ? tr('On') : tr('Off')}</span>
-        <span className="muted small">{item.mode === 'live' ? tr('Live') : tr('Simulated: nothing is really sent')}</span>
-      </div>
-      <p className="muted small">{tr(def.summary)}</p>
+    <div className="form-card stack intg-detail">
+      <IntegrationHeader kind={def.kind} name={tr(def.name)} summary={tr(def.summary)} status={connectionStatus(item)} />
+      {item.mode === 'simulated' ? <p className="muted small">{tr('Simulated: nothing is really sent')}</p> : null}
       <Notice message={message} />
       <fieldset className="stack" disabled={!canManage || busy}>
         {def.fields.map((f) => {
@@ -107,7 +100,7 @@ function ProviderCard({ def, item, canManage, consented, onChanged }: { def: Pro
   );
 }
 
-function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManage: boolean; onChanged: () => void }) {
+export function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManage: boolean; onChanged: () => void }) {
   const session = useSession();
   const { message, busy, run } = useNotice();
   const isOwner = session.role === 'owner';
@@ -153,41 +146,3 @@ function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManag
   );
 }
 
-export function ProvidersSettings() {
-  const session = useSession();
-  const canManage = hasPermission(session.permissions, 'core.integrations.manage');
-  const list = useLoad(() => api<ProviderSettings[]>('/v1/core/integrations/providers'));
-  const ai = useLoad(() => api<AiStatus>('/v1/core/integrations/ai'));
-  const providers = list.data;
-  const status = ai.data;
-  if (!providers || !status) return <Loading error={list.error ?? ai.error} rows={3} />;
-  const reload = () => {
-    list.reload();
-    ai.reload();
-  };
-  const consented = Boolean(status.consent && status.consent.version === AI_NOTICE_VERSION);
-  const groups = ['payments', 'shipping', 'store', 'ai'] as const;
-  return (
-    <>
-      <h2>{tr('Payments, shipping, store and AI')}</h2>
-      <p className="muted small">{tr('Each starts simulated, and nothing reaches a provider until you save the details and go live. Secret keys are saved once and cannot be shown again.')}</p>
-      {groups.map((g) => (
-        <div key={g} className="stack">
-          <h3>{tr(GROUP_TITLE[g])}</h3>
-          {g === 'ai' ? <AiNotice status={status} canManage={canManage} onChanged={reload} /> : null}
-          {g === 'ai' && consented ? <AiTry canManage={canManage} /> : null}
-          {PROVIDERS.filter((p) => p.group === g).map((def) => {
-            const item = providers.find((x) => x.kind === def.kind);
-            if (!item) return null;
-            return (
-              <div key={def.kind} className="stack">
-                <ProviderCard def={def} item={item} canManage={canManage} consented={consented} onChanged={reload} />
-                {def.kind === 'shopify' && item.enabled ? <OnlineOrders canManage={canManage} simulated={item.mode === 'simulated'} /> : null}
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </>
-  );
-}
