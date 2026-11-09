@@ -73,6 +73,7 @@ export function NewPurchaseOrder() {
       backTo="/purchasing/orders"
       backLabel={tr('Purchase orders')}
       submitLabel={tr('Place order')}
+      partyAddPermission="purchasing.suppliers.manage"
     />
   );
 }

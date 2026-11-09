@@ -70,7 +70,7 @@ const TUTORIAL_EN: TutorialContent = {
   notReady: [
     '**Approving by WhatsApp or voice** is not switched on yet. Messages can already be copied to email, Slack, Microsoft Teams or Telegram (Settings → Integrations); decisions are always made in the app.',
     '**Manufacturing** (recipes and production orders) is not built, so profit for a factory is approximate until it is.',
-    '**Arabic** covers every screen. Some wording is still being reviewed.',
+    '**Arabic** covers every screen.',
     "**Tax and e-invoicing** (VAT, the tax authority's electronic invoice) are not included. This is a management view, not statutory accounts.",
     'No printing or PDF of invoices yet.',
   ],
@@ -106,14 +106,14 @@ const TUTORIAL_AR: TutorialContent = {
   notReady: [
     '**الموافقة عبر واتساب أو الصوت** غير مفعّلة بعد. يمكن بالفعل نسخ الرسائل إلى البريد الإلكتروني أو Slack أو Microsoft Teams أو Telegram (الإعدادات ← التكاملات)؛ وتُتخذ القرارات دائمًا داخل التطبيق.',
     '**التصنيع** (الوصفات وأوامر الإنتاج) غير مبني، لذا تكون الأرباح لمصنع تقريبية إلى أن يُبنى.',
-    '**العربية** تشمل كل الشاشات. ما زالت بعض الصياغات قيد المراجعة.',
+    '**العربية** تشمل كل الشاشات.',
     '**الضرائب والفاتورة الإلكترونية** (ضريبة القيمة المضافة والفاتورة الإلكترونية لمصلحة الضرائب) غير مشمولة. هذه نظرة إدارية وليست حسابات قانونية.',
     'لا طباعة ولا PDF للفواتير بعد.',
   ],
   hide: 'إخفاء هذا الدليل',
   hideHintCan: 'يمكنك إعادته في أي وقت من الإعدادات ← عام.',
   hideHintCannot: 'يمكن للمالك أو المدير إخفاء هذا الدليل.',
-  draftNote: 'النص العربي مسودة أولى بالترجمة الآلية وبانتظار مراجعة متحدث أصلي.',
+  draftNote: null,
 };
 
 const GUIDE_EN: GuideContent = {
@@ -134,7 +134,7 @@ const GUIDE_EN: GuideContent = {
   notReadyHint: 'So nobody is surprised: these are planned or partly built.',
   notReady: [
     '**Approvals by WhatsApp and by voice.** Designed and partly built, but not tested on a real phone. Approvals today are in the app.',
-    '**Arabic.** Every screen. Each person chooses English or Arabic in Settings → General. Some wording is still being reviewed.',
+    '**Arabic.** Every screen. Each person chooses English or Arabic in Settings → General.',
     '**Accounting.** The profit figures are a management view (no VAT, cost is the average cost of stock). It is not a full ledger, tax return or Egypt e-invoicing.',
     '**Manufacturing.** No bill of materials or production orders yet, so profit for a factory is approximate.',
     '**Import and returns.** Importing items from a file, and customer or supplier returns and credit notes, are planned.',
@@ -161,13 +161,13 @@ const GUIDE_AR: GuideContent = {
   notReadyHint: 'حتى لا يتفاجأ أحد: هذه أمور مخطط لها أو مبنية جزئيًا.',
   notReady: [
     '**الموافقات عبر واتساب والصوت.** مصمَّمة ومبنية جزئيًا، لكنها لم تُختبر على هاتف حقيقي. الموافقات اليوم داخل التطبيق.',
-    '**العربية.** كل الشاشات. يختار كل شخص الإنجليزية أو العربية من الإعدادات ← عام. ما زالت بعض الصياغات قيد المراجعة.',
+    '**العربية.** كل الشاشات. يختار كل شخص الإنجليزية أو العربية من الإعدادات ← عام.',
     '**المحاسبة.** أرقام الربح عرض إداري (دون ضريبة القيمة المضافة، والتكلفة هي متوسط تكلفة المخزون). وهي ليست دفتر أستاذ كاملًا ولا إقرارًا ضريبيًا ولا فاتورة إلكترونية لمصر.',
     '**التصنيع.** لا قائمة مواد ولا أوامر إنتاج بعد، لذا تكون الأرباح لمصنع تقريبية.',
     '**الاستيراد والمرتجعات.** استيراد الأصناف من ملف، ومرتجعات العملاء أو الموردين والإشعارات الدائنة، مخطط لها.',
     '**بيانات العينة.** في شركات العينة كل شيء مُختلَق ومُعلَّم بوضوح.',
   ],
-  draftNote: 'النص العربي مسودة أولى بالترجمة الآلية وبانتظار مراجعة متحدث أصلي.',
+  draftNote: null,
 };
 
 export const tutorialContent = (lang: Lang): TutorialContent => (lang === 'ar' ? TUTORIAL_AR : TUTORIAL_EN);

@@ -13,6 +13,7 @@ const AppsSettings = lazyNamed(() => import('./core/settings/AppsSettings'), 'Ap
 const AuditLog = lazyNamed(() => import('./core/settings/AuditLog'), 'AuditLog');
 const GeneralSettings = lazyNamed(() => import('./core/settings/GeneralSettings'), 'GeneralSettings');
 const UsersSettings = lazyNamed(() => import('./core/settings/UsersSettings'), 'UsersSettings');
+const MySettings = lazyNamed(() => import('./core/settings/MySettings'), 'MySettings');
 const BatchesPage = lazyNamed(() => import('./inventory/Batches'), 'BatchesPage');
 const ForecastPage = lazyNamed(() => import('./inventory/Forecast'), 'ForecastPage');
 const GuidePage = lazyNamed(() => import('./help/Guide'), 'GuidePage');
@@ -282,15 +283,18 @@ export const APPS: AppDef[] = [
     description: 'Organization, users, apps and audit log',
     suite: 'Core',
     basePath: '/settings',
+    // Staff see only "My settings"; company pages need the matching manage permission (decision D10, 9 Nov 2026: staff used to see
+    // greyed-out company, user, app and audit pages). /settings opens the first page a person can see (resolveRoute).
     pages: [
-      { path: '', label: 'General', permission: 'core.org.read', component: GeneralSettings },
-      { path: '/users', label: 'Users', permission: 'core.users.read', component: UsersSettings },
+      { path: '', label: 'General', permission: 'core.org.manage', component: GeneralSettings },
+      { path: '/me', label: 'My settings', component: MySettings },
+      { path: '/users', label: 'Users', permission: 'core.users.manage', component: UsersSettings },
       // Real API only: the sample-data demo has no branches (it stayed on the loading skeleton; found by the smoke test).
-      ...(demoMode ? [] : [{ path: '/branches', label: 'Branches', permission: 'core.org.read', component: BranchesSettings }]),
+      ...(demoMode ? [] : [{ path: '/branches', label: 'Branches', permission: 'core.org.manage', component: BranchesSettings }]),
       // Integrations (INTEGRATIONS_PLAN.md wave 1). Real API only. Owner and admin only.
       ...(demoMode ? [] : [{ path: '/integrations', label: 'Integrations', permission: 'core.integrations.view', component: IntegrationsSettings }]),
-      { path: '/apps', label: 'Apps', permission: 'core.org.read', component: AppsSettings },
-      { path: '/audit', label: 'Audit log', permission: 'core.audit.read', component: AuditLog },
+      { path: '/apps', label: 'Apps', permission: 'core.org.manage', component: AppsSettings },
+      { path: '/audit', label: 'Audit log', permission: 'core.org.manage', component: AuditLog },
     ],
   },
 ];

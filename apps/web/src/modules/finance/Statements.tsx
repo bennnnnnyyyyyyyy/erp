@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ItemStatementLine, PartyStatementLine } from '@erp/shared';
 import { Loading } from '../../components/Loading';
+import { SearchSelect } from '../../components/SearchSelect';
 import { Button } from '../../components/ui/button';
 import { api, apiDownload } from '../../lib/api';
 import { formatDay } from '../../lib/format';
@@ -58,10 +59,7 @@ export function StatementsPage() {
           </select>
         </label>
         <label>{kind === 'customer' ? tr('Customer') : kind === 'supplier' ? tr('Supplier') : tr('Item')}
-          <select value={id} onChange={(e) => setId(e.target.value)}>
-            <option value="">{tr('Choose…')}</option>
-            {options.map((o) => <option key={o.id} value={o.id}>{o.code ? `${o.code} · ${o.name}` : o.name}</option>)}
-          </select>
+          <SearchSelect value={id} onChange={setId} options={options.map((o) => ({ value: o.id, label: o.code ? `${o.code} · ${o.name}` : o.name }))} />
         </label>
         <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>

@@ -5,6 +5,7 @@ import type { SessionInfo } from '@erp/shared';
 import { api, getActiveOrgId, setActiveOrgId } from './lib/api';
 import { arrivedFromInvite, arrivedToSetPassword, supabase } from './lib/supabase';
 import { SessionContext } from './session';
+import { setCompanyTimeZone } from './lib/dates';
 import { reloadMode, sessionKey } from './lib/sessionKey';
 import { SignIn } from './components/SignIn';
 import {useI18n, tr } from './lib/i18n';
@@ -68,6 +69,8 @@ export function App() {
     );
   }
   if (!session) return <main className="center"><Loading /></main>;
+  // Default dates on every form follow the company's time zone (lib/dates.ts, decision D11).
+  setCompanyTimeZone(session.org?.timezone);
 
   return (
     <SessionContext.Provider value={{ session, reload: () => setSessionTick((t) => t + 1) }}>

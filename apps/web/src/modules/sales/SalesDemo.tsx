@@ -81,6 +81,7 @@ export function NewSalesOrder() {
       backTo="/sales/orders"
       backLabel={tr('Sales orders')}
       submitLabel={tr('Save order')}
+      partyAddPermission="sales.customers.manage"
     />
   );
 }

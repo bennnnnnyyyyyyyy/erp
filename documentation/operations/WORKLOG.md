@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — UX decisions, batch 1 (no database change): time zone dates, no draft note, quick-add, My settings, searchable lists
+
+**Objective.** Build the decisions Ben answered in `documentation/planning/2026-11-09-ux-decisions.md` that need no database change.
+
+**Actions Completed.** Branch `ux/batch1-decisions`.
+- **D11:** default dates follow the company time zone (`lib/dates.ts`, tested with 23:30 UTC on 31 Dec = 1 Jan in Cairo), set when
+  the session loads; used by accounting, finance, invoices, the lock date and stock revaluation.
+- **D2:** the "Arabic is a draft / still being reviewed" and "most screens are English" notes are gone (help, tour, language
+  chooser, General); tests now expect no note.
+- **D5:** "+ New" beside the customer or supplier in a new order opens a name-and-phone pop-up; the new one is chosen straight away.
+- **D10:** Settings → My settings (language, account and password, notifications, connect phone) for everyone; General, Users,
+  Branches, Apps and Audit log now need the matching manage permission, so staff see only their own page.
+- **Search:** `components/SearchSelect.tsx` (tested; Arabic matching ignores hamza, diacritics and taa marbuta) replaces the
+  customer, supplier, item and account dropdowns in orders, journals and statements.
+- Arabic machine drafts in `lib/i18nDecisions.ts`.
+
+**Database / System Result.** None.
+
+**Safety Status.** Lint, typecheck, `npm test` (shared 32 + 1 skipped, API 285 + 7 skipped, web 85) and doc links pass. Not viewed in
+a browser. "My notifications" explains where messages arrive; choosing them per person needs server work (batch 2 or later).
+
 ## 2026-11-09 — Reconcile active product and documentation status
 
 **Objective.** Reconcile active product wording and status dates after the audit of the repository audit fixes. Keep dated audit and planning material as historical evidence.

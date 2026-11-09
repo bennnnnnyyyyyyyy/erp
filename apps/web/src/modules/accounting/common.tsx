@@ -3,6 +3,8 @@ import { formatMoney, hasPermission, type Account } from '@erp/shared';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { firstOfYearIn, todayIn } from '../../lib/dates';
+import { SearchSelect } from '../../components/SearchSelect';
 import { currentLanguage, tr } from '../../lib/i18n';
 
 // Shared bits of the accounting screens (documentation/plans/ACCOUNTING_PLAN.md section 6).
@@ -10,8 +12,9 @@ import { currentLanguage, tr } from '../../lib/i18n';
 export const money = (amountMinor: number, currency: string) => formatMoney({ amountMinor, currency });
 /** A debit or credit cell: blank when zero, so the eye finds the side that has the amount. */
 export const side = (amountMinor: number, currency: string) => (amountMinor ? money(amountMinor, currency) : '');
-export const today = () => new Date().toISOString().slice(0, 10);
-export const firstOfYear = () => `${new Date().getFullYear()}-01-01`;
+/** Today and the start of this year in the company's time zone (lib/dates.ts, decision D11). */
+export const today = () => todayIn();
+export const firstOfYear = () => firstOfYearIn();
 
 /** The account's name in the person's language (Arabic when there is one and the screen is in Arabic). */
 export const accountName = (a: Pick<Account, 'name' | 'nameAr'>) => (currentLanguage() === 'ar' && a.nameAr ? a.nameAr : a.name);
@@ -152,14 +155,15 @@ export function Notice({ message }: { message: { ok: boolean; text: string } | n
 
 /** An account picker limited to postable accounts. */
 export function AccountSelect({ accounts, value, onChange, empty, label }: { accounts: Account[]; value: string; onChange: (id: string) => void; empty?: string; label?: string }) {
+  // Type to search by code or name, in either language (long charts were a plain dropdown).
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label ?? tr('Account')}>
-      <option value="">{empty ?? tr('Choose…')}</option>
-      {postable(accounts).map((a) => (
-        <option key={a.id} value={a.id}>
-          {accountLabel(a)}
-        </option>
-      ))}
-    </select>
+    <SearchSelect
+      value={value}
+      onChange={onChange}
+      label={label ?? tr('Account')}
+      placeholder={empty ?? tr('Choose…')}
+      emptyLabel={empty}
+      options={postable(accounts).map((a) => ({ value: a.id, label: accountLabel(a), keywords: `${a.name} ${a.nameAr ?? ''}` }))}
+    />
   );
 }
