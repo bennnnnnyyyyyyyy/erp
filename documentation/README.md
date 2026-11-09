@@ -17,6 +17,7 @@ division**:
 | [`operations/`](operations/) | Dated worklog, migration runs, deployment handoffs | **Authoritative (historical evidence)** |
 | [`reference/`](reference/) | Background material, external specs, legacy designs | **Reference only**: do not assume active |
 | [`reviews/`](reviews/) | Audits, security reviews, test sweeps | **Guardrails**: lessons learned |
+| [`archive/`](archive/) | Superseded notes and dated historical material | **Historical only**: current status lives in the checklist and worklog |
 
 How work flows through them:
 
@@ -37,7 +38,7 @@ research/<system>/   →   plans/<MODULE>_PLAN.md   →   code + sql/   →   op
 ## 3. Rules for every agent
 
 1. **Documentation lives only in `documentation/`.** Not in `apps/`, not in the repo root (the
-   root keeps only `README.md`, `agents.md`, `CLAUDE.md` and `PLANS.md`).
+   root keeps only `README.md`, `PRODUCT_BRIEF.md`, `agents.md`, `CLAUDE.md` and `PLANS.md`).
 2. **Consult `operations/WORKLOG.md` before assuming state.** A plan says what is intended. If
    it isn't in the worklog, it hasn't been run or deployed.
 3. **Log live changes.** Any schema change, migration run, deployment or data operation gets a

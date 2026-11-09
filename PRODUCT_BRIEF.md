@@ -1,11 +1,11 @@
 # {{PRODUCT_NAME}}: product brief
 
-**Status:** draft, 2026-10-29. Demand is untested; scope below changes if the trials and customer interviews say so.
+**Status:** draft, originally written 2026-10-29 and repositioned 2026-11-09. Demand is untested; scope below changes if the trials and customer interviews say so.
 **Longer plans:** [`TECHNICAL_PLAN.md`](documentation/plans/TECHNICAL_PLAN.md) (engineering), [`MANAGEMENT_PLAN.md`](documentation/planning/MANAGEMENT_PLAN.md) (management).
 
 ## What it is
 
-A general-purpose ERP for SMEs, Egypt first (the GCC and other markets later, as settings). It is built to cover every business track, one module at a time: warehouse (including core stock and inventory) and accounting are built; a deeper inventory track and the work around it come next. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default.
+A general-purpose ERP for SMEs, Egypt first (the GCC and other markets later, as settings). It is built to cover every business track, one module at a time: the first warehouse, stock and accounting capabilities are built; next comes broader inventory workflows and the connected business tracks. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default.
 
 It is **not** an internal tool for any one company. A new track (for example CRM or HR) is added as its own module once it has an approved plan.
 
@@ -35,7 +35,7 @@ A clickable demo of this slice on sample data exists (see the README). It imitat
 
 ## Modules
 
-The "When" column was the 29 Oct plan. What is actually built and live is kept in one place: the status overview in [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (updated 6 Nov 2026).
+The "When" column was the 29 Oct plan. What is actually built and live is kept in one place: the status overview in [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (updated 9 Nov 2026).
 
 | Module | Purpose | When (29 Oct plan) |
 |---|---|---|

@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Reconcile active product and documentation status
+
+**Objective.** Reconcile active product wording and status dates after the audit of the repository audit fixes. Keep dated audit and planning material as historical evidence.
+
+**Actions Completed.** Updated `agents.md`, `README.md` and `PRODUCT_BRIEF.md` to distinguish the first built warehouse/stock capabilities from broader inventory workflows and future business tracks. Updated the README status date and described the recorded `sql/061` live status and AI notice v2 prerequisite. Updated `documentation/plans/checklist.md` to reflect its 9 Nov status overview. Added the historical-only `archive/` authority and `PRODUCT_BRIEF.md` to the root allowlist in `documentation/README.md`. Updated `documentation/reviews/2026-11-09-audit-fix-audit.md` to record subsequent evidence from PRs #17 and #18 and this documentation follow-up.
+
+**Database / System Result.** None. The worklog's existing 9 Nov entry records that migration 061 was applied by Ben; this documentation change did not access or change the database.
+
+**Safety Status.** Documentation-only. Relative links in the new audit report were checked before this follow-up; no typecheck, tests, SQL checks, browser checks or deployment were run. Historical detail blocks and the 6 Nov audit remain dated snapshots.
+
 ## 2026-11-09 — Whole-app redesign, step 1: a left menu in every app
 
 **Objective.** Ben liked the Integrations redesign and asked to revise every menu the same way. His choices: a left list in every app;
