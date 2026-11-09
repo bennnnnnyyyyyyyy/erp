@@ -61,18 +61,32 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
   if (error) throw error;
   const rows = (data ?? []) as OrderRow[];
   const ids = rows.map((o) => o.id);
-  const lines = new Map<string, { itemId: string; qty: number; unitCostMinor: number }[]>();
+  const lines = new Map<string, { lineId: string; itemId: string; qty: number; receivedQty: number; unitCostMinor: number }[]>();
   if (ids.length) {
     const { data: lineRows, error: lineError } = await userDb(c)
       .from('pur_order_lines')
-      .select('order_id, item_id, qty, unit_cost_minor')
+      .select('id, order_id, item_id, qty, received_qty, unit_cost_minor')
       .eq('org_id', orgOf(c))
       .in('order_id', ids);
     if (lineError) throw lineError;
-    for (const l of (lineRows ?? []) as { order_id: string; item_id: string; qty: number; unit_cost_minor: number }[])
+    for (const l of (lineRows ?? []) as {
+      id: string;
+      order_id: string;
+      item_id: string;
+      qty: number;
+      received_qty: number;
+      unit_cost_minor: number;
+    }[])
       lines.set(l.order_id, [
         ...(lines.get(l.order_id) ?? []),
-        { itemId: l.item_id, qty: Number(l.qty), unitCostMinor: Number(l.unit_cost_minor) },
+        {
+          lineId: l.id,
+          itemId: l.item_id,
+          qty: Number(l.qty),
+          // sql/064: how much of the line has arrived so far.
+          receivedQty: Number(l.received_qty),
+          unitCostMinor: Number(l.unit_cost_minor),
+        },
       ]);
   }
   return rows.map((o) => {
@@ -88,6 +102,8 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
       createdAt: o.created_at,
       receivedAt: o.received_at,
       lines: orderLines,
+      /** Open, with some goods already in (sql/064): the screens say "Partly received". */
+      partlyReceived: o.status === 'ordered' && orderLines.some((l) => l.receivedQty > 0),
       totalMinor: orderLines.reduce((sum, l) => sum + l.qty * l.unitCostMinor, 0),
     };
   });
@@ -115,6 +131,21 @@ purchasingRoutes.put('/suppliers/:id/terms', requirePermission('purchasing.suppl
     invalid('days must be a whole number from 0 to 365, or null');
   await callRpc<void>(userDb(c), 'pur_set_supplier_terms', { p_supplier_id: idParam(c), p_days: days });
   return ok(c, { id: idParam(c), paymentTermsDays: days });
+});
+// Fix a supplier's name, contact, city or phone (sql/062, decision D4). The code stays; the old and new values are audited.
+purchasingRoutes.put('/suppliers/:id', requirePermission('purchasing.suppliers.manage'), async (c) => {
+  const body = await jsonBody(c);
+  const name = text(body.name);
+  if (!name) invalid('Supplier name is required');
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'pur_update_supplier', {
+    p_supplier_id: id,
+    p_name: name,
+    p_contact: text(body.contact) || null,
+    p_city: text(body.city) || null,
+    p_phone: text(body.phone) || null,
+  });
+  return ok(c, { id, name, contact: text(body.contact), city: text(body.city), phone: text(body.phone) });
 });
 // Change a supplier's code (sql/050). The database allows owners and admins; codes are unique per company.
 purchasingRoutes.put('/suppliers/:id/code', requirePermission('purchasing.suppliers.manage'), async (c) => {
@@ -166,9 +197,22 @@ purchasingRoutes.post('/orders', requirePermission('purchasing.orders.create'), 
   });
   return ok(c, await oneOrder(c, made.id), 201);
 });
+// Receive goods. No body: everything still to come (the old one-click receipt). With a body (sql/064, decision D3):
+// { lines: [{ lineId, qty }], restComing: boolean } receives what actually arrived; restComing false closes the order short.
 purchasingRoutes.post('/orders/:id/receive', requirePermission('purchasing.orders.receive'), async (c) => {
   const id = idParam(c);
-  await callRpc<void>(userDb(c), 'pur_receive_order', { p_order_id: id });
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || !Array.isArray(body.lines)) {
+    await callRpc<void>(userDb(c), 'pur_receive_order', { p_order_id: id });
+    return ok(c, await oneOrder(c, id));
+  }
+  const lines = body.lines.map((line) => {
+    const value = (line ?? {}) as Record<string, unknown>;
+    return { lineId: text(value.lineId), qty: Number(value.qty) };
+  });
+  if (typeof body.restComing !== 'boolean' || lines.some((l) => !UUID_RE.test(l.lineId) || !Number.isFinite(l.qty) || l.qty < 0))
+    invalid('Each line needs a quantity of 0 or more, and say whether the rest is still coming');
+  await callRpc<unknown>(userDb(c), 'pur_receive_lines', { p_order_id: id, p_lines: lines, p_rest_coming: body.restComing });
   return ok(c, await oneOrder(c, id));
 });
 purchasingRoutes.post('/orders/:id/cancel', requirePermission('purchasing.orders.manage'), async (c) => {
@@ -288,16 +332,17 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
 
 purchasingRoutes.get('/billing-summary', requirePermission('purchasing.orders.read'), async (c) => {
   const orders = await loadOrders(c);
-  const received = orders.filter((o) => o.status === 'received');
+  // sql/064: an open order with goods already in can be billed for what arrived.
+  const received = orders.filter((o) => o.status === 'received' || o.partlyReceived);
   const orderIds = received.map((o) => o.id);
   if (!orderIds.length) return ok(c, []);
   const { data: orderLines, error } = await userDb(c)
     .from('pur_order_lines')
-    .select('id,order_id,item_id,qty,unit_cost_minor')
+    .select('id,order_id,item_id,received_qty,unit_cost_minor')
     .eq('org_id', orgOf(c))
     .in('order_id', orderIds);
   if (error) throw error;
-  const ls = (orderLines ?? []) as { id: string; order_id: string; item_id: string; qty: number; unit_cost_minor: number }[];
+  const ls = (orderLines ?? []) as { id: string; order_id: string; item_id: string; received_qty: number; unit_cost_minor: number }[];
   const lineIds = ls.map((l) => l.id);
   const billed = new Map<string, number>();
   if (lineIds.length) {
@@ -322,7 +367,7 @@ purchasingRoutes.get('/billing-summary', requirePermission('purchasing.orders.re
         .map((l) => ({
           orderLineId: l.id,
           itemId: l.item_id,
-          receivedQty: Number(l.qty),
+          receivedQty: Number(l.received_qty),
           billedQty: billed.get(l.id) ?? 0,
           unitCostMinor: Number(l.unit_cost_minor),
         })),

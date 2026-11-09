@@ -144,6 +144,21 @@ salesRoutes.put('/customers/:id/terms', requirePermission('sales.customers.manag
   await callRpc<void>(userDb(c), 'sal_set_customer_terms', { p_customer_id: idParam(c), p_days: days });
   return ok(c, { id: idParam(c), paymentTermsDays: days });
 });
+// Fix a customer's name, contact, city or phone (sql/062, decision D4). The code stays; the old and new values are audited.
+salesRoutes.put('/customers/:id', requirePermission('sales.customers.manage'), async (c) => {
+  const b = await jsonBody(c);
+  const name = text(b.name);
+  if (!name) invalid('Customer name is required');
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'sal_update_customer', {
+    p_customer_id: id,
+    p_name: name,
+    p_contact: text(b.contact) || null,
+    p_city: text(b.city) || null,
+    p_phone: text(b.phone) || null,
+  });
+  return ok(c, { id, kind: 'customer', name, contact: text(b.contact), city: text(b.city), phone: text(b.phone) });
+});
 // Change a customer's code (sql/050). The database allows owners and admins; codes are unique per company.
 salesRoutes.put('/customers/:id/code', requirePermission('sales.customers.manage'), async (c) => {
   const code = text((await jsonBody(c)).code);

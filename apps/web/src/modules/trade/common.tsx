@@ -91,17 +91,37 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
   // Terms are set by owners and admins (the database checks again). Not in the sample-data demo build, which has no such route.
   const canSetTerms = !demoMode && (session.role === 'owner' || session.role === 'admin');
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', contact: '', city: '', phone: '', code: '' });
+  // Decision D4 (sql/062): fix a name, contact, city or phone later. The code never changes here; the change is in the history.
+  const [editing, setEditing] = useState<Party | null>(null);
+  const canManage = !addPermission || hasPermission(session.permissions, addPermission);
+  const canEdit = canManage && !demoMode;
+  const blank = { name: '', contact: '', city: '', phone: '', code: '' };
+  const [form, setForm] = useState(blank);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const close = () => {
+    setAdding(false);
+    setEditing(null);
+    setError(null);
+    setForm(blank);
+  };
+  const startEdit = (p: Party) => {
+    setError(null);
+    setForm({ name: p.name, contact: p.contact ?? '', city: p.city ?? '', phone: p.phone ?? '', code: p.code ?? '' });
+    setEditing(p);
+  };
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     try {
-      await api(endpoint, { method: 'POST', body: JSON.stringify(form) });
-      setAdding(false);
-      setForm({ name: '', contact: '', city: '', phone: '', code: '' });
+      if (editing) {
+        const { code: _code, ...changes } = form;
+        await api(`${endpoint}/${editing.id}`, { method: 'PUT', body: JSON.stringify(changes) });
+      } else {
+        await api(endpoint, { method: 'POST', body: JSON.stringify(form) });
+      }
+      close();
       parties.reload();
     } catch (err) {
       setError((err as Error).message);
@@ -128,6 +148,20 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
           trf('{n} days', { n: p.paymentTermsDays })
         ),
     },
+    ...(canEdit
+      ? [
+          {
+            key: 'edit',
+            label: tr('Actions'),
+            value: () => '',
+            render: (p: Party) => (
+              <Button variant="outline" size="sm" onClick={() => startEdit(p)} aria-label={trf('Edit {name}', { name: p.name })}>
+                {tr('Edit')}
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -140,25 +174,31 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
           rows={parties.data}
           columns={columns}
           rowKey={(p) => p.id}
-          toolbar={(!addPermission || hasPermission(session.permissions, addPermission)) ? <Button type="submit" onClick={() => setAdding(true)}>{tr('Add')} {noun}</Button> : undefined}
+          toolbar={canManage ? <Button type="submit" onClick={() => setAdding(true)}>{tr('Add')} {noun}</Button> : undefined}
         />
       ) : (
         <Loading />
       )}
-      {adding && (
-        <Modal title={trf('Add {noun}', { noun: tr(noun) })} onClose={() => setAdding(false)}>
+      {(adding || editing) && (
+        <Modal title={editing ? trf('Edit {name}', { name: editing.name }) : trf('Add {noun}', { noun: tr(noun) })} onClose={close}>
           <form className="stack" onSubmit={submit}>
+            {editing && (
+              <p className="muted">
+                {tr('The code stays the same, because it is printed on documents. Every change is kept in the history.')}
+                {editing.code ? <> <code>{editing.code}</code></> : null}
+              </p>
+            )}
             <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
             <div className="form-row">
               <label>{tr('Contact person (optional)')}<input value={form.contact} onChange={set('contact')} /></label>
               <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
             </div>
             <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
-            {demoMode ? null : (
+            {demoMode || editing ? null : (
               <label>{tr('Code (optional)')}<input value={form.code} onChange={set('code')} placeholder={tr('Automatic if empty')} /></label>
             )}
             {error && <p className="error">{error}</p>}
-            <div className="form-actions"><Button type="submit">{tr('Add')} {noun}</Button></div>
+            <div className="form-actions"><Button type="submit">{editing ? tr('Save changes') : <>{tr('Add')} {noun}</>}</Button></div>
           </form>
         </Modal>
       )}

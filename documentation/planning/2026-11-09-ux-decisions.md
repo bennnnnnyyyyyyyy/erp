@@ -27,6 +27,17 @@ someone else must approve it"), but a solo owner still has no way forward.
 
 Your answer: B, only while the company has **no other active owner or manager**. As soon as one is added, the normal rule returns. Each self-approval is marked in the audit log ("self-approved: no second approver in the company"). Ben gave the explicit yes this rule change needs.
 
+Built in batch 3 (`sql/063_sole_approver.sql`), for **stock requests only**.
+
+**Follow-up question (D1b):** the same "someone else must approve" rule also applies to stock adjustments, transfers, stock counts,
+credit notes and manual journals. A solo owner is still stuck on those. Should the same exception apply to them?
+
+- [ ] **A.** Yes, all of them, the same way (only while there is no other owner or manager; marked in the history).
+- [ ] **B.** Only stock ones (adjustments, transfers, counts); keep money ones (credit notes, journals) strict.
+- [ ] **C.** No, stock requests only.
+
+Your answer:
+
 ### D2. Arabic text: say it is still being reviewed, or not?
 
 All screens now say "Some wording is still being reviewed" (it used to say large parts were English only, which was no longer true).

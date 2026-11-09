@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — UX decisions, batch 3 (migrations 062-064): editing records, sole-owner approval, partial receipts
+
+**Objective.** Ben's decisions D4, D1 and D3 (`documentation/planning/2026-11-09-ux-decisions.md`), which need database changes.
+
+**Actions Completed.** Branch `db/batch3-decisions`.
+- **D4, `sql/062_edit_records.sql`:** edit customers, suppliers (name, contact, city, phone) and items (English and Arabic name); codes,
+  SKUs and units stay fixed; old and new values audited. API `PUT /v1/sales/customers/:id`, `/v1/purchasing/suppliers/:id`,
+  `/v1/inventory/items/:id`. Web: **Edit** on the customer and supplier lists and on Stock on hand.
+- **D1, `sql/063_sole_approver.sql`:** an owner or admin may approve their own stock request only while the company has no other active
+  owner or admin; marked `inventory.request.self_approved`. The request page offers Approve with a note; the refusal message now says
+  another owner or manager must approve. Stock requests only: follow-up question D1b added to the decisions file. `agents.md` notes the
+  exception.
+- **D3, `sql/064_partial_receipts.sql`:** per-line `received_qty`; `pur_receive_lines` with "Is the rest still coming?" (yes keeps the
+  order open, shown as "Partly received"; no closes it short); bills capped by what arrived; a partly received order cannot be cancelled;
+  the forecast's "on order" no longer counts goods already in. API `POST /v1/purchasing/orders/:id/receive` takes `{ lines, restComing }`
+  (no body = receive everything left, as before). Web: receive form on the purchase order page and a Received column. The sample-data
+  demo keeps the one-step receipt.
+- SQL tests `sql/tests/057`-`059`; Arabic for every new text; `sql/README.md` rows.
+
+**Database / System Result.** None yet. To apply after CI passes, in order 062, 063, 064, with a rolled-back dry run first. 064 must be
+live before this branch is merged (the API reads `received_qty`).
+
+**Safety Status.** Lint, typecheck, `npm test` (shared 32 + 1 skipped, API 285 + 7 skipped, web 85) pass. The SQL tests run only in CI
+(no local database). Not viewed in a browser.
+
 ## 2026-11-09 — UX decisions, batch 2 (no database change): complete record history, Stock value page, "Paid now" on expenses
 
 **Objective.** Ben's decisions D7, D8 and the record-history follow-up (`documentation/planning/2026-11-09-ux-decisions.md`). D4 (editing

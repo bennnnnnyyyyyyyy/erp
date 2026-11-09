@@ -327,6 +327,16 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
   );
 });
 
+// Fix an item's name in English and Arabic (sql/062, decision D4). The SKU and unit stay; the old and new names are audited.
+inventoryRoutes.put('/items/:id', requirePermission('inventory.items.manage'), async (c) => {
+  const body = await jsonBody(c);
+  const name = text(body.name);
+  if (!name) invalid('Item name is required');
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'inv_update_item', { p_item_id: id, p_name: name, p_name_ar: text(body.nameAr) || null });
+  return ok(c, { id, name, nameAr: text(body.nameAr) || null });
+});
+
 // Set an item's average cost by hand (sql/023 `inv_set_item_cost`: owners and admins only, audited, logged in inv_cost_log). The route
 // check is the early rejection; the database allows only owners and admins. Used by Settings-free flows such as the setup wizard.
 inventoryRoutes.put('/items/:id/cost', requirePermission('inventory.items.manage'), async (c) => {
