@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
-import { formatMoney } from '@erp/shared';
+import { formatMoney, hasPermission } from '@erp/shared';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -45,7 +45,7 @@ export function SupplierInvoices(){
   return <section className="page">
     <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Supplier invoices matched against received purchase orders.')}</p>
     {message&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
-    {session.role!=='viewer'&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
+    {hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
         <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>

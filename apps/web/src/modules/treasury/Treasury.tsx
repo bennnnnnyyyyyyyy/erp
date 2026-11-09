@@ -12,7 +12,7 @@ import { Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill, toMinor } from '../trade/common';
-import { Notice, firstOfYear, money, side, sourceLabel, sourcePath, today, useNotice } from '../accounting/common';
+import { Notice, firstOfYear, money, side, sourceLabel, sourcePath, today, useChartManager, useNotice } from '../accounting/common';
 
 // Treasury (documentation/plans/TREASURY_PLAN.md §6; database sql/051). Cash boxes, bank accounts and clearing accounts by branch;
 // balances and lines come from the ledger. Owner and admin only; the database narrows adding accounts to the owner and the head
@@ -25,7 +25,7 @@ const useBranches = () => useLoad(() => api<Branch[]>('/v1/core/branches'));
 
 export function TreasuryPage() {
   const session = useSession();
-  const canManage = hasPermission(session.permissions, 'treasury.accounts.manage');
+  const canManage = useChartManager() && hasPermission(session.permissions, 'treasury.accounts.manage');   // owner or head accountant (sql/051)
   const accounts = useAccounts();
   const branches = useBranches();
   const { message, busy, run } = useNotice();
@@ -124,7 +124,7 @@ export function TreasuryPage() {
 export function TreasuryAccountPage() {
   const session = useSession();
   const id = useParam('id');
-  const canManage = hasPermission(session.permissions, 'treasury.accounts.manage');
+  const canManage = useChartManager() && hasPermission(session.permissions, 'treasury.accounts.manage');   // owner or head accountant (sql/051)
   const accounts = useAccounts();
   const branches = useBranches();
   const [from, setFrom] = useState(firstOfYear());

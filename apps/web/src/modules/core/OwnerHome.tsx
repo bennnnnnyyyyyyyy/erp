@@ -82,7 +82,9 @@ export function OwnerSummary() {
   const stockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
   const hasMoney = s.owedToMeMinor !== 0 || s.iOweMinor !== 0;
   const moneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
-  const supplierTone: Tone | undefined = s.topSuppliers.length === 0 ? undefined : (s.topSuppliers[0]?.sharePercent ?? 0) > 40 ? 'bad' : s.singleSourceItems > 0 ? 'watch' : 'good';
+  // Information, not a status: one big supplier is normal for a small firm and there is nothing to act on (UX audit: it was a permanent red
+  // "Action required").
+  const supplierTone: Tone | undefined = undefined;
   const count = (n: number, one: string, many: string) => trf(n === 1 ? one : many, { n });
 
   return (

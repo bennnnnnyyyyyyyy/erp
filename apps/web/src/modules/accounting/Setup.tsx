@@ -20,7 +20,7 @@ import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useReloadSession, useSession } from '../../session';
 import { toMinor } from '../trade/common';
-import { AccountSelect, Notice, accountLabel, accountName, depths, firstOfYear, money, useNotice } from './common';
+import { AccountSelect, Notice, accountLabel, accountName, depths, firstOfYear, money, useChartManager, useNotice } from './common';
 
 // Accounting set-up (plan section 6): everything a company prepares before switching accounting on, and the switch itself. Works
 // before accounting is on (the API's set-up routes are open then). The database decides who may change what: the chart, roles and
@@ -57,7 +57,7 @@ export function AccountingSetupPage() {
   const reloadSession = useReloadSession();
   const person = usePeople();
   const isOwner = session.role === 'owner';
-  const canManage = hasPermission(session.permissions, 'accounting.chart.manage');
+  const canManage = useChartManager();
   const preview = useLoad(() => api<SwitchOnPreview>('/v1/accounting/setup/preview'));
   const accounts = useLoad(() => api<Account[]>('/v1/accounting/accounts'));
   const roles = useLoad(() => api<RoleRow[]>('/v1/accounting/roles'));
@@ -328,7 +328,7 @@ const kindLabel = (k: string) => tr(k.charAt(0).toUpperCase() + k.slice(1));
 
 export function ChartPage() {
   const session = useSession();
-  const canManage = hasPermission(session.permissions, 'accounting.chart.manage');
+  const canManage = useChartManager();
   const accounts = useLoad(() => api<Account[]>('/v1/accounting/accounts'));
   const { message, busy, run } = useNotice();
   const [query, setQuery] = useState('');

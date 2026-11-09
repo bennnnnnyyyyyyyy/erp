@@ -131,6 +131,7 @@ export function UsersSettings() {
     members.setData((members.data ?? []).map((m) => (m.id === updated.id ? updated : m)));
   }
 
+  const [pendingRole, setPendingRole] = useState<{ m: Member; role: Role } | null>(null);
   const changeRole = (m: Member, role: Role) =>
     act(m, async () => replace(await api<Member>(`/v1/core/members/${m.id}`, { method: 'PATCH', body: JSON.stringify({ role }) })));
 
@@ -181,11 +182,21 @@ export function UsersSettings() {
       render: (m) => {
         const locked = !canManage || m.userId === session.userId || (!isOwner && m.role === 'owner');
         if (locked) return <span>{tr(ROLE_NAME[m.role])}</span>;
+        // A role change grants or removes powers at once, so it is confirmed first (UX audit: it applied on the spot).
+        if (pendingRole?.m.id === m.id) {
+          return (
+            <div className="confirm-row" role="group">
+              <span>{trf('Make {email} {role}?', { email: m.email, role: tr(ROLE_NAME[pendingRole.role]) })}</span>
+              <Button size="sm" disabled={busyId === m.id} onClick={() => { const p = pendingRole; setPendingRole(null); changeRole(p.m, p.role); }}>{tr('Yes, change')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setPendingRole(null)}>{tr('Cancel')}</Button>
+            </div>
+          );
+        }
         return (
           <select
             value={m.role}
             disabled={busyId === m.id}
-            onChange={(e) => changeRole(m, e.target.value as Role)}
+            onChange={(e) => setPendingRole({ m, role: e.target.value as Role })}
             aria-label={trf('Role for {email}', { email: m.email })}
           >
             {ROLES.filter((r) => r !== 'owner' || isOwner).map((r) => (
