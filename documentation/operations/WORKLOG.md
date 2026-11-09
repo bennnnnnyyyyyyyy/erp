@@ -11,6 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — UX audit of every screen; fixes that needed no decision
+
+**Objective.** Ben: "there are a lot of UX choices that are just stupid, check for all", then "do all the fixes, then write an MD where
+I answer and we work together". Three reviewers read every screen's code (about 80 findings); the most serious claims were checked in
+the code before acting.
+
+**Actions Completed.** Branch `fix/ux-audit`, in four commits: broken things (order warehouse placeholder, amounts with commas and Arabic
+digits, Finance loading forever with Sales or Purchasing off, journal crash on a half-typed currency, six unmapped server error codes,
+server errors in Arabic, the wizard's false "Invitation sent", wizard dismissal per tab); buttons that follow the server's permissions
+and confirmations on permanent actions; dead ends (rejected stock request, "Create invoice" on a delivered order, real request numbers,
+ledger labels, wrong phone code shown as success); plain wording in Integrations, owner home, profit, tour, help and the outbox. New
+`lib/numbers.ts` (tested), `lib/i18nErrors.ts` (tested against every server message), `lib/i18nUxAudit.ts`. API: `rpc.ts` messages,
+`requestNumber` on sales orders. Shared: `formatMoney` cannot throw (tested). Decisions and the larger remaining items are in
+`documentation/planning/2026-11-09-ux-decisions.md` for Ben to answer.
+
+**Database / System Result.** None. No SQL change.
+
+**Safety Status.** Lint, typecheck, `npm test` (shared 32 + 1 skipped, API 285 + 7 skipped, web 80) and doc links pass. Not viewed in a
+browser; the smoke test runs in CI. New Arabic is machine drafted. Not deployed until Ben merges.
+
 ## 2026-11-09 — Whole-app redesign, step 1: a left menu in every app
 
 **Objective.** Ben liked the Integrations redesign and asked to revise every menu the same way. His choices: a left list in every app;

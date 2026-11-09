@@ -92,6 +92,7 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
       currency: o.currency,
       requestId: o.request_id,
       requestStatus: request?.status ?? null,
+      requestNumber: request?.number ?? null,
       createdBy: o.created_by,
       createdAt: o.created_at,
     };

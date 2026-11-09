@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
 import { Modal } from '../../components/Modal';
+import { ConfirmButton } from '../../components/FormToggle';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
@@ -125,7 +126,7 @@ export function TasksPage() {
               <>
                 {t.status === 'open' && <Button variant="outline" type="submit" onClick={() => setStatus(t, 'in_progress')}>{tr('Acknowledge')}</Button>}{' '}
                 <Button type="submit" onClick={() => setStatus(t, 'done')}>{tr('Done')}</Button>{' '}
-                <Button variant="outline" type="submit" onClick={() => setStatus(t, 'cancelled')}>{tr('Cancel')}</Button>
+                <ConfirmButton size="sm" label={tr('Cancel')} confirmLabel={tr('Yes, cancel it')} question={tr('Cancel this task?')} onConfirm={() => setStatus(t, 'cancelled')} />
               </>
             ) : null
           }
@@ -156,7 +157,7 @@ export function TaskPage() {
     setResult(null);
     try {
       await api(`/v1/tasks/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
-      setResult({ ok: true, text: done });
+      setResult({ ok: true, text: tr(done) });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -197,7 +198,7 @@ export function TaskPage() {
           <div className="form-actions">
             {t.status === 'open' && <Button variant="outline" type="submit" disabled={busy} onClick={() => act('in_progress', 'Acknowledged. The person who assigned it can see that you are on it.')}>{tr('Acknowledge')}</Button>}
             <Button type="submit" disabled={busy} onClick={() => act('done', 'Marked as done. The person who assigned it will be notified.')}>{tr('Complete')}</Button>
-            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancelled', 'Task cancelled.')}>{tr('Cancel task')}</Button>
+            <ConfirmButton label={tr('Cancel task')} confirmLabel={tr('Yes, cancel it')} question={tr('Cancel this task?')} disabled={busy} onConfirm={() => act('cancelled', 'Task cancelled.')} />
           </div>
         </div>
       )}

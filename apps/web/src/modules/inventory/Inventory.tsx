@@ -12,8 +12,9 @@ import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { parseAmount } from '../../lib/numbers';
 import { Pill } from '../trade/common';
-import { FormToggle } from '../../components/FormToggle';
+import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 
 import { tr, trf } from '../../lib/i18n';
 // Inventory slice 1 screens. They call /v1/inventory/... : the real API in the real app, and the in-browser sample
@@ -150,7 +151,7 @@ export function StockPage() {
   const [adding, setAdding] = useState(false);
   const [addingWarehouse, setAddingWarehouse] = useState(false);
   const session = useSession();
-  const canAdd = session.role !== 'viewer';
+  const canAdd = hasPermission(session.permissions, 'inventory.items.manage');
   const canAddWarehouse = hasPermission(session.permissions, 'inventory.warehouses.manage');
 
   const rows: StockLine[] = (cat.items.data ?? []).map((i) => {
@@ -401,7 +402,8 @@ export function AdjustmentsPage() {
   const [form, setForm] = useState({ itemId: '', warehouseId: '', countedQty: '', reason: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canApprove = session.role === 'owner' || session.role === 'admin';
+  const canApprove = hasPermission(session.permissions, 'inventory.adjustments.approve');
+  const canCount = hasPermission(session.permissions, 'inventory.adjustments.create');
 
   const expected = form.itemId && form.warehouseId ? stock.data?.find((s) => s.itemId === form.itemId && s.warehouseId === form.warehouseId)?.onHand ?? 0 : null;
   const itemName = (id: string) => cat.itemName(id);
@@ -440,7 +442,7 @@ export function AdjustmentsPage() {
       <h1>{tr('Stock adjustments')}</h1>
       <p className="muted">{tr('Cycle counts. A manager approves any variance before it is posted.')}</p>
       {error && <p className="error notice">{error}</p>}
-      <FormToggle label={tr('New cycle count')}><form className="stack" onSubmit={submit}>
+      {canCount && <FormToggle label={tr('New cycle count')}><form className="stack" onSubmit={submit}>
         <div className="form-row">
           <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
           <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
@@ -448,7 +450,7 @@ export function AdjustmentsPage() {
         </div>
         <label>{tr('Reason')}<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={tr('Physical count, damaged stock…')} /></label>
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit count')}</Button></div>
-      </form></FormToggle>
+      </form></FormToggle>}
       <div className="table-wrap">
         <table>
           <thead><tr><th scope="col">{tr('Count')}</th><th scope="col">{tr('Item')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col" className="right">{tr('Book')}</th><th scope="col" className="right">{tr('Counted')}</th><th scope="col" className="right">{tr('Difference')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead>
@@ -504,7 +506,7 @@ export function RequestsList() {
                 <option value="all">{tr('All requests')}</option>
                 <option value="submitted">{tr('Waiting for approval')}</option>
               </select>
-              {session.role !== 'viewer' && <Button type="submit" onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</Button>}
+              {hasPermission(session.permissions, 'inventory.request.create') && <Button type="submit" onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</Button>}
             </>
           }
         />
@@ -557,7 +559,7 @@ export function NewRequest() {
     try {
       const r = await api<DemoRequest>('/v1/inventory/requests', {
         method: 'POST',
-        body: JSON.stringify({ warehouseId, reason, lines: lines.filter((l) => l.itemId).map((l) => ({ itemId: l.itemId, qty: Number(l.qty) })) }),
+        body: JSON.stringify({ warehouseId, reason, lines: lines.filter((l) => l.itemId).map((l) => ({ itemId: l.itemId, qty: parseAmount(l.qty) })) }),
       });
       try { localStorage.setItem(lastKey, warehouseId); } catch { /* storage blocked: next time falls back to the fullest warehouse */ }
       navigate(`/inventory/requests/${r.id}`);
@@ -596,7 +598,7 @@ export function NewRequest() {
             </label>
             <label>
               {tr('Quantity')} {l.itemId && <span className="muted small">{trf('({n} available)', { n: available(l.itemId) })}</span>}
-              <input type="number" min="1" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
+              <input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
             </label>
           </div>
         ))}
@@ -624,14 +626,18 @@ export function RequestPage() {
   const [busy, setBusy] = useState(false);
 
   const r = request.data;
-  const isManager = session.role === 'owner' || session.role === 'admin';
+  // Buttons follow the same permissions as the server, so nobody fills in a form only to be refused (UX audit).
+  const isManager = hasPermission(session.permissions, 'inventory.request.approve');
+  const mine = r?.requesterId === session.userId;
+  const canIssue = hasPermission(session.permissions, 'inventory.stock.issue');
+  const canCancel = mine || isManager;
 
   async function act(action: 'approve' | 'reject' | 'issue' | 'cancel', done: string) {
     setBusy(true);
     setResult(null);
     try {
       await api(`/v1/inventory/requests/${id}/${action}`, { method: 'POST', body: JSON.stringify({ comment }) });
-      setResult({ ok: true, text: done });
+      setResult({ ok: true, text: tr(done) });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -676,7 +682,11 @@ export function RequestPage() {
 
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
 
-      {r.status === 'submitted' && isManager && (
+      {/* The person who asked can never approve their own request (a database rule); say so instead of offering Approve (UX audit). */}
+      {r.status === 'submitted' && isManager && mine && !demoMode && (
+        <p className="notice">{tr('You made this request, so someone else must approve it: another owner or manager.')}</p>
+      )}
+      {r.status === 'submitted' && isManager && (!mine || demoMode) && (
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
           <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
@@ -689,12 +699,18 @@ export function RequestPage() {
       )}
       {r.status === 'submitted' && !isManager && <p className="notice">{tr('Waiting for a manager to approve.')}{demoMode && tr(' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.')}</p>}
 
-      {open && session.role !== 'viewer' && (
+      {open && (canIssue || canCancel) && (
         <div className="form-actions">
-          {r.status === 'approved' && (
-            <Button type="submit" disabled={busy} onClick={() => act('issue', 'Stock issued and recorded in the ledger.')}>{tr('Issue stock')}</Button>
+          {r.status === 'approved' && canIssue && (
+            <ConfirmButton label={tr('Issue stock')} confirmLabel={tr('Yes, issue')} disabled={busy}
+              question={tr('Issue this stock now? It leaves the warehouse and is recorded in the ledger.')}
+              onConfirm={() => act('issue', 'Stock issued and recorded in the ledger.')} />
           )}
-          <Button variant="outline" type="submit" disabled={busy} onClick={() => act('cancel', 'Request cancelled. The reserved stock was released.')}>{tr('Cancel request')}</Button>
+          {canCancel && (
+            <ConfirmButton label={tr('Cancel request')} confirmLabel={tr('Yes, cancel it')} disabled={busy}
+              question={tr('Cancel this request? The reserved stock is released.')}
+              onConfirm={() => act('cancel', 'Request cancelled. The reserved stock was released.')} />
+          )}
         </div>
       )}
 
@@ -722,6 +738,11 @@ export function RequestPage() {
 
 // ------------------------------------------------------------------ ledger
 
+/** Plain words for the stock ledger's movement codes (UX audit: the list showed `transfer_out`, `return_in`). */
+const MOVE_KIND_LABEL: Record<string, string> = {
+  receipt: 'Received', issue: 'Issued', adjust: 'Count adjustment', transfer_out: 'Transfer out', transfer_in: 'Transfer in', return_in: 'Customer return',
+};
+
 export function LedgerPage() {
   const who = usePeople();
   const cat = useCatalog();
@@ -732,9 +753,10 @@ export function LedgerPage() {
     { key: 'when', label: tr('When'), value: (m) => m.postedAt, render: (m) => <span className="nowrap">{formatDateTime(m.postedAt, session.org)}</span> },
     { key: 'item', label: tr('Item'), value: (m) => cat.itemName(m.itemId) },
     { key: 'wh', label: tr('Warehouse'), value: (m) => cat.warehouseName(m.warehouseId) },
-    { key: 'kind', label: tr('Type'), value: (m) => m.kind },
+    { key: 'kind', label: tr('Type'), value: (m) => m.kind, render: (m) => tr(MOVE_KIND_LABEL[m.kind] ?? m.kind) },
     { key: 'qty', label: tr('Quantity'), value: (m) => m.qty, align: 'right', render: (m) => <strong className={m.qty < 0 ? 'overdue' : undefined}>{m.qty > 0 ? `+${m.qty}` : m.qty}</strong> },
-    { key: 'req', label: tr('Request'), value: (m) => m.requestId ?? '', render: (m) => (m.requestId ? <Link to={`/inventory/requests/${m.requestId}`}>{m.requestNumber ?? (/^r\d+$/.test(m.requestId) ? `OUT-${m.requestId.slice(1).padStart(4, '0')}` : tr('Request'))}</Link> : m.ref?.startsWith('PO-') ? <Link to={`/purchasing/orders/p${Number(m.ref.slice(3))}`}>{m.ref}</Link> : <span className="muted">{tr('opening stock')}</span>) },
+    // UX audit: transfers, adjustments and returns all said "opening stock" here, and the order link was built from a sample-data id.
+    { key: 'req', label: tr('Reference'), value: (m) => m.requestNumber ?? m.ref ?? '', render: (m) => (m.requestId ? <Link to={`/inventory/requests/${m.requestId}`}>{m.requestNumber ?? (/^r\d+$/.test(m.requestId) ? `OUT-${m.requestId.slice(1).padStart(4, '0')}` : tr('Request'))}</Link> : m.ref ? <code>{m.ref}</code> : <span className="muted">—</span>) },
     { key: 'by', label: tr('Posted by'), value: (m) => who(m.postedBy) },
   ];
 

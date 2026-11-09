@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import type { OrgSettings } from '@erp/shared';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
-import { tr } from '../../../lib/i18n';
+import { tr, trf } from '../../../lib/i18n';
+import { ConfirmButton } from '../../../components/FormToggle';
 import { useSession } from '../../../session';
 
 // Settings > General: the closed-period lock date (sql/040, owners only) and the company's default payment terms (sql/041, owners and
@@ -54,9 +55,10 @@ export function PeriodSettings({ org, onSaved }: { org: OrgSettings; onSaved: ()
       </label>
       {isOwner ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" disabled={busy !== null || lockDate === (org.lockDate ?? '')} onClick={() => save('lock', '/v1/core/org/lock-date', { date: lockDate || null })}>
-            {busy === 'lock' ? tr('Saving…') : tr('Save lock date')}
-          </Button>
+          {/* Locking stops everyone recording or voiding anything up to that day, so it asks first (UX audit). */}
+          <ConfirmButton label={busy === 'lock' ? tr('Saving…') : tr('Save lock date')} confirmLabel={tr('Yes, lock')} disabled={busy !== null || lockDate === (org.lockDate ?? '')}
+            question={lockDate ? trf('Lock everything dated {date} or earlier? Nobody can record or void anything in that period.', { date: lockDate }) : tr('Remove the lock?')}
+            onConfirm={() => save('lock', '/v1/core/org/lock-date', { date: lockDate || null })} />
           {org.lockDate ? (
             <Button type="button" variant="ghost" disabled={busy !== null} onClick={() => save('lock', '/v1/core/org/lock-date', { date: null })}>
               {tr('Remove the lock')}

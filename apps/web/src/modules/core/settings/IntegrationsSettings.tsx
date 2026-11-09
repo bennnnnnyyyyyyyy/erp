@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AI_NOTICE_VERSION, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Loading } from '../../../components/Loading';
@@ -54,7 +54,7 @@ function IntegrationCard({ item, canManage, onChanged }: { item: IntegrationSett
   return (
     <div className="form-card stack intg-detail">
       <IntegrationHeader kind={item.kind} name={tr(NAME[item.kind])} summary={tr(HELP[item.kind])} status={connectionStatus(item)} />
-      {item.mode === 'simulated' ? <p className="muted small">{tr('Simulated: nothing is really sent')}</p> : null}
+      {item.enabled && item.mode === 'simulated' ? <p className="muted small">{tr('Test mode: nothing is really sent.')}</p> : null}
       <Notice message={message} />
 
       {item.needsSecret ? (
@@ -96,7 +96,7 @@ function IntegrationCard({ item, canManage, onChanged }: { item: IntegrationSett
             <ConfirmButton label={tr('Go live')} confirmLabel={tr('Yes, go live')} question={tr('Go live? Messages will really be sent from now on.')} disabled={busy || !item.liveAvailable}
               onConfirm={() => save({ mode: 'live' })} />
           ) : (
-            <Button variant="outline" disabled={busy} onClick={() => save({ mode: 'simulated' })}>{tr('Back to simulated')}</Button>
+            <Button variant="outline" disabled={busy} onClick={() => save({ mode: 'simulated' })}>{tr('Back to test mode')}</Button>
           )}
           <Button variant="ghost" disabled={busy} onClick={() => run(async () => {
             await api(`/v1/core/integrations/${item.kind}/test`, { method: 'POST' });
@@ -105,7 +105,7 @@ function IntegrationCard({ item, canManage, onChanged }: { item: IntegrationSett
         </div>
       ) : null}
       {!item.liveAvailable && item.mode === 'simulated' ? (
-        <p className="muted small">{item.kind === 'email' ? tr('Live email is not set up on this server yet.') : tr('Save a webhook URL to go live.')}</p>
+        <p className="muted small">{item.needsSecret ? tr('Save a webhook URL to go live.') : tr('Going live is not available on this server yet. Contact support to switch it on.')}</p>
       ) : null}
       {item.lastStatus ? (
         <p className={item.lastStatus === 'failed' ? 'error small' : 'muted small'}>
@@ -124,7 +124,7 @@ function ExchangeRates() {
   return (
     <div className="form-card stack intg-detail">
       <h2>{tr('Exchange rates')}</h2>
-      <p className="muted small">{tr('Daily mid-market rates from central banks (Frankfurter), saved once a day. For tax and accounting, confirm with your accountant which official rate applies.')}</p>
+      <p className="muted small">{tr('Daily rates from central banks, saved once a day. For tax and accounting, ask your accountant which official rate applies.')}</p>
       {!rates.data ? <Loading error={rates.error} rows={2} /> : rates.data.length ? (
         <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Currency')}</th><th scope="col" className="right">{trf('In {currency}', { currency: session.org?.defaultCurrency ?? '' })}</th><th scope="col">{tr('Date')}</th></tr></thead><tbody>
           {rates.data.map((r) => <tr key={r.from}><td>{r.from}</td><td className="right">{r.rate.toFixed(4)}</td><td>{formatDay(r.rateDate, session.org)}</td></tr>)}
@@ -190,6 +190,12 @@ export function IntegrationsSettings() {
   const ai = useLoad(() => api<AiStatus>('/v1/core/integrations/ai'));
   // The open item lives in the address (#paymob), so a link can open it and a reload keeps it.
   const [selected, setSelected] = useState(() => window.location.hash.slice(1) || OVERVIEW_KEY);
+  // A plain link such as "Open the AI notice" (#ai-notice) also opens its item.
+  useEffect(() => {
+    const follow = () => setSelected(window.location.hash.slice(1) || OVERVIEW_KEY);
+    window.addEventListener('hashchange', follow);
+    return () => window.removeEventListener('hashchange', follow);
+  }, []);
   const open = (key: string) => {
     setSelected(key);
     window.history.replaceState(null, '', key === OVERVIEW_KEY ? window.location.pathname : `#${key}`);
@@ -267,7 +273,7 @@ export function IntegrationsSettings() {
           {current === AI_NOTICE_KEY ? (
             <div className="stack intg-detail">
               <AiNotice status={status} canManage={canManage} onChanged={reload} />
-              {consented ? <AiTry canManage={canManage} /> : null}
+              {consented && aiOn ? <AiTry canManage={canManage} /> : null}
             </div>
           ) : null}
           {current === RATES_KEY ? <ExchangeRates /> : null}

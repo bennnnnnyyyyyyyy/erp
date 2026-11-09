@@ -35,7 +35,7 @@ export function BranchesSettings() {
   return (
     <section className="page">
       <h1>{tr('Branches')}</h1>
-      <p className="muted">{tr('Branches of this company. Warehouses and cash boxes belong to a branch; reports by branch come later.')}</p>
+      <p className="muted">{tr('Branches of this company. Each warehouse and cash box belongs to a branch.')}</p>
       <Notice message={message} />
       {canManage ? (
         <FormToggle label={tr('Add a branch')}>

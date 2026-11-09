@@ -81,7 +81,8 @@ export function GettingStartedPage() {
     customers == null ? null : customers > 0,
     rules == null ? null : rules > 0,
   ];
-  const checklist = c.checklist.map((label, i) => ({ label, done: dones[i] ?? null, to: CHECKLIST_ROUTES[i] ?? '/' }));
+  // Only steps this person can see or do (UX audit: a worker got "Set up an alert", which opened "Page not found").
+  const checklist = c.checklist.map((label, i) => ({ label, done: dones[i] ?? null, to: CHECKLIST_ROUTES[i] ?? '/' })).filter((x, i) => i === 0 || x.done !== null);
   const finished = checklist.filter((x) => x.done === true).length;
 
   async function hide() {
@@ -109,13 +110,16 @@ export function GettingStartedPage() {
       <p className="muted">{c.intro(session.org?.name ?? (lang === 'ar' ? 'شركتك' : 'your company'))}</p>
       {c.draftNote ? <p className="muted small" role="note">{c.draftNote}</p> : null}
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-card p-5 text-card-foreground shadow-xs">
-        <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-base font-semibold">{wizard.steps.welcome.title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{wizard.welcome.points.join(' · ')}</p>
+      {/* The setup wizard is for people who can change the company (UX audit: workers clicked through 8 steps they could not do). */}
+      {canHide ? (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-card p-5 text-card-foreground shadow-xs">
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-base font-semibold">{wizard.steps.welcome.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{wizard.welcome.points.join(' · ')}</p>
+          </div>
+          <Button onClick={() => navigate('/start/setup')}>{wizard.welcome.start}</Button>
         </div>
-        <Button onClick={() => navigate('/start/setup')}>{wizard.welcome.start}</Button>
-      </div>
+      ) : null}
 
       <div className="mt-5 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs">
         <div className="flex items-center justify-between gap-3">

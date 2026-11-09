@@ -32,6 +32,7 @@ import {
   type Report,
 } from './sampleFill';
 import { startTour } from './TourHost';
+import { InviteLinkBox } from '../core/settings/UsersSettings';
 
 // First-run setup wizard (documentation/plans/ONBOARDING_WIZARD_PLAN.md). Welcome, language, company, storage conditions, warehouses,
 // items, suppliers, customers, team, approvals, then the tour. Every save goes through an existing API route (the same audited database
@@ -107,7 +108,7 @@ export function OnboardingPage() {
   const next = () => go(step + 1);
   const leave = () => {
     writeProgress(orgId, { step, done: readProgress(orgId).done });
-    sessionStorage.setItem(`erp.onboarding.dismissed.${orgId}`, '1');
+    localStorage.setItem(`erp.onboarding.dismissed.${orgId}`, '1');
     navigate('/start');
   };
 
@@ -687,6 +688,8 @@ function TeamStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [sent, setSent] = useState<string[]>([]);
+  // Nothing is emailed: the server makes a sign-in link and the owner sends it (UX audit: the wizard said "Invitation sent" and threw it away).
+  const [link, setLink] = useState<{ email: string; link: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!can) return <p className="m-0 text-sm text-muted-foreground">{c.notAllowed}</p>;
@@ -695,7 +698,8 @@ function TeamStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await api('/v1/core/members', { method: 'POST', body: JSON.stringify({ email: email.trim(), role, name: fullName.trim() }) });
+      const r = await api<{ inviteLink?: string; member?: { email: string } }>('/v1/core/members', { method: 'POST', body: JSON.stringify({ email: email.trim(), role, name: fullName.trim() }) });
+      if (r.inviteLink) setLink({ email: email.trim(), link: r.inviteLink });
       setSent((s) => [...s, email.trim()]);
       setEmail('');
       setFullName('');
@@ -732,6 +736,11 @@ function TeamStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
         <p className="error m-0 sm:col-span-2" role="alert">
           {error}
         </p>
+      ) : null}
+      {link ? (
+        <div className="sm:col-span-2">
+          <InviteLinkBox email={link.email} link={link.link} onClose={() => setLink(null)} />
+        </div>
       ) : null}
       {sent.length > 0 ? (
         <ul className="m-0 list-disc ps-5 text-sm sm:col-span-2">

@@ -63,8 +63,8 @@ export function LanguageChooser({ withDefault = false }: { withDefault?: boolean
         </div>
       )}
       <p className="mt-4 text-xs text-muted-foreground">
-        <span lang="en" dir="ltr" className="block">Arabic is a first draft awaiting review by a native speaker. The menus, home page, tutorial, tour and Guide are translated; other screens stay in English for now.</span>
-        <span lang="ar" dir="rtl" className="mt-1 block">العربية مسودة أولى بانتظار مراجعة متحدث أصلي. القوائم والصفحة الرئيسية والدليل التعليمي والجولة ودليل الاستخدام مترجمة؛ وتبقى بقية الشاشات بالإنجليزية حاليًا.</span>
+        <span lang="en" dir="ltr" className="block">Every screen is available in Arabic. Some wording is still being reviewed.</span>
+        <span lang="ar" dir="rtl" className="mt-1 block">كل الشاشات متاحة بالعربية. ما زالت بعض الصياغات قيد المراجعة.</span>
       </p>
     </div>
   );

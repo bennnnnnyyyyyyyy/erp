@@ -38,13 +38,15 @@ export function CustomerInvoices() {
   const invoices = useLoad(() => api<Invoice[]>('/v1/sales/invoices'));
   const customers = useLoad(() => api<Customer[]>('/v1/sales/customers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
-  const [orderId, setOrderId] = useState('');
+  // "Create invoice" on a delivered order opens this page with ?order=… already chosen (UX audit: the order page had no way here).
+  const preset = new URLSearchParams(window.location.search).get('order') ?? '';
+  const [orderId, setOrderId] = useState(preset);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(Boolean(preset));
 
   const invoicedByLine = useMemo(() => {
     const m = new Map<string, number>();
@@ -60,12 +62,18 @@ export function CustomerInvoices() {
   const open = rows.filter((r) => r.billing.some((b) => b.flag === 'under_invoiced'));
   const chosen = rows.find((r) => r.o.id === orderId);
   const canManage = session.permissions.includes('sales.invoices.manage');
+  // Each line starts with what is still to invoice (UX audit: every quantity started empty though the remainder is known).
+  const left = (b: { delivered: number; invoiced: number }) => Math.max(0, b.delivered - b.invoiced);
+  const qtyFor = (b: { orderLineId: string; delivered: number; invoiced: number }) => {
+    const typed = qty[b.orderLineId];
+    return typed === undefined ? left(b) : Number(typed) || 0;
+  };
 
   async function create() {
     if (!chosen) return;
     setBusy(true); setMessage(null);
     try {
-      const lines = chosen.billing.filter((b) => Number(qty[b.orderLineId]) > 0).map((b) => ({ orderLineId: b.orderLineId, qty: Number(qty[b.orderLineId]) }));
+      const lines = chosen.billing.filter((b) => qtyFor(b) > 0).map((b) => ({ orderLineId: b.orderLineId, qty: qtyFor(b) }));
       const made = await api<{ number: string }>(`/v1/sales/orders/${chosen.o.id}/invoices`, { method: 'POST', body: JSON.stringify({ invoiceDate: date, lines }) });
       setMessage({ ok: true, text: trf('Invoice {number} created.', { number: made.number }) }); setOrderId(''); setQty({});
       invoices.reload();
@@ -79,7 +87,8 @@ export function CustomerInvoices() {
     const worst = billing.find((b) => b.flag === 'over_invoiced') ?? billing.find((b) => b.flag === 'under_invoiced') ?? billing.find((b) => b.flag === 'not_delivered') ?? billing[0];
     return { o, sum, flag: worst?.flag ?? 'not_delivered' as BillingFlag };
   });
-  const attention = billingRows.filter((r) => r.flag !== 'ok');
+  // Orders not delivered yet cannot be invoiced, so they are not "orders to invoice" (UX audit); "Show all" still lists them.
+  const attention = billingRows.filter((r) => r.flag !== 'ok' && r.flag !== 'not_delivered');
   const shownBilling = showAll ? billingRows : attention;
 
   return (
@@ -104,10 +113,11 @@ export function CustomerInvoices() {
               <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Delivered')}</th><th scope="col" className="right">{tr('Already invoiced')}</th><th scope="col">{tr('Quantity to invoice')}</th></tr></thead><tbody>
                 {chosen.billing.map((b) => (
                   <tr key={b.orderLineId}><td>{item(b.itemId)}</td><td className="right">{b.delivered}</td><td className="right">{b.invoiced}</td>
-                    <td><input type="number" min="0" max={b.delivered - b.invoiced} step="0.001" aria-label={trf('Quantity to invoice for {item}', { item: item(b.itemId) })} value={qty[b.orderLineId] ?? ''} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
+                    <td><input type="number" min="0" max={left(b)} step="0.001" aria-label={trf('Quantity to invoice for {item}', { item: item(b.itemId) })} value={qty[b.orderLineId] ?? String(left(b))} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
                 ))}
               </tbody></table></div>
-              <Button disabled={busy || !Object.values(qty).some((v) => Number(v) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
+              {!chosen.billing.some((b) => qtyFor(b) > 0) ? <p className="muted small">{tr('Nothing is left to invoice on this order.')}</p> : null}
+              <Button disabled={busy || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
             </>
           )}
         </FormToggle>
