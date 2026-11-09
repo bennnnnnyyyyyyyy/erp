@@ -114,3 +114,7 @@ Both links still point to `../plans/` although the plans directory is two levels
 ## Review limits
 
 This report is static. I did not rerun typecheck, unit tests, SQL tests, the documentation link checker, a browser flow, or a live database query. The worklog is the evidence for recorded CI and migration results. I did not independently verify GitHub branch protection or provider-side spending limits.
+
+> **Correction (9 Nov):** the regex finding is  │
+  wrong. `sql/061` has one backslash, not two, and accepts hosts starting with `s`; SQL test 056 now proves it   │
+  (PR #17). See the worklog.
