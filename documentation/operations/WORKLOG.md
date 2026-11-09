@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Demo company stock value corrected on live (Ben)
+
+**Objective.** Bring the demo company's inventory books into line with quantity × average cost. The gap came from the demo seed, which
+set average costs directly with no cost history (see the 6 Nov entries); it was a sample-data artefact, not a posting error.
+
+**Actions Completed.** Read-only preview first: 45 items, books EGP 3,723,858.67, target EGP 3,141,758.08, net −EGP 582,100.59 (same as
+6 Nov). Ben then ran the correction as owner in Accounting setup.
+
+**Database / System Result.** On live (ggoerp), Demo Cosmetics Factory only: one entry, `JE-002677` dated 2026-11-09, debits and credits
+EGP 582,100.59 each; 45 item lines, net −EGP 582,100.59 on inventory; 45 `inv_cost_log` revaluation rows; 1 audit row. The check now
+shows books = target = EGP 3,141,758.08 and 0 items different. Permanent, append-only entry.
+
+**Safety Status.** Verified read-only after posting. The trial balance screen and the item statements were not opened in a browser.
+
 ## 2026-11-09 — Second review of the audit fixes: findings checked and small fixes
 
 **Objective.** A reviewer's report (`documentation/reviews/2026-11-09-audit-fix-audit.md`) audited the fixes. Each finding was checked
