@@ -32,7 +32,7 @@ Built in batch 3 (`sql/063_sole_approver.sql`), for **stock requests only**.
 **Follow-up question (D1b):** the same "someone else must approve" rule also applies to stock adjustments, transfers, stock counts,
 credit notes and manual journals. A solo owner is still stuck on those. Should the same exception apply to them?
 
-- [ ] **A.** Yes, all of them, the same way (only while there is no other owner or manager; marked in the history).
+- [x] **A.** Yes, all of them, the same way (only while there is no other owner or manager; marked in the history).
 - [ ] **B.** Only stock ones (adjustments, transfers, counts); keep money ones (credit notes, journals) strict.
 - [ ] **C.** No, stock requests only.
 
@@ -106,7 +106,7 @@ Your answer: A: its own Accounting page, "Stock value", showing the profit effec
 
 The first-run wizard has 11 steps, asks for language a third time, and has a cold-room "storage conditions" step before warehouses.
 
-- [ ] **A.** Shorten it: drop the language step and move storage conditions out (to Batches and expiry).
+- [x] **A.** Shorten it: drop the language step and move storage conditions out (to Batches and expiry).
 - [ ] **B.** Leave it.
 
 Your answer: Neither A nor B: the wizard first asks **"What do you sell?"** (shop, food or drinks, medicine, cosmetics, building materials, something else) and shows only the steps that fit; the storage-conditions step appears only for food, medicine and cosmetics. Drop the language step (already asked twice before).
