@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Positioning: general-purpose ERP; root files archived
+
+**Objective.** Ben set the positioning (9 Nov): the ERP is general-purpose and will cover every track; warehouse and accounting are
+built, inventory and the work around it come next. He also asked for the unneeded root files to be moved out (repo audit finding 7).
+
+**Actions Completed.** `agents.md`, `README.md` and `PRODUCT_BRIEF.md` now describe a general-purpose ERP, Egypt first; CRM, HR and
+similar tracks are "not planned yet, each its own module with an approved plan" instead of out of scope. Fourteen root files (scratch
+notes, old AI handoffs, the integrations PDF, the trial workbook, the email zip) moved to `documentation/archive/root-files-2026-11/`
+with a README saying what each was; one link inside `QUESTIONS_FOR_BEN.md` fixed. Branch `docs/positioning-cleanup`.
+
+**Database / System Result.** None.
+
+**Safety Status.** Doc link check passes (90 files). Not done: the two ADR-0004 links (the ADR folder is blocked for agents by Ben's
+permission settings, so Ben edits them), the `{{PRODUCT_NAME}}` placeholder (no name chosen yet).
+
 ## 2026-11-09 — `sql/061` applied to live; record of the 6 Nov UI merge and revert and the audit deploy
 
 **Objective.** Record what reached live on 6 Nov night and on 9 Nov, which the entries below do not (they were written before it

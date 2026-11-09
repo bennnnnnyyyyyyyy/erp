@@ -5,9 +5,11 @@
 
 ## What it is
 
-A warehouse-first ERP for SMEs in Egypt and the GCC (Saudi Arabia and the UAE first) that hold stock. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default, and every warehouse feature is included in the price.
+A general-purpose ERP for SMEs, Egypt first (the GCC and other markets later, as settings). It is built to cover every business track, one module at a time: warehouse and accounting are built; inventory and the work around it come next. Many companies share one system, each fully isolated, and each switches on only the modules it uses. Egyptian-pound pricing is the default.
 
-It is **not** an internal tool for any one company: no CRM, time tracking, HR or payroll.
+It is **not** an internal tool for any one company. A new track (for example CRM or HR) is added as its own module once it has an approved plan.
+
+(Positioning updated 9 Nov 2026 by Ben: general-purpose, all tracks. The sections below were written on 29 Oct for the first, warehouse-only phase and are kept as its history.)
 
 ## Why it might win (from the market research)
 
@@ -47,8 +49,8 @@ The "When" column was the 29 Oct plan. What is actually built and live is kept i
 
 ## Out of scope
 
-- CRM, time and attendance, HR, payroll.
-- ~~A full general ledger and statutory accounting (we export to the customer's accounting tool instead).~~ Changed in Nov 2026: a general ledger, treasury and statements are built ([`ROADMAP_ACCOUNTING_SUITE.md`](documentation/plans/ROADMAP_ACCOUNTING_SUITE.md)). How the product is positioned after that change is Ben's decision and is not yet rewritten here.
+- Not planned yet (each would be its own module with an approved plan): CRM, time and attendance, HR, payroll.
+- ~~A full general ledger and statutory accounting (we export to the customer's accounting tool instead).~~ Changed in Nov 2026: a general ledger, treasury and statements are built ([`ROADMAP_ACCOUNTING_SUITE.md`](documentation/plans/ROADMAP_ACCOUNTING_SUITE.md)), and the product is now general-purpose (see "What it is").
 - A native phone app at first: the product is a web app now, with a phone app later on the same back end.
 - Point of sale and manufacturing, unless customers ask.
 - Per-customer custom code. Variation lives in settings, custom fields and approval policies.
