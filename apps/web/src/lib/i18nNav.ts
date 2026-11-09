@@ -60,6 +60,7 @@ export const NAV_AR: Record<string, string> = {
   'Sales order': 'أمر بيع',
   Customers: 'العملاء',
   'Sales invoices': 'فواتير المبيعات',
+  'Online orders': 'الطلبات الإلكترونية',
   'Sales invoice': 'فاتورة مبيعات',
   Task: 'مهمة',
   Notifications: 'الإشعارات',

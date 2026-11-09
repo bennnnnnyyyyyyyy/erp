@@ -11,6 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Settings > Integrations redesigned (Ben's choices); Online orders moved to Sales
+
+**Objective.** Ben found the page ugly and chose a new design through interactive options: a list on the left and one integration on
+the right, an overview first with a summary and a "needs attention" list, one clear status badge, a simple form, the app's existing
+theme, and real logos. He also set the rule: Settings connects an integration, the apps use it.
+
+**Actions Completed.** `IntegrationsSettings.tsx` rewritten around that layout; `ProvidersSettings.tsx` now exports the provider form and
+AI notice; new `IntegrationHeader.tsx` (logo, badge, "Used in" link to the app it feeds) and `integrationStatus.ts` (off, test, live,
+problem; tested). Online orders moved from Settings to Sales (`sales/OnlineOrders.tsx`, `/sales/online-orders`), with the same permission
+as its API route (`core.integrations.view`), so only owners and admins see it for now. AI notice and exchange rates are their own items
+in the list. Eight logos in `apps/web/public/integrations/`: Simple Icons files (CC0; the marks stay their owners' trademarks) and
+Paymob's from paymob.com. Fawry and Bosta keep a letter mark until files are supplied. New strings have Arabic machine drafts for Ben's
+review. Styles use existing tokens and logical properties.
+
+**Database / System Result.** None. No API or SQL change.
+
+**Safety Status.** Lint, typecheck, `npm test` (shared 30 + 1 skipped, API 285 + 7 skipped, web 72) and the web build pass. **Not viewed in
+a browser by the agent:** Ben checks the look, Arabic layout and a phone width. A real AI screen in the apps and using exchange rates in
+documents remain later plans.
+
 ## 2026-11-09 — Demo company stock value corrected on live (Ben)
 
 **Objective.** Bring the demo company's inventory books into line with quantity × average cost. The gap came from the demo seed, which
