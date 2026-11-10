@@ -1,7 +1,8 @@
 # Bank Statement Import and Reconciliation Plan
 
-**Status:** draft for Ben to read (9 November 2026). Nothing is built. Code starts only after Ben approves this plan, on a fresh branch
-from `main`.
+**Status:** approved by Ben with his answers to Q1–Q5 (10 November 2026; §11). Built so far: the CSV/Excel reader, match
+suggestions and the MT940 reader (`packages/shared`). Next: the migration, API and screens; real bank samples still needed to pre-fill
+each bank's columns and to choose the PDF service.
 
 **Context:** [INTEGRATIONS_PLAN.md](INTEGRATIONS_PLAN.md) wave 6 ("statement file import, all banks"; "never auto-post a match without
 a person") and [TREASURY_PLAN.md](TREASURY_PLAN.md) §2 Out ("bank reconciliation"). Egypt has no bank APIs open to third parties, so a
@@ -206,3 +207,28 @@ version**: it is a published standard, so it can be built and tested without sam
   entries)?
 - **Q5.** Bank charges: always an expense under a "Bank charges" category (simple, recommended), or straight to a chosen ledger
   account (accountant-style)?
+
+**Ben's answers (10 Nov 2026), and how they will be built**
+
+| | Ben said | Built as |
+|---|---|---|
+| Q1 | CSV and Excel now, DOCX now; PDF through a cheap OCR API | First version reads CSV, Excel (.xlsx) and Word (.docx) statements (the table inside the document). PDF through an OCR service (options below); a company switches it on, like the AI features, because the statement leaves our system. |
+| Q2 | The roles can be edited per company; default owner and head accountant | A company setting: which roles may confirm matches and close periods. Default: owner and head accountant. The database checks the setting. |
+| Q3 | "idk" | Claude's call (reversible): "Confirm all exact matches" is allowed. It shows how many and which before confirming; each match is audited. |
+| Q4 | Standard accounting and ERP practice | As common ERPs do: an authorised person (owner by default, same setting as Q2) may undo a closed reconciliation with a reason, audited; never for a date on or before the books' lock date. Corrections after that are new entries. |
+| Q5 | Standard accounting | Bank charges post to a "Bank charges" expense account. A "Bank charges" expense category is seeded and pointed at that ledger account, so a person can pick the category (simple) and the accountant sees the right account. |
+
+**PDF reading (OCR) options** (prices from 2026 comparison articles, not official pages; check before signing up). A monthly
+statement is a few pages, so any of them costs cents per company per month; the deciding factor is how well it reads **Arabic tables**,
+which no published benchmark covers, so the two best candidates should be tried on real statements from `bank-samples/`.
+
+| Service | Price per 1,000 pages (claimed) | Notes |
+|---|---|---|
+| Mistral OCR | about $2 (batch) to $4 | Returns structured text and tables; claims 170 languages |
+| Google Document AI | $1.50 plain OCR; about $10 layout parser | Layout parser needed for tables |
+| Azure Document Intelligence | $1.50 read; about $10 prebuilt; 500 pages a month free | |
+| AWS Textract | $1.50 text; $15 with tables | Tables make it the most expensive here |
+| The AI provider already in the app (OpenAI, sql/056) | per use, small | Reads the page into lines; already needs the owner's consent; a person checks every line anyway |
+
+Recommendation: try Mistral OCR and the AI provider already in the app on the same real statements; keep whichever reads Arabic tables
+correctly, with every line shown to a person before import.
