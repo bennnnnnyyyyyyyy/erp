@@ -54,7 +54,7 @@ does not see it (they count what is there, not what they expect).
 - [ ] **B.** Hide it from members while counting; managers see it when approving. (Recommended.)
 - [ ] **C.** A company setting.
 
-Your answer:
+Your answer: **C**, a company setting (Ben, 10 Nov). Needs a small database change (a company setting the count functions read); built with the inventory redesign.
 
 ### M4. Small gaps (say yes and they are done)
 - [ ] Alert rule recipients can be set only when a rule is created; add "change recipients" to the alert rules list.

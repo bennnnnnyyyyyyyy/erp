@@ -22,6 +22,7 @@ const TransferPage = lazyNamed(() => import('./inventory/Transfers'), 'TransferP
 const TransfersList = lazyNamed(() => import('./inventory/Transfers'), 'TransfersList');
 const CountsList = lazyNamed(() => import('./inventory/Counts'), 'CountsList');
 const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
+const ItemPage = lazyNamed(() => import('./inventory/ItemPage'), 'ItemPage');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
 const ApprovalPoliciesPage = lazyNamed(() => import('./inventory/Inventory'), 'ApprovalPoliciesPage');
 const LedgerPage = lazyNamed(() => import('./inventory/Inventory'), 'LedgerPage');
@@ -116,6 +117,7 @@ const INVENTORY_APP: AppDef = {
   basePath: '/inventory',
   pages: [
     { path: '', label: 'Stock on hand', permission: READ, component: StockPage },
+    { path: '/items/:id', label: 'Item', permission: READ, component: ItemPage, nav: false, parent: '' },
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
     ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
