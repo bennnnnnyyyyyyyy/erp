@@ -11,6 +11,34 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Bank statement import part 1 (sql/067, API, screens); 066 applied; Google decided; npm incident
+
+**Objective.** Ben approved the bank import plan with answers to Q1–Q5 and the Google recommendations; build the import (part 1).
+Record a mistake and its rule.
+
+**Actions Completed.** Branch `docs/bank-answers-google`.
+- Plan and decisions: Q1–Q5 answers and how each is built; PDF reading options (OCR prices, Arabic tables untested); a QNB Qatar PDF
+  sample's layout (structure only; the file is git-ignored in `documentation/research/bank-samples/qnb/`). Google: Sheets A then C;
+  Sign in with Google, then Google Chat; the rest when a customer asks.
+- `sql/067_trs_bank_statements.sql` + `sql/tests/063_bank_statements.sql`: tables, import, match, unmatch, ignore, close and reopen,
+  who may reconcile (company setting, default owner and head accountant).
+- API `apps/api/src/modules/treasury/statements.ts` under `/v1/treasury/statements` (14 routes; suggestions from the shared engine;
+  "confirm all exact matches"); permission keys `treasury.statements.view/import/reconcile`.
+- Web: `apps/web/src/lib/statementFiles.ts` reads CSV, Excel (.xlsx), Word (.docx) and MT940 in the browser with no new library (zip via
+  `DecompressionStream`), fingerprints the file (SHA-256) and guesses columns from English/Arabic headers; Treasury → Bank statements
+  (import with column mapping and preview, imports list, reconcile and reopen periods) and one statement (suggestions, confirm, ignore,
+  undo, confirm all exact). Arabic as machine drafts.
+- 066 applied by Ben via CLI (verified from its output: users_can_set true, anon_can_set false).
+- **Incident:** an `npm install` run inside the worktree resolved to the main checkout's `node_modules` and failed half-way, breaking
+  tests and the dev server; Ben's `npm install` in the main checkout repaired it. Rule added to `agents.md`: never install packages
+  from a worktree.
+
+**Database / System Result.** 066 live. 067 not applied.
+
+**Safety Status.** Lint, typecheck, tests (shared 66 + 1 skipped, API 319 + 7 skipped, web 97) pass; all 67 migrations and 63 SQL tests
+pass locally. 067 must be applied before this branch is merged. Not viewed in a browser. Part 2 (explain a line, rules, bank charges
+category, PDF reading) not built.
+
 ## 2026-11-10 — 065 applied; MT940 reader; inventory slice 3 (stock list, phone actions, blind counts sql/066)
 
 **Objective.** Record Ben's apply of 065; start the bank import groundwork that needs no decision (MT940, after finding which formats

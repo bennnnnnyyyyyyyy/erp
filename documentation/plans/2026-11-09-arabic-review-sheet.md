@@ -64,3 +64,5 @@ Placeholders such as `{name}`, `{item}` and `{n}` must stay exactly as they are 
 | 50 | Inventory overview | (the 17 texts of the overview: numbers, "Needs you today" lines) | see `apps/web/src/lib/i18nDecisions.ts`, section "Inventory overview" | |
 | 51 | Menu | Overview / Counting / Planning / Records and rules | نظرة عامة / الجرد / التخطيط / السجلات والقواعد | |
 | 52 | Settings, stock counts | (the 9 texts of blind counts, the phone action bar and "No stock yet") | see `apps/web/src/lib/i18nDecisions.ts`, section "Blind counts" | |
+| 53 | Bank statements | (about 70 texts of the bank statement screens and file messages; accounting terms to check: تسوية بنكية, كشف حساب, مطابقة) | see `apps/web/src/lib/i18nDecisions.ts`, section "Bank statements" | |
+| 54 | Menu | Bank statements / Bank statement | كشوف الحساب البنكية / كشف حساب بنكي | |

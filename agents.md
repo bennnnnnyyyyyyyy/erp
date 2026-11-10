@@ -77,6 +77,12 @@ Module conventions: `apps/api/src/modules/<key>`, `apps/web/src/modules/<key>`, 
 - The system PATH may not be configured. Node lives at `C:\Users\ben.arthur\node-v24.14.1-win-x64\` and Git at `C:\Users\ben.arthur\PortableGit\bin\`; use absolute executable paths if a command is not found.
 - No administrator privileges are available; never request elevation.
 - npm workspaces: run `npm install` at the repo root. Use `npm run <script> -w apps/api` (or `apps/web`, `packages/shared`) for one package.
+- **Never run `npm install` (or `npm ci`, `npm uninstall`, or any command that writes `node_modules`) inside a git worktree** (for
+  example `.claude/worktrees/<name>`). A worktree inside the repo has no `node_modules` of its own: Node and npm resolve to the main
+  checkout's, so an install from the worktree rewrites the main checkout's packages, and a failed one leaves them broken (10 Nov 2026: a
+  failed install emptied a package and broke every test and the dev server until `npm install` was rerun in the main checkout). To add a
+  dependency, prefer the platform (for example the browser's `DecompressionStream`, `crypto.subtle`) or ask the human to install it in the
+  main checkout. Running scripts (`npm run`, `npm test`) from a worktree is fine.
 
 ## Verification handoff
 

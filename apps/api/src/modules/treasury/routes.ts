@@ -8,6 +8,7 @@ import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
+import { statementRoutes } from './statements';
 
 // Treasury (documentation/plans/TREASURY_PLAN.md; database sql/051). Cash boxes, bank accounts and clearing accounts, each on its
 // own ledger account; balances and lines come from the ledger. Owners and admins only (no ".read" key); the database narrows managing
@@ -61,6 +62,7 @@ async function loadAccounts(c: Ctx): Promise<TreasuryAccount[]> {
   }));
 }
 
+treasuryRoutes.route('/statements', statementRoutes);
 treasuryRoutes.get('/accounts', requirePermission('treasury.accounts.view'), async (c) => ok(c, await loadAccounts(c)));
 
 // The default accounts on the role accounts (main cash box, main bank account, clearing accounts). Safe to repeat.
