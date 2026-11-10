@@ -13,6 +13,7 @@ import { AiTry } from './AiTry';
 import { IntegrationHeader, IntegrationLogo, StatusBadge } from './IntegrationHeader';
 import { connectionStatus, countStatuses, needsAttention, STATUS_LABEL, type Connection, type ConnectionStatus } from './integrationStatus';
 import { AiNotice, ProviderCard } from './ProvidersSettings';
+import { ReportLinks } from './ReportLinks';
 
 // Settings > Integrations (INTEGRATIONS_PLAN.md wave 1; sql/053). Owners and admins. Each integration starts "simulated": messages
 // are marked delivered but nothing leaves the system, so a company can try it safely. Webhook URLs are write-only (a hint is shown).
@@ -216,6 +217,7 @@ function Overview({ connections, aiNoticeNeeded, onOpen }: { connections: Connec
 const OVERVIEW_KEY = 'overview';
 const AI_NOTICE_KEY = 'ai-notice';
 const RATES_KEY = 'exchange-rates';
+const SHEETS_KEY = 'google-sheets';
 
 export function IntegrationsSettings() {
   const session = useSession();
@@ -263,11 +265,11 @@ export function IntegrationsSettings() {
     { title: 'Online store', keys: entries('store') },
     { title: 'Messages', keys: channelConnections.map((c) => c.key) },
     { title: 'AI and voice', keys: [AI_NOTICE_KEY, ...entries('ai')] },
-    { title: 'Other', keys: [RATES_KEY] },
+    { title: 'Other', keys: [RATES_KEY, SHEETS_KEY] },
   ];
-  const known = new Set([OVERVIEW_KEY, AI_NOTICE_KEY, RATES_KEY, ...connections.map((c) => c.key)]);
+  const known = new Set([OVERVIEW_KEY, AI_NOTICE_KEY, RATES_KEY, SHEETS_KEY, ...connections.map((c) => c.key)]);
   const current = known.has(selected) ? selected : OVERVIEW_KEY;
-  const label = (key: string) => (key === AI_NOTICE_KEY ? tr('AI notice') : key === RATES_KEY ? tr('Exchange rates') : (byKey.get(key)?.name ?? key));
+  const label = (key: string) => (key === AI_NOTICE_KEY ? tr('AI notice') : key === RATES_KEY ? tr('Exchange rates') : key === SHEETS_KEY ? tr('Links for Google Sheets') : (byKey.get(key)?.name ?? key));
 
   const providerDef = PROVIDERS.find((d) => d.kind === current);
   const providerItem = providers.data.find((p) => p.kind === current);
@@ -312,6 +314,7 @@ export function IntegrationsSettings() {
             </div>
           ) : null}
           {current === RATES_KEY ? <ExchangeRates /> : null}
+          {current === SHEETS_KEY ? <ReportLinks canManage={canManage} /> : null}
         </div>
       </div>
     </section>

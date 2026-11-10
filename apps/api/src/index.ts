@@ -15,6 +15,7 @@ import { HttpError, isMissingSchema } from './lib/errors';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
 import { KB, MB, limitBody } from './middleware/bodyLimit';
+import { reportLinkCsv } from './lib/reportLinks';
 import { rateLimit } from './middleware/rateLimit';
 import { requireModule, requireTenant } from './middleware/tenant';
 import { MODULE_ROUTES } from './modules/registry';
@@ -45,6 +46,15 @@ app.use('/webhooks/*', rateLimit('webhook'));
 // Body caps before any handler reads the body (repo audit 2026-11-06, finding 8). Shopify order payloads are larger than the rest.
 for (const hook of ['whatsapp', 'telegram', 'paymob', 'fawry', 'bosta']) app.use(`/webhooks/${hook}`, limitBody(100 * KB));
 app.use('/webhooks/shopify', limitBody(1 * MB));
+// Private report links for Google Sheets (sql/070): no user, the token in the address is the only credential. Read-only CSV. The token
+// format is checked before any database call; every refusal (missing, revoked, expired, module off) is the same bare 404.
+app.use('/r/*', rateLimit('webhook'));
+app.get('/r/:token', async (c) => {
+  const csv = await reportLinkCsv(c.env, c.req.param('token'));
+  if (csv === null) return c.body(null, 404, { 'Cache-Control': 'no-store' });
+  return c.body(csv, 200, { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+});
+
 app.get('/webhooks/whatsapp', (c) => {
   const token = c.env.WHATSAPP_VERIFY_TOKEN;
   if (!token) return fail(c, 503, 'WhatsApp is not configured on this server', 'not_configured');

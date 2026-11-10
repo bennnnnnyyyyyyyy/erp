@@ -15,6 +15,25 @@ export const INTEGRATION_MESSAGE_KINDS = [
 ] as const;
 export type IntegrationMessageKind = (typeof INTEGRATION_MESSAGE_KINDS)[number];
 
+/** Private read-only report links for Google Sheets (sql/070). */
+export const REPORT_LINK_KINDS = ['stock_on_hand', 'open_invoices', 'sales_by_month'] as const;
+export type ReportLinkKind = (typeof REPORT_LINK_KINDS)[number];
+
+/** A link as listed: never the token (only its hash is stored). */
+export type ReportLink = {
+  id: string;
+  report: ReportLinkKind;
+  label: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastReadAt: string | null;
+  readCount: number;
+};
+
+/** Answer to creating a link: the only time the token and the address are shown. */
+export type ReportLinkCreated = { id: string; token: string; url: string; formula: string };
+
 export type IntegrationSettings = {
   kind: IntegrationKind;
   enabled: boolean;
