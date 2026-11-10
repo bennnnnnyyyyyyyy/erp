@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
+import { UnitSelect } from '../../components/UnitSelect';
 import {
   BUSINESS_TYPES,
   onboardingContent,
@@ -122,7 +123,7 @@ export function RowsSaver({ c, s, disabled, onSave }: { c: OnboardingContent; s:
 }
 
 /** `optional`: the column may be left empty; its header says so (demo note, 5 Nov: people could not tell what was required). */
-export type Col<T> = { key: keyof T & string; label: string; type?: 'text' | 'number'; list?: string; width?: string; optional?: boolean };
+export type Col<T> = { key: keyof T & string; label: string; type?: 'text' | 'number'; list?: string; width?: string; optional?: boolean; unit?: boolean };
 
 /** An editable table: one input per cell, add and remove rows. Logical properties only, so it mirrors in Arabic. */
 export function RowsTable<T extends Record<string, string | number | null>>({
@@ -163,15 +164,19 @@ export function RowsTable<T extends Record<string, string | number | null>>({
             <tr key={i}>
               {cols.map((col) => (
                 <td key={col.key}>
-                  <input
-                    className={inputClass}
-                    aria-label={`${col.label} ${i + 1}`}
-                    type={col.type === 'number' ? 'number' : 'text'}
-                    step={col.type === 'number' ? 'any' : undefined}
-                    list={col.list}
-                    value={r[col.key] === null || r[col.key] === undefined ? '' : String(r[col.key])}
-                    onChange={(e) => set(i, col.key, e.target.value)}
-                  />
+                  {col.unit ? (
+                    <UnitSelect className={inputClass} label={`${col.label} ${i + 1}`} value={String(r[col.key] ?? '')} onChange={(u) => set(i, col.key, u)} />
+                  ) : (
+                    <input
+                      className={inputClass}
+                      aria-label={`${col.label} ${i + 1}`}
+                      type={col.type === 'number' ? 'number' : 'text'}
+                      step={col.type === 'number' ? 'any' : undefined}
+                      list={col.list}
+                      value={r[col.key] === null || r[col.key] === undefined ? '' : String(r[col.key])}
+                      onChange={(e) => set(i, col.key, e.target.value)}
+                    />
+                  )}
                 </td>
               ))}
               <td>

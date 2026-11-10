@@ -26,5 +26,16 @@ export const toMinor = (text: string) => {
   return Number.isFinite(n) ? Math.round(n * 100) : 0;
 };
 
+/**
+ * A quantity as people read it: no trailing zeros ("1", not "1.000"; "2.5" stays "2.5"), thousands grouped. Quantities are stored with
+ * three decimals so kilos and litres work, but a piece count must never show them. Accepts the text the database sends too ("1.000").
+ */
+export function formatQty(n: number | string | null | undefined): string {
+  if (n === null || n === undefined || n === '') return '';
+  const v = typeof n === 'number' ? n : Number(n);
+  if (!Number.isFinite(v)) return String(n);
+  return v.toLocaleString('en-US', { maximumFractionDigits: 3 });
+}
+
 /** True when something was typed that is not a number, so the form can say so instead of silently disabling its button. */
 export const isBadAmount = (text: string) => text.trim() !== '' && !Number.isFinite(parseAmount(text));

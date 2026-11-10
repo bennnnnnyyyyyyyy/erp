@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
-import { hasPermission } from '@erp/shared';
+import { formatMoney, hasPermission } from '@erp/shared';
+import { SkuFormatControl } from '../../components/SkuFormat';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
@@ -19,7 +20,7 @@ import { AddItemModal, AddWarehouseModal, EditItemModal } from './ItemModals';
 
 /** One row of Stock on hand: an item in one warehouse (inventory redesign Q4 B), or the item alone when it has no stock anywhere.
  *  `totalAvailable` is the item's available stock in all warehouses: the status compares it with the item's reorder level. */
-type StockLine = DemoItem & { warehouseId: string | null; onHand: number; reserved: number; available: number; totalAvailable: number };
+type StockLine = DemoItem & { tracksBatches?: boolean; warehouseId: string | null; onHand: number; reserved: number; available: number; totalAvailable: number };
 
 export function StockPage() {
   const cat = useCatalog();
@@ -33,6 +34,10 @@ export function StockPage() {
   const canAdd = hasPermission(session.permissions, 'inventory.items.manage');
   const canEdit = canAdd && !demoMode;
   const canAddWarehouse = hasPermission(session.permissions, 'inventory.warehouses.manage');
+  const isManager = !demoMode && (session.role === 'owner' || session.role === 'admin');
+  const currency = session.org?.defaultCurrency ?? 'EGP';
+  const costs = useLoad(() => (isManager ? api<{ itemId: string; avgCostMinor: number | null }[]>('/v1/inventory/item-costs').catch(() => []) : Promise.resolve([])));
+  const costOf = new Map((costs.data ?? []).map((x) => [x.itemId, x.avgCostMinor]));
 
   // One row per item and warehouse (Ben, 10 Nov: Q4 B). An item with no stock anywhere still gets one row, so new items show.
   const items = cat.items.data ?? [];
@@ -61,6 +66,19 @@ export function StockPage() {
           : isLow(r, r.totalAvailable)
             ? <Pill status="submitted" label={tr('Low')} />
             : <Pill status="received" label={tr('OK')} /> },
+    // More about each item (walkthrough fix, 10 Nov 2026: "i should have more options"): the reorder level, whether it is tracked by batch,
+    // and, for owners and admins only (the database refuses others), the average cost.
+    { key: 'reorder', label: tr('Reorder level'), value: (r) => r.reorderLevel ?? -1, align: 'right', render: (r) => (r.reorderLevel === null ? <span className="muted">—</span> : qty(r.reorderLevel)) },
+    { key: 'batches', label: tr('Batch tracked'), value: (r) => (r.tracksBatches ? 'yes' : 'no'), render: (r) => (r.tracksBatches ? tr('Yes') : <span className="muted">{tr('No')}</span>) },
+    ...(isManager
+      ? [{
+          key: 'cost',
+          label: tr('Average cost'),
+          value: (r: StockLine) => costOf.get(r.id) ?? -1,
+          align: 'right' as const,
+          render: (r: StockLine) => (costOf.get(r.id) == null ? <span className="muted">—</span> : formatMoney({ amountMinor: costOf.get(r.id) as number, currency })),
+        }]
+      : []),
     { key: 'onHand', label: tr('On hand'), value: (r) => r.onHand, align: 'right', render: (r) => qty(r.onHand) },
     { key: 'reserved', label: tr('Reserved'), value: (r) => r.reserved, align: 'right', render: (r) => (r.reserved ? qty(r.reserved) : <span className="muted">0</span>) },
     { key: 'available', label: tr('Available'), value: (r) => r.available, align: 'right', render: (r) => <strong>{qty(r.available)}</strong> },
@@ -86,6 +104,7 @@ export function StockPage() {
     <section className="page">
       <h1>{tr('Stock on hand')}</h1>
       <p className="muted">{tr('On-hand, reserved and available quantities by warehouse.')}</p>
+      {canAdd && <SkuFormatControl />}
       {cat.ready && stock.data && (
         <div className="stats">
           <div className="stat" style={{ '--i': 0 } as CSSProperties}>

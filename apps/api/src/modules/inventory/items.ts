@@ -2,7 +2,7 @@ import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { HttpError } from '../../lib/errors';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -100,6 +100,38 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
         };
       }),
     );
+  });
+
+  // The company's item code format and the next free code (sql/075). Before the migration is applied there is simply no format.
+  inventoryRoutes.get('/sku-format', requirePermission('inventory.items.read'), async (c) => {
+    try {
+      const format = await callRpc<{ prefix: string; digits: number } | null>(userDb(c), 'inv_sku_format', {});
+      // The next code needs a role that can create items; a viewer just sees the format.
+      let next: string | null = null;
+      try {
+        next = await callRpc<string | null>(userDb(c), 'inv_next_sku', {});
+      } catch (err) {
+        if (!(err instanceof HttpError) || err.status !== 403) throw err;
+      }
+      return ok(c, { format: format ?? null, next });
+    } catch (err) {
+      if (isMissingSchema(err)) return ok(c, { format: null, next: null });
+      throw err;
+    }
+  });
+  // Choose the format once: a prefix and how many digits (ITM- and 4 gives ITM-0001). Owners and admins; the change is audited.
+  inventoryRoutes.put('/sku-format', requirePermission('inventory.items.manage'), async (c) => {
+    const body = await jsonBody(c);
+    const prefix = text(body.prefix).toUpperCase();
+    const digits = Number(body.digits);
+    if (!/^[A-Z0-9-]{0,12}$/.test(prefix)) invalid('A prefix is letters, digits and dashes, up to 12');
+    if (!Number.isInteger(digits) || digits < 1 || digits > 8) invalid('Digits must be a whole number from 1 to 8');
+    const format = await callRpc<{ prefix: string; digits: number }>(userDb(c), 'inv_set_sku_format', {
+      p_prefix: prefix,
+      p_digits: digits,
+    });
+    const next = await callRpc<string | null>(userDb(c), 'inv_next_sku', {});
+    return ok(c, { format, next });
   });
 
   inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), async (c) => {

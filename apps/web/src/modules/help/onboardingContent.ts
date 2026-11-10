@@ -36,7 +36,7 @@ export type OnboardingContent = {
   business: { options: Record<BusinessType, { label: string; hint: string }>; unitHint: Record<BusinessType, string> };
   company: { name: string; currency: string; timezone: string; dateFormat: string };
   warehouse: { code: string; codeHint: string; name: string; condition: string; conditionHint: string; existing: (n: number) => string };
-  items: { sku: string; name: string; unit: string; opening: string; cost: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
+  items: { sku: string; name: string; nameAr: string; warehouse: string; unit: string; opening: string; cost: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
   team: { email: string; fullName: string; role: string; roles: Record<'admin' | 'member' | 'viewer', string>; invite: string; invited: (email: string) => string; existing: (n: number) => string };
   approval: { always: string; minQty: string; minQtyHint: string; approvers: string; existing: (n: number) => string };
   done: { tour: string; home: string; checklist: string };
@@ -115,6 +115,8 @@ const EN: OnboardingContent = {
   items: {
     sku: 'Code (SKU)',
     name: 'Name',
+    nameAr: 'Name in Arabic',
+    warehouse: 'Warehouse',
     unit: 'Unit',
     opening: 'In stock now',
     cost: 'Cost each',
@@ -230,6 +232,8 @@ const AR: OnboardingContent = {
   items: {
     sku: 'رمز الصنف (SKU)',
     name: 'الاسم',
+    nameAr: 'الاسم بالعربية',
+    warehouse: 'المستودع',
     unit: 'الوحدة',
     opening: 'الموجود الآن',
     cost: 'تكلفة الوحدة',

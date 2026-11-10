@@ -1,4 +1,5 @@
 import type { SessionInfo } from '@erp/shared';
+import { formatQty } from './numbers';
 
 type OrgPrefs = Pick<NonNullable<SessionInfo['org']>, 'timezone' | 'dateFormat'>;
 
@@ -55,7 +56,7 @@ export function formatDateTime(iso: string | null | undefined, org: OrgPrefs | n
 }
 
 /** "30 × Safety gloves": a quantity and an item name. The × is the same in both languages. */
-export const qtyLine = (qty: number | string, name: string): string => `${qty} × ${name}`;
+export const qtyLine = (qty: number | string, name: string): string => `${formatQty(qty)} × ${name}`;
 
 /**
  * Keeps a piece of left-to-right text (a quantity line, a code) in its own order inside an Arabic sentence. Without it the bidi

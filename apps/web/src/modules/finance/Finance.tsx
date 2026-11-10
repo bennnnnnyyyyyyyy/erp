@@ -19,7 +19,7 @@ type Category = { id: string; name: string };
 type Expense = { id: string; number: string; date: string; categoryId: string; supplierId: string | null; amountMinor: number; currency: string; note: string | null; status: 'recorded' | 'void' };
 type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; targetNumber: string | null; note: string | null; status: 'recorded' | 'void' };
 /** An invoice or expense with money still outstanding (GET /v1/finance/open-items). */
-type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' | 'expense'; id: string; number: string; partyId: string | null; currency: string; totalMinor: number; paidMinor: number; leftMinor: number; detail?: string };
+type OpenItem = { value: string; kind: 'customer_invoice' | 'supplier_invoice' | 'expense'; id: string; number: string; partyId: string | null; currency: string; totalMinor: number; paidMinor: number; leftMinor: number; dueDate?: string; daysOverdue?: number; detail?: string };
 type Named = { id: string; name: string };
 
 const today = () => todayIn();   // company time zone (decision D11)
@@ -170,6 +170,9 @@ export function PaymentsPage() {
   const [preset] = useState(() => { const f = new URLSearchParams(window.location.search).get('for') ?? ''; return /^[cse]:[0-9a-f-]{36}$/i.test(f) ? f : ''; });
   const [direction, setDirection] = useState<'in' | 'out'>(preset.startsWith('c:') || !preset ? 'in' : 'out');
   const [target, setTarget] = useState(preset);
+  // For a payment out: pick the supplier first, then one of that supplier's unpaid bills (walkthrough, 10 Nov 2026: "should have the
+  // pending invoices not paid"). Empty = every supplier.
+  const [supplierId, setSupplierId] = useState('');
   const [formOpen, setFormOpen] = useState(preset !== '');
   const [amount, setAmount] = useState('');
   const [paidOn, setPaidOn] = useState(today());
@@ -192,15 +195,20 @@ export function PaymentsPage() {
   const name = (list: Named[] | null, id: string | null) => (id ? list?.find((x) => x.id === id)?.name ?? '' : '');
 
   // What can be paid: each open item with what is still outstanding (from the server).
-  const open = (direction === 'in' ? openIn.data : openOut.data).map((t) => ({
+  const due = (t: OpenItem) => (t.dueDate ? trf('due {date}', { date: formatDay(t.dueDate, session.org) }) : '');
+  const pool = direction === 'in' ? openIn.data : openOut.data.filter((t) => !supplierId || t.partyId === supplierId);
+  const open = pool.map((t) => ({
     value: t.value,
     label: t.kind === 'customer_invoice' ? `${t.number} · ${name(customers.data, t.partyId)}`
-      : t.kind === 'supplier_invoice' ? `${trf('Purchase invoice {number}', { number: t.number })} · ${name(suppliers.data, t.partyId)}`
+      : t.kind === 'supplier_invoice' ? [trf('Purchase invoice {number}', { number: t.number }), name(suppliers.data, t.partyId), due(t)].filter(Boolean).join(' · ')
       // Category, note and supplier, so unpaid expenses can be told apart (decision D7).
-      : [trf('Expense {number}', { number: t.number }), t.detail, name(suppliers.data, t.partyId)].filter(Boolean).join(' · '),
+      : [trf('Expense {number}', { number: t.number }), t.detail, name(suppliers.data, t.partyId), due(t)].filter(Boolean).join(' · '),
     left: t.leftMinor,
     currency: t.currency,
   }));
+  // Suppliers that have something unpaid, for the supplier choice.
+  const owedOut = openOut.data;
+  const owedSuppliers = (suppliers.data ?? []).filter((s) => owedOut.some((t) => t.partyId === s.id));
   const chosen = open.find((t) => t.value === target);
   const needsBox = treasuryOn && (method === 'cash' || method === 'bank');
   const boxes = (treasury.data ?? []).filter((b) => b.active && b.kind === method && (!chosen || b.currency === chosen.currency));
@@ -219,11 +227,19 @@ export function PaymentsPage() {
       <FormToggle label={tr('Record a payment')} open={formOpen} onOpenChange={setFormOpen}>
         <div className="form-row">
           <label>{tr('Payment type')}
-            <select value={direction} onChange={(e) => { setDirection(e.target.value as 'in' | 'out'); setTarget(''); }}>
+            <select value={direction} onChange={(e) => { setDirection(e.target.value as 'in' | 'out'); setTarget(''); setSupplierId(''); }}>
               <option value="in">{tr('Customer receipt')}</option>
               <option value="out">{tr('Payment to supplier or expense')}</option>
             </select>
           </label>
+          {direction === 'out' ? (
+            <label>{tr('Supplier')}
+              <select value={supplierId} onChange={(e) => { setSupplierId(e.target.value); setTarget(''); }}>
+                <option value="">{tr('All suppliers')}</option>
+                {owedSuppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          ) : null}
           <label>{tr('For')}
             <select value={target} onChange={(e) => { setTarget(e.target.value); const t = open.find((x) => x.value === e.target.value); if (t) setAmount((t.left / 100).toFixed(2)); }}>
               <option value="">{tr('Choose…')}</option>

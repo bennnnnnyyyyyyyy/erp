@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
+import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
+import { UnitSelect } from '../../components/UnitSelect';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import { tr, trf } from '../../lib/i18n';
@@ -9,6 +11,15 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
   const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // The company's code format (sql/075): the next free code is filled in and stays editable. With no format yet, an owner or admin is asked once.
+  const sku = useSkuFormat();
+  const canSetFormat = useCanSetSkuFormat();
+  const [skipFormat, setSkipFormat] = useState(false);
+  const [touchedSku, setTouchedSku] = useState(false);
+  useEffect(() => {
+    if (sku.info?.next && !touchedSku) setForm((f) => ({ ...f, sku: sku.info?.next ?? f.sku }));
+  }, [sku.info?.next, touchedSku]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -24,9 +35,12 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
   return (
     <Modal title={tr('Add item')} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
+        {sku.info && !sku.info.format && canSetFormat && !skipFormat ? (
+          <SkuFormatForm initial={null} onSaved={(info) => sku.setInfo(info)} onCancel={() => setSkipFormat(true)} />
+        ) : null}
         <div className="form-row">
-          <label>SKU<input required value={form.sku} onChange={set('sku')} /></label>
-          <label>{tr('Unit')}<input required value={form.uom} onChange={set('uom')} /></label>
+          <label>SKU<input required value={form.sku} onChange={(e) => { setTouchedSku(true); set('sku')(e); }} /></label>
+          <label>{tr('Unit')}<UnitSelect label={tr('Unit')} value={form.uom} onChange={(uom) => setForm((f) => ({ ...f, uom }))} /></label>
         </div>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
