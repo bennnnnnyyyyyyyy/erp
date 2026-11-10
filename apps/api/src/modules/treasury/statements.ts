@@ -124,6 +124,80 @@ async function candidates(c: Ctx, accountId: string): Promise<(LedgerCandidate &
   }));
 }
 
+// ------------------------------------------------------------------ part 2 (sql/068): explain, rules, bank charges, roles
+
+statementRoutes.get('/reconcile-roles', requirePermission('treasury.statements.view'), async (c) =>
+  ok(c, { roles: await callRpc<string[]>(userDb(c), 'trs_reconcile_roles', {}) }),
+);
+
+statementRoutes.post('/bank-charges/prepare', requirePermission('treasury.statements.reconcile'), async (c) =>
+  ok(c, { categoryId: await callRpc<string>(userDb(c), 'trs_prepare_bank_charges', {}) }),
+);
+
+type RuleRow = { id: string; account_id: string | null; contains: string; category_id: string; note: string | null };
+async function loadRules(c: Ctx): Promise<RuleRow[]> {
+  const { data, error } = await userDb(c)
+    .from('trs_match_rules')
+    .select('id, account_id, contains, category_id, note')
+    .eq('org_id', orgOf(c))
+    .is('deleted_at', null)
+    .order('contains');
+  if (error) throw error;
+  return (data ?? []) as RuleRow[];
+}
+
+statementRoutes.get('/rules', requirePermission('treasury.statements.view'), async (c) =>
+  ok(
+    c,
+    (await loadRules(c)).map((r) => ({ id: r.id, accountId: r.account_id, contains: r.contains, categoryId: r.category_id, note: r.note })),
+  ),
+);
+
+async function saveRule(c: Ctx, id: string | null) {
+  const b = await jsonBody(c);
+  const contains = text(b.contains);
+  const categoryId = text(b.categoryId);
+  const accountId = text(b.accountId);
+  if (contains.length < 2 || !UUID_RE.test(categoryId) || (accountId && !UUID_RE.test(accountId)))
+    invalid('Text to look for (2 letters or more) and a category');
+  const saved = await callRpc<string>(userDb(c), 'trs_save_rule', {
+    p_id: id,
+    p_account_id: accountId || null,
+    p_contains: contains,
+    p_category_id: categoryId,
+    p_note: text(b.note) || null,
+  });
+  return ok(c, { id: saved }, id ? 200 : 201);
+}
+statementRoutes.post('/rules', requirePermission('treasury.statements.reconcile'), async (c) => saveRule(c, null));
+statementRoutes.put('/rules/:id', requirePermission('treasury.statements.reconcile'), async (c) => saveRule(c, param(c, 'id')));
+statementRoutes.delete('/rules/:id', requirePermission('treasury.statements.reconcile'), async (c) => {
+  await callRpc<void>(userDb(c), 'trs_delete_rule', { p_id: param(c, 'id') });
+  return ok(c, { deleted: true });
+});
+
+// Record what an unmatched bank line was and match it (sql/068 trs_explain_line). kind: expense | customer_payment |
+// supplier_payment | transfer; the ids it needs depend on the kind. The existing functions' checks all apply.
+statementRoutes.post('/lines/:id/explain', requirePermission('treasury.statements.reconcile'), async (c) => {
+  const b = await jsonBody(c);
+  const kind = text(b.kind);
+  if (!['expense', 'customer_payment', 'supplier_payment', 'transfer'].includes(kind))
+    invalid('kind: expense, customer_payment, supplier_payment or transfer');
+  const args: Record<string, string> = {};
+  for (const key of ['categoryId', 'supplierId', 'invoiceId', 'billId', 'otherAccountId'] as const) {
+    const v = text(b[key]);
+    if (v) {
+      if (!UUID_RE.test(v)) invalid(`${key} must be an id`);
+      args[key] = v;
+    }
+  }
+  if (kind === 'customer_payment' && !args.invoiceId) invalid('Choose the invoice this payment is for');
+  if (kind === 'supplier_payment' && !args.billId) invalid('Choose the supplier bill this payment is for');
+  if (kind === 'transfer' && !args.otherAccountId) invalid('Choose the other account');
+  if (text(b.note)) args.note = text(b.note).slice(0, 200);
+  return ok(c, await callRpc<unknown>(userDb(c), 'trs_explain_line', { p_line_id: param(c, 'id'), p_kind: kind, p_args: args }), 201);
+});
+
 // ------------------------------------------------------------------ settings and formats
 
 statementRoutes.put('/reconcile-roles', requirePermission('treasury.statements.reconcile'), async (c) => {
@@ -271,6 +345,14 @@ statementRoutes.get('/imports/:id', requirePermission('treasury.statements.view'
   if (me) throw me;
   const cands = await candidates(c, imp.account_id as string);
   const byId = new Map(cands.map((x) => [x.id, x]));
+  // Rules (sql/068) for this account or every account: "the text contains X -> an expense in category Y". Money out only.
+  const rules = (await loadRules(c)).filter((r) => !r.account_id || r.account_id === imp.account_id);
+  const ruleFor = (text: string, amount: number) => {
+    if (amount >= 0) return null;
+    const hay = text.toLowerCase();
+    const r = rules.find((x) => hay.includes(x.contains.toLowerCase()));
+    return r ? { ruleId: r.id, categoryId: r.category_id, contains: r.contains } : null;
+  };
   return ok(c, {
     id: imp.id,
     accountId: imp.account_id,
@@ -294,6 +376,7 @@ statementRoutes.get('/imports/:id', requirePermission('treasury.statements.view'
         balanceMinor: l.balance_minor === null ? null : Number(l.balance_minor),
         status: l.status,
         ignoreReason: l.ignore_reason,
+        rule: l.status === 'open' ? ruleFor(`${l.description} ${l.reference}`, Number(l.amount_minor)) : null,
         matches: ((ms ?? []) as { line_id: string; entry_line_id: number; amount_minor: number }[])
           .filter((m) => m.line_id === l.id)
           .map((m) => ({ entryLineId: String(m.entry_line_id), amountMinor: Number(m.amount_minor) })),
