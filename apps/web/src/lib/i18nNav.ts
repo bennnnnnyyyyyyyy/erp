@@ -45,6 +45,11 @@ export const NAV_AR: Record<string, string> = {
   // machine draft (10 Nov), in the Arabic review sheet
   'Stock counts': 'جرد المخزون',
   'Stock count': 'جرد مخزون',
+  Item: 'صنف',
+  Overview: 'نظرة عامة',
+  Counting: 'الجرد',
+  Planning: 'التخطيط',
+  'Records and rules': 'السجلات والقواعد',
   'Stock transfers': 'تحويلات المخزون',
   'New transfer': 'تحويل جديد',
   Transfer: 'تحويل',

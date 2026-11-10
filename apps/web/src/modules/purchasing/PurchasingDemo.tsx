@@ -268,7 +268,7 @@ export function PurchaseOrderPage() {
         </div>
       )}
       {o.status === 'received' && (
-        <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory">{tr('check stock on hand')}</Link>.</p>
+        <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory/stock">{tr('check stock on hand')}</Link>.</p>
       )}
 
       <RecordHistory key={`${o.id}:${o.status}`} id={o.id} />

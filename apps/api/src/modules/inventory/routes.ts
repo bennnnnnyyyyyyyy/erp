@@ -169,13 +169,16 @@ inventoryRoutes.get('/stock', requirePermission('inventory.items.read'), async (
   );
 });
 
+// The latest stock movements; ?itemId= limits them to one item (the item page, inventory redesign 10 Nov 2026).
 inventoryRoutes.get('/ledger', requirePermission('inventory.items.read'), async (c) => {
-  const { data, error } = await userDb(c)
+  const itemId = c.req.query('itemId');
+  if (itemId !== undefined && !UUID_RE.test(itemId)) invalid('itemId must be an item id');
+  let query = userDb(c)
     .from('inv_stock_moves')
     .select('id, item_id, warehouse_id, qty, kind, request_id, ref, posted_by, posted_at, inv_requests(number)')
-    .eq('org_id', orgOf(c))
-    .order('id', { ascending: false })
-    .limit(500);
+    .eq('org_id', orgOf(c));
+  if (itemId) query = query.eq('item_id', itemId);
+  const { data, error } = await query.order('id', { ascending: false }).limit(500);
   if (error) throw error;
   type LedgerRow = {
     id: number;
@@ -324,6 +327,25 @@ inventoryRoutes.post('/items', requirePermission('inventory.items.manage'), asyn
     c,
     toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }),
     201,
+  );
+});
+
+// Average cost and stock value per item (sql/023 inv_item_costs). The database allows owners and admins only; others get FORBIDDEN,
+// and the item page then simply leaves cost out.
+inventoryRoutes.get('/item-costs', requirePermission('inventory.items.read'), async (c) => {
+  const rows = await callRpc<{ item_id: string; avg_cost_minor: number | null; on_hand: number; value_minor: number | null }[]>(
+    userDb(c),
+    'inv_item_costs',
+    {},
+  );
+  return ok(
+    c,
+    (rows ?? []).map((r) => ({
+      itemId: r.item_id,
+      avgCostMinor: r.avg_cost_minor === null ? null : Number(r.avg_cost_minor),
+      onHand: Number(r.on_hand),
+      valueMinor: r.value_minor === null ? null : Number(r.value_minor),
+    })),
   );
 });
 

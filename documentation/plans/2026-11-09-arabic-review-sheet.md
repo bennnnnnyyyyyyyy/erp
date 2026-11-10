@@ -59,3 +59,7 @@ Placeholders such as `{name}`, `{item}` and `{n}` must stay exactly as they are 
 | 45 | Wizard | (the other five unit hints, same pattern) | see `onboardingContent.ts`, `business.unitHint` | |
 | 46 | Menu | Stock counts / Stock count | جرد المخزون / جرد مخزون | |
 | 47 | Stock counts | (the 28 texts of the Stock counts screens) | see `apps/web/src/lib/i18nDecisions.ts`, section "Stock counts screens" | |
+| 48 | Item page | (the 25 texts of the item page: tabs, totals, empty states) | see `apps/web/src/lib/i18nDecisions.ts`, section "Item page" | |
+| 49 | Menu | Item | صنف | |
+| 50 | Inventory overview | (the 17 texts of the overview: numbers, "Needs you today" lines) | see `apps/web/src/lib/i18nDecisions.ts`, section "Inventory overview" | |
+| 51 | Menu | Overview / Counting / Planning / Records and rules | نظرة عامة / الجرد / التخطيط / السجلات والقواعد | |

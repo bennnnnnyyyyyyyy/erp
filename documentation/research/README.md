@@ -39,6 +39,7 @@ a module plan from it without going back to the system.
 | Daftra | `daftra` | Inventory, requisitions, lots/serials/expiry | Not started | inventory |
 | Odoo | `odoo` | Inventory, internal transfers, WhatsApp, AI agents | In progress: main benchmark; P1 gap written ([`odoo/P1_GAP.md`](odoo/P1_GAP.md)), trial results pending | inventory, messaging |
 | Wafeq | `wafeq` | Accounting, approval-gated AI agent, EGP pricing | Not started | billing |
+| Microsoft Dynamics 365 Supply Chain | `dynamics-365-scm` | Purchase process, landed cost; MRP basics | Parked: from two training videos; gap list written ([`dynamics-365-scm/TEARDOWN.md`](dynamics-365-scm/TEARDOWN.md)) | purchasing, inventory |
 | Zoho (Books/Inventory) | `zoho` | Approvals, audit trail, transfer orders | Not started | inventory |
 | ERPNext | `erpnext` | Workflow engine, multi-level approvals | Not started | inventory |
 | Business Central | `business-central` | Approval workflows, agents, MCP | Not started | messaging |

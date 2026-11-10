@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Inventory redesign: Ben's choices, and slice 1 (the item page)
+
+**Objective.** Ben chose the inventory redesign options (Q1 A item page with tabs, Q2 A "what needs you today", Q3 A grouped menu,
+Q4 B one row per item and warehouse, Q5 A phone cards) and MVP M3 (blind counts as a company setting). Build slice 1.
+
+**Actions Completed.** Branch `ux/inventory-redesign`.
+- Answers recorded in `documentation/planning/2026-11-10-inventory-redesign-options.md` and `2026-11-10-mvp-readiness.md`.
+- `apps/web/src/modules/inventory/ItemPage.tsx` at `/inventory/items/:id`: totals, runs-out date, average cost (managers), tabs for
+  stock by warehouse, movements, batches, units, cost and history; Edit reuses the item edit dialog. Linked from every Stock on hand
+  row and every item in the Stock ledger. Tab styles added (logical properties, RTL-safe). Arabic as machine drafts.
+- API: `GET /v1/inventory/ledger?itemId=` (checked id); `GET /v1/inventory/item-costs` (the owner-and-admin function inv_item_costs).
+- `apps/api/test/new_routes_auth.test.ts`: the 12 routes added on 9–10 Nov need a signed-in user; item costs come from the function.
+
+- **Slice 2:** `apps/web/src/modules/inventory/Overview.tsx` opens Inventory: four numbers, "Needs you today" (by role), shortcuts.
+  Stock on hand moved to `/inventory/stock`; links updated (item page, setup wizard, Getting started, purchase order page). Menu
+  grouped as Ben chose (MENU_GROUPS: Counting, Planning, Records and rules); icons for Stock on hand and Stock counts.
+
+**Database / System Result.** None.
+
+**Safety Status.** Lint, typecheck, tests (API 304 + 7 skipped, web 88) pass. Not viewed in a browser.
+
 ## 2026-11-10 — Setup wizard asks "What do you sell?" (UX decision D9)
 
 **Objective.** Ben's D9: the wizard starts with "What do you sell?" and shows only the steps that fit; no language step.

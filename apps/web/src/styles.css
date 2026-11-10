@@ -379,6 +379,13 @@ td input { margin-top: 0; }
 /* trade demo screens */
 .form-row.three { grid-template-columns: 2fr 1fr 1fr; }
 .steps.wide { max-width: 760px; }
+
+/* Tabs (item page, inventory redesign 10 Nov 2026). Logical properties only, so they mirror in Arabic. */
+.tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-block: 1.25rem 0.75rem; border-block-end: 1px solid var(--border-strong); }
+.tab { background: transparent; border: 0; border-block-end: 2px solid transparent; padding: 0.5rem 0.9rem; margin-block-end: -1px; color: var(--muted-foreground); font: inherit; cursor: pointer; }
+.tab:hover { color: var(--foreground); }
+.tab.active { color: var(--foreground); border-block-end-color: var(--primary); font-weight: 600; }
+.tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 720px) { .form-row.three { grid-template-columns: 1fr; } }
 /* Phones: every table becomes a stack of cards instead of scrolling sideways. Each cell shows its
    column name (data-label) at the start and its value at the end; the first cell (the record's number or name) is the card's title.
@@ -555,3 +562,8 @@ td input { margin-top: 0; }
 .search-select-list li { padding: 0.45rem 0.6rem; border-radius: calc(var(--radius) * 0.7); cursor: pointer; font-size: 0.9rem; }
 .search-select-list li.is-active, .search-select-list li[aria-selected='true'] { background: var(--accent); }
 .search-select-list li.search-select-none { cursor: default; background: none; }
+
+/* "Needs you today" on the Inventory overview (inventory redesign Q2, 10 Nov 2026). */
+.task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.task-list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.65rem 0.9rem; border: 1px solid var(--border-strong); border-radius: 0.6rem; background: var(--surface-1, transparent); }
+.task-list li span { min-width: 0; }

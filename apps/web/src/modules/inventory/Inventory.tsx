@@ -114,7 +114,7 @@ function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehou
 
 // Decision D4 (sql/062): fix an item's name later. The SKU and unit stay (documents and quantities depend on them); the old and new
 // names are kept in the history.
-function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClose: () => void; onDone: () => void }) {
+export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({ name: item.name, nameAr: item.nameAr ?? '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -264,6 +264,7 @@ export function StockPage() {
           rows={rows}
           columns={columns}
           rowKey={(r) => r.id}
+          rowHref={(r) => `/inventory/items/${r.id}`}
           toolbar={
             <>
               <select className="narrow-select" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} aria-label={tr('Warehouse')}>
@@ -768,7 +769,7 @@ export function RequestPage() {
 // ------------------------------------------------------------------ ledger
 
 /** Plain words for the stock ledger's movement codes (UX audit: the list showed `transfer_out`, `return_in`). */
-const MOVE_KIND_LABEL: Record<string, string> = {
+export const MOVE_KIND_LABEL: Record<string, string> = {
   receipt: 'Received', issue: 'Issued', adjust: 'Count adjustment', transfer_out: 'Transfer out', transfer_in: 'Transfer in', return_in: 'Customer return',
 };
 
@@ -780,7 +781,7 @@ export function LedgerPage() {
 
   const columns: Column<LedgerMove>[] = [
     { key: 'when', label: tr('When'), value: (m) => m.postedAt, render: (m) => <span className="nowrap">{formatDateTime(m.postedAt, session.org)}</span> },
-    { key: 'item', label: tr('Item'), value: (m) => cat.itemName(m.itemId) },
+    { key: 'item', label: tr('Item'), value: (m) => cat.itemName(m.itemId), render: (m) => <Link to={`/inventory/items/${m.itemId}`}>{cat.itemName(m.itemId)}</Link> },
     { key: 'wh', label: tr('Warehouse'), value: (m) => cat.warehouseName(m.warehouseId) },
     { key: 'kind', label: tr('Type'), value: (m) => m.kind, render: (m) => tr(MOVE_KIND_LABEL[m.kind] ?? m.kind) },
     { key: 'qty', label: tr('Quantity'), value: (m) => m.qty, align: 'right', render: (m) => <strong className={m.qty < 0 ? 'overdue' : undefined}>{m.qty > 0 ? `+${m.qty}` : m.qty}</strong> },

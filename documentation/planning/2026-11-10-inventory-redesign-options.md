@@ -37,7 +37,7 @@ sections. Faster to look at several items; cramped on a laptop and on phones.
 
 **C. Keep the separate screens**, and only make each item name a link to that item's lines in the stock ledger.
 
-Your answer:
+Your answer: **A**, a full item page with tabs (Ben, 10 Nov).
 
 ## Q2. The Inventory home (overview)
 
@@ -60,7 +60,7 @@ Needs you today
 
 **C. No overview page**: keep opening on Stock on hand, with the four numbers on top (today).
 
-Your answer:
+Your answer: **A**, "What needs you today" (Ben, 10 Nov).
 
 ## Q3. The menu
 
@@ -89,7 +89,7 @@ corrections"). Seven entries instead of eleven, but two pages become longer.
 
 **C. Keep the flat list** (today).
 
-Your answer:
+Your answer: **A**, grouped, the clerk's three on top (Ben, 10 Nov).
 
 ## Q4. The stock list
 
@@ -100,7 +100,7 @@ Out), and the row opens the item page. Columns you can hide: Arabic name, unit, 
 
 **C. Keep today's table**, adding only the link to the item page.
 
-Your answer:
+Your answer: **B**, one row per item and warehouse (Ben, 10 Nov). The item page shows the totals.
 
 ## Q5. On a phone (warehouse staff)
 
@@ -108,7 +108,7 @@ Your answer:
 
 **B. The same tables, scrolling sideways** (today).
 
-Your answer:
+Your answer: **A**, cards and big buttons below tablet width (Ben, 10 Nov).
 
 ## How it would be built
 
@@ -120,3 +120,16 @@ filtered by item (an API change only).
 3. The stock list (Q4) and phone layout (Q5).
 
 After each slice: checked in the browser in English and Arabic before it is merged.
+
+## Progress
+
+- **Slice 1, the item page (Q1): built** on branch `ux/inventory-redesign`. Inventory → Stock on hand → click a row (or an item in
+  the Stock ledger). Tabs: stock by warehouse, movements, batches, units, cost (owners and admins), history. Totals on top, with
+  "runs out" from the forecast and the average cost for managers. API: the stock ledger takes `?itemId=`; `GET /item-costs` reads the
+  owner-and-admin function `inv_item_costs`. No database change.
+- **Next:** slice 2, the overview (Q2) and grouped menu (Q3); then slice 3, the stock list one row per item and warehouse (Q4) and
+  phone cards (Q5). The blind-count setting (MVP M3, answer C) needs a small database change and comes with the stock list slice.
+- **Slice 2, overview (Q2) and grouped menu (Q3): built** on the same branch. Inventory now opens on the overview: four numbers, then
+  "Needs you today" (approvals, approved requests to issue, transfers to receive, low items, batches expiring within 30 days), each
+  with its button, then shortcuts; each person sees only what their role can act on. Stock on hand moved to `/inventory/stock` (every
+  link updated). Menu: Overview, Stock on hand, Requests, Transfers; then Counting, Planning, Records and rules.

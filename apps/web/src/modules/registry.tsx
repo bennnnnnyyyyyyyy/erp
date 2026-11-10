@@ -22,6 +22,8 @@ const TransferPage = lazyNamed(() => import('./inventory/Transfers'), 'TransferP
 const TransfersList = lazyNamed(() => import('./inventory/Transfers'), 'TransfersList');
 const CountsList = lazyNamed(() => import('./inventory/Counts'), 'CountsList');
 const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
+const ItemPage = lazyNamed(() => import('./inventory/ItemPage'), 'ItemPage');
+const InventoryOverview = lazyNamed(() => import('./inventory/Overview'), 'InventoryOverview');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
 const ApprovalPoliciesPage = lazyNamed(() => import('./inventory/Inventory'), 'ApprovalPoliciesPage');
 const LedgerPage = lazyNamed(() => import('./inventory/Inventory'), 'LedgerPage');
@@ -114,13 +116,18 @@ const INVENTORY_APP: AppDef = {
   description: demoMode ? 'Stock, requests, approvals and the ledger (demo data)' : 'Stock, requests, approvals, transfers and the stock ledger',
   suite: 'Warehouse',
   basePath: '/inventory',
+  // Order and groups: inventory redesign Q2 and Q3 (Ben, 10 Nov 2026). The overview opens first; the clerk's three pages (stock,
+  // requests, transfers) come next as single items; the rest sit in groups (MENU_GROUPS below).
   pages: [
-    { path: '', label: 'Stock on hand', permission: READ, component: StockPage },
-    { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
-    ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
-    ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
-    { path: '/approval-policies', label: 'Approval policies', permission: READ, component: ApprovalPoliciesPage },
-    { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
+    { path: '', label: 'Overview', permission: READ, component: InventoryOverview },
+    { path: '/stock', label: 'Stock on hand', permission: READ, component: StockPage },
+    { path: '/items/:id', label: 'Item', permission: READ, component: ItemPage, nav: false, parent: '/stock' },
+    { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
+    { path: '/requests/new', label: 'New request', permission: READ, component: NewRequest, nav: false, parent: '/requests' },
+    { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },
+    { path: '/transfers', label: 'Stock transfers', permission: 'inventory.transfers.read', component: TransfersList },
+    { path: '/transfers/new', label: 'New transfer', permission: 'inventory.transfers.create', component: NewTransfer, nav: false, parent: '/transfers' },
+    { path: '/transfers/:id', label: 'Transfer', permission: 'inventory.transfers.read', component: TransferPage, nav: false, parent: '/transfers' },
     // Stock counts (sql/042): the sample-data demo has no counts, so only in the real app.
     ...(demoMode
       ? []
@@ -128,13 +135,12 @@ const INVENTORY_APP: AppDef = {
           { path: '/counts', label: 'Stock counts', permission: 'inventory.adjustments.read', component: CountsList },
           { path: '/counts/:id', label: 'Stock count', permission: 'inventory.adjustments.read', component: CountPage, nav: false, parent: '/counts' },
         ]),
-    { path: '/transfers', label: 'Stock transfers', permission: 'inventory.transfers.read', component: TransfersList },
-    { path: '/transfers/new', label: 'New transfer', permission: 'inventory.transfers.create', component: NewTransfer, nav: false, parent: '/transfers' },
-    { path: '/transfers/:id', label: 'Transfer', permission: 'inventory.transfers.read', component: TransferPage, nav: false, parent: '/transfers' },
-    { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
-    { path: '/requests/new', label: 'New request', permission: READ, component: NewRequest, nav: false, parent: '/requests' },
-    { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },
+    { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
+    { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
+    ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
+    ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/ledger', label: 'Stock ledger', permission: READ, component: LedgerPage },
+    { path: '/approval-policies', label: 'Approval policies', permission: READ, component: ApprovalPoliciesPage },
   ],
 };
 
@@ -318,10 +324,11 @@ export const SUITE_ORDER: AppDef['suite'][] = ['Warehouse', 'Sales & Purchasing'
  * single menu items. Keyed by app key, then by page path.
  */
 export const MENU_GROUPS: Record<string, Record<string, string>> = {
+  // Ben, 10 Nov 2026 (inventory redesign Q3): Overview, Stock on hand, Requests and Transfers stay single items on top.
   inventory: {
-    '/requests': 'Operations', '/transfers': 'Operations', '/adjustments': 'Operations',
-    '/ledger': 'Reporting', '/forecast': 'Reporting', '/batches': 'Reporting',
-    '/reorder-levels': 'Configuration', '/approval-policies': 'Configuration',
+    '/counts': 'Counting', '/adjustments': 'Counting',
+    '/reorder-levels': 'Planning', '/forecast': 'Planning', '/batches': 'Planning',
+    '/ledger': 'Records and rules', '/approval-policies': 'Records and rules',
   },
 };
 
