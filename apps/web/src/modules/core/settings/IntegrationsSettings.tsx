@@ -13,6 +13,7 @@ import { AiTry } from './AiTry';
 import { IntegrationHeader, IntegrationLogo, StatusBadge } from './IntegrationHeader';
 import { connectionStatus, countStatuses, needsAttention, STATUS_LABEL, type Connection, type ConnectionStatus } from './integrationStatus';
 import { AiNotice, ProviderCard } from './ProvidersSettings';
+import { ReportLinks } from './ReportLinks';
 
 // Settings > Integrations (INTEGRATIONS_PLAN.md wave 1; sql/053). Owners and admins. Each integration starts "simulated": messages
 // are marked delivered but nothing leaves the system, so a company can try it safely. Webhook URLs are write-only (a hint is shown).
@@ -20,11 +21,12 @@ import { AiNotice, ProviderCard } from './ProvidersSettings';
 // Layout (Ben, 9 Nov 2026): a list on the left, one integration on the right, an overview first. This page only CONNECTS an integration;
 // the apps use it (Pay now links on sales invoices, shipments on sales orders, online orders in Sales, copies of messages).
 
-const NAME: Record<IntegrationKind, string> = { email: 'Email', slack: 'Slack', teams: 'Microsoft Teams', telegram: 'Telegram' };
+const NAME: Record<IntegrationKind, string> = { email: 'Email', slack: 'Slack', teams: 'Microsoft Teams', telegram: 'Telegram', google_chat: 'Google Chat' };
 const HELP: Record<IntegrationKind, string> = {
   email: 'Sends a copy of the chosen messages to each person by email.',
   slack: 'Posts the chosen messages to one Slack channel. In Slack: create an app, turn on Incoming Webhooks, add it to a channel, and paste the webhook URL here.',
   teams: 'Posts the chosen messages to one Teams channel. In Teams: on the channel, open Workflows, choose "Send webhook alerts to a channel", and paste the URL it gives you here.',
+  google_chat: 'Posts the chosen messages to one Google Chat space. In Google Chat: open the space, choose Apps & integrations, then Webhooks, add one, and paste the webhook URL here (it starts with https://chat.googleapis.com/).',
   telegram: 'Sends a copy of the chosen messages on Telegram to each person who has linked it (Messages → Connect WhatsApp and Telegram). Free; each message has an "Open in the app" button.',
 };
 const KIND_LABEL: Record<string, string> = {
@@ -216,6 +218,7 @@ function Overview({ connections, aiNoticeNeeded, onOpen }: { connections: Connec
 const OVERVIEW_KEY = 'overview';
 const AI_NOTICE_KEY = 'ai-notice';
 const RATES_KEY = 'exchange-rates';
+const SHEETS_KEY = 'google-sheets';
 
 export function IntegrationsSettings() {
   const session = useSession();
@@ -263,11 +266,11 @@ export function IntegrationsSettings() {
     { title: 'Online store', keys: entries('store') },
     { title: 'Messages', keys: channelConnections.map((c) => c.key) },
     { title: 'AI and voice', keys: [AI_NOTICE_KEY, ...entries('ai')] },
-    { title: 'Other', keys: [RATES_KEY] },
+    { title: 'Other', keys: [RATES_KEY, SHEETS_KEY] },
   ];
-  const known = new Set([OVERVIEW_KEY, AI_NOTICE_KEY, RATES_KEY, ...connections.map((c) => c.key)]);
+  const known = new Set([OVERVIEW_KEY, AI_NOTICE_KEY, RATES_KEY, SHEETS_KEY, ...connections.map((c) => c.key)]);
   const current = known.has(selected) ? selected : OVERVIEW_KEY;
-  const label = (key: string) => (key === AI_NOTICE_KEY ? tr('AI notice') : key === RATES_KEY ? tr('Exchange rates') : (byKey.get(key)?.name ?? key));
+  const label = (key: string) => (key === AI_NOTICE_KEY ? tr('AI notice') : key === RATES_KEY ? tr('Exchange rates') : key === SHEETS_KEY ? tr('Links for Google Sheets') : (byKey.get(key)?.name ?? key));
 
   const providerDef = PROVIDERS.find((d) => d.kind === current);
   const providerItem = providers.data.find((p) => p.kind === current);
@@ -312,6 +315,7 @@ export function IntegrationsSettings() {
             </div>
           ) : null}
           {current === RATES_KEY ? <ExchangeRates /> : null}
+          {current === SHEETS_KEY ? <ReportLinks canManage={canManage} /> : null}
         </div>
       </div>
     </section>

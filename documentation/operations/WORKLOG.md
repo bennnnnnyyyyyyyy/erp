@@ -11,6 +11,165 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — 069–077 applied to live (by Ben); PR #39
+
+**Objective.** Put tonight's database changes live before merging PR #39 (`feat/po-approval`).
+
+**Actions Completed.** Ben applied 069–073 (before the code was deployed) and then 074–077 via CLI; their own verification queries
+showed anon refused and users allowed as designed (074 `anon_edits_warehouses` false; 075 `anon_can_ask` false; 076 `new_columns` 8;
+077 `companies_with_it_on` 0). PR #39 opened. Ben removed private drafts from git tracking in the main checkout (`git rm --cached`).
+
+**Database / System Result.** All of 069–077 live; read-only check afterwards: every object present. Between applying 069 and deploying
+the code, a purchase order made in the old app (PO-0003, test company) waits for approval and its receipt is refused; the old app shows
+that as "Cannot reach the server". It becomes approvable once PR #39 is deployed.
+
+**Safety Status.** Code not yet deployed: merge PR #39 next. Then approve PO-0003 and check the new screens.
+
+**CI on PR #39 found a bug in 070** (SQL test 066 failed: `gen_random_bytes(integer) does not exist`). Supabase keeps pgcrypto in the
+`extensions` schema; `core_create_report_link`'s search_path was `public` only, so creating a report link fails on live too (070 is
+applied). Fix: `sql/078_fix_report_link_token.sql` (adds `extensions` to that function's search_path, like 054). Claude's local test
+runner had pgcrypto in `public`, which hid it; the runner now installs it in `extensions` like Supabase, and reproduces the failure
+without 078. With 078: all 78 migrations and 73 SQL tests pass locally.
+
+## 2026-11-10 — Walkthrough fixes merged (sql/074, 075, 076); pop-ups; self-approval switch
+
+**Objective.** Fix Ben's walkthrough notes (see `documentation/planning/2026-11-10-walkthrough-review.md`).
+
+**Actions Completed.** Merged into `feat/po-approval` after review:
+- `fix/walkthrough-setup` (Sonnet agent): currency and time zone dropdowns (`components/ZoneCurrencyFields.tsx`); sign-up owns name,
+  currency and time zone, onboarding shows them read-only; no Arabic warehouse name in forms; `sql/074_inv_update_warehouse.sql` +
+  test 070 and `PUT /v1/inventory/warehouses/:id`, "Edit warehouse" on Stock on hand and in setup; own display name in My settings;
+  Settings menu grouped; General → "Company options" card; error pop-ups (`components/Toast.tsx`) on sign-up, stock request and orders.
+- `fix/walkthrough-items` (Sonnet agent): `sql/075_inv_sku_format.sql` + test 071 (SKU format, next code prefilled); unit dropdown;
+  more columns on Stock on hand and setup's items step; `sql/076_pur_supplier_details.sql` + test 072 and the supplier form; supplier
+  payments pick from unpaid bills and an "Unpaid bills" list on Purchase invoices; quantities without trailing zeros and a plain
+  "not enough stock" message (`rpc.ts`, Arabic via `translateServerError`).
+- Claude: pop-ups drawn over the whole window (`components/Modal.tsx`, portal; the cause of "anything with a box is broken"); the
+  "Owners may approve their own" switch in Company options (owners only).
+- Not done: customer details (needs its own migration), branch column in setup's warehouse step, error pop-ups on the payment screens.
+
+**Database / System Result.** None applied.
+
+**Safety Status.** Lint and typecheck clean; shared 74 + 1 skipped, API 353 + 7 skipped, web 113; all 77 migrations and 73 SQL tests
+pass locally; doc links OK. Not viewed in a browser. Apply 069–077 in number order before merging (073 needs 069).
+
+## 2026-11-10 — Ben's walkthrough; owners may approve their own (sql/077, decision D1c)
+
+**Objective.** Ben clicked through the app (old version, before tonight's branch) and left notes (`notes.md`, outside the repo) and
+ticks in `documentation/operations/2026-11-11-click-through-checklist.md` (main checkout). Decision on approvals: "all of them, and the
+single owner can do everything as is". Claude may use Chrome on the test company.
+
+**Actions Completed.**
+- `sql/077_core_owner_self_approval.sql` + `sql/tests/073_owner_self_approval.sql`; `POST /v1/core/org/owner-self-approval`; the
+  session carries `ownerSelfApproval`. `agents.md` records decision D1c next to D1/D1b. The on/off switch on General settings follows
+  once the settings screen rework (below) is merged.
+- Two Sonnet agents started on the walkthrough notes, on branches built from `feat/po-approval`: `fix/walkthrough-setup` (time zone
+  and currency dropdowns, one setup page per question, no Arabic warehouse name, editable warehouses, own name, Settings menu grouped,
+  errors as popups) and `fix/walkthrough-items` (items columns, SKU format and auto-numbering, unit dropdown, supplier details, unpaid
+  bills on supplier payments, quantities without trailing zeros and a plain "not enough stock" message).
+
+**Database / System Result.** None.
+
+**Safety Status.** All 74 migrations and 70 SQL tests pass locally; lint and typecheck clean; API 350 + 7 skipped.
+
+## 2026-11-10 — Google Chat alerts (sql/071), channel adapters registered, large files split, alert recipients; dry run of 069-073
+
+**Objective.** Ben: finish everything doable today, using Sonnet agents orchestrated by Claude.
+
+**Actions Completed.** Branch `feat/po-approval` (one branch, one pull request for tonight's work).
+- **Google Chat alerts** (Sonnet agent, reviewed and merged): `sql/071_google_chat_channel.sql` + `sql/tests/067_google_chat_channel.sql`;
+  adapter in `apps/api/src/lib/channels/integrations.ts` (`{"text": ...}`; simulated mode makes no call); Settings → Integrations shows it
+  like Slack and Teams. No Google logo added (trademark): the screen shows a "G".
+- **Bug fixed (found by the agent, checked by Claude):** `apps/api/src/lib/channels/index.ts` imported the email, Slack, Teams and
+  Telegram adapters but never registered them, so those messages failed with "Channel ... is not configured". Now registered. Live
+  integrations are all in simulated mode, so after deploy they record simulated deliveries instead of failing.
+- **Large files split** (Sonnet agent, pure move, reviewed): `apps/api/src/modules/inventory/routes.ts` (1,114 lines → 10 files),
+  `apps/web/src/modules/inventory/Inventory.tsx`, `apps/web/src/modules/help/Onboarding.tsx`, `apps/web/src/modules/treasury/Statements.tsx`;
+  largest new file 294 lines; same 114 API routes and identical test counts before and after.
+- **Alert rules: change recipients** (MVP M4, last of the two): "Change" next to each rule's recipients (the API existed).
+- Gap 5 (minimum order and pack size) **not done**: the forecast has no supplier per item, so it needs the forecast function reworked;
+  left for a planned change rather than a rushed one.
+
+**Database / System Result.** One dry run on live of 069, 070, 071, 072 and 073 together inside a rolled-back transaction passed (279
+orders stay `not_needed`; integrations kept; `google_chat` allowed; anon can only read a report through a link); a read-only check
+afterwards confirmed nothing was kept. None applied.
+
+**Safety Status.** Combined branch: lint and typecheck clean; shared 74 + 1 skipped, API 349 + 7 skipped, web 109; all 73 migrations
+and 69 SQL tests pass locally; doc links OK. Nothing viewed in a browser. **Apply 069, 070, 071, 072, 073 in that order before merging.**
+
+## 2026-11-10 — Supplier confirmation and promised date, late orders (sql/073)
+
+**Objective.** Dynamics review gap 4, as part of "finish everything doable today".
+
+**Actions Completed.** Branch `feat/po-approval`. `sql/073_pur_order_confirmation.sql` + `sql/tests/069_order_confirmation.sql` (see
+`sql/README.md`). API `POST /purchasing/orders/:id/confirm` (`purchasing.orders.receive`); orders carry `promisedDate`, `supplierRef`,
+`confirmedAt` (the list falls back while 073 or 069 is not applied). Web: "Late" (red) in the list and on the order, computed in the
+company's time zone; on the order "The supplier confirmed…" / "Change the promised date"; Arabic drafts.
+
+**Database / System Result.** None yet. Not wired to alert rules yet (`pur_late_orders()` is ready for it).
+
+**Safety Status.** Lint and typecheck clean; API 340 + 7 skipped, web 109; SQL test 069 passes locally. Not viewed in a browser.
+
+## 2026-11-10 — Supplier delivery note number on receipts (sql/072); guided tour switch (MVP M4)
+
+**Objective.** Ben: finish everything doable today. Dynamics review gap 1, and the second of the two MVP M4 small gaps.
+
+**Actions Completed.** Branch `feat/po-approval`.
+- `sql/072_pur_delivery_notes.sql` + `sql/tests/068_delivery_notes.sql`: `pur_receipts` and `pur_receive_with_note` (see `sql/README.md`).
+- API: `POST /purchasing/orders/:id/receive` takes an optional `deliveryNote` (≤ 60); one order carries its `deliveryNotes`
+  (empty while 072 is not applied). Web: the field on "What arrived?", and the notes on the order page.
+- Settings → General: "Guided tour for new staff" on/off (the API `POST /v1/core/org/tour` already existed; no screen had it).
+- Arabic drafts for both.
+
+**Database / System Result.** None yet.
+
+**Safety Status.** Lint and typecheck clean; API 339 + 7 skipped, web 109; SQL test 068 passes locally. Not viewed in a browser.
+
+## 2026-11-10 — Imports from a file (Sheets A) and private report links for Google Sheets (sql/070)
+
+**Objective.** Ben: Google Sheets options A and C "do it now". Built by two Sonnet agents in their own worktrees (orchestrated by
+Claude Opus), reviewed and merged into `feat/po-approval` so there is one branch and one pull request.
+
+**Actions Completed.**
+- **Imports (option A), web only, no migration:** Settings → Import from a file (`apps/web/src/modules/core/settings/ImportFromFile.tsx`,
+  logic in `apps/web/src/lib/importRows.ts` with 12 tests). Items with opening stock, customers, suppliers from CSV or .xlsx; column
+  guessing from English and Arabic headers; checks before sending (missing name or SKU, bad numbers, duplicate codes in the file); rows
+  sent one by one through the existing routes, so every database rule applies; failed rows listed with the server's message and retried
+  alone; templates to download; 2,000 rows per file; one warehouse per file. `registry.tsx` gained an optional `anyPermission` for pages.
+- **Report links (option C):** `sql/070_core_report_links.sql` + `sql/tests/066_report_links.sql`; API `/v1/core/report-links` (list,
+  create, revoke; `core.integrations.manage`) and the public `GET /r/:token` (format checked first, rate limited, publishable-key client,
+  CSV with formula cells defused, `no-store`, bare 404 on any refusal); Settings → Integrations → "Links for Google Sheets".
+- Reviewed by Claude: the public function, grants and token handling.
+
+**Database / System Result.** 070 dry run on live inside a rolled-back transaction passed (RLS on; anon can call only the read
+function, not the table, the create function or the helper). Not applied.
+
+**Safety Status.** Combined branch: lint and typecheck clean; shared 74 + 1 skipped, API 339 + 7 skipped, web 109; all 70 migrations
+and 66 SQL tests pass locally; doc links OK. Not viewed in a browser. Limits: open invoices do not net credit notes; stock lists only
+quantities above zero; Arabic is machine drafts. **Apply 069 and 070 before merging.**
+
+## 2026-11-10 — Purchase order approval (sql/069)
+
+**Objective.** Ben, on the Dynamics gaps: purchase orders have no approval; "fix that asap".
+
+**Actions Completed.** Branch `feat/po-approval`.
+- `sql/069_pur_order_approval.sql` + `sql/tests/065_po_approval.sql`: approval state on each order, a company setting (default: every
+  new order), decision by an owner or admin who did not create the order (a sole owner may, flagged and audited), reject with a reason
+  cancels, and a table rule that refuses receiving goods on a waiting or rejected order. Existing orders are unaffected.
+- Older SQL tests that create orders switch approval off (they test receiving, bills, costs and postings); the business-day test 061
+  now has the admin approve the owner's order.
+- API (`apps/api/src/modules/purchasing/routes.ts`): `POST /orders/:id/decide`, `GET/PUT /order-approval`; orders carry their approval;
+  the order list falls back to the old columns while 069 is not applied, so it never breaks. Permission `purchasing.orders.approve`.
+  Error `NOT_APPROVED` (409) with Arabic.
+- Web: "Waiting for approval" / "Rejected" in the list and on the order; Approve / Reject (with a reason) on the order; "Receive goods"
+  hidden while waiting; the setting on the purchase orders page (`apps/web/src/modules/purchasing/OrderApproval.tsx`). 13 Arabic drafts.
+
+**Database / System Result.** 069 dry run on live inside a rolled-back transaction passed (278 existing orders stay `not_needed`,
+anonymous callers cannot decide, the receive guard is in place). Not applied.
+
+**Safety Status.** All 69 migrations and 65 SQL tests pass locally; lint, typecheck clean; API 330 + 7 skipped, web 97. Not viewed in a
+browser. **Apply 069 before merging.**
+
 ## 2026-11-10 — Manufacturing plan (draft); click-through checklist; full automated suite re-run
 
 **Objective.** Ian's questions to Ben; Ben's notes on the reply: "plan for this immediately" (manufacturing), "full workflow tests

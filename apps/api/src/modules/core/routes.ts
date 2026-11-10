@@ -12,6 +12,7 @@ import { fxRoutes, integrationRoutes } from './integrationRoutes';
 import { memberRoutes } from './memberRoutes';
 import { moduleRoutes } from './moduleRoutes';
 import { orgRoutes } from './org';
+import { reportLinkRoutes } from './reportLinkRoutes';
 
 export const coreRoutes = new Hono<AppEnv>();
 
@@ -21,6 +22,7 @@ coreRoutes.route('/modules', moduleRoutes);
 coreRoutes.route('/branches', branchRoutes);
 coreRoutes.route('/integrations', integrationRoutes);
 coreRoutes.route('/fx', fxRoutes);
+coreRoutes.route('/report-links', reportLinkRoutes);
 coreRoutes.route('/ai', aiRoutes);
 
 // The person's own saved language (sql/038). A display preference, not essential: if it cannot be read (for example the migration is not
@@ -67,6 +69,7 @@ coreRoutes.get('/session', async (c) => {
       showTutorial: tenant.showTutorial,
       showTour: tenant.showTour,
       blindCounts: tenant.blindCounts,
+      ownerSelfApproval: tenant.ownerSelfApproval,
     },
     role: tenant.role,
     permissions: tenant.permissions,

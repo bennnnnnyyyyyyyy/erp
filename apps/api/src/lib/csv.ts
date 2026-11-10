@@ -17,6 +17,13 @@ export const minorToText = (n: number, currency: string) => {
   return digits === 0 ? `${sign}${a}` : `${sign}${a.slice(0, -digits)}.${a.slice(-digits)}`;
 };
 
+/**
+ * Plain CSV text for a spreadsheet that fetches it by address (Google Sheets IMPORTDATA): a header row, CRLF line ends, no byte-order
+ * mark (it would stick to the first header). Cells are quoted when needed; text starting with = + - @ is defused like csvCell does.
+ */
+export const toCsv = (header: string[], rows: (string | number | null | undefined)[][]): string =>
+  `${[header.map(csvCell).join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\r\n')}\r\n`;
+
 /** A CSV download (UTF-8 with a byte-order mark, so Excel shows Arabic correctly). */
 export function csvResponse(c: Context, filename: string, header: string[], rows: (string | number | null | undefined)[][]) {
   const body = [header.map(csvCell).join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\r\n');

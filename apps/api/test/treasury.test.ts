@@ -53,7 +53,7 @@ describe('phase 2 routes', () => {
   it('branch changes need the branch key; statements need the statements key', () => {
     expect(branches.match(/branchRoutes\.(post|patch)\([^\n]*requirePermission\('core\.branches\.manage'\)/g)?.length).toBe(2);
     expect(statements.match(/financeRoutes\.get\([^\n]*requirePermission\('finance\.statements\.view'\)/g)?.length).toBe(2);
-    expect(read('modules/inventory/routes.ts')).toMatch(
+    expect(read('modules/inventory/warehouses.ts')).toMatch(
       /\.put\('\/warehouses\/:id\/branch', requirePermission\('core\.branches\.manage'\)/,
     );
   });

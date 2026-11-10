@@ -29,6 +29,7 @@ begin
   w := public.inv_create_warehouse('MAIN', 'Main');
   i := public.inv_create_item('S-1', 'Item', null, 'piece', 20, w);   -- opening stock with no cost: allowed while accounting is off
   sup := public.pur_create_supplier('Supplier', null, null, null);
+  perform public.pur_set_po_approval(false, 0); -- sql/069: this test is not about approval
   po := (public.pur_create_order(sup, w, jsonb_build_array(jsonb_build_object('itemId', i, 'qty', 10, 'unitCostMinor', 300))) ->> 'id')::uuid;
   perform public.pur_receive_order(po);
   c := public.sal_create_customer('Customer', null, null, null);

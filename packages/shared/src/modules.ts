@@ -119,6 +119,7 @@ export const MODULES: readonly ModuleManifest[] = [
       'purchasing.orders.create',
       'purchasing.orders.receive',
       'purchasing.orders.manage',
+      'purchasing.orders.approve', // sql/069: owners and admins; never one's own order unless the only one
       'purchasing.invoices.read',
       'purchasing.invoices.record',
     ],

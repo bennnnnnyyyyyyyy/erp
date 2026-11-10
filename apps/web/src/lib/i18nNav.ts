@@ -52,6 +52,11 @@ export const NAV_AR: Record<string, string> = {
   Counting: 'الجرد',
   Planning: 'التخطيط',
   'Records and rules': 'السجلات والقواعد',
+  // Settings menu groups (walkthrough fixes)
+  Company: 'الشركة',
+  'Your account': 'حسابك',
+  Connections: 'الربط',
+  Records: 'السجلات',
   'Stock transfers': 'تحويلات المخزون',
   'New transfer': 'تحويل جديد',
   Transfer: 'تحويل',
@@ -103,6 +108,7 @@ export const NAV_AR: Record<string, string> = {
   Transfers: 'التحويلات',
   'Statement of account': 'كشف حساب',
   Branches: 'الفروع',
+  'Import from a file': 'الاستيراد من ملف',
   // integrations (wave 1)
   Integrations: 'الربط مع خدمات أخرى',
   Payments: 'المدفوعات',

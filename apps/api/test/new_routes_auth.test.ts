@@ -47,6 +47,12 @@ const routes: [string, string][] = [
   ['PUT', `/v1/treasury/statements/rules/${ID}`],
   ['DELETE', `/v1/treasury/statements/rules/${ID}`],
   ['POST', `/v1/treasury/statements/lines/${ID}/explain`],
+  // purchase order approval (sql/069)
+  ['POST', `/v1/purchasing/orders/${ID}/decide`],
+  ['GET', '/v1/purchasing/order-approval'],
+  ['PUT', '/v1/purchasing/order-approval'],
+  ['POST', `/v1/purchasing/orders/${ID}/confirm`], // sql/073
+  ['POST', '/v1/core/org/owner-self-approval'], // sql/077
 ];
 
 describe('a migration not applied yet', () => {
@@ -64,14 +70,14 @@ describe('routes added on 9-10 November', () => {
     expect(res.status).toBe(401);
   });
 
-  const src = readFileSync(join(__dirname, '../src/modules/inventory/routes.ts'), 'utf8');
+  const src = readFileSync(join(__dirname, '../src/modules/inventory/items.ts'), 'utf8');
   it('item costs come from the owner-and-admin database function, not a table read', () => {
     const route = src.slice(src.indexOf("inventoryRoutes.get('/item-costs'"), src.indexOf('// Fix an item'));
     expect(route).toContain("'inv_item_costs'");
     expect(route).not.toMatch(/\.from\(/);
   });
   it('the ledger checks the item id before using it', () => {
-    const route = src.slice(src.indexOf("inventoryRoutes.get('/ledger'"), src.indexOf("inventoryRoutes.get('/requests'"));
+    const route = src.slice(src.indexOf("inventoryRoutes.get('/ledger'"), src.indexOf("inventoryRoutes.post('/items'"));
     expect(route).toMatch(/UUID_RE\.test\(itemId\)/);
   });
 });

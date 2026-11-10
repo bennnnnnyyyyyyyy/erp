@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { isBadAmount, parseAmount, toMinor } from './numbers';
+import { formatQty, isBadAmount, parseAmount, toMinor } from './numbers';
+
+describe('formatQty', () => {
+  it('drops trailing zeros but keeps real decimals', () => {
+    expect(formatQty(1)).toBe('1');
+    expect(formatQty('1.000')).toBe('1');
+    expect(formatQty('2.500')).toBe('2.5');
+    expect(formatQty(2.5)).toBe('2.5');
+    expect(formatQty(1234.125)).toBe('1,234.125');
+    expect(formatQty(null)).toBe('');
+  });
+});
 
 describe('parseAmount', () => {
   it('reads plain, comma-grouped and decimal amounts', () => {

@@ -64,6 +64,7 @@ const TransfersPage = lazyNamed(() => import('./treasury/Treasury'), 'TransfersP
 const BankStatementsPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementsPage');
 const BankStatementPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementPage');
 const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
+const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/Setup'), 'AccountingSetupPage');
@@ -86,6 +87,8 @@ export type AppPage = {
   path: string;
   label: string;
   permission?: string;
+  /** Shown when the user has at least one of these (used instead of `permission`). */
+  anyPermission?: string[];
   component: ComponentType;
   /** false keeps the page out of the app menu (record pages). */
   nav?: boolean;
@@ -316,6 +319,8 @@ export const APPS: AppDef[] = [
       ...(demoMode ? [] : [{ path: '/branches', label: 'Branches', permission: 'core.org.manage', component: BranchesSettings }]),
       // Integrations (INTEGRATIONS_PLAN.md wave 1). Real API only. Owner and admin only.
       ...(demoMode ? [] : [{ path: '/integrations', label: 'Integrations', permission: 'core.integrations.view', component: IntegrationsSettings }]),
+      // Import items, customers and suppliers from a CSV or Excel file (Sheets option A). Each kind needs its own manage permission.
+      ...(demoMode ? [] : [{ path: '/import', label: 'Import from a file', anyPermission: ['inventory.items.manage', 'sales.customers.manage', 'purchasing.suppliers.manage'], component: ImportFromFile }]),
       { path: '/apps', label: 'Apps', permission: 'core.org.manage', component: AppsSettings },
       { path: '/audit', label: 'Audit log', permission: 'core.org.manage', component: AuditLog },
     ],
@@ -335,6 +340,13 @@ export const MENU_GROUPS: Record<string, Record<string, string>> = {
     '/reorder-levels': 'Planning', '/forecast': 'Planning', '/batches': 'Planning',
     '/ledger': 'Records and rules', '/approval-policies': 'Records and rules',
   },
+  // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
+  settings: {
+    '': 'Company', '/branches': 'Company', '/users': 'Company', '/apps': 'Company',
+    '/me': 'Your account',
+    '/integrations': 'Connections', '/import': 'Connections',
+    '/audit': 'Records',
+  },
 };
 
 /**
@@ -350,7 +362,7 @@ export function visibleApps(session: SessionInfo): AppDef[] {
   return APPS.filter((a) => (session.modules.includes(a.module) || a.pages.some((p) => p.beforeEnabled)) && (a.visible?.(session) ?? true))
     .map((a) => {
       const on = session.modules.includes(a.module);
-      return { ...a, pages: a.pages.filter((p) => (on || p.beforeEnabled) && (!p.permission || hasPermission(session.permissions, p.permission))) };
+      return { ...a, pages: a.pages.filter((p) => (on || p.beforeEnabled) && (!p.permission || hasPermission(session.permissions, p.permission)) && (!p.anyPermission || p.anyPermission.some((k) => hasPermission(session.permissions, k)))) };
     })
     .filter((a) => a.pages.length > 0);
 }

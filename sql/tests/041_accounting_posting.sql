@@ -53,6 +53,7 @@ begin
 
   -- ---- P1: purchase receipt (10 at 120)
   sup := public.pur_create_supplier('Supplier', null, null, null);
+  perform public.pur_set_po_approval(false, 0); -- sql/069: this test is not about approval
   po := (public.pur_create_order(sup, w, jsonb_build_array(jsonb_build_object('itemId', i, 'qty', 10, 'unitCostMinor', 120))) ->> 'id')::uuid;
   perform public.pur_receive_order(po);
   reset role;

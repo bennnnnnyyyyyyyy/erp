@@ -38,6 +38,8 @@ export function AlertsPage() {
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState({ name: '', kind: 'stock_below' as Kind, itemId: '', threshold: '', repeatHours: '24', to: '' });
   const [teamName, setTeamName] = useState('');
+  // MVP M4: change who a rule notifies (PUT /rules/:id/recipients already existed; only the screen was missing).
+  const [changing, setChanging] = useState<{ id: string; to: string } | null>(null);
   const canManage = session.permissions.includes('alerts.rules.manage');
 
   async function run(work: () => Promise<string>, after: () => void) {
@@ -108,7 +110,27 @@ export function AlertsPage() {
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
             <td>{ruleText(r)}</td>
-            <td>{r.recipients.map(recipientLabel).join(', ')}</td><td>{r.repeatHours} h</td>
+            <td>
+              {changing?.id === r.id ? (
+                <span className="flex flex-wrap gap-2">
+                  <select aria-label={tr('Recipients')} value={changing.to} onChange={(e) => setChanging({ id: r.id, to: e.target.value })}>
+                    <option value="">{tr('Choose…')}</option>
+                    {recipientOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <Button size="sm" disabled={busy || !changing.to} onClick={() => run(async () => {
+                    await api(`/v1/alerts/rules/${r.id}/recipients`, { method: 'PUT', body: JSON.stringify({ recipients: [parse(changing.to)] }) });
+                    setChanging(null);
+                    return trf('Recipients of "{name}" changed.', { name: r.name });
+                  }, reloadAll)}>{tr('Save')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setChanging(null)}>{tr('Cancel')}</Button>
+                </span>
+              ) : (
+                <>
+                  {r.recipients.map(recipientLabel).join(', ')}
+                  {canManage && <> <Button size="sm" variant="ghost" disabled={busy} onClick={() => setChanging({ id: r.id, to: '' })}>{tr('Change')}</Button></>}
+                </>
+              )}
+            </td><td>{r.repeatHours} h</td>
             <td>{r.timesFired}{r.lastFiredAt ? <span className="muted small"> {tr('· last')} {formatDateTime(r.lastFiredAt, session.org)}</span> : ''}</td>
             <td><Pill status={r.enabled ? 'received' : 'cancelled'} label={r.enabled ? tr('On') : tr('Off')} /></td>
             <td>{canManage && <span className="flex flex-wrap gap-2">

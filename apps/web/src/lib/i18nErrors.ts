@@ -49,6 +49,7 @@ export const ERRORS_AR: Record<string, string> = {
   'With accounting on, received stock needs a unit cost': 'مع تفعيل المحاسبة، يحتاج المخزون المستلم إلى تكلفة الوحدة',
   'You cannot approve your own request': 'لا يمكنك اعتماد طلبك بنفسك',
   'You cannot approve your own request: another owner or manager must approve it': 'لا يمكنك اعتماد طلبك بنفسك: يجب أن يعتمده مالك أو مدير آخر',
+  'This purchase order needs approval before goods can be received': 'يجب اعتماد أمر الشراء هذا قبل استلام البضاعة',
   'Supplier name is required': 'اسم المورد مطلوب',
   'Customer name is required': 'اسم العميل مطلوب',
   'Item name is required': 'اسم الصنف مطلوب',

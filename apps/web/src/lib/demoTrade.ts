@@ -16,6 +16,15 @@ export type Party = {
   phone: string;
   /** Payment terms in days; null or missing = the company default (sql/041). */
   paymentTermsDays?: number | null;
+  /** Supplier business details (sql/076; real API only). Empty text when not given. */
+  taxNumber?: string;
+  commercialRegistry?: string;
+  email?: string;
+  address?: string;
+  bankName?: string;
+  bankAccount?: string;
+  defaultCurrency?: string;
+  notes?: string;
 };
 export type POStatus = 'ordered' | 'received' | 'cancelled';
 export type PurchaseOrder = {
@@ -33,6 +42,17 @@ export type PurchaseOrder = {
   createdBy: string;
   createdAt: string;
   receivedAt: string | null;
+  /** sql/069 (real API only; the sample data needs no approval): 'pending' blocks receiving until approved. */
+  approval?: 'not_needed' | 'pending' | 'approved' | 'rejected';
+  approvalDecidedAt?: string | null;
+  approvalNote?: string | null;
+  approvalSelf?: boolean;
+  /** sql/073: the date the supplier promised; an open order past it is late. */
+  promisedDate?: string | null;
+  supplierRef?: string | null;
+  confirmedAt?: string | null;
+  /** sql/072 (real API, one order only): the supplier's delivery note numbers received against this order. */
+  deliveryNotes?: { id: string; number: string; receivedBy: string; receivedAt: string }[];
 };
 export type SOStatus = 'open' | 'stock_requested' | 'approved' | 'delivered' | 'cancelled';
 export type SalesOrder = {

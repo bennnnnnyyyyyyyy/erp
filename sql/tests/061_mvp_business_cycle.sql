@@ -49,6 +49,11 @@ begin
   select id into l_box from public.pur_order_lines where order_id = po and item_id = i_box;
   select id into l_tape from public.pur_order_lines where order_id = po and item_id = i_tape;
 
+  -- sql/069: the order waits for approval by someone other than its creator; the admin approves it
+  if (select approval from public.pur_orders where id = po) <> 'pending' then raise exception 'FAIL B0: the order does not wait for approval'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  perform public.pur_decide_order(po, 'approved');
+
   -- the clerk receives 60 boxes and all the tape; the rest of the boxes are still coming; later the rest arrives
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
   j := public.pur_receive_lines(po, jsonb_build_array(jsonb_build_object('lineId', l_box, 'qty', 60), jsonb_build_object('lineId', l_tape, 'qty', 50)), true);

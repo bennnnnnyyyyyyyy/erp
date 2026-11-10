@@ -1,6 +1,6 @@
 // Integrations, wave 1 (documentation/plans/INTEGRATIONS_PLAN.md; database sql/053). Shapes shared by the API and the web app.
 
-export const INTEGRATION_KINDS = ['email', 'slack', 'teams', 'telegram'] as const;
+export const INTEGRATION_KINDS = ['email', 'slack', 'teams', 'telegram', 'google_chat'] as const;
 export type IntegrationKind = (typeof INTEGRATION_KINDS)[number];
 
 /** Outbox message kinds a company may route to an integration (sql/053 core__integration_kinds). */
@@ -15,6 +15,25 @@ export const INTEGRATION_MESSAGE_KINDS = [
 ] as const;
 export type IntegrationMessageKind = (typeof INTEGRATION_MESSAGE_KINDS)[number];
 
+/** Private read-only report links for Google Sheets (sql/070). */
+export const REPORT_LINK_KINDS = ['stock_on_hand', 'open_invoices', 'sales_by_month'] as const;
+export type ReportLinkKind = (typeof REPORT_LINK_KINDS)[number];
+
+/** A link as listed: never the token (only its hash is stored). */
+export type ReportLink = {
+  id: string;
+  report: ReportLinkKind;
+  label: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastReadAt: string | null;
+  readCount: number;
+};
+
+/** Answer to creating a link: the only time the token and the address are shown. */
+export type ReportLinkCreated = { id: string; token: string; url: string; formula: string };
+
 export type IntegrationSettings = {
   kind: IntegrationKind;
   enabled: boolean;
@@ -24,7 +43,7 @@ export type IntegrationSettings = {
   /** The end of the saved webhook URL, never the URL itself. */
   secretHint: string | null;
   needsSecret: boolean;
-  /** Whether live mode can work now (email: our sending account is set up; Slack/Teams: a URL is saved). */
+  /** Whether live mode can work now (email: our sending account is set up; Slack/Teams/Google Chat: a URL is saved). */
   liveAvailable: boolean;
   lastStatus: 'sent' | 'failed' | null;
   lastError: string | null;

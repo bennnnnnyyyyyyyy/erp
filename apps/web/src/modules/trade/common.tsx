@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { demoMode } from '../../lib/demo';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
+import { ErrorToast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/ui/badge';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -85,7 +86,14 @@ function TermsCell({ party, endpoint, onSaved }: { party: Party; endpoint: strin
   );
 }
 
-export function PartyList({ title, endpoint, noun, addPermission }: { title: string; endpoint: string; noun: string; addPermission?: string }) {
+// Supplier business details (sql/076), edited in the same dialog. Customers do not have them yet.
+const DETAIL_BLANK = { taxNumber: '', commercialRegistry: '', email: '', address: '', bankName: '', bankAccount: '', defaultCurrency: '', notes: '' };
+const detailsOf = (p: Party) => ({
+  taxNumber: p.taxNumber ?? '', commercialRegistry: p.commercialRegistry ?? '', email: p.email ?? '', address: p.address ?? '',
+  bankName: p.bankName ?? '', bankAccount: p.bankAccount ?? '', defaultCurrency: p.defaultCurrency ?? '', notes: p.notes ?? '',
+});
+
+export function PartyList({ title, endpoint, noun, addPermission, detailed }: { title: string; endpoint: string; noun: string; addPermission?: string; detailed?: boolean }) {
   const parties = useLoad(() => api<Party[]>(endpoint));
   const session = useSession();
   // Terms are set by owners and admins (the database checks again). Not in the sample-data demo build, which has no such route.
@@ -95,7 +103,8 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
   const [editing, setEditing] = useState<Party | null>(null);
   const canManage = !addPermission || hasPermission(session.permissions, addPermission);
   const canEdit = canManage && !demoMode;
-  const blank = { name: '', contact: '', city: '', phone: '', code: '' };
+  const blank = { name: '', contact: '', city: '', phone: '', code: '', ...DETAIL_BLANK };
+  const withDetails = detailed && !demoMode;
   const [form, setForm] = useState(blank);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -107,7 +116,7 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
   };
   const startEdit = (p: Party) => {
     setError(null);
-    setForm({ name: p.name, contact: p.contact ?? '', city: p.city ?? '', phone: p.phone ?? '', code: p.code ?? '' });
+    setForm({ name: p.name, contact: p.contact ?? '', city: p.city ?? '', phone: p.phone ?? '', code: p.code ?? '', ...detailsOf(p) });
     setEditing(p);
   };
 
@@ -115,11 +124,14 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
     e.preventDefault();
     setError(null);
     try {
+      // Customers have no business details yet: send them for suppliers only.
+      const { taxNumber, commercialRegistry, email, address, bankName, bankAccount, defaultCurrency, notes, ...core } = form;
+      const body = withDetails ? { ...core, taxNumber, commercialRegistry, email, address, bankName, bankAccount, defaultCurrency, notes } : core;
       if (editing) {
-        const { code: _code, ...changes } = form;
+        const { code: _code, ...changes } = body;
         await api(`${endpoint}/${editing.id}`, { method: 'PUT', body: JSON.stringify(changes) });
       } else {
-        await api(endpoint, { method: 'POST', body: JSON.stringify(form) });
+        await api(endpoint, { method: 'POST', body: JSON.stringify(body) });
       }
       close();
       parties.reload();
@@ -135,6 +147,13 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
     { key: 'contact', label: tr('Contact'), value: (p) => p.contact },
     { key: 'city', label: tr('City'), value: (p) => p.city },
     { key: 'phone', label: tr('Phone'), value: (p) => p.phone, render: (p) => <code>{p.phone}</code> },
+    ...(withDetails
+      ? [
+          { key: 'email', label: tr('Email'), value: (p: Party) => p.email ?? '' },
+          { key: 'tax', label: tr('Tax registration no.'), value: (p: Party) => p.taxNumber ?? '', render: (p: Party) => <code>{p.taxNumber}</code> },
+          { key: 'currency', label: tr('Currency'), value: (p: Party) => p.defaultCurrency ?? '' },
+        ]
+      : []),
     {
       key: 'terms',
       label: tr('Payment terms'),
@@ -194,6 +213,24 @@ export function PartyList({ title, endpoint, noun, addPermission }: { title: str
               <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
             </div>
             <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
+            {withDetails ? (
+              <>
+                <div className="form-row">
+                  <label>{tr('Tax registration number (optional)')}<input maxLength={40} value={form.taxNumber} onChange={set('taxNumber')} /></label>
+                  <label>{tr('Commercial registry number (optional)')}<input maxLength={40} value={form.commercialRegistry} onChange={set('commercialRegistry')} /></label>
+                </div>
+                <div className="form-row">
+                  <label>{tr('Email (optional)')}<input type="email" maxLength={200} value={form.email} onChange={set('email')} /></label>
+                  <label>{tr('Default currency (optional)')}<input maxLength={3} placeholder="EGP" value={form.defaultCurrency} onChange={(e) => setForm((f) => ({ ...f, defaultCurrency: e.target.value.toUpperCase() }))} /></label>
+                </div>
+                <label>{tr('Address (optional)')}<input maxLength={500} value={form.address} onChange={set('address')} /></label>
+                <div className="form-row">
+                  <label>{tr('Bank name (optional)')}<input maxLength={120} value={form.bankName} onChange={set('bankName')} /></label>
+                  <label>{tr('Bank account or IBAN (optional)')}<input maxLength={60} dir="ltr" value={form.bankAccount} onChange={set('bankAccount')} /></label>
+                </div>
+                <label>{tr('Notes (optional)')}<textarea rows={3} maxLength={2000} value={form.notes} onChange={set('notes')} /></label>
+              </>
+            ) : null}
             {demoMode || editing ? null : (
               <label>{tr('Code (optional)')}<input value={form.code} onChange={set('code')} placeholder={tr('Automatic if empty')} /></label>
             )}
@@ -317,7 +354,7 @@ export function NewOrderForm(props: {
         <div className="form-actions">
           <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>{tr('Add another item')}</Button>
         </div>
-        {error && <p className="error">{error}</p>}
+        <ErrorToast message={error} onClose={() => setError(null)} />
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
       </form>
       {quickAdd ? (

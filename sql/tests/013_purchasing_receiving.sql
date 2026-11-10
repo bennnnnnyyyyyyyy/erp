@@ -6,7 +6,7 @@ begin
   insert into auth.users(id,aud,role,email) values (ua,'authenticated','authenticated','pur-owner@tests.invalid'),(ub,'authenticated','authenticated','pur-member@tests.invalid'),(uc,'authenticated','authenticated','pur-other@tests.invalid');
   oa := public.bootstrap_organization('Purchasing Test A','purchasing-test-a','pur-owner@tests.invalid'); ob := public.bootstrap_organization('Purchasing Test B','purchasing-test-b','pur-other@tests.invalid');
   insert into public.memberships(org_id,user_id,role) values(oa,ub,'member'); insert into public.org_modules(org_id,module_key) values(oa,'inventory'),(oa,'purchasing'),(ob,'inventory'),(ob,'purchasing');
-  perform set_config('request.jwt.claims',json_build_object('sub',ua,'role','authenticated')::text,true); perform set_config('request.headers',json_build_object('x-org-id',oa)::text,true); set local role authenticated;
+  perform set_config('request.jwt.claims',json_build_object('sub',ua,'role','authenticated')::text,true); perform set_config('request.headers',json_build_object('x-org-id',oa)::text,true); set local role authenticated; perform public.pur_set_po_approval(false, 0);
   w := public.inv_create_warehouse('MAIN','Main'); i := public.inv_create_item('PUR-001','Receipt item',null,'piece',0,w); s := public.pur_create_supplier('Test Supplier'); po := (public.pur_create_order(s,w,jsonb_build_array(jsonb_build_object('itemId',i,'qty',4,'unitCostMinor',1250)))->>'id')::uuid; reset role;
   select count(*) into n from public.pur_order_lines where order_id=po; if n <> 1 then raise exception 'FAIL S1: expected order line'; end if;
   perform set_config('request.jwt.claims',json_build_object('sub',ub,'role','authenticated')::text,true); set local role authenticated;

@@ -3,15 +3,17 @@ import { Button } from './ui/button';
 import { supabase } from '../lib/supabase';
 
 import { tr } from '../lib/i18n';
+import { timeZoneList } from '../lib/zonesCurrencies';
+import { CurrencySelect, TimeZoneSelect } from './ZoneCurrencyFields';
+import { ErrorToast } from './Toast';
 // "Set up your company": the second step of sign-up (sql/032). The person is already signed in; this creates the company, makes them
 // its owner, switches every app on and stores the company's language, currency and time zone. The language is for the whole
 // company: everyone who joins later sees it.
 
-const CURRENCIES = ['EGP', 'SAR', 'AED', 'USD', 'EUR', 'GBP', 'QAR', 'KWD', 'BHD', 'OMR', 'JOD'];
-
 function browserTimeZone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+    const z = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return z && timeZoneList().includes(z) ? z : 'Africa/Cairo';
   } catch {
     return 'Africa/Cairo';
   }
@@ -62,15 +64,14 @@ export function CreateCompany({ onCreated, onCancel, first }: { onCreated: (orgI
         <div className="form-row">
           <label>
             {tr('Currency')}
-            <input required list="signup-currencies" maxLength={3} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} />
-            <datalist id="signup-currencies">{CURRENCIES.map((c) => <option key={c} value={c} />)}</datalist>
+            <CurrencySelect value={currency} onChange={setCurrency} />
           </label>
           <label>
             {tr('Time zone')}
-            <input required value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+            <TimeZoneSelect value={timezone} onChange={setTimezone} />
           </label>
         </div>
-        {error && <p className="error" role="alert">{error}</p>}
+        <ErrorToast message={error} onClose={() => setError(null)} />
         <Button type="submit" disabled={busy || name.trim().length < 2}>{busy ? tr('Setting up…') : tr('Create my company')}</Button>
         {onCancel && <Button variant="outline" type="button" onClick={onCancel}>{tr('Cancel')}</Button>}
         <Button variant="outline" type="button" onClick={() => supabase.auth.signOut()}>{tr('Sign out')}</Button>

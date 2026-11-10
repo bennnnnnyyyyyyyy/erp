@@ -27,6 +27,7 @@ begin
   c := public.sal_create_customer('Customer', null, null, null);
   so := (public.sal_create_order(c, w, jsonb_build_array(jsonb_build_object('itemId', i, 'qty', 10, 'unitPriceMinor', 250))) ->> 'id')::uuid;
   sup := public.pur_create_supplier('Supplier', null, null, null);
+  perform public.pur_set_po_approval(false, 0); -- sql/069: this test is not about approval
   po := (public.pur_create_order(sup, w, jsonb_build_array(jsonb_build_object('itemId', i, 'qty', 10, 'unitCostMinor', 100))) ->> 'id')::uuid;
   reset role;
   select id into ol from public.sal_order_lines where order_id = so;

@@ -29,6 +29,8 @@ export type SessionInfo = {
     showTour: boolean;
     /** Blind stock counts (sql/066). */
     blindCounts: boolean;
+    /** Owners may approve their own requests, each flagged self-approved (sql/077, decision D1c). Optional until every API sends it. */
+    ownerSelfApproval?: boolean;
   } | null;
   /** The person's own saved language (sql/038), or null to follow the company default. Same in every company they belong to. */
   userLanguage: 'en' | 'ar' | null;

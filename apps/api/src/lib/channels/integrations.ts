@@ -3,14 +3,26 @@ import { adminDb } from '../db.admin';
 import { appUrl, sendTelegram } from '../telegram';
 import type { ChannelAdapter, OutboxMessage } from './index';
 
-// Email, Slack and Teams (documentation/plans/INTEGRATIONS_PLAN.md wave 1; sql/053). Like every channel, these only DELIVER a
+// Email, Slack, Teams and Google Chat (documentation/plans/INTEGRATIONS_PLAN.md wave 1; sql/053). Like every channel, these only DELIVER a
 // message; they never decide anything. Each company's integration has a mode:
 //   simulated -> nothing leaves the system; the message is marked delivered "simulated" (the default, and what tests use)
-//   live      -> email through our sending account (Resend; RESEND_API_KEY and EMAIL_FROM are Worker secrets), Slack or Teams
+//   live      -> email through our sending account (Resend; RESEND_API_KEY and EMAIL_FROM are Worker secrets), Slack, Teams or Google Chat
 //                through the company's own webhook URL, read from Vault by the job only (core__integration_secret)
 // A company that switched an integration off after a message was queued gets "skipped", not a send.
 
-export type IntegrationKind = 'email' | 'slack' | 'teams' | 'telegram';
+export type IntegrationKind = 'email' | 'slack' | 'teams' | 'telegram' | 'google_chat';
+
+/** Google Chat incoming webhooks (sql/071): the URL must point at the Chat API's spaces endpoint. */
+export const GOOGLE_CHAT_URL_PREFIX = 'https://chat.googleapis.com/v1/spaces/';
+export const isGoogleChatWebhookUrl = (url: string): boolean =>
+  url.length <= 2000 && url.startsWith(GOOGLE_CHAT_URL_PREFIX) && url.length > GOOGLE_CHAT_URL_PREFIX.length + 10 && !/\s/.test(url);
+
+/** Simple text message: the subject in bold (Chat's *bold*), then the body. Never a one-time code. */
+export const googleChatPayload = (m: Pick<OutboxMessage, 'subject' | 'body'>) => ({
+  text: [`*${m.subject.replace(/\*/g, '')}*`, m.body].filter(Boolean).join('\n\n'),
+});
+
+const WEBHOOK_LABEL = { slack: 'Slack', teams: 'Teams', google_chat: 'Google Chat' } as const;
 export type IntegrationState = { enabled: boolean; mode: 'simulated' | 'live' };
 
 /** What the adapters need from the outside world; replaced in tests so nothing real is called. */
@@ -113,40 +125,43 @@ export function makeIntegrationAdapters(deps: IntegrationDeps = realDeps): Chann
       }),
   };
 
-  const webhook = (kind: 'slack' | 'teams'): ChannelAdapter => ({
+  const webhook = (kind: 'slack' | 'teams' | 'google_chat'): ChannelAdapter => ({
     kind,
     send: (message, env) =>
       deliver(kind, message, env, deps, async () => {
         const url = await deps.secret(env, message.org_id, kind);
-        if (!url) throw new Error(`No ${kind === 'slack' ? 'Slack' : 'Teams'} webhook URL is saved`);
+        if (!url) throw new Error(`No ${WEBHOOK_LABEL[kind]} webhook URL is saved`);
+        if (kind === 'google_chat' && !isGoogleChatWebhookUrl(url)) throw new Error('The saved Google Chat webhook URL is not valid');
         const text = plainText(message);
         const payload =
           kind === 'slack'
             ? { text }
-            : {
-                // Teams Workflows webhook (Office 365 connectors were retired in May 2026): an Adaptive Card message.
-                type: 'message',
-                attachments: [
-                  {
-                    contentType: 'application/vnd.microsoft.card.adaptive',
-                    content: {
-                      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
-                      type: 'AdaptiveCard',
-                      version: '1.4',
-                      body: [
-                        { type: 'TextBlock', text: message.subject, weight: 'Bolder', wrap: true },
-                        ...(message.body ? [{ type: 'TextBlock', text: message.body, wrap: true }] : []),
-                      ],
+            : kind === 'google_chat'
+              ? googleChatPayload(message)
+              : {
+                  // Teams Workflows webhook (Office 365 connectors were retired in May 2026): an Adaptive Card message.
+                  type: 'message',
+                  attachments: [
+                    {
+                      contentType: 'application/vnd.microsoft.card.adaptive',
+                      content: {
+                        $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+                        type: 'AdaptiveCard',
+                        version: '1.4',
+                        body: [
+                          { type: 'TextBlock', text: message.subject, weight: 'Bolder', wrap: true },
+                          ...(message.body ? [{ type: 'TextBlock', text: message.body, wrap: true }] : []),
+                        ],
+                      },
                     },
-                  },
-                ],
-              };
+                  ],
+                };
         const res = await deps.fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        await check(res, kind === 'slack' ? 'Slack' : 'Teams');
+        await check(res, WEBHOOK_LABEL[kind]);
         return `${kind}-webhook`;
       }),
   });
@@ -163,5 +178,5 @@ export function makeIntegrationAdapters(deps: IntegrationDeps = realDeps): Chann
       }),
   };
 
-  return [email, webhook('slack'), webhook('teams'), telegram];
+  return [email, webhook('slack'), webhook('teams'), telegram, webhook('google_chat')];
 }
