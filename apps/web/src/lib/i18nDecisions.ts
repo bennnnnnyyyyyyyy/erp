@@ -288,4 +288,32 @@ export const DECISIONS_AR: Record<string, string> = {
   'Only the owner can change this.': 'المالك وحده يمكنه تغيير هذا.',
   // the API's answer when code is deployed before its database update (503 not_set_up)
   'This feature is not set up yet: its database update has not been applied': 'هذه الميزة غير مُفعّلة بعد: لم يُطبَّق تحديث قاعدة البيانات الخاص بها',
+  // report links (Sheets option C)
+  'Links for Google Sheets': 'روابط لجداول بيانات جوجل',
+  'A private link lets a Google Sheet read one report and refresh by itself. Paste the formula into a cell. The reports hold no phone numbers, emails or addresses.':
+    'يتيح الرابط الخاص لجدول بيانات جوجل قراءة تقرير واحد وتحديث نفسه تلقائيًا. الصق الصيغة في خلية. لا تحتوي التقارير على أرقام هواتف أو بريد إلكتروني أو عناوين.',
+  'Anyone who has the link can read that report until you revoke it. Share it only with people who should see these numbers.':
+    'كل من لديه الرابط يستطيع قراءة هذا التقرير إلى أن تلغيه. شاركه فقط مع من يجب أن يرى هذه الأرقام.',
+  Report: 'التقرير',
+  'Label (optional)': 'التسمية (اختياري)',
+  'Expires after (days, optional)': 'ينتهي بعد (أيام، اختياري)',
+  'Create link': 'إنشاء الرابط',
+  'Link created. Copy it now: it cannot be shown again.': 'تم إنشاء الرابط. انسخه الآن: لا يمكن عرضه مرة أخرى.',
+  'Your new link': 'رابطك الجديد',
+  'It is shown only once. In Google Sheets, paste this formula into a cell:': 'يظهر مرة واحدة فقط. في جداول بيانات جوجل، الصق هذه الصيغة في خلية:',
+  'Google Sheets formula': 'صيغة جداول بيانات جوجل',
+  'Or the plain link:': 'أو الرابط فقط:',
+  Link: 'الرابط',
+  'No links yet.': 'لا توجد روابط بعد.',
+  Label: 'التسمية',
+  'Last read': 'آخر قراءة',
+  Reads: 'عدد القراءات',
+  expired: 'منتهي',
+  Revoke: 'إلغاء',
+  'Yes, revoke': 'نعم، ألغِ',
+  'Revoke this link? Sheets using it stop updating.': 'إلغاء هذا الرابط؟ ستتوقف الجداول التي تستخدمه عن التحديث.',
+  'Link revoked.': 'تم إلغاء الرابط.',
+  'Revoked {date}': 'أُلغي في {date}',
+  'Open invoices': 'الفواتير المفتوحة',
+  'Sales by month': 'المبيعات حسب الشهر',
 };
