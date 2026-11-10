@@ -3,7 +3,7 @@
 // Excel (.xlsx) and Word (.docx) files are zip archives of XML; they are unpacked with the browser's own DecompressionStream (no
 // library), and the first worksheet / every table in the document is turned into rows of text. MT940 goes to the shared reader.
 
-import { type Mt940Error, type Mt940Statement, parseCsv, readMt940 } from '@erp/shared';
+import { type Mt940Error, type Mt940Statement, parseCsv, readMt940, type StatementDateFormat, type StatementMapping } from '@erp/shared';
 
 export type StatementFile =
   | { kind: 'rows'; format: 'csv' | 'xlsx' | 'docx'; rows: string[][]; hash: string; name: string }
@@ -19,7 +19,7 @@ export async function sha256(bytes: ArrayBuffer): Promise<string> {
 // ------------------------------------------------------------------ zip (stored or deflated entries; enough for Office files)
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  const stream = new Blob([new Uint8Array(data)]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
@@ -142,4 +142,53 @@ export async function readStatementFile(file: File): Promise<StatementFile> {
     return { kind: 'mt940', format: 'mt940', statements: r.statements, errors: r.errors, hash, name };
   }
   return { kind: 'rows', format: 'csv', rows: parseCsv(textValue), hash, name };
+}
+
+// ------------------------------------------------------------------ guessing the columns from the header row
+
+// Header words in English and Arabic, as Egyptian and Gulf banks print them (QNB prints both in one cell: "Date التاريخ").
+const HEADERS: [keyof StatementMapping, RegExp][] = [
+  ['valueDate', /value\s*date|تاريخ\s*(ال)?(قيمة|استحقاق)/i],
+  ['date', /^(booking\s*|posting\s*|trans(action)?\s*)?date\b|التاريخ|تاريخ/i],
+  ['description', /desc|details|narrative|particulars|البيان|الوصف|التفاصيل/i],
+  ['reference', /^ref|reference|cheque|chq|المرجع|رقم\s*(ال)?(شيك|مرجع)/i],
+  ['moneyOut', /debit|withdraw|مدين|سحب|مسحوبات/i],
+  ['moneyIn', /credit|deposit|دائن|ائتمان|إيداع|ايداع|إيداعات/i],
+  ['amount', /^amount$|المبلغ|القيمة/i],
+  ['balance', /balance|الرصيد/i],
+];
+
+/** The first row that looks like a header (it names a date column and an amount column), and the columns it names. A value date is
+ *  recognised before the booking date, so "تاريخ القيمة" is not taken for the booking date. */
+export function guessMapping(rows: string[][]): StatementMapping | null {
+  for (let r = 0; r < Math.min(rows.length, 15); r++) {
+    const row = rows[r] ?? [];
+    const found: Partial<Record<keyof StatementMapping, number>> = {};
+    row.forEach((cell, i) => {
+      const text = cell.trim();
+      for (const [key, re] of HEADERS) {
+        if (found[key] === undefined && re.test(text)) {
+          found[key] = i;
+          break;
+        }
+      }
+    });
+    if (found.date !== undefined && (found.amount !== undefined || found.moneyIn !== undefined || found.moneyOut !== undefined)) {
+      const sample = rows.slice(r + 1, r + 6).map((x) => x[found.date ?? 0] ?? '');
+      const dateFormat: StatementDateFormat = sample.some((s) => /^\d{4}-/.test(s.trim())) ? 'yyyy-mm-dd' : 'dd/mm/yyyy';
+      return {
+        date: found.date,
+        description: found.description ?? found.date + 1,
+        reference: found.reference ?? null,
+        valueDate: found.valueDate ?? null,
+        amount: found.amount ?? null,
+        moneyIn: found.moneyIn ?? null,
+        moneyOut: found.moneyOut ?? null,
+        balance: found.balance ?? null,
+        dateFormat,
+        skipRows: r + 1,
+      };
+    }
+  }
+  return null;
 }

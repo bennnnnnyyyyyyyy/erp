@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { readDocx, readStatementFile, readXlsx, sha256, StatementFileError } from './statementFiles';
+import { guessMapping, readDocx, readStatementFile, readXlsx, sha256, StatementFileError } from './statementFiles';
+
+describe('guessMapping', () => {
+  it('finds the columns from an English header with money in and out', () => {
+    const m = guessMapping([['Bank statement'], ['Date', 'Description', 'Ref', 'Debit', 'Credit', 'Balance'], ['09/11/2026', 'x', '', '5', '', '1']]);
+    expect(m).toMatchObject({ date: 0, description: 1, reference: 2, moneyOut: 3, moneyIn: 4, balance: 5, skipRows: 2, dateFormat: 'dd/mm/yyyy' });
+  });
+  it('reads bilingual and Arabic headers, and a value date before the booking date', () => {
+    expect(guessMapping([['Date التاريخ', 'Description الوصف', 'Debit مدين', 'Credit ائتمان', 'Balance الرصيد']])).toMatchObject({ date: 0, description: 1, moneyOut: 2, moneyIn: 3, balance: 4 });
+    expect(guessMapping([['تاريخ القيمة', 'التاريخ', 'البيان', 'المبلغ'], ['2026-11-09', '2026-11-09', 'x', '5']])).toMatchObject({ valueDate: 0, date: 1, description: 2, amount: 3, dateFormat: 'yyyy-mm-dd' });
+  });
+  it('gives up when no row names a date and an amount', () => {
+    expect(guessMapping([['a', 'b'], ['1', '2']])).toBeNull();
+  });
+});
 
 // Minimal Office files built here (a zip with the few XML parts the reader needs), so no real bank file is committed.
 async function zip(files: Record<string, string>, deflate = false): Promise<ArrayBuffer> {

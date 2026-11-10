@@ -61,6 +61,8 @@ const ProfitOverviewPage = lazyNamed(() => import('./finance/ProfitOverview'), '
 const TreasuryPage = lazyNamed(() => import('./treasury/Treasury'), 'TreasuryPage');
 const TreasuryAccountPage = lazyNamed(() => import('./treasury/Treasury'), 'TreasuryAccountPage');
 const TransfersPage = lazyNamed(() => import('./treasury/Treasury'), 'TransfersPage');
+const BankStatementsPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementsPage');
+const BankStatementPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementPage');
 const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
@@ -267,6 +269,9 @@ export const APPS: AppDef[] = [
       { path: '', label: 'Cash and banks', permission: 'treasury.accounts.view', component: TreasuryPage },
       { path: '/accounts/:id', label: 'Treasury account', permission: 'treasury.accounts.view', component: TreasuryAccountPage, nav: false, parent: '' },
       { path: '/transfers', label: 'Transfers', permission: 'treasury.accounts.view', component: TransfersPage },
+      // Bank statements (sql/067; BANK_STATEMENT_IMPORT_PLAN.md).
+      { path: '/statements', label: 'Bank statements', permission: 'treasury.statements.view', component: BankStatementsPage },
+      { path: '/statements/:id', label: 'Bank statement', permission: 'treasury.statements.view', component: BankStatementPage, nav: false, parent: '/statements' },
     ],
   } satisfies AppDef]),
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.

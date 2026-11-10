@@ -46,6 +46,8 @@ export const NAV_AR: Record<string, string> = {
   'Stock counts': 'جرد المخزون',
   'Stock count': 'جرد مخزون',
   Item: 'صنف',
+  'Bank statements': 'كشوف الحساب البنكية',
+  'Bank statement': 'كشف حساب بنكي',
   Overview: 'نظرة عامة',
   Counting: 'الجرد',
   Planning: 'التخطيط',
