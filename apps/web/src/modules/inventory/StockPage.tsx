@@ -13,7 +13,7 @@ import { Pill } from '../trade/common';
 import { ClerkActions } from './ClerkActions';
 import { tr, trf } from '../../lib/i18n';
 import { qty, useCatalog } from './inventoryShared';
-import { AddItemModal, AddWarehouseModal, EditItemModal } from './ItemModals';
+import { AddItemModal, AddWarehouseModal, EditItemModal, EditWarehouseModal } from './ItemModals';
 
 // ------------------------------------------------------------------ stock on hand and items
 
@@ -28,6 +28,7 @@ export function StockPage() {
   const [warehouseId, setWarehouseId] = useState('all');
   const [adding, setAdding] = useState(false);
   const [addingWarehouse, setAddingWarehouse] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState(false);
   const [editing, setEditing] = useState<DemoItem | null>(null);
   const session = useSession();
   const canAdd = hasPermission(session.permissions, 'inventory.items.manage');
@@ -123,6 +124,7 @@ export function StockPage() {
                 <option value="all">{tr('All warehouses')}</option>
                 {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
+              {canAddWarehouse && warehouseId !== 'all' && <Button variant="outline" type="submit" onClick={() => setEditingWarehouse(true)}>{tr('Edit warehouse')}</Button>}
               {canAddWarehouse && <Button variant="outline" type="submit" onClick={() => setAddingWarehouse(true)}>{tr('Add warehouse')}</Button>}
               {canAdd && (cat.warehouses.data?.length ?? 0) > 0 && <Button type="submit" onClick={() => setAdding(true)}>{tr('Add item')}</Button>}
             </>
@@ -133,6 +135,9 @@ export function StockPage() {
       )}
       {cat.ready && (cat.warehouses.data?.length ?? 0) === 0 && (
         <p className="notice">{canAddWarehouse ? tr('Start by adding your first warehouse (any place you keep stock), then add items to it.') : tr('No warehouse exists yet. Ask an owner or admin to add one.')}</p>
+      )}
+      {editingWarehouse && warehouseId !== 'all' && cat.warehouses.data?.find((w) => w.id === warehouseId) && (
+        <EditWarehouseModal warehouse={cat.warehouses.data.find((w) => w.id === warehouseId)!} onClose={() => setEditingWarehouse(false)} onDone={() => { setEditingWarehouse(false); cat.warehouses.reload(); stock.reload(); }} />
       )}
       {addingWarehouse && <AddWarehouseModal onClose={() => setAddingWarehouse(false)} onDone={() => { setAddingWarehouse(false); cat.warehouses.reload(); stock.reload(); }} />}
       {editing && <EditItemModal item={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); cat.items.reload(); }} />}

@@ -131,7 +131,7 @@ export async function saveWarehouses(api: Api, rows: SampleWarehouse[] = SAMPLE_
     new Set(existing.map((x) => x.code.toUpperCase())),
     (w) => w.code.trim().toUpperCase(),
     async (w, code) => {
-      const made = await api<{ id: string }>('/v1/inventory/warehouses', post({ code, name: w.name.trim(), nameAr: w.nameAr.trim() }));
+      const made = await api<{ id: string }>('/v1/inventory/warehouses', post({ code, name: w.name.trim() }));
       const cond = w.condition ? conds.get(low(w.condition)) : undefined;
       if (cond) await api(`/v1/inventory/warehouses/${made.id}/storage`, post({ conditionId: cond }));
     },

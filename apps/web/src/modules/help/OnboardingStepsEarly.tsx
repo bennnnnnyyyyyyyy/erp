@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
+import { tr } from '../../lib/i18n';
+import { Link } from '../../lib/router';
+import { EditWarehouseModal } from '../inventory/ItemModals';
 import { api } from '../../lib/api';
 import { useReloadSession, useSession } from '../../session';
 import {
@@ -38,7 +41,7 @@ import {
   type OnProgress,
   type Report,
 } from './sampleFill';
-import { TIMEZONES, CURRENCIES, inputClass, useCanFill, useList, Field } from './onboardingShared';
+import { inputClass, useCanFill, useList, Field } from './onboardingShared';
 import { FillButton, Failures, useSave, useRowsSave, RowsSaver, RowsTable } from './onboardingParts';
 
 // ------------------------------------------------------------------ steps
@@ -148,65 +151,43 @@ export function BusinessStep({ c, value, onChoose }: { c: OnboardingContent; val
   );
 }
 
+/** The company's name, currency and time zone are asked once, on the sign-up "Set up your company" page (Ben, 10 Nov 2026: "why 2 pages").
+ *  Here they are shown read-only with a link to change them in Settings; only the date format, which sign-up does not ask, is set here. */
 export function CompanyStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
   const session = useSession();
   const reload = useReloadSession();
   const canManage = hasPermission(session.permissions, 'core.org.manage');
   const org = session.org;
-  const [name, setName] = useState(org?.name ?? '');
-  const [currency, setCurrency] = useState(org?.defaultCurrency ?? 'EGP');
-  const [timezone, setTimezone] = useState(org?.timezone ?? 'Africa/Cairo');
   const [dateFormat, setDateFormat] = useState(org?.dateFormat ?? 'DD/MM/YYYY');
   const { busy, error, run } = useSave(onDone);
   if (!canManage) return <p className="m-0 text-sm text-muted-foreground">{c.notAllowed}</p>;
-  const fill = () => {
-    // The company name stays as typed at sign-up.
-    setCurrency(SAMPLE_COMPANY.defaultCurrency);
-    setTimezone(SAMPLE_COMPANY.timezone);
-    setDateFormat(SAMPLE_COMPANY.dateFormat);
-  };
+  const fill = () => setDateFormat(SAMPLE_COMPANY.dateFormat);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
-      const changes: Record<string, string> = {};
-      if (name.trim() !== org?.name) changes.name = name.trim();
-      if (currency !== org?.defaultCurrency) changes.defaultCurrency = currency;
-      if (timezone !== org?.timezone) changes.timezone = timezone;
-      if (dateFormat !== org?.dateFormat) changes.dateFormat = dateFormat;
-      if (Object.keys(changes).length > 0) {
-        await api('/v1/core/org', { method: 'PATCH', body: JSON.stringify(changes) });
+      if (dateFormat !== org?.dateFormat) {
+        await api('/v1/core/org', { method: 'PATCH', body: JSON.stringify({ dateFormat }) });
         reload();
       }
     });
   };
-  const zones = TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];
   return (
     <>
       <FillButton c={c} onFill={fill} />
+      <div className="mb-4 rounded-lg border border-border p-3 text-sm">
+        <dl className="m-0 grid gap-1 sm:grid-cols-[auto_1fr] sm:gap-x-4">
+          <dt className="font-medium">{c.company.name}</dt>
+          <dd className="m-0">{org?.name}</dd>
+          <dt className="font-medium">{c.company.currency}</dt>
+          <dd className="m-0">{org?.defaultCurrency}</dd>
+          <dt className="font-medium">{c.company.timezone}</dt>
+          <dd className="m-0" dir="ltr">{org?.timezone}</dd>
+        </dl>
+        <p className="m-0 mt-2 text-xs text-muted-foreground">
+          {tr('You entered these when you set up your company.')} <Link to="/settings">{tr('Change them in Settings')}</Link>
+        </p>
+      </div>
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Field label={c.company.name}>
-            <input className={inputClass} required minLength={2} maxLength={200} value={name} onChange={(e) => setName(e.target.value)} autoComplete="organization" />
-          </Field>
-        </div>
-        <Field label={c.company.currency}>
-          <select className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)}>
-            {(CURRENCIES.includes(currency) ? CURRENCIES : [currency, ...CURRENCIES]).map((x) => (
-              <option key={x} value={x}>
-                {x}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={c.company.timezone}>
-          <select className={inputClass} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-            {zones.map((z) => (
-              <option key={z} value={z}>
-                {z}
-              </option>
-            ))}
-          </select>
-        </Field>
         <Field label={c.company.dateFormat}>
           <select className={inputClass} value={dateFormat} onChange={(e) => setDateFormat(e.target.value)}>
             {DATE_FORMATS.map((f) => (
@@ -217,7 +198,7 @@ export function CompanyStep({ c, onDone }: { c: OnboardingContent; onDone: () =>
           </select>
         </Field>
         <div className="sm:col-span-2">
-          <Saver c={c} busy={busy} error={error} disabled={name.trim().length < 2} />
+          <Saver c={c} busy={busy} error={error} />
         </div>
       </form>
     </>
@@ -258,7 +239,9 @@ export function StorageStep({ c, onDone }: { c: OnboardingContent; onDone: () =>
 export function WarehouseStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
   const session = useSession();
   const can = hasPermission(session.permissions, 'inventory.warehouses.manage');
-  const existing = useList<{ id: string }>('/v1/inventory/warehouses', hasPermission(session.permissions, 'inventory.items.read'), 0);
+  const [version, setVersion] = useState(0);
+  const [editing, setEditing] = useState<{ id: string; code: string; name: string } | null>(null);
+  const existing = useList<{ id: string; code: string; name: string }>('/v1/inventory/warehouses', hasPermission(session.permissions, 'inventory.items.read'), version);
   const conditions = useList<{ id: string; name: string }>('/v1/inventory/storage-conditions', hasPermission(session.permissions, 'inventory.batches.read'), 0);
   const blank = (): SampleWarehouse => ({ code: '', name: '', nameAr: '', condition: '' });
   const [rows, setRows] = useState<SampleWarehouse[]>([{ ...blank(), code: 'MAIN' }]);
@@ -268,7 +251,33 @@ export function WarehouseStep({ c, onDone }: { c: OnboardingContent; onDone: () 
   return (
     <>
       <FillButton c={c} onFill={() => setRows(SAMPLE_WAREHOUSES.map((x) => ({ ...x })))} />
-      {existing && existing.length > 0 ? <p className="m-0 mb-2 text-sm">{c.warehouse.existing(existing.length)}</p> : null}
+      {existing && existing.length > 0 ? (
+        <div className="mb-3">
+          <p className="m-0 mb-1 text-sm">{c.warehouse.existing(existing.length)}</p>
+          <ul className="m-0 list-none p-0 text-sm">
+            {existing.map((w) => (
+              <li key={w.id} className="flex items-center gap-2 py-1">
+                <span>
+                  <code>{w.code}</code> · {w.name}
+                </span>
+                <Button type="button" size="sm" variant="outline" onClick={() => setEditing(w)}>
+                  {tr('Edit')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {editing ? (
+        <EditWarehouseModal
+          warehouse={editing}
+          onClose={() => setEditing(null)}
+          onDone={() => {
+            setEditing(null);
+            setVersion((v) => v + 1);
+          }}
+        />
+      ) : null}
       <datalist id="onb-conditions">
         {(conditions ?? []).map((x) => (
           <option key={x.id} value={x.name} />
@@ -278,7 +287,6 @@ export function WarehouseStep({ c, onDone }: { c: OnboardingContent; onDone: () 
         cols={[
           { key: 'code', label: c.warehouse.code, width: '9rem' },
           { key: 'name', label: c.warehouse.name },
-          { key: 'nameAr', label: `${c.warehouse.name} (ع)`, optional: true },
           { key: 'condition', label: c.warehouse.condition, list: 'onb-conditions', optional: true },
         ]}
         rows={rows}

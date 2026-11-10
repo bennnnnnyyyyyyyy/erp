@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { demoMode } from '../../lib/demo';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
+import { ErrorToast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/ui/badge';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -317,7 +318,7 @@ export function NewOrderForm(props: {
         <div className="form-actions">
           <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>{tr('Add another item')}</Button>
         </div>
-        {error && <p className="error">{error}</p>}
+        <ErrorToast message={error} onClose={() => setError(null)} />
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
       </form>
       {quickAdd ? (

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
+import { ErrorToast } from '../../components/Toast';
 import { hasPermission } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
@@ -158,7 +159,7 @@ export function NewRequest() {
         <div className="form-actions">
           <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1' }])}>{tr('Add another item')}</Button>
         </div>
-        {error && <p className="error">{error}</p>}
+        <ErrorToast message={error} onClose={() => setError(null)} />
         <div className="form-actions">
           <Button type="submit" disabled={busy}>{busy ? tr('Submitting…') : tr('Submit for approval')}</Button>
         </div>

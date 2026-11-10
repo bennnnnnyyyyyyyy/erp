@@ -577,3 +577,14 @@ td input { margin-top: 0; }
   }
   .clerk-actions button { min-height: 56px; font-size: 1rem; font-weight: 600; }
 }
+
+/* Company options (General settings): one card, one row per switch. */
+.option-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.option-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.6rem; border-block-start: 1px solid var(--border, #e5e7eb); }
+.option-row p { margin: 0.15rem 0 0; }
+.option-switch { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+
+/* Error popup (components/Toast.tsx): top of the screen, over the page, dismissible. */
+.toast-host { position: fixed; inset-block-start: 1rem; inset-inline: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; pointer-events: none; padding-inline: 1rem; }
+.toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 0.75rem; max-inline-size: 32rem; padding: 0.75rem 1rem; border-radius: 0.5rem; background: #7f1d1d; color: #fff; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); font-size: 0.9rem; }
+.toast button { background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0; }
