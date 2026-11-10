@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Walkthrough fixes merged (sql/074, 075, 076); pop-ups; self-approval switch
+
+**Objective.** Fix Ben's walkthrough notes (see `documentation/planning/2026-11-10-walkthrough-review.md`).
+
+**Actions Completed.** Merged into `feat/po-approval` after review:
+- `fix/walkthrough-setup` (Sonnet agent): currency and time zone dropdowns (`components/ZoneCurrencyFields.tsx`); sign-up owns name,
+  currency and time zone, onboarding shows them read-only; no Arabic warehouse name in forms; `sql/074_inv_update_warehouse.sql` +
+  test 070 and `PUT /v1/inventory/warehouses/:id`, "Edit warehouse" on Stock on hand and in setup; own display name in My settings;
+  Settings menu grouped; General → "Company options" card; error pop-ups (`components/Toast.tsx`) on sign-up, stock request and orders.
+- `fix/walkthrough-items` (Sonnet agent): `sql/075_inv_sku_format.sql` + test 071 (SKU format, next code prefilled); unit dropdown;
+  more columns on Stock on hand and setup's items step; `sql/076_pur_supplier_details.sql` + test 072 and the supplier form; supplier
+  payments pick from unpaid bills and an "Unpaid bills" list on Purchase invoices; quantities without trailing zeros and a plain
+  "not enough stock" message (`rpc.ts`, Arabic via `translateServerError`).
+- Claude: pop-ups drawn over the whole window (`components/Modal.tsx`, portal; the cause of "anything with a box is broken"); the
+  "Owners may approve their own" switch in Company options (owners only).
+- Not done: customer details (needs its own migration), branch column in setup's warehouse step, error pop-ups on the payment screens.
+
+**Database / System Result.** None applied.
+
+**Safety Status.** Lint and typecheck clean; shared 74 + 1 skipped, API 353 + 7 skipped, web 113; all 77 migrations and 73 SQL tests
+pass locally; doc links OK. Not viewed in a browser. Apply 069–077 in number order before merging (073 needs 069).
+
 ## 2026-11-10 — Ben's walkthrough; owners may approve their own (sql/077, decision D1c)
 
 **Objective.** Ben clicked through the app (old version, before tonight's branch) and left notes (`notes.md`, outside the repo) and
