@@ -24,6 +24,21 @@ const routes: [string, string][] = [
   ['POST', `/v1/inventory/counts/${ID}/approve`],
   ['POST', `/v1/inventory/counts/${ID}/cancel`],
   ['POST', '/v1/core/org/blind-counts'],
+  // bank statements (sql/067)
+  ['PUT', '/v1/treasury/statements/reconcile-roles'],
+  ['GET', `/v1/treasury/statements/accounts/${ID}/format`],
+  ['PUT', `/v1/treasury/statements/accounts/${ID}/format`],
+  ['POST', `/v1/treasury/statements/accounts/${ID}/imports`],
+  ['GET', '/v1/treasury/statements/imports'],
+  ['GET', `/v1/treasury/statements/imports/${ID}`],
+  ['GET', `/v1/treasury/statements/accounts/${ID}/unmatched`],
+  ['POST', `/v1/treasury/statements/lines/${ID}/match`],
+  ['POST', `/v1/treasury/statements/lines/${ID}/unmatch`],
+  ['POST', `/v1/treasury/statements/lines/${ID}/ignore`],
+  ['POST', `/v1/treasury/statements/imports/${ID}/confirm-exact`],
+  ['GET', `/v1/treasury/statements/accounts/${ID}/reconciliations`],
+  ['POST', `/v1/treasury/statements/accounts/${ID}/reconcile`],
+  ['POST', `/v1/treasury/statements/reconciliations/${ID}/reopen`],
 ];
 
 describe('routes added on 9-10 November', () => {

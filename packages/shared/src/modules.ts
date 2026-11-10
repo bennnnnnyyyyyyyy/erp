@@ -210,7 +210,15 @@ export const MODULES: readonly ModuleManifest[] = [
     description: 'Cash boxes and bank accounts by branch, payments through them, transfers between them, balances from the ledger.',
     core: false,
     dependsOn: ['accounting', 'finance'],
-    permissions: ['treasury.accounts.view', 'treasury.accounts.manage', 'treasury.transfers.create'],
+    permissions: [
+      'treasury.accounts.view',
+      'treasury.accounts.manage',
+      'treasury.transfers.create',
+      // Bank statements (sql/067). Reconcile is narrowed further by the company setting (who may reconcile).
+      'treasury.statements.view',
+      'treasury.statements.import',
+      'treasury.statements.reconcile',
+    ],
     suite: 'Finance',
   },
 ];
