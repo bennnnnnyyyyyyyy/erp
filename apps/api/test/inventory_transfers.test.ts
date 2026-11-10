@@ -28,7 +28,7 @@ describe('inventory transfers API', () => {
     expect(await res.json()).toMatchObject({ success: false, code: 'unauthenticated' });
   });
 
-  const source = readFileSync(join(__dirname, '../src/modules/inventory/routes.ts'), 'utf8');
+  const source = readFileSync(join(__dirname, '../src/modules/inventory/transfers.ts'), 'utf8');
   const transferSource = source.slice(source.indexOf('transfers between warehouses (sql/033)'));
 
   it('puts a permission check on every transfer route', () => {
