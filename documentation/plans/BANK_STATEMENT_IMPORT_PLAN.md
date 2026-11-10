@@ -182,6 +182,20 @@ the import.
 - **Sample statement files** (any real month, amounts can be blanked out): CSV or Excel exports from the banks your customers use
   first, for example National Bank of Egypt, Banque Misr, CIB, QNB. Without samples the mapping screen still works, but no bank is
   pre-filled. Whether each bank offers CSV, Excel, MT940 or only PDF is **unconfirmed** until we see the files.
+  Put them in `documentation/research/bank-samples/` (git-ignored: they stay on the machine).
+
+**What the banks offer (web search, 10 Nov 2026; no public sample files exist)**
+
+| Bank | Statement download | Source |
+|---|---|---|
+| National Bank of Egypt (Al Ahly Net) | An "e-statement" download; file type not stated | Third-party articles; *claimed* |
+| Banque Misr | The e-statement is a **PDF** | The bank's own E-Statement page; *documented* |
+| CIB (corporate report portal) | **MT940** (SWIFT) | Egyptian banking news; *claimed* |
+| QNB Egypt (TradeNet, corporate) | **Excel and PDF**, possibly CSV | Third-party pages; *claimed* |
+
+So: CSV/Excel alone will not cover every bank (Banque Misr customers may only have PDF), and **MT940 moves into the first
+version**: it is a published standard, so it can be built and tested without samples (built 10 Nov in
+`packages/shared/src/mt940.ts`). PDF stays a decision (Q1).
 
 **Decisions**
 - **Q1.** First version formats: CSV and Excel only (recommended), or also PDF through the AI reader (later, slower to build, every

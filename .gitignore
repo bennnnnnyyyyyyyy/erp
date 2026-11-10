@@ -64,6 +64,8 @@ documentation/research/**/*.jpg
 documentation/research/VIDEO*.MD
 documentation/research/video transcribe*
 documentation/research/**/transcripts/
+# Real bank statements (customer data): never committed.
+documentation/research/bank-samples/
 # Third-party documentation saved for reference (unknown licences: never committed). Covers eta-sdk/ and the integration folders.
 # The three files already tracked here (README.md, arabic-glossary.md, egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md) are our own
 # writing; git keeps tracking them, because an ignore rule does not untrack files.
