@@ -3,7 +3,9 @@ import { LanguageChooser, LanguageSwitch, useDialogFocus } from '../../component
 import { Button } from '../../components/ui/button';
 import { useI18n } from '../../lib/i18n';
 import { navigate, usePath } from '../../lib/router';
+import { demoMode } from '../../lib/demo';
 import { useSession } from '../../session';
+import { markTourSeen, shouldAutoStartTour, tourSeen } from './tourAuto';
 import { tourContent } from './tourContent';
 import { placeTooltip, stepsFor, type Box } from './tourSteps';
 
@@ -36,8 +38,7 @@ function tourDone(): boolean {
 
 export function TourButton({ className }: { className?: string }) {
   const { lang } = useI18n();
-  // The tour is offered in every company (2026-11-03): an off-by-default switch meant nobody ever found it. The org's show_tour
-  // setting is no longer read; steps the person's role cannot use are still left out (stepsFor).
+  // The button is offered in every company and always works. The company's show_tour switch decides only whether the tour also starts by\n  // itself, once, for a person's first sign-in (TourHost, tourAuto.ts). Steps the person's role cannot use are left out (stepsFor).
   const c = tourContent(lang);
   return (
     <Button variant="outline" className={className} onClick={startTour}>
@@ -109,6 +110,18 @@ export function TourHost() {
     window.addEventListener(START, on);
     return () => window.removeEventListener(START, on);
   }, []);
+
+  // Starts by itself, once per person and company, when the company's "Guided tour for new staff" switch is on (tourAuto.ts). It is marked as
+  // seen the moment it starts, so closing it early does not bring it back.
+  const userId = session.userId ?? null;
+  const orgId = session.org?.id ?? null;
+  const showTour = session.org?.showTour === true;
+  useEffect(() => {
+    const seen = !!userId && !!orgId && tourSeen(userId, orgId);
+    if (!shouldAutoStartTour({ showTour, userId, orgId, seen, stepCount: steps.length, onSetupWizard: path.startsWith('/start'), demo: demoMode })) return;
+    markTourSeen(userId!, orgId!);
+    startTour();
+  }, [showTour, userId, orgId, steps.length, path]);
 
   useEffect(() => {
     if (!active) return;

@@ -32,7 +32,7 @@ export type OnboardingContent = {
   /** Shown after a column or field that may be left empty. */
   optional: string;
   steps: Record<StepKey, { title: string; body: string }>;
-  welcome: { start: string; later: string; points: string[] };
+  welcome: { start: string; points: string[] };
   business: { options: Record<BusinessType, { label: string; hint: string }>; unitHint: Record<BusinessType, string> };
   company: { name: string; currency: string; timezone: string; dateFormat: string };
   warehouse: { code: string; codeHint: string; name: string; condition: string; conditionHint: string; existing: (n: number) => string };
@@ -68,7 +68,7 @@ const EN: OnboardingContent = {
   exit: 'Leave setup (you can come back from Getting started)',
   optional: 'optional',
   steps: {
-    welcome: { title: 'Welcome', body: 'This app runs your warehouse, buying and selling, with a manager approval on every outgoing stock movement and a history nobody can change. A few short steps set up your company; every step can be skipped and changed later.' },
+    welcome: { title: 'Welcome', body: 'This app runs your warehouse, buying and selling, with a manager approval on every outgoing stock movement and a history nobody can change. A few short steps set up your company; after this first screen you can skip any step or leave, and change everything later.' },
     business: { title: 'What do you sell?', body: 'Choose the closest. Setup then shows only the steps that fit your business; you can change your mind on this step at any time.' },
     company: { title: 'Your company', body: 'These appear on your documents and decide how money, dates and times are shown.' },
     storage: { title: 'Storage conditions', body: 'Some goods must stay cool. A storage condition (for example a cold room at 2 to 8 °C) stops cold items being put in a warm warehouse.' },
@@ -82,7 +82,6 @@ const EN: OnboardingContent = {
   },
   welcome: {
     start: 'Start setup',
-    later: 'Not now',
     points: ['Tell us what you sell', 'Check your company details', 'Add your warehouses and items', 'Add your suppliers and customers', 'Invite your team', 'Set how approvals work'],
   },
   business: {
@@ -184,7 +183,7 @@ const AR: OnboardingContent = {
   exit: 'اترك الإعداد (يمكنك العودة من صفحة البدء)',
   optional: 'اختياري',
   steps: {
-    welcome: { title: 'مرحبًا بك', body: 'يدير هذا التطبيق مستودعك ومشترياتك ومبيعاتك، مع موافقة مدير على كل حركة مخزون صادرة وسجل لا يمكن لأحد تغييره. بضع خطوات قصيرة تُعدّ شركتك؛ ويمكن تخطي كل خطوة وتغييرها لاحقًا.' },
+    welcome: { title: 'مرحبًا بك', body: 'يدير هذا التطبيق مستودعك ومشترياتك ومبيعاتك، مع موافقة مدير على كل حركة مخزون صادرة وسجل لا يمكن لأحد تغييره. بضع خطوات قصيرة تُعدّ شركتك؛ وبعد هذه الشاشة الأولى يمكنك تخطي أي خطوة أو المغادرة، وتغيير كل شيء لاحقًا.' },
     business: { title: 'ماذا تبيع؟', body: 'اختر الأقرب. بعدها يعرض الإعداد الخطوات التي تناسب نشاطك فقط، ويمكنك تغيير اختيارك في هذه الخطوة في أي وقت.' },
     company: { title: 'شركتك', body: 'تظهر هذه البيانات على مستنداتك وتحدد طريقة عرض المبالغ والتواريخ والأوقات.' },
     storage: { title: 'ظروف التخزين', body: 'بعض البضائع يجب أن تبقى باردة. تمنع ظروف التخزين (مثل غرفة تبريد من 2 إلى 8 درجات) وضع الأصناف المبرّدة في مستودع دافئ.' },
@@ -198,7 +197,6 @@ const AR: OnboardingContent = {
   },
   welcome: {
     start: 'ابدأ الإعداد',
-    later: 'ليس الآن',
     points: ['أخبرنا بما تبيعه', 'راجع بيانات شركتك', 'أضف مستودعاتك وأصنافك', 'أضف مورّديك وعملاءك', 'ادعُ فريقك', 'حدّد طريقة عمل الموافقات'],
   },
   // MACHINE DRAFT (10 Nov): the business question, listed in the Arabic review sheet

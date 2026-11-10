@@ -46,7 +46,7 @@ import { FillButton, Failures, useSave, useRowsSave, RowsSaver, RowsTable } from
 
 // ------------------------------------------------------------------ steps
 
-export function WelcomeStep({ c, onStart, onLater, onFilledAll }: { c: OnboardingContent; onStart: () => void; onLater: () => void; onFilledAll: () => void }) {
+export function WelcomeStep({ c, onStart, onFilledAll }: { c: OnboardingContent; onStart: () => void; onFilledAll: () => void }) {
   const canFill = useCanFill();
   return (
     <>
@@ -57,9 +57,6 @@ export function WelcomeStep({ c, onStart, onLater, onFilledAll }: { c: Onboardin
       </ol>
       <div className="mt-5 flex flex-wrap gap-3">
         <Button onClick={onStart}>{c.welcome.start}</Button>
-        <Button variant="outline" onClick={onLater}>
-          {c.welcome.later}
-        </Button>
       </div>
       {canFill ? <FillEverything c={c} onFilled={onFilledAll} /> : null}
     </>

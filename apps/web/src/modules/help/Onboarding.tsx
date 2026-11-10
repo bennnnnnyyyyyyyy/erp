@@ -44,7 +44,7 @@ import { ItemsStep, PartyStep, TeamStep, ApprovalStep, DoneStep } from './Onboar
 
 // First-run setup wizard (documentation/plans/ONBOARDING_WIZARD_PLAN.md). Welcome, language, company, storage conditions, warehouses,
 // items, suppliers, customers, team, approvals, then the tour. Every save goes through an existing API route (the same audited database
-// functions as the normal screens); every step can be skipped. For the demo account only, "Fill with sample data" puts the cosmetics
+// functions as the normal screens); every step after the first can be skipped, and nothing can be skipped or closed on the first screen. For the demo account only, "Fill with sample data" puts the cosmetics
 // sample (sampleCompany.ts) straight into the form on screen, with no animation; the presenter can change anything, then saves.
 // Progress is kept in this browser per company (onboardingContent.ts); nothing here is a business record.
 
@@ -94,7 +94,6 @@ export function OnboardingPage() {
               <WelcomeStep
                 c={c}
                 onStart={() => go(1)}
-                onLater={leave}
                 // the sample is a cosmetics company
                 onFilledAll={() => {
                   setBusiness('cosmetics');
@@ -130,7 +129,7 @@ export function OnboardingPage() {
             </Button>
           </div>
         ) : null}
-        {key !== 'done' ? (
+        {key !== 'done' && key !== 'welcome' ? (
           <p className="mt-4 text-center text-xs">
             <button type="button" className="text-muted-foreground underline" onClick={leave}>
               {c.exit}
