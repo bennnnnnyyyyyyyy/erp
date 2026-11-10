@@ -11,6 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Manufacturing plan (draft); click-through checklist; full automated suite re-run
+
+**Objective.** Ian's questions to Ben; Ben's notes on the reply: "plan for this immediately" (manufacturing), "full workflow tests
+now", "give me a checklist".
+
+**Actions Completed.**
+- `documentation/plans/MANUFACTURING_PLAN.md` (draft, waiting for Ben): recipes, production orders with approval in the database,
+  issue and output with batches and expiry, cost per unit with a worked example, accounting postings, what to make and buy, phone; three
+  migrations in four slices; open questions. Listed in `documentation/plans/checklist.md`.
+- `documentation/operations/2026-11-11-click-through-checklist.md`: the whole app as owner and staff, a second company, Arabic, phone.
+- Re-ran every automated test.
+- Exchange rates checked for Ben ("how can I make it real"): the daily rates are real (Frankfurter, central-bank reference rates); the
+  Central Bank of Egypt view is simulated; the CBE publishes rates on its website with no official feed. Options given to Ben in his
+  reply file (not in the repo).
+
+**Database / System Result.** None.
+
+**Safety Status.** All 68 migrations and 64 SQL tests pass locally (including the business-day test 061); shared 74, API 327, web 97
+earlier today; documentation links OK. Manufacturing is not built (agents.md: not before an approved plan).
+
 ## 2026-11-10 — MT940 reader tested on 54 public bank samples; 7 real-world variations handled
 
 **Objective.** Ben: "find any statements to train on". No Egyptian samples exist publicly; test the MT940 reader on what does.
