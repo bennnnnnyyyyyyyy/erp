@@ -1,6 +1,6 @@
 # Google Sheets: what it would be for, and the options
 
-**Status:** for Ben to decide (9 November 2026). Nothing is built. Context: [INTEGRATIONS_PLAN.md](../plans/INTEGRATIONS_PLAN.md)
+**Status:** decided by Ben (10 November 2026, see the end). Nothing is built yet. Context: [INTEGRATIONS_PLAN.md](../plans/INTEGRATIONS_PLAN.md)
 ("Google Sheets and Drive: export, import, save PDFs; risk: Google app verification, and a scope that triggers a paid security
 assessment").
 
@@ -61,3 +61,14 @@ below is from memory of Google's rules and is **to be checked** on Google's page
 ## What Ben decides (other Google services)
 
 4. Which of these to do, in which order. Recommended: Sign in with Google, then Google Chat alerts; the rest when a customer asks.
+
+## Ben's decision (10 November 2026): the recommendations approved
+
+1. **A now, then C**; B only if customers ask.
+2. A, in this order: items with opening stock, then customers, then suppliers.
+3. C: read-only links only for stock on hand, open invoices and sales by month; never the audit log or personal data.
+4. Other Google services: **Sign in with Google**, then **Google Chat** alerts; Gmail, Drive, Calendar (as a feed) and Maps when a
+   customer asks; not Google Contacts.
+
+Build order (after the bank statement import, Ben's earlier priority): Sign in with Google (needs a Google Cloud OAuth client from Ben,
+entered in Supabase), Google Chat alerts, then option A imports, then option C links.
