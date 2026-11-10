@@ -11,6 +11,43 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Setup wizard asks "What do you sell?" (UX decision D9)
+
+**Objective.** Ben's D9: the wizard starts with "What do you sell?" and shows only the steps that fit; no language step.
+
+**Actions Completed.** Branch `ux/d9-wizard`.
+- `apps/web/src/modules/help/onboardingContent.ts`: step `business` replaces `language`; six choices (shop, food or drinks, medicine,
+  cosmetics, building materials, something else); `stepsFor` shows the storage conditions step only for food, medicine and cosmetics;
+  a unit hint per business on the items step; progress keeps the answer. Arabic as machine drafts (review sheet rows 35–45).
+- `Onboarding.tsx`: the business step (one click chooses and moves on); the language step removed (language is chosen at sign-up and
+  in the language chooser); "Fill everything" (demo) chooses cosmetics, the sample company.
+- Tests: three new (storage step only for the three businesses; question right after the welcome, no language step; both languages
+  complete); two updated.
+
+**Database / System Result.** None.
+
+**Safety Status.** Lint, typecheck, web tests (88) pass. Not viewed in a browser.
+
+## 2026-11-10 — Overnight MVP readiness check; Stock counts screens; full business-day test (061)
+
+**Objective.** Ben (9 Nov): check the whole ERP is a ready MVP overnight; decisions in the morning.
+
+**Actions Completed.** Merged in PR #30 (via #31). Report: `documentation/planning/2026-11-10-mvp-readiness.md`.
+- Wiring checks by script: 234 web API calls all reach a route with the right method; 193 database calls match a function and its
+  parameter names; 112 table reads name existing tables and columns. No breakage.
+- `sql/tests/061_mvp_business_cycle.sql`: a full business day with accounting and treasury on; the ledger agrees with the records
+  (debits = credits, inventory, receivables, payables, goods received not invoiced, bank, cash, revenue, returns, cost of sales, count
+  loss, stock, audit chain, isolation).
+- Inventory → Stock counts screens (the database and API of sql/042 had no screen).
+- All 65 migrations and 61 SQL tests also run locally now (Postgres in Node with stand-ins for Supabase's auth and vault), so database
+  changes can be tested before a push.
+- Morning: one lint error in the statement reader fixed (CI lint step).
+
+**Database / System Result.** None (no migration). Deployed with PR #30 on 10 Nov.
+
+**Safety Status.** CI green on #30 (lint, typecheck, tests, web build, SQL tests). Stock counts screens not yet viewed in a browser.
+Decisions M1–M4 open in the report.
+
 ## 2026-11-09 — Bank import plan, simulated Central Bank of Egypt rates, Google Sheets options, Arabic review sheet
 
 **Objective.** Ben's next priorities: the bank statement import plan (plan first, code after his approval), the Central Bank of Egypt

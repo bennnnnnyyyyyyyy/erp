@@ -5,7 +5,16 @@ import { api } from '../../lib/api';
 import { useI18n, type Lang } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
-import { onboardingContent, readProgress, STEP_KEYS, writeProgress, type OnboardingContent } from './onboardingContent';
+import {
+  BUSINESS_TYPES,
+  onboardingContent,
+  readProgress,
+  STEP_KEYS,
+  stepsFor,
+  writeProgress,
+  type BusinessType,
+  type OnboardingContent,
+} from './onboardingContent';
 import {
   SAMPLE_APPROVAL,
   SAMPLE_COMPANY,
@@ -43,7 +52,7 @@ import { InviteLinkBox } from '../core/settings/UsersSettings';
 /** Where each step's "Explore more" goes: the real screen behind what the step sets up. */
 const EXPLORE_ROUTES: Record<(typeof STEP_KEYS)[number], string> = {
   welcome: '/guide',
-  language: '/settings',
+  business: '/guide',
   company: '/settings',
   storage: '/inventory/batches',
   warehouse: '/inventory',
@@ -96,18 +105,26 @@ export function OnboardingPage() {
   const { lang } = useI18n();
   const c = onboardingContent(lang);
   const [step, setStep] = useState(() => readProgress(orgId).step);
-  const total = STEP_KEYS.length;
-  const key = STEP_KEYS[step] ?? 'welcome';
+  // D9: the answer to "What do you sell?" decides which steps are shown (stepsFor).
+  const [business, setBusiness] = useState<BusinessType | null>(() => readProgress(orgId).business ?? null);
+  const steps = stepsFor(business);
+  const total = steps.length;
+  const key = steps[step] ?? 'welcome';
 
-  const go = (n: number) => {
-    const next = Math.max(0, Math.min(total - 1, n));
+  const go = (n: number, b: BusinessType | null = business) => {
+    const count = stepsFor(b).length;
+    const next = Math.max(0, Math.min(count - 1, n));
     setStep(next);
-    writeProgress(orgId, { step: next, done: next === total - 1 });
+    writeProgress(orgId, { step: next, done: next === count - 1, business: b });
     window.scrollTo?.(0, 0);
   };
   const next = () => go(step + 1);
+  const choose = (b: BusinessType) => {
+    setBusiness(b);
+    go(stepsFor(b).indexOf('business') + 1, b);
+  };
   const leave = () => {
-    writeProgress(orgId, { step, done: readProgress(orgId).done });
+    writeProgress(orgId, { step, done: readProgress(orgId).done, business });
     localStorage.setItem(`erp.onboarding.dismissed.${orgId}`, '1');
     navigate('/start');
   };
@@ -124,17 +141,28 @@ export function OnboardingPage() {
           <h1 className="m-0 text-xl font-semibold">{s.title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
           <div className="mt-5">
-            {key === 'welcome' && <WelcomeStep c={c} onStart={() => go(1)} onLater={leave} onFilledAll={() => go(STEP_KEYS.indexOf('team'))} />}
-            {key === 'language' && <LanguageStep c={c} onDone={next} />}
+            {key === 'welcome' && (
+              <WelcomeStep
+                c={c}
+                onStart={() => go(1)}
+                onLater={leave}
+                // the sample is a cosmetics company
+                onFilledAll={() => {
+                  setBusiness('cosmetics');
+                  go(stepsFor('cosmetics').indexOf('team'), 'cosmetics');
+                }}
+              />
+            )}
+            {key === 'business' && <BusinessStep c={c} value={business} onChoose={choose} />}
             {key === 'company' && <CompanyStep c={c} onDone={next} />}
             {key === 'storage' && <StorageStep c={c} onDone={next} />}
             {key === 'warehouse' && <WarehouseStep c={c} onDone={next} />}
-            {key === 'items' && <ItemsStep c={c} onDone={next} />}
+            {key === 'items' && <ItemsStep c={c} business={business} onDone={next} />}
             {key === 'suppliers' && <PartyStep c={c} kind="suppliers" onDone={next} />}
             {key === 'customers' && <PartyStep c={c} kind="customers" onDone={next} />}
             {key === 'team' && <TeamStep c={c} onDone={next} />}
             {key === 'approval' && <ApprovalStep c={c} onDone={next} />}
-            {key === 'done' && <DoneStep c={c} orgId={orgId} />}
+            {key === 'done' && <DoneStep c={c} orgId={orgId} step={total - 1} business={business} />}
           </div>
           <p className="m-0 mt-5 border-t border-border pt-3 text-sm">
             <a href={EXPLORE_ROUTES[key]} target="_blank" rel="noopener">
@@ -405,46 +433,23 @@ function Saver({ c, busy, error, disabled }: { c: OnboardingContent; busy: boole
   );
 }
 
-function LanguageStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
-  const session = useSession();
-  const reload = useReloadSession();
-  const { lang, setPersonalLang, setOrgLang } = useI18n();
-  const canManage = hasPermission(session.permissions, 'core.org.manage');
-  const [forCompany, setForCompany] = useState(canManage);
-  const { busy, error, run } = useSave(onDone);
-  const choose = (l: Lang) => setPersonalLang(l);
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    run(async () => {
-      if (canManage && forCompany && session.org?.language !== lang) {
-        await api('/v1/core/org/language', { method: 'POST', body: JSON.stringify({ language: lang }) });
-        setOrgLang(lang);
-        reload();
-      }
-    });
-  };
+/** D9: "What do you sell?". One click chooses and moves on; the answer decides which steps follow (stepsFor). */
+function BusinessStep({ c, value, onChoose }: { c: OnboardingContent; value: BusinessType | null; onChoose: (b: BusinessType) => void }) {
   return (
-    <form onSubmit={submit}>
-      <p className="m-0 text-sm font-medium">{c.language.personal}</p>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
-        <Button type="button" variant={lang === 'en' ? 'default' : 'outline'} className="h-12 text-base" lang="en" dir="ltr" onClick={() => choose('en')} aria-pressed={lang === 'en'}>
-          English
-        </Button>
-        <Button type="button" variant={lang === 'ar' ? 'default' : 'outline'} className="h-12 text-base" lang="ar" dir="rtl" onClick={() => choose('ar')} aria-pressed={lang === 'ar'}>
-          العربية
-        </Button>
-      </div>
-      {canManage ? (
-        <label className="mt-4 flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" checked={forCompany} onChange={(e) => setForCompany(e.target.checked)} />
-          <span>
-            {c.language.company}
-            <span className="block text-xs text-muted-foreground">{c.language.companyHint}</span>
-          </span>
-        </label>
-      ) : null}
-      <Saver c={c} busy={busy} error={error} />
-    </form>
+    <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label={c.steps.business.title}>
+      {BUSINESS_TYPES.map((b) => (
+        <button
+          key={b}
+          type="button"
+          aria-pressed={value === b}
+          onClick={() => onChoose(b)}
+          className={`rounded-lg border p-4 text-start ${value === b ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'}`}
+        >
+          <span className="block font-medium">{c.business.options[b].label}</span>
+          <span className="mt-1 block text-xs text-muted-foreground">{c.business.options[b].hint}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -599,7 +604,7 @@ const toItemRow = (x: SampleItem): ItemRow => ({ sku: x.sku, name: x.name, nameA
 // Two decimals, as for EGP and most currencies here. (A three-decimal currency such as KWD would need the currency's own exponent.)
 const fromItemRow = (r: ItemRow): SampleItem => ({ ...r, openingQty: Number(r.openingQty) || 0, costMinor: Math.round((Number(r.cost) || 0) * 100) });
 
-function ItemsStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
+function ItemsStep({ c, business, onDone }: { c: OnboardingContent; business: BusinessType | null; onDone: () => void }) {
   const session = useSession();
   const can = hasPermission(session.permissions, 'inventory.items.manage');
   const readable = hasPermission(session.permissions, 'inventory.items.read');
@@ -614,6 +619,7 @@ function ItemsStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) 
   return (
     <>
       <FillButton c={c} onFill={() => setRows(SAMPLE_ITEMS.map(toItemRow))} />
+      {business ? <p className="m-0 mb-2 text-sm text-muted-foreground">{c.business.unitHint[business]}</p> : null}
       {items && items.length > 0 ? <p className="m-0 mb-2 text-sm">{c.items.existing(items.length)}</p> : null}
       <datalist id="onb-warehouses">
         {(warehouses ?? []).map((x) => (
@@ -812,10 +818,10 @@ function ApprovalStep({ c, onDone }: { c: OnboardingContent; onDone: () => void 
   );
 }
 
-function DoneStep({ c, orgId }: { c: OnboardingContent; orgId: string }) {
+function DoneStep({ c, orgId, step, business }: { c: OnboardingContent; orgId: string; step: number; business: BusinessType | null }) {
   useEffect(() => {
-    writeProgress(orgId, { step: STEP_KEYS.length - 1, done: true });
-  }, [orgId]);
+    writeProgress(orgId, { step, done: true, business });
+  }, [orgId, step, business]);
   return (
     <div className="flex flex-wrap gap-3">
       <Button

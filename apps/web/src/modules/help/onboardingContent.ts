@@ -4,8 +4,19 @@ import type { Lang } from '../../lib/i18n';
 // here, never in the component, and onboarding.test.ts fails if the two languages drift apart. The Arabic is a first draft awaiting
 // review by a native speaker.
 
-export type StepKey = 'welcome' | 'language' | 'company' | 'storage' | 'warehouse' | 'items' | 'suppliers' | 'customers' | 'team' | 'approval' | 'done';
-export const STEP_KEYS: StepKey[] = ['welcome', 'language', 'company', 'storage', 'warehouse', 'items', 'suppliers', 'customers', 'team', 'approval', 'done'];
+export type StepKey = 'welcome' | 'business' | 'company' | 'storage' | 'warehouse' | 'items' | 'suppliers' | 'customers' | 'team' | 'approval' | 'done';
+export const STEP_KEYS: StepKey[] = ['welcome', 'business', 'company', 'storage', 'warehouse', 'items', 'suppliers', 'customers', 'team', 'approval', 'done'];
+
+// Decision D9 (Ben, 9 Nov 2026): the wizard first asks "What do you sell?" and shows only the steps that fit. The language step is gone
+// (language is already chosen at sign-up and in the first-run language chooser).
+export const BUSINESS_TYPES = ['shop', 'food', 'medicine', 'cosmetics', 'building', 'other'] as const;
+export type BusinessType = (typeof BUSINESS_TYPES)[number];
+/** Goods that may need a cold room or a temperature range: only these see the storage conditions step. */
+export const needsStorage = (b: BusinessType | null | undefined) => b === 'food' || b === 'medicine' || b === 'cosmetics';
+/** The steps shown for a business; before the question is answered, every step (the storage step is decided by the answer). */
+export function stepsFor(b: BusinessType | null | undefined): StepKey[] {
+  return STEP_KEYS.filter((k) => k !== 'storage' || !b || needsStorage(b));
+}
 export type FillStageKey = 'company' | 'storage' | 'warehouses' | 'items' | 'suppliers' | 'customers' | 'approval';
 
 export type OnboardingContent = {
@@ -22,7 +33,7 @@ export type OnboardingContent = {
   optional: string;
   steps: Record<StepKey, { title: string; body: string }>;
   welcome: { start: string; later: string; points: string[] };
-  language: { personal: string; company: string; companyHint: string };
+  business: { options: Record<BusinessType, { label: string; hint: string }>; unitHint: Record<BusinessType, string> };
   company: { name: string; currency: string; timezone: string; dateFormat: string };
   warehouse: { code: string; codeHint: string; name: string; condition: string; conditionHint: string; existing: (n: number) => string };
   items: { sku: string; name: string; unit: string; opening: string; cost: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
@@ -58,7 +69,7 @@ const EN: OnboardingContent = {
   optional: 'optional',
   steps: {
     welcome: { title: 'Welcome', body: 'This app runs your warehouse, buying and selling, with a manager approval on every outgoing stock movement and a history nobody can change. A few short steps set up your company; every step can be skipped and changed later.' },
-    language: { title: 'Your language', body: 'Choose the language you want to use. The layout turns right to left for Arabic.' },
+    business: { title: 'What do you sell?', body: 'Choose the closest. Setup then shows only the steps that fit your business; you can change your mind on this step at any time.' },
     company: { title: 'Your company', body: 'These appear on your documents and decide how money, dates and times are shown.' },
     storage: { title: 'Storage conditions', body: 'Some goods must stay cool. A storage condition (for example a cold room at 2 to 8 °C) stops cold items being put in a warm warehouse.' },
     suppliers: { title: 'Your suppliers', body: 'The companies you buy from. Purchase orders and supplier invoices use them.' },
@@ -72,12 +83,25 @@ const EN: OnboardingContent = {
   welcome: {
     start: 'Start setup',
     later: 'Not now',
-    points: ['Choose your language', 'Check your company details', 'Add your warehouses and items', 'Add your suppliers and customers', 'Invite your team', 'Set how approvals work'],
+    points: ['Tell us what you sell', 'Check your company details', 'Add your warehouses and items', 'Add your suppliers and customers', 'Invite your team', 'Set how approvals work'],
   },
-  language: {
-    personal: 'My language',
-    company: 'Also make this the default for everyone in the company',
-    companyHint: 'Each person can still pick their own language under Settings.',
+  business: {
+    options: {
+      shop: { label: 'A shop or general trading', hint: 'Clothes, electronics, home goods, spare parts…' },
+      food: { label: 'Food or drinks', hint: 'Groceries, dairy, frozen food, drinks…' },
+      medicine: { label: 'Medicine', hint: 'A pharmacy or medicine distribution' },
+      cosmetics: { label: 'Cosmetics', hint: 'Creams, perfumes, personal care…' },
+      building: { label: 'Building materials', hint: 'Cement, steel, tiles, paint…' },
+      other: { label: 'Something else', hint: 'Any other goods' },
+    },
+    unitHint: {
+      shop: 'Units are usually piece, box or carton.',
+      food: 'Units are usually kg, carton or crate; goods that must stay cold can get a storage condition (previous step).',
+      medicine: 'Units are usually box, strip or bottle; medicines that need a cool place can get a storage condition (previous step).',
+      cosmetics: 'Units are usually piece, bottle or carton; products that need a cool place can get a storage condition (previous step).',
+      building: 'Units are usually ton, bag, m² or m³.',
+      other: 'Use the unit you count stock in: piece, kg, box…',
+    },
   },
   company: { name: 'Company name', currency: 'Currency', timezone: 'Time zone', dateFormat: 'Date format' },
   warehouse: {
@@ -120,7 +144,7 @@ const EN: OnboardingContent = {
     hint: 'opens in a new tab; setup stays here',
     screens: {
       welcome: 'The user guide',
-      language: 'Settings: General',
+      business: 'The user guide',
       company: 'Settings: General',
       storage: 'Inventory: Batches and expiry',
       warehouse: 'Inventory: Stock on hand',
@@ -159,7 +183,7 @@ const AR: OnboardingContent = {
   optional: 'اختياري',
   steps: {
     welcome: { title: 'مرحبًا بك', body: 'يدير هذا التطبيق مستودعك ومشترياتك ومبيعاتك، مع موافقة مدير على كل حركة مخزون صادرة وسجل لا يمكن لأحد تغييره. بضع خطوات قصيرة تُعدّ شركتك؛ ويمكن تخطي كل خطوة وتغييرها لاحقًا.' },
-    language: { title: 'لغتك', body: 'اختر اللغة التي تريد استخدامها. يتحول اتجاه الصفحة من اليمين إلى اليسار مع العربية.' },
+    business: { title: 'ماذا تبيع؟', body: 'اختر الأقرب. بعدها يعرض الإعداد الخطوات التي تناسب نشاطك فقط، ويمكنك تغيير اختيارك في هذه الخطوة في أي وقت.' },
     company: { title: 'شركتك', body: 'تظهر هذه البيانات على مستنداتك وتحدد طريقة عرض المبالغ والتواريخ والأوقات.' },
     storage: { title: 'ظروف التخزين', body: 'بعض البضائع يجب أن تبقى باردة. تمنع ظروف التخزين (مثل غرفة تبريد من 2 إلى 8 درجات) وضع الأصناف المبرّدة في مستودع دافئ.' },
     suppliers: { title: 'مورّدوك', body: 'الشركات التي تشتري منها. تستخدمها أوامر الشراء وفواتير المورّدين.' },
@@ -173,12 +197,26 @@ const AR: OnboardingContent = {
   welcome: {
     start: 'ابدأ الإعداد',
     later: 'ليس الآن',
-    points: ['اختر لغتك', 'راجع بيانات شركتك', 'أضف مستودعاتك وأصنافك', 'أضف مورّديك وعملاءك', 'ادعُ فريقك', 'حدّد طريقة عمل الموافقات'],
+    points: ['أخبرنا بما تبيعه', 'راجع بيانات شركتك', 'أضف مستودعاتك وأصنافك', 'أضف مورّديك وعملاءك', 'ادعُ فريقك', 'حدّد طريقة عمل الموافقات'],
   },
-  language: {
-    personal: 'لغتي',
-    company: 'اجعلها أيضًا اللغة الافتراضية لكل من في الشركة',
-    companyHint: 'يستطيع كل شخص اختيار لغته من الإعدادات.',
+  // MACHINE DRAFT (10 Nov): the business question, listed in the Arabic review sheet
+  business: {
+    options: {
+      shop: { label: 'محل أو تجارة عامة', hint: 'ملابس، إلكترونيات، أدوات منزلية، قطع غيار…' },
+      food: { label: 'أغذية أو مشروبات', hint: 'بقالة، ألبان، مجمدات، مشروبات…' },
+      medicine: { label: 'أدوية', hint: 'صيدلية أو توزيع أدوية' },
+      cosmetics: { label: 'مستحضرات تجميل', hint: 'كريمات، عطور، عناية شخصية…' },
+      building: { label: 'مواد بناء', hint: 'أسمنت، حديد، سيراميك، دهانات…' },
+      other: { label: 'شيء آخر', hint: 'أي بضائع أخرى' },
+    },
+    unitHint: {
+      shop: 'الوحدات عادةً: قطعة أو علبة أو كرتونة.',
+      food: 'الوحدات عادةً: كجم أو كرتونة أو صندوق؛ ويمكن إعطاء البضائع التي يجب أن تبقى باردة ظرف تخزين (الخطوة السابقة).',
+      medicine: 'الوحدات عادةً: علبة أو شريط أو زجاجة؛ ويمكن إعطاء الأدوية التي تحتاج إلى مكان بارد ظرف تخزين (الخطوة السابقة).',
+      cosmetics: 'الوحدات عادةً: قطعة أو زجاجة أو كرتونة؛ ويمكن إعطاء المنتجات التي تحتاج إلى مكان بارد ظرف تخزين (الخطوة السابقة).',
+      building: 'الوحدات عادةً: طن أو شيكارة أو م² أو م³.',
+      other: 'استخدم الوحدة التي تعدّ بها مخزونك: قطعة، كجم، علبة…',
+    },
   },
   company: { name: 'اسم الشركة', currency: 'العملة', timezone: 'المنطقة الزمنية', dateFormat: 'تنسيق التاريخ' },
   warehouse: {
@@ -221,7 +259,7 @@ const AR: OnboardingContent = {
     hint: 'يُفتح في علامة تبويب جديدة؛ ويبقى الإعداد هنا',
     screens: {
       welcome: 'دليل الاستخدام',
-      language: 'الإعدادات: عام',
+      business: 'دليل الاستخدام',
       company: 'الإعدادات: عام',
       storage: 'المخزون: الدفعات وتواريخ الانتهاء',
       warehouse: 'المخزون: المخزون المتاح',
@@ -253,16 +291,19 @@ export const onboardingContent = (lang: Lang): OnboardingContent => (lang === 'a
 
 const key = (orgId: string) => `erp.onboarding.${orgId}`;
 
-export type Progress = { step: number; done: boolean };
+/** step: the position in the steps shown for `business` (stepsFor). business: the answer to "What do you sell?", once given. */
+export type Progress = { step: number; done: boolean; business?: BusinessType | null };
 
 export function readProgress(orgId: string, storage: Pick<Storage, 'getItem'> = localStorage): Progress {
   try {
     const raw = storage.getItem(key(orgId));
     const p = raw ? (JSON.parse(raw) as Partial<Progress>) : {};
-    const step = Number.isInteger(p.step) && (p.step as number) >= 0 && (p.step as number) < STEP_KEYS.length ? (p.step as number) : 0;
-    return { step, done: p.done === true };
+    const business = (BUSINESS_TYPES as readonly string[]).includes(p.business as string) ? (p.business as BusinessType) : null;
+    const count = stepsFor(business).length;
+    const step = Number.isInteger(p.step) && (p.step as number) >= 0 && (p.step as number) < count ? (p.step as number) : 0;
+    return { step, done: p.done === true, business };
   } catch {
-    return { step: 0, done: false };
+    return { step: 0, done: false, business: null };
   }
 }
 

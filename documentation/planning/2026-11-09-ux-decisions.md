@@ -112,6 +112,11 @@ The first-run wizard has 11 steps, asks for language a third time, and has a col
 
 Your answer: Neither A nor B: the wizard first asks **"What do you sell?"** (shop, food or drinks, medicine, cosmetics, building materials, something else) and shows only the steps that fit; the storage-conditions step appears only for food, medicine and cosmetics. Drop the language step (already asked twice before).
 
+Built 10 Nov (branch `ux/d9-wizard`): the question is step 2, one click chooses and moves on; the storage step appears only for food,
+medicine and cosmetics; the items step shows a unit hint for the business (for example "ton, bag, m² or m³" for building materials).
+The answer is kept with the wizard's progress in this browser (no database change). Using it elsewhere in the app (for example
+default units or which apps to switch on) would need it saved as a company setting: a later question.
+
 ### D10. Settings for staff
 
 Workers open Settings and see greyed-out company, users, apps and audit pages they cannot use.
