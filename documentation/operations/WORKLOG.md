@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-09 — Bank import plan, simulated Central Bank of Egypt rates, Google Sheets options, Arabic review sheet
+
+**Objective.** Ben's next priorities: the bank statement import plan (plan first, code after his approval), the Central Bank of Egypt
+exchange rate as a simulated source, and a short Google Sheets options note. Build the parts that need no decision straight away.
+
+**Actions Completed.** Branch `plans/bank-import-cbe-sheets`.
+- `documentation/plans/BANK_STATEMENT_IMPORT_PLAN.md`: formats, matching tiers, unmatched lines, who approves, data model, five
+  questions for Ben and the sample files we need.
+- `packages/shared/src/bankStatements.ts` (+ 28 tests): CSV reading, statement amounts and dates (Arabic digits, brackets, Excel
+  serials), rows to lines with an error list, line fingerprints against double imports, match suggestions (exact, strong, possible)
+  and groups. Pure functions; no screen or database uses them yet.
+- Central Bank of Egypt, simulated: `apps/api/src/lib/rates/cbe.ts` (buy and sell from the stored daily mid rate ± 0.25%, labelled
+  simulated; live mode refuses), `GET /v1/core/fx/cbe`, a table under Settings → Integrations → Exchange rates with a SIMULATED badge.
+  The simulated rates are never saved, so `core_fx_rate` can never convert with them (a test checks the route and the rates job).
+  Found: `core_fx_rate` picks between sources on the same day alphabetically; must be fixed (explicit preference) before any second
+  stored source, i.e. before live CBE rates.
+- `documentation/planning/2026-11-09-google-sheets-options.md`: uses, options A (files), B (live Google connection), C (read-only
+  link), recommendation A then C.
+- Arabic: the CBE texts are machine drafts; `documentation/plans/2026-11-09-arabic-review-sheet.md` lists them with batch 3's (34).
+
+**Database / System Result.** None. No migration.
+
+**Safety Status.** Lint, typecheck, tests (shared 60 + 1 skipped, API 290 + 7 skipped, web 85) pass; doc links OK. CBE screen not
+viewed in a browser. Bank import screens and migration wait for Ben's approval of the plan.
+
 ## 2026-11-09 — 063 applied to live; sole-approver exception for the other approvals (065); stray root files removed
 
 **Objective.** Record Ben's apply of 063; build decision D1b ("A, all of them"); remove three scratch files committed to `main` by a

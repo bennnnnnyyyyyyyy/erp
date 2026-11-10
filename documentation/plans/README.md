@@ -39,6 +39,7 @@ Add a line here in the same change that adds a plan.
 - [`TREASURY_PLAN.md`](TREASURY_PLAN.md): accounting phase 2, treasury, branches, party codes, statements.
 - [`ETA_EINVOICING_PLAN.md`](ETA_EINVOICING_PLAN.md): Egyptian e-invoicing.
 - [`INTEGRATIONS_PLAN.md`](INTEGRATIONS_PLAN.md): email, Slack, Teams, Telegram, payments, shipping, Shopify, AI.
+- [`BANK_STATEMENT_IMPORT_PLAN.md`](BANK_STATEMENT_IMPORT_PLAN.md): bank statement import and reconciliation (draft, waiting for Ben's approval).
 - [`ONBOARDING_WIZARD_PLAN.md`](ONBOARDING_WIZARD_PLAN.md): first-run setup wizard.
 - [`IN_APP_TOUR_PLAN.md`](IN_APP_TOUR_PLAN.md): the in-app tour.
 

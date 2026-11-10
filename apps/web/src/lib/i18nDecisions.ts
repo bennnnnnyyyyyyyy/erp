@@ -69,4 +69,46 @@ export const DECISIONS_AR: Record<string, string> = {
   'Say whether the rest is still coming.': 'حدّد إن كان الباقي سيصل.',
   'Received what arrived. The order stays open for the rest.': 'تم استلام ما وصل. يبقى الأمر مفتوحًا للباقي.',
   'Received what arrived. The order is closed; the rest will not come.': 'تم استلام ما وصل. أُغلق الأمر؛ الباقي لن يصل.',
+  // Central Bank of Egypt rates, simulated (9 Nov). MACHINE DRAFT: listed in documentation/plans/2026-11-09-arabic-review-sheet.md.
+  'Central Bank of Egypt': 'البنك المركزي المصري',
+  SIMULATED: 'تجريبي',
+  'Practice numbers only: worked out from the daily rate above, not the Central Bank’s own figures. They are not saved and nothing is converted with them. Live rates come later.':
+    'أرقام للتجربة فقط: محسوبة من السعر اليومي أعلاه، وليست أرقام البنك المركزي نفسه. لا تُحفظ ولا يُحوَّل بها أي مبلغ. الأسعار الفعلية لاحقًا.',
+  'Buy (EGP)': 'شراء (ج.م)',
+  'Sell (EGP)': 'بيع (ج.م)',
+  // Stock counts screens (10 Nov, MVP check). MACHINE DRAFT: listed in the Arabic review sheet.
+  Counting: 'جارٍ العد',
+  'Applied to stock': 'طُبِّق على المخزون',
+  'Started by': 'بدأه',
+  Started: 'بدأ في',
+  'Count a whole warehouse. The differences change stock only after a manager approves them.':
+    'اجرد مخزنًا كاملًا. لا تُغيِّر الفروق المخزون إلا بعد موافقة مدير.',
+  'Start a count': 'بدء جرد',
+  'Month-end count': 'جرد نهاية الشهر',
+  'Every item in the warehouse is listed with the quantity the books show right now. Count each one and enter what you find.':
+    'يظهر كل صنف في المخزن بالكمية التي تُظهرها الدفاتر الآن. اعدّ كل صنف وأدخل ما تجده.',
+  'Start the count': 'ابدأ الجرد',
+  '← Stock counts': '→ جرد المخزون',
+  '{n} of {total} items': '{n} من {total} صنف',
+  Differences: 'الفروق',
+  'Submitted by': 'أرسله',
+  'Type the quantity you counted for each item; it is saved when you leave the field. Leave it empty to clear it.':
+    'اكتب الكمية التي عددتها لكل صنف؛ تُحفظ عند مغادرة الخانة. اتركها فارغة لمسحها.',
+  'Show only items not counted yet': 'إظهار الأصناف التي لم تُعَدّ بعد فقط',
+  'This warehouse has no items to count.': 'لا توجد أصناف للجرد في هذا المخزن.',
+  'Every item is counted.': 'تم عدّ كل الأصناف.',
+  'Yes, submit': 'نعم، أرسل',
+  'Submit the count with {n} difference(s)? Nobody can change the counted quantities after this.':
+    'إرسال الجرد بعدد {n} فرق؟ لا يمكن لأحد تغيير الكميات المعدودة بعد ذلك.',
+  '{n} item(s) still to count': 'ما زال {n} صنف بلا عدّ',
+  'Approving changes stock by each difference. If you started or submitted this count, another owner or manager must approve it, unless you are the only one.':
+    'الموافقة تغيّر المخزون بكل فرق. إن كنت بدأت هذا الجرد أو أرسلته، فيجب أن يوافق عليه مالك أو مدير آخر، إلا إذا كنت الوحيد.',
+  'Yes, change the stock': 'نعم، غيّر المخزون',
+  'Change stock by the {n} difference(s) of this count?': 'تغيير المخزون بفروق هذا الجرد ({n})؟',
+  'Cancel count': 'إلغاء الجرد',
+  'Cancel this count? Stock is not changed.': 'إلغاء هذا الجرد؟ لن يتغير المخزون.',
+  'Submitted. A manager now has to approve it.': 'تم الإرسال. يجب الآن أن يوافق عليه مدير.',
+  'Approved. The differences were applied to stock.': 'تمت الموافقة. طُبِّقت الفروق على المخزون.',
+  'Rejected. Stock was not changed.': 'رُفض. لم يتغير المخزون.',
+  'Count cancelled. Stock was not changed.': 'أُلغي الجرد. لم يتغير المخزون.',
 };

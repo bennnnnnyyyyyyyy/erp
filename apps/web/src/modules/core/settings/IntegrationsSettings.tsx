@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AI_NOTICE_VERSION, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
+import { AI_NOTICE_VERSION, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type CbeRate, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
@@ -130,7 +130,42 @@ function ExchangeRates() {
           {rates.data.map((r) => <tr key={r.from}><td>{r.from}</td><td className="right">{r.rate.toFixed(4)}</td><td>{formatDay(r.rateDate, session.org)}</td></tr>)}
         </tbody></table></div>
       ) : <p className="muted small">{tr('No rates saved yet; they arrive with the next scheduled run.')}</p>}
+      <CentralBankRates />
     </div>
+  );
+}
+
+// Central Bank of Egypt buy and sell rates, SIMULATED (apps/api/src/lib/rates/cbe.ts): worked out from the daily rate above, never
+// saved, never used to convert anything. Live rates wait for the source and for the company's choice of buy, sell or mid.
+function CentralBankRates() {
+  const session = useSession();
+  const rates = useLoad(() => api<CbeRate[]>('/v1/core/fx/cbe'));
+  return (
+    <section className="stack" aria-labelledby="cbe-rates">
+      <h3 id="cbe-rates">
+        {tr('Central Bank of Egypt')} <span className="badge">{tr('SIMULATED')}</span>
+      </h3>
+      <p className="muted small">
+        {tr('Practice numbers only: worked out from the daily rate above, not the Central Bank’s own figures. They are not saved and nothing is converted with them. Live rates come later.')}
+      </p>
+      {!rates.data ? <Loading error={rates.error} rows={2} /> : rates.data.length ? (
+        <div className="table-wrap"><table><thead><tr>
+          <th scope="col">{tr('Currency')}</th>
+          <th scope="col" className="right">{tr('Buy (EGP)')}</th>
+          <th scope="col" className="right">{tr('Sell (EGP)')}</th>
+          <th scope="col">{tr('Date')}</th>
+        </tr></thead><tbody>
+          {rates.data.map((r) => (
+            <tr key={r.currency}>
+              <td>{r.currency}</td>
+              <td className="right">{r.buy.toFixed(4)}</td>
+              <td className="right">{r.sell.toFixed(4)}</td>
+              <td>{formatDay(r.rateDate, session.org)}</td>
+            </tr>
+          ))}
+        </tbody></table></div>
+      ) : <p className="muted small">{tr('No rates saved yet; they arrive with the next scheduled run.')}</p>}
+    </section>
   );
 }
 

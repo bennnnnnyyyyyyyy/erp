@@ -7,4 +7,5 @@ export * from './billing';
 export * from './modules/einvoicing';
 export * from './accounting';
 export * from './treasury';
+export * from './bankStatements';
 export * from './integrations';
