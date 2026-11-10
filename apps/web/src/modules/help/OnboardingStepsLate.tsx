@@ -39,6 +39,8 @@ import {
   type OnProgress,
   type Report,
 } from './sampleFill';
+import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
+import { followingCodes } from '../../lib/sku';
 import { startTour } from './TourHost';
 import { InviteLinkBox } from '../core/settings/UsersSettings';
 import { inputClass, useList, Field } from './onboardingShared';
@@ -58,8 +60,26 @@ export function ItemsStep({ c, business, onDone }: { c: OnboardingContent; busin
   const items = useList<{ id: string }>('/v1/inventory/items', readable, 0);
   const warehouses = useList<{ id: string; code: string }>('/v1/inventory/warehouses', readable, 0);
   const conditions = useList<{ id: string; name: string }>('/v1/inventory/storage-conditions', hasPermission(session.permissions, 'inventory.batches.read'), 0);
-  const blank = (): ItemRow => ({ sku: '', name: '', nameAr: '', uom: 'piece', warehouse: warehouses?.[0]?.code ?? '', condition: '', openingQty: 0, cost: null });
+  // The company's item code format (sql/075): new rows get the next free codes on their own and stay editable. With no format yet,
+  // an owner or admin is asked once, above the table.
+  const sku = useSkuFormat();
+  const canSetFormat = useCanSetSkuFormat();
+  const last = (rs: ItemRow[]) => [...rs].reverse().find((r) => r.sku.trim())?.sku.trim() ?? '';
+  const blank = (after: ItemRow[] = []): ItemRow => ({
+    sku: sku.info?.format && last(after) ? (followingCodes(last(after), 2)[1] ?? '') : '',
+    name: '',
+    nameAr: '',
+    uom: 'piece',
+    warehouse: warehouses?.[0]?.code ?? '',
+    condition: '',
+    openingQty: 0,
+    cost: null,
+  });
   const [rows, setRows] = useState<ItemRow[]>(() => [blank(), blank(), blank()]);
+  useEffect(() => {
+    const next = sku.info?.next;
+    if (next) setRows((rs) => (rs.some((r) => r.sku.trim()) ? rs : rs.map((r, i) => ({ ...r, sku: followingCodes(next, rs.length)[i] ?? '' }))));
+  }, [sku.info?.next]);
   const saver = useRowsSave(onDone);
   if (!can) return <p className="m-0 text-sm text-muted-foreground">{c.notAllowed}</p>;
   const filled = rows.filter((r) => r.sku.trim() && r.name.trim());
@@ -78,19 +98,22 @@ export function ItemsStep({ c, business, onDone }: { c: OnboardingContent; busin
           <option key={x.id} value={x.name} />
         ))}
       </datalist>
+      {sku.info && !sku.info.format && canSetFormat ? <SkuFormatForm initial={null} onSaved={(info) => sku.setInfo(info)} /> : null}
       <RowsTable<ItemRow>
         cols={[
           { key: 'sku', label: c.items.sku, width: '9rem' },
           { key: 'name', label: c.items.name },
-          { key: 'uom', label: c.items.unit, width: '7rem' },
-          { key: 'warehouse', label: c.warehouse.code, list: 'onb-warehouses', width: '8rem' },
+          { key: 'nameAr', label: c.items.nameAr, optional: true },
+          { key: 'uom', label: c.items.unit, unit: true, width: '9rem' },
+          // Was labelled "Code" like the SKU, so the table showed two code columns (walkthrough, 10 Nov 2026).
+          { key: 'warehouse', label: c.items.warehouse, list: 'onb-warehouses', width: '8rem' },
           { key: 'openingQty', label: c.items.opening, type: 'number', width: '8rem', optional: true },
           { key: 'cost', label: c.items.cost, type: 'number', width: '8rem', optional: true },
           { key: 'condition', label: c.warehouse.condition, list: 'onb-item-conditions', width: '10rem', optional: true },
         ]}
         rows={rows}
         setRows={setRows}
-        blank={blank}
+        blank={() => blank(rows)}
         addLabel={c.items.addRow}
         optionalLabel={c.optional}
       />

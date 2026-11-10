@@ -1,6 +1,6 @@
 import type { ApiResponse } from '@erp/shared';
 import { demoApi, demoMode } from './demo';
-import { tr } from './i18n';
+import { currentLanguage, tr, trf } from './i18n';
 import { supabase } from './supabase';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
@@ -83,6 +83,11 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 export function translateServerError(message: string): string {
   const whole = tr(message);
   if (whole !== message) return whole;
+  // The plain stock-shortage sentence the server builds (apps/api/src/lib/rpc.ts); its numbers are placed into the Arabic sentence.
+  const short = /^Not enough stock: you asked for (\S+), but only (\S+) (?:is|are) available in this warehouse\.$/.exec(message);
+  if (short && currentLanguage() === 'ar') {
+    return trf('Not enough stock: you asked for {asked}, but only {available} available in this warehouse.', { asked: short[1] as string, available: short[2] as string });
+  }
   const cut = message.indexOf(': ');
   if (cut < 0) return message;
   const head = message.slice(0, cut);

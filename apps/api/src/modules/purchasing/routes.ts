@@ -25,6 +25,15 @@ type SupplierRow = {
   city: string | null;
   phone: string | null;
   payment_terms_days?: number | null;
+  // sql/076
+  tax_number?: string | null;
+  commercial_registry?: string | null;
+  email?: string | null;
+  address?: string | null;
+  bank_name?: string | null;
+  bank_account?: string | null;
+  default_currency?: string | null;
+  notes?: string | null;
 };
 type OrderRow = {
   id: string;
@@ -50,6 +59,7 @@ type OrderRow = {
 const ORDER_COLUMNS = 'id, number, supplier_id, warehouse_id, status, currency, created_by, created_at, received_at';
 const APPROVAL_COLUMNS = 'approval, approval_decided_by, approval_decided_at, approval_note, approval_self';
 const CONFIRM_COLUMNS = 'promised_date, supplier_ref, confirmed_at'; // sql/073
+const SUPPLIER_DETAIL_COLUMNS = 'tax_number, commercial_registry, email, address, bank_name, bank_account, default_currency, notes';
 const supplier = (s: SupplierRow) => ({
   id: s.id,
   code: s.code,
@@ -59,7 +69,40 @@ const supplier = (s: SupplierRow) => ({
   phone: s.phone ?? '',
   /** null = the company default (sql/041). */
   paymentTermsDays: s.payment_terms_days ?? null,
+  // sql/076: business details of the company, shown only to people who can read suppliers (never in public report links).
+  taxNumber: s.tax_number ?? '',
+  commercialRegistry: s.commercial_registry ?? '',
+  email: s.email ?? '',
+  address: s.address ?? '',
+  bankName: s.bank_name ?? '',
+  bankAccount: s.bank_account ?? '',
+  defaultCurrency: s.default_currency ?? '',
+  notes: s.notes ?? '',
 });
+
+/** The optional supplier details from a request body, as the database function's parameters (sql/076). Empty means none. */
+function supplierDetails(body: Record<string, unknown>) {
+  const limited = (v: string, max: number, label: string) => {
+    if (v.length > max) invalid(`${label} is too long (up to ${max} characters)`);
+    return v || null;
+  };
+  const email = limited(text(body.email), 200, 'Email');
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) invalid('That email address is not valid');
+  const currency = text(body.defaultCurrency).toUpperCase();
+  if (currency && !/^[A-Z]{3}$/.test(currency)) invalid('A currency is a 3-letter code, for example EGP');
+  const all = {
+    p_tax_number: limited(text(body.taxNumber), 40, 'Tax registration number'),
+    p_commercial_registry: limited(text(body.commercialRegistry), 40, 'Commercial registry number'),
+    p_email: email,
+    p_address: limited(text(body.address), 500, 'Address'),
+    p_bank_name: limited(text(body.bankName), 120, 'Bank name'),
+    p_bank_account: limited(text(body.bankAccount), 60, 'Bank account'),
+    p_default_currency: currency || null,
+    p_notes: limited(text(body.notes), 2000, 'Notes'),
+  };
+  // Only what was given: with none, the call is the old one and works before sql/076 is applied.
+  return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== null));
+}
 
 async function loadOrders(c: Context<AppEnv>, id?: string) {
   const read = (columns: string) => {
@@ -159,14 +202,13 @@ async function oneOrder(c: Context<AppEnv>, id: string) {
 }
 
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
-  const { data, error } = await userDb(c)
-    .from('pur_suppliers')
-    .select('id, code, name, contact, city, phone, payment_terms_days')
-    .eq('org_id', orgOf(c))
-    .is('deleted_at', null)
-    .order('name');
+  const read = (columns: string) =>
+    userDb(c).from('pur_suppliers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
+  // Until sql/076 is applied the new columns do not exist: read the old ones so the list still works.
+  let { data, error } = await read(`id, code, name, contact, city, phone, payment_terms_days, ${SUPPLIER_DETAIL_COLUMNS}`);
+  if (error && isMissingSchema(error)) ({ data, error } = await read('id, code, name, contact, city, phone, payment_terms_days'));
   if (error) throw error;
-  return ok(c, ((data ?? []) as SupplierRow[]).map(supplier));
+  return ok(c, ((data ?? []) as unknown as SupplierRow[]).map(supplier));
 });
 // A supplier's payment terms in days, or null for the company default (sql/041). The database allows owners and admins.
 purchasingRoutes.put('/suppliers/:id/terms', requirePermission('purchasing.suppliers.manage'), async (c) => {
@@ -188,6 +230,7 @@ purchasingRoutes.put('/suppliers/:id', requirePermission('purchasing.suppliers.m
     p_contact: text(body.contact) || null,
     p_city: text(body.city) || null,
     p_phone: text(body.phone) || null,
+    ...supplierDetails(body),
   });
   return ok(c, { id, name, contact: text(body.contact), city: text(body.city), phone: text(body.phone) });
 });
@@ -211,6 +254,7 @@ purchasingRoutes.post('/suppliers', requirePermission('purchasing.suppliers.mana
     p_phone: text(body.phone) || null,
     // sql/050: a typed code, or an automatic one (S-00001) when empty.
     p_code: text(body.code) || null,
+    ...supplierDetails(body),
   });
   return ok(c, { id, name, contact: text(body.contact), city: text(body.city), phone: text(body.phone) }, 201);
 });

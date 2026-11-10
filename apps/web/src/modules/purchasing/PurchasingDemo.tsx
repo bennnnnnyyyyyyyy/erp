@@ -39,7 +39,7 @@ const statusPill = (o: PurchaseOrder, today: string = todayIn()) => (
 );
 
 export function Suppliers() {
-  return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" addPermission="purchasing.suppliers.manage" />;
+  return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" addPermission="purchasing.suppliers.manage" detailed />;
 }
 
 export function PurchaseOrders() {

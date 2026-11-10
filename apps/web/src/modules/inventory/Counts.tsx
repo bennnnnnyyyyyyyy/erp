@@ -8,7 +8,7 @@ import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
-import { parseAmount } from '../../lib/numbers';
+import { formatQty, parseAmount } from '../../lib/numbers';
 import { usePeople } from '../../lib/people';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
@@ -51,7 +51,7 @@ const STATUS_CLASS: Record<CountStatus, string> = {
   counting: 'st-ordered', submitted: 'st-submitted', approved: 'st-approved', applied: 'st-received', rejected: 'st-rejected', cancelled: 'st-cancelled',
 };
 const StatusPill = ({ status }: { status: CountStatus }) => <span className={`pill ${STATUS_CLASS[status]}`}>{tr(STATUS_LABEL[status])}</span>;
-const qty = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 3 });
+const qty = (n: number) => formatQty(n);
 
 export function CountsList() {
   const cat = useCatalog();

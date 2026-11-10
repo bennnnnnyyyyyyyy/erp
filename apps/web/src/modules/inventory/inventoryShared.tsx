@@ -1,10 +1,11 @@
+import { formatQty } from '../../lib/numbers';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse, RequestStatus } from '../../lib/demoInventory';
 import { useLoad } from '../../lib/useLoad';
 import { tr } from '../../lib/i18n';
 
 /** A quantity for display: thousands separated, at most three decimals, no trailing zeros (4,826 or 12.5). */
-export const qty = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 3 });
+export const qty = (n: number) => formatQty(n);
 
 const STATUS_LABEL: Record<RequestStatus, string> = {
   submitted: 'Waiting for approval',

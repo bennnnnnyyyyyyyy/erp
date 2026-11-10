@@ -1,3 +1,4 @@
+import { formatQty } from '../../lib/numbers';
 import type { CSSProperties, ReactNode } from 'react';
 import { hasPermission } from '@erp/shared';
 import { Loading } from '../../components/Loading';
@@ -22,7 +23,7 @@ type Count = { id: string; number: string; warehouseId: string; status: string; 
 type Task = { key: string; rank: number; text: ReactNode; to: string; action: string };
 
 const DAY = 86_400_000;
-const qty = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 3 });
+const qty = (n: number) => formatQty(n);
 const optional = <T,>(p: Promise<T[]>) => p.catch(() => [] as T[]);
 
 export function InventoryOverview() {

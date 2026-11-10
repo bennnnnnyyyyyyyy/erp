@@ -106,6 +106,19 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   NOT_SIGNED_IN: { status: 401, message: 'Your session has ended: sign in again', code: 'not_signed_in' },
 };
 
+/** "1.000" -> "1", "2.500" -> "2.5": quantities are stored with three decimals but people should not read them. */
+export const trimQty = (text: string): string =>
+  text.replace(/(\d+)\.(\d*?)0+(?!\d)/g, (_m, i: string, d: string) => (d ? `${i}.${d}` : i));
+
+/** The plain sentence for a stock shortage, from the database's "0.000 available, 1.000 requested" detail. */
+export function stockShortMessage(details: string): string | null {
+  const m = /^(-?[\d.]+) available, (-?[\d.]+) requested$/.exec(details.trim());
+  if (!m) return null;
+  const available = trimQty(m[1] as string);
+  const asked = trimQty(m[2] as string);
+  return `Not enough stock: you asked for ${asked}, but only ${available} ${available === '1' ? 'is' : 'are'} available in this warehouse.`;
+}
+
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */
 export async function callRpc<T>(client: SupabaseClient, fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await client.rpc(fn, args);
@@ -114,7 +127,11 @@ export async function callRpc<T>(client: SupabaseClient, fn: string, args: Recor
     if (error.code === '23505') throw new HttpError(409, 'That already exists', 'duplicate');
     const reason = REASONS[error.message.trim()];
     // The database puts the specifics (for example "30 available, 80 requested") in `details`.
-    if (reason) throw new HttpError(reason.status, error.details ? `${reason.message}: ${error.details}` : reason.message, reason.code);
+    if (reason) {
+      const short = reason.code === 'insufficient_available' && error.details ? stockShortMessage(error.details) : null;
+      if (short) throw new HttpError(reason.status, short, reason.code);
+      throw new HttpError(reason.status, error.details ? `${reason.message}: ${trimQty(error.details)}` : reason.message, reason.code);
+    }
     throw error;
   }
   return data as T;

@@ -16,6 +16,15 @@ export type Party = {
   phone: string;
   /** Payment terms in days; null or missing = the company default (sql/041). */
   paymentTermsDays?: number | null;
+  /** Supplier business details (sql/076; real API only). Empty text when not given. */
+  taxNumber?: string;
+  commercialRegistry?: string;
+  email?: string;
+  address?: string;
+  bankName?: string;
+  bankAccount?: string;
+  defaultCurrency?: string;
+  notes?: string;
 };
 export type POStatus = 'ordered' | 'received' | 'cancelled';
 export type PurchaseOrder = {

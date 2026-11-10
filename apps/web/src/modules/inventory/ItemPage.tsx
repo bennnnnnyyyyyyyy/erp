@@ -1,3 +1,4 @@
+import { formatQty } from '../../lib/numbers';
 import { useState, type CSSProperties } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { Loading } from '../../components/Loading';
@@ -24,7 +25,7 @@ type Batch = { id: string; itemId: string; batchNo: string; expiryDate: string |
 type Cost = { itemId: string; avgCostMinor: number | null; onHand: number; valueMinor: number | null };
 type Forecast = { itemId: string; runsOutOn: string | null; dailyRate: number; daysOfCover: number | null };
 
-const qty = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 3 });
+const qty = (n: number) => formatQty(n);
 /** A list that may not exist for this person or in the demo: an error just means "nothing to show". */
 const optional = <T,>(p: Promise<T[]>) => p.catch(() => [] as T[]);
 
