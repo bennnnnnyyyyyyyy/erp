@@ -1,131 +1,175 @@
-# Walkthrough, part 2: what is left
+# Walkthrough, part 2 (checked against the live app's code)
 
-You did part 1 (sign-up, settings, warehouses, suppliers, buying, selling). This list is only what is left, in plain steps.
+Every step below was checked against the code that is live now. The labels in **bold** are the exact words on screen.
+Steps are grouped by how sure we are that the step is right:
 
-**Before you start**
+- **Group 1:** confirmed in the code. Do these first.
+- **Group 2:** confirmed, but one detail is worth watching (written under the step).
+- **Group 3:** the app can't do what the old checklist asked. Each says what to check instead.
 
-- You test the app **as it is live now**. Tonight's work (purchase order approval, imports from Excel, Google Sheets links, delivery
-  note numbers, "Late" orders, Google Chat, the walkthrough fixes) is **not live yet**, so don't look for it.
-- **Already known, no need to report again:**
-  - pop-up boxes cut off (fixed);
-  - Payment terms box inside the supplier list;
-  - empty Arabic name column on Stock on hand;
-  - "0.000" quantities and the stock message;
-  - time zone and currency typed by hand;
-  - setup asking twice;
-  - warehouse can't be edited;
-  - Settings menu order;
-  - errors shown as text;
-  - few columns on items and suppliers;
-  - accounting setup wording;
-  - inventory menu confusing (being rebuilt).
-- Use **A** = you (owner) and **B** = your staff account, in two browser windows.
-- For each line write ✅ works, ❌ broken, or ⚠️ works but confusing, plus a few words. That's all I need.
-- The made-up bank statement is ready: `Desktop\ERP\test-bank-statement.csv`.
+**A** = you (owner). **B** = your staff account (member). Use two browser windows.
+Mark each step ✅ works, ❌ broken, or ⚠️ works but confusing, plus a few words.
+
+**Who sees what (confirmed):**
+- B never sees the **Finance**, **Accounting**, **Treasury** or **Alerts** apps.
+- In **Settings**, B sees only **My settings**.
+- B can't create purchase orders.
+
+**Not live yet, don't look for it:** purchase order approval, imports from Excel, Google Sheets links, delivery note numbers, "Late"
+orders, Google Chat, and tonight's walkthrough fixes.
 
 ---
 
-## 1. Stock (Inventory app)
+## 0. Get ready (A, about 5 minutes)
 
-1. [ ] **Add an item that has an expiry date.**
-   1. As A: Inventory → Stock on hand → Add item. Name "Face cream", SKU "FC-1", unit piece, no opening stock. Save.
-   2. Open the item (click its row) → switch on "Track batches" (it may be called batch tracking). (where i can find that, i didnt even add an expiry date)
-   3. Check: the item page opens and shows the batch setting on.
+1. [ ] **Two warehouses:** Inventory → Stock on hand → **Add warehouse** (Short code, Name). You need two.
+2. [ ] **A supplier:** Purchasing → Suppliers → **Add supplier**.
+3. [ ] **A bank account and a cash box:**
+   1. **Treasury** → **Cash and banks** → **Add the default treasury accounts**.
+   2. Or use **Add a cash box or bank account** with Kind "Bank account", then again for a cash box.
+   3. Treasury needs Accounting switched on.
 
-2. [ ] **Give that item stock with a batch and expiry.**
-   1. Purchasing → New purchase order for Face cream, 20 pieces.
-   2. Open the order → Receive goods → enter a batch number "B-001" and an expiry date three months ahead, if asked.
-   3. Check: Inventory → Batches and expiry shows B-001 with its date.
+---
 
-3. [ ] **Receive part of an order.**
-   1. Make a new purchase order for 10 of any item → Receive goods → type 4 → choose "Yes, the rest is still coming".
-   2. Check: the order says "Partly received" and Stock on hand went up by 4.
+## Group 1: confirmed in the code
+
+**Stock**
+
+1. [ ] **Add an item, then switch on batches.**
+   1. As A: Inventory → Stock on hand → **Add item**. Fields: SKU **FC-1**, Unit **piece**, Name **Face cream**, Opening stock **0**, Warehouse. Click **Add item**.
+   2. Inventory → **Batches and expiry** (under Planning) → section **Batch tracking per item** → row **FC-1 · Face cream** → **Turn on**.
+   3. Check: the message "FC-1: batch tracking on." appears and the Tracking column says On.
+   4. Click the Face cream row in Stock on hand. The item page opens with the tabs **Stock by warehouse, Movements, Batches, Units, Cost, History**.
+
+2. [ ] **Receive a batch with an expiry date.**
+   1. Inventory → **Batches and expiry** → **Receive a batch**. Fields: Item Face cream, Warehouse, **Batch number** B-001, **Quantity** 20, **Expires on** about three months ahead, Unit cost (needed when accounting is on).
+   2. Click **Receive batch**.
+   3. Check: B-001 appears under **All batches** and **Expiring in the next 90 days**.
+
+3. [ ] **Receive part of a purchase order** (A only).
+   1. Purchasing → Purchase orders → **New purchase order**: Supplier, Warehouse, item Face cream, Quantity **10**, Unit cost (type 0 if free) → **Place order**.
+   2. Open the order → **Receive goods**. "Arrived now" is filled with 10: change it to **4**.
+   3. Choose **Yes, keep the order open for the rest** → **Receive into stock**.
+   4. Check: the message "Received what arrived. The order stays open for the rest." In the Purchase orders list, Status says **Partly received**.
+   - These 4 go into a lot called "UNBATCHED" (no expiry), because receiving an order doesn't ask for a batch.
 
 4. [ ] **Staff asks for goods; the owner approves.**
-   1. As B: Inventory → Stock requests → New request, 2 pieces of an item that has stock.
-   2. As B: open it. There should be **no** Approve button for B.
-   3. As A: open the bell or Stock requests → open B's request → Approve → Issue.
+   1. As B: Inventory → Stock requests → **New request**: Issue from warehouse, **Reason**, Item, Quantity **2** → **Submit for approval**.
+   2. As B: open it. Check it says "Waiting for a manager to approve." and there is **no** Approve button.
+   3. As A: open the request → **Approve** → **Issue stock** → **Yes, issue**.
    4. Check: stock went down by 2.
+   - After approval B can also press Issue stock.
 
 5. [ ] **Move stock between warehouses.**
-   1. As B: Stock transfers → New transfer, 1 piece from warehouse 1 to warehouse 2.
-   2. As A: approve it; then dispatch and receive it as the screens ask.
-   3. Check: one less in warehouse 1, one more in warehouse 2.
-   - (Owners approving their own transfers is built, not live yet.)
+   1. As B: Inventory → Stock transfers → **New transfer**: From warehouse, To warehouse, Item, Quantity 1 → **Submit transfer**.
+   2. As A: open it → **Approve**.
+   3. Then (A or B) **Dispatch**, then **Receive at destination**.
+   4. Check: one less in the first warehouse, one more in the second.
 
-6. [ ] **Correct a quantity.**
-   1. As B: Stock adjustments → record a loss of 1 piece with a reason ("broken").
-   2. As A: approve it.
+6. [ ] **Correct a quantity (a loss of 1).** This screen is a one-item count, not a "loss" form.
+   1. As B: Inventory → **Stock adjustments** (under Counting) → **New cycle count**: Item, Warehouse, **Counted quantity** = the "System quantity" shown minus 1, **Reason** "broken" → **Submit count**.
+   2. As A: in that row press **Approve**.
    3. Check: stock went down by 1.
 
 7. [ ] **Count a warehouse.**
-   1. As B: Stock counts → Start a count for warehouse 1 → type a counted number for each item, **one of them different** from the books → Submit.
-   2. As A: open it → Approve.
-   3. Check: the difference became a stock change.
+   1. As B: Inventory → **Stock counts** → **Start a count** → pick a warehouse → **Start the count**.
+   2. Type a counted quantity for **every** item; make one different from the books. **Submit for approval** only works once every item is counted → **Yes, submit**.
+   3. As A: open it → **Approve** → **Yes, change the stock**.
+   4. Check: the Stock ledger shows a **Count adjustment** row.
 
 8. [ ] **Reorder level and forecast.**
-   1. Reorder levels → set 10 for one item.
-   2. Check: Overview "Low on stock" counts it if it has fewer than 10. Stock forecast lists the item.
+   1. As A: Inventory → **Reorder levels** → type **10** in Face cream's row → **Save**. B sees this page read-only.
+   2. Check: the Overview tile **Low on stock** counts Face cream when its available stock is 10 or less.
+   3. Inventory → **Stock forecast** lists every item; Face cream shows "no usage in 90 days".
 
-9. [ ] **Stock ledger:** Inventory → Stock ledger. Check: every movement above is listed, with who did it and when.
+9. [ ] **Stock ledger:** Inventory → **Stock ledger** (under Records and rules). Check: every movement above, with When, Item,
+   Warehouse, Type, Quantity, Reference and **Posted by**.
 
-## 2. Money
+**Money (A only)**
 
-10. [ ] **Pay a supplier.**
-    1. Cash and banks must have a bank account; add one if not.
-    2. Payments → pay a supplier you billed, from the bank account.
-    3. Check: Purchases → that bill shows paid. (Picking from a list of unpaid bills is coming; type it for now.)
-11. [ ] **Credit note.**
-    1. As B: open a sales invoice → Credit note for 1 item.
-    2. As A: approve it.
-    3. Check: the customer owes less.
-12. [ ] **Statement of account:** Finance → Statement of account → pick the customer, then the supplier. Check: lines and balances match what you did.
-13. [ ] **Expense:** Expenses → record "Office tea", 50, paid in cash. Check: it shows in the list.
-14. [ ] **Cash and bank transfer:** Cash and banks → Transfers → move 100 from bank to cash. Check: both balances change.
-15. [ ] **Bank statement** (Treasury → Bank statements):
-    1. Choose the bank account → Import → pick `test-bank-statement.csv` → check the columns are matched → Import.
-    2. On the statement:
-       - Confirm a suggested match if one appears.
-       - Ignore one line with a reason.
-       - For the "BANK CHARGES" line press "Record what it was…" (if you see it) → expense.
-    3. Check: the line counts change (open, matched, ignored).
-16. [ ] **As B:** Bank statements. Check: B can look but cannot confirm, ignore or close.
+10. [ ] **Record the supplier's bill, then pay it.**
+    1. Purchasing → **Purchase invoices** → **Record an invoice**: pick the received order from step 3, Supplier's invoice number, Invoice date, quantity (up to the 4 received).
+    2. Finance → **Payments** → **Record a payment** (or open the invoice → **Record a payment →**). Fields: Payment type **Payment to supplier or expense**; **For** = that purchase invoice; Amount; Date; Method **bank**; **Paid from** = the bank account → **Record payment**.
+    3. Check: open the purchase invoice; the Payments section says **Paid in full** (or "paid · outstanding" if you paid part).
 
-## 3. Accounting reports (Accounting app)
+11. [ ] **Statement of account:** Finance → **Statement of account** → For **Customer** (then **Supplier**) → pick the party, **From** and
+    **To** dates → **Show**. Check: lines and balance match what you did.
 
-17. [ ] **Trial balance:** the two total columns are equal.
-18. [ ] **Profit and loss** (Finance → Profit and loss): sales, costs and the expense above appear.
-19. [ ] **Journal:** open any entry, for example the expense; it shows two sides that are equal.
-20. [ ] **Manual journal:** New manual journal → two lines that balance → save as draft → change it → post.
-21. [ ] **Stock value:** the total equals the "Goods for resale" (inventory) line in the trial balance.
+12. [ ] **Expense paid in cash.**
+    1. Finance → **Expenses** → **Record an expense**: Date; Category (if none, type a **New category** → **Add category**); Amount **50**; **Note** "Office tea" (there's no name field).
+    2. Tick **Paid now** → **Paid from** = the cash box → **Record expense and payment**.
+    3. Check: it shows in the list.
 
-## 4. Messages, tasks, alerts, settings
+13. [ ] **Bank to cash:** Treasury → **Transfers** → **New transfer**: From the bank account, To the cash box, Amount **100** → **Record
+    transfer**. Check: both balances change in Cash and banks.
 
-22. [ ] **Bell:** as A, the approvals you were asked for appear; as B, B's own notices appear.
-23. [ ] **Tasks:** open one (if any) and mark it done.
-24. [ ] **Alert rules:** Alerts → Add a rule: "Stock below reorder level", every item, recipients "All owners". Check: it appears in the list.
-25. [ ] **Connect WhatsApp and Telegram:** it opens and says it's not set up (expected).
-26. [ ] **Message outbox:** opens (it may be empty or show test messages).
-27. [ ] **Settings → Integrations:** every provider says test mode; Exchange rates show "SIMULATED".
-28. [ ] **Audit log:** your approvals above are there, with who did them.
-29. [ ] **Guide and tour:** Guide opens. Sign in as B in a fresh private window: the tour starts.
+14. [ ] **Bank statement.**
+    1. Treasury → **Bank statements** → pick the Bank account → **Import a statement** → choose `Desktop\ERP\test-bank-statement.csv`.
+    2. Check the columns are matched: Debit shows as **Money out**, Credit as **Money in**, plus Balance. Check the date format → **Import**.
+    3. On the statement page:
+       - **Confirm** a suggestion if one appears;
+       - on one line, **Ignore…** → "Why ignore it?" → **Ignore**;
+       - on the BANK CHARGES line, **Record what it was…** → **An expense paid from the bank** → Expense category **Bank charges (created if missing)** → **Record and match**.
+    4. Check: the open, matched and ignored counts change.
 
-## 5. Safety checks
+**Accounting (A only)**
 
-30. [ ] **Another company sees nothing.**
-    1. Sign up a third email as a new company (C).
-    2. Check: C sees none of A's items, customers, invoices or users.
-31. [ ] **Staff limits:** as B, open Settings → Users, Apps, and Inventory → Approval policies. Check: B cannot change them.
-32. [ ] **Signed out:** sign B out, then paste a link from A's company. Check: it asks to sign in.
+15. [ ] **Trial balance:** Accounting → **Trial balance** → From, To, Currency → **Show**. Check: "The books balance: debits equal credits."
+16. [ ] **Journal:** Accounting → **Journal** → click a row. Check: the **Total** row's debit and credit are equal.
+17. [ ] **Manual journal.**
+    1. Accounting → **Manual journals** → **New manual journal**: Date, **Description**, two lines (Account, Debit or Credit) until it says **Balanced.** → **Save for approval**.
+    2. Open it → **Change** → edit → then **Post now** → **Yes, post**.
+    - You can't approve your own draft with "Approve and post"; **Post now** is the owner's way.
 
-## 6. Arabic and phone
+**Messages, alerts, settings**
 
-33. [ ] **Arabic:** switch to Arabic. Check:
-    - screens read right to left;
-    - no English left on the main screens;
-    - numbers and dates look right.
-34. [ ] **Phone** (or Chrome F12 → phone icon): sign in, Overview, Stock on hand, make a stock request, approve from the bell, record a payment.
+18. [ ] **Alert rule** (A): **Alerts** app → **Alert rules** → **Add a rule**: Name, Trigger **Stock below reorder level**, For **Every item**,
+    Recipients **All owners** → **Add rule**. Check: it's in the list; **Send test** works.
+19. [ ] **Phone link page** (A and B): **Messages** app → **Connect WhatsApp and Telegram**. Check: heading "Connect your WhatsApp",
+    buttons **Send me a code** and **Connect Telegram**. Not set up yet; that's expected.
+20. [ ] **Outbox** (A): Messages → **Message outbox** opens (button **Send waiting messages now**).
+21. [ ] **Audit log** (A): Settings → **Audit log**. Check: the approvals above are there with who did them.
+22. [ ] **Staff limits** (B): Settings shows only **My settings**. Inventory → **Approval policies** opens but says "Only owners and admins
+    can change approval policies." Reorder levels is read-only too.
+23. [ ] **Arabic:** Settings → **My settings** → **My language** → Arabic.
+    - Check: screens read right to left, no English left on the main screens, numbers and dates look right.
+    - Then switch back.
 
 ---
 
-When done, put this file back in `Desktop\ERP` and tell Claude. Each ❌ and ⚠️ gets fixed and checked again.
+## Group 2: confirmed, one detail to watch
+
+24. [ ] **Profit and loss:** Finance → **Profit and loss**. It says "Nothing to show yet" until something is invoiced or an expense recorded.
+25. [ ] **Stock value:** Accounting → **Stock value** shows "In the books / At average cost / Difference".
+    - Watch: compare "In the books" with the inventory line of the Trial balance by eye.
+    - We couldn't confirm which account code that line has (likely 161, "Goods for resale").
+26. [ ] **Bell:** the bell (top bar) shows A a notice when B submits a stock request; **See all** opens Messages → Notifications. Inventory →
+    Overview **Needs you today** also lists pending approvals.
+    - Watch: whether transfers, counts and adjustments also send a notice is unconfirmed. Note what you see.
+27. [ ] **Tasks** (Tasks app): there are none until someone makes one.
+    1. As A: **New task** (Task, For = B, Due, Details) → **Assign task**.
+    2. As B: **Done** on the row (or open it → **Complete**).
+28. [ ] **Integrations:** Settings → **Integrations**. Each switched-on provider says "Test mode: nothing is really sent." Click **Exchange
+    rates**: the Central Bank of Egypt panel shows **SIMULATED**.
+29. [ ] **Tour:** Guide app → **Guide** opens. **Take the tour** (top right of Guide or Home) starts it.
+    - Watch: the tour does **not** start by itself on first sign-in. That's a bug we found; it's being fixed.
+    - B may see a language picker first.
+30. [ ] **Signed out:** sign B out, paste a link from A's company. It should show the sign-in screen (exact wording unconfirmed).
+
+---
+
+## Group 3: the old step was wrong; check this instead
+
+31. [ ] **Credit notes have no screen on the live app.** The sales invoice page only offers **Void invoice** and payments.
+    - Just confirm you can't find a credit-note button.
+    - This is a finding: the screen will be added.
+32. [ ] **B and bank statements:** B can't see Treasury at all (there's no "look but not change" role). Check: B's app menu has no
+    Treasury, Finance, Accounting or Alerts.
+33. [ ] **Another company:** sign up a new email as company C. Check: C has no items, orders, invoices or users from A. (The database
+    separation is tested automatically; this is the on-screen check.)
+34. [ ] **Phone layout:** open the app on a phone (or Chrome F12 → phone icon): Overview, Stock on hand, a stock request, approve from
+    the bell, record a payment. Note anything cut off or hard to tap.
+
+---
+
+When done, save this file and tell Claude. Each ❌ and ⚠️ gets fixed and checked again.
