@@ -21,6 +21,11 @@ npm-debug.log*
 
 # Test and coverage
 coverage/
+walkthrough-full.md
+walkthrough-part2.md
+walkthrough-part2.old.md
+ian-reply-target.md
+ianemaill.md
 Hello Ian, apologies for the delay.txt
 ian-reply.md
 notes.md
@@ -86,3 +91,14 @@ documentation/reference/
 # Playwright smoke test output (apps/web/e2e)
 apps/web/test-results/
 apps/web/playwright-report/
+
+# private drafts and test files (kept on the Desktop                                     │
+  only)
+ian-reply*.md
+ianemaill.md
+walkthrough*.md
+notes.md
+whatidid.txt
+Hello                                 │
+  Ian*.txt
+test-bank-statement.csv
