@@ -41,3 +41,21 @@ Placeholders such as `{name}`, `{item}` and `{n}` must stay exactly as they are 
 | 32 | Error messages | Customer name is required | اسم العميل مطلوب | |
 | 33 | Error messages | Item name is required | اسم الصنف مطلوب | |
 | 34 | Error messages | Each line needs a quantity of 0 or more, and say whether the rest is still coming | يحتاج كل سطر إلى كمية صفر أو أكثر، وحدّد إن كان الباقي سيصل | |
+
+## Added 10 November: setup wizard, "What do you sell?" (machine drafts, in `apps/web/src/modules/help/onboardingContent.ts`)
+
+| # | Where | English | Arabic now (machine draft) | Correction |
+|---|---|---|---|---|
+| 35 | Wizard | What do you sell? | ماذا تبيع؟ | |
+| 36 | Wizard | Choose the closest. Setup then shows only the steps that fit your business; you can change your mind on this step at any time. | اختر الأقرب. بعدها يعرض الإعداد الخطوات التي تناسب نشاطك فقط، ويمكنك تغيير اختيارك في هذه الخطوة في أي وقت. | |
+| 37 | Wizard | Tell us what you sell | أخبرنا بما تبيعه | |
+| 38 | Wizard | A shop or general trading / Clothes, electronics, home goods, spare parts… | محل أو تجارة عامة / ملابس، إلكترونيات، أدوات منزلية، قطع غيار… | |
+| 39 | Wizard | Food or drinks / Groceries, dairy, frozen food, drinks… | أغذية أو مشروبات / بقالة، ألبان، مجمدات، مشروبات… | |
+| 40 | Wizard | Medicine / A pharmacy or medicine distribution | أدوية / صيدلية أو توزيع أدوية | |
+| 41 | Wizard | Cosmetics / Creams, perfumes, personal care… | مستحضرات تجميل / كريمات، عطور، عناية شخصية… | |
+| 42 | Wizard | Building materials / Cement, steel, tiles, paint… | مواد بناء / أسمنت، حديد، سيراميك، دهانات… | |
+| 43 | Wizard | Something else / Any other goods | شيء آخر / أي بضائع أخرى | |
+| 44 | Wizard | Units are usually ton, bag, m² or m³. | الوحدات عادةً: طن أو شيكارة أو م² أو م³. | |
+| 45 | Wizard | (the other five unit hints, same pattern) | see `onboardingContent.ts`, `business.unitHint` | |
+| 46 | Menu | Stock counts / Stock count | جرد المخزون / جرد مخزون | |
+| 47 | Stock counts | (the 28 texts of the Stock counts screens) | see `apps/web/src/lib/i18nDecisions.ts`, section "Stock counts screens" | |

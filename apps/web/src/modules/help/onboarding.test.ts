@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { onboardingContent, readProgress, shouldAutoStart, STEP_KEYS, writeProgress } from './onboardingContent';
+import {
+  BUSINESS_TYPES,
+  needsStorage,
+  onboardingContent,
+  readProgress,
+  shouldAutoStart,
+  STEP_KEYS,
+  stepsFor,
+  writeProgress,
+} from './onboardingContent';
 
 const en = onboardingContent('en');
 const ar = onboardingContent('ar');
@@ -57,17 +66,42 @@ describe('progress', () => {
 
   it('round-trips per company and starts at the beginning when nothing is stored', () => {
     const s = store();
-    expect(readProgress('org-a', s)).toEqual({ step: 0, done: false });
-    writeProgress('org-a', { step: 3, done: false }, s);
-    expect(readProgress('org-a', s)).toEqual({ step: 3, done: false });
-    expect(readProgress('org-b', s)).toEqual({ step: 0, done: false });
+    expect(readProgress('org-a', s)).toEqual({ step: 0, done: false, business: null });
+    writeProgress('org-a', { step: 3, done: false, business: 'food' }, s);
+    expect(readProgress('org-a', s)).toEqual({ step: 3, done: false, business: 'food' });
+    expect(readProgress('org-b', s)).toEqual({ step: 0, done: false, business: null });
   });
 
   it('ignores damaged or out-of-range values', () => {
     const s = store();
     s.setItem('erp.onboarding.x', 'not json');
-    expect(readProgress('x', s)).toEqual({ step: 0, done: false });
-    s.setItem('erp.onboarding.y', JSON.stringify({ step: 99, done: 'yes' }));
-    expect(readProgress('y', s)).toEqual({ step: 0, done: false });
+    expect(readProgress('x', s)).toEqual({ step: 0, done: false, business: null });
+    s.setItem('erp.onboarding.y', JSON.stringify({ step: 99, done: 'yes', business: 'spaceships' }));
+    expect(readProgress('y', s)).toEqual({ step: 0, done: false, business: null });
+    // a step past the end of the shorter list (no storage step) starts again
+    s.setItem('erp.onboarding.z', JSON.stringify({ step: STEP_KEYS.length - 1, done: false, business: 'shop' }));
+    expect(readProgress('z', s).step).toBe(0);
+  });
+});
+
+describe('what do you sell (D9)', () => {
+  it('shows the storage step only for food, medicine and cosmetics', () => {
+    for (const b of BUSINESS_TYPES) expect(stepsFor(b).includes('storage')).toBe(needsStorage(b));
+    expect(BUSINESS_TYPES.filter(needsStorage)).toEqual(['food', 'medicine', 'cosmetics']);
+  });
+  it('asks the question right after the welcome, and has no language step', () => {
+    for (const b of [null, ...BUSINESS_TYPES]) {
+      expect(stepsFor(b).slice(0, 2)).toEqual(['welcome', 'business']);
+      expect(stepsFor(b) as string[]).not.toContain('language');
+    }
+  });
+  it('has a label, a hint and a unit hint for every business, in both languages', () => {
+    for (const c of [en, ar]) {
+      for (const b of BUSINESS_TYPES) {
+        expect(c.business.options[b].label.length).toBeGreaterThan(0);
+        expect(c.business.options[b].hint.length).toBeGreaterThan(0);
+        expect(c.business.unitHint[b].length).toBeGreaterThan(0);
+      }
+    }
   });
 });
