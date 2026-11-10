@@ -58,6 +58,7 @@ export const requireTenant = createMiddleware<AppEnv>(async (c, next) => {
     language: org.settings?.language === 'ar' ? 'ar' : 'en',
     showTutorial: org.settings?.show_tutorial === true,
     showTour: org.settings?.show_tour === true,
+    blindCounts: org.settings?.blind_counts === true,
     role: membership.role,
     permissions: defaultPermissionsFor(membership.role),
     modules: [...modules],

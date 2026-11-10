@@ -23,6 +23,7 @@ const routes: [string, string][] = [
   ['POST', `/v1/inventory/counts/${ID}/submit`],
   ['POST', `/v1/inventory/counts/${ID}/approve`],
   ['POST', `/v1/inventory/counts/${ID}/cancel`],
+  ['POST', '/v1/core/org/blind-counts'],
 ];
 
 describe('routes added on 9-10 November', () => {

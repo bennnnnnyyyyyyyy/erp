@@ -20,13 +20,15 @@ import { useCatalog } from './Inventory';
 // line is counted it is submitted; a manager who did not start or submit it approves, and the differences become stock moves.
 
 type CountStatus = 'counting' | 'submitted' | 'approved' | 'applied' | 'rejected' | 'cancelled';
-type CountLine = { itemId: string; expectedQty: number; countedQty: number | null; difference: number | null; countedAt: string | null };
+type CountLine = { itemId: string; expectedQty: number | null; countedQty: number | null; difference: number | null; countedAt: string | null };
 type Count = {
   id: string;
   number: string;
   warehouseId: string;
   note: string | null;
   status: CountStatus;
+  /** Blind count (sql/066): the expected quantities are left out for this person while counting. */
+  blind?: boolean;
   requesterId: string;
   submittedBy: string | null;
   submittedAt: string | null;
@@ -195,6 +197,7 @@ export function CountPage() {
   const editable = count.status === 'counting' && can('inventory.adjustments.create');
   const open = count.status === 'counting' || count.status === 'submitted';
   const mine = count.requesterId === session.userId;
+  const blind = count.blind === true;
 
   return (
     <section className="page wide">
@@ -208,12 +211,13 @@ export function CountPage() {
         <div><dt>{tr('Started by')}</dt><dd>{who(count.requesterId)} · {formatDateTime(count.createdAt, session.org)}</dd></div>
         {count.note && <div><dt>{tr('Note')}</dt><dd>{count.note}</dd></div>}
         <div><dt>{tr('Counted')}</dt><dd>{trf('{n} of {total} items', { n: counted, total: lines.length })}</dd></div>
-        <div><dt>{tr('Differences')}</dt><dd>{differences.length}</dd></div>
+        {!blind && <div><dt>{tr('Differences')}</dt><dd>{differences.length}</dd></div>}
         {count.submittedBy && <div><dt>{tr('Submitted by')}</dt><dd>{who(count.submittedBy)}</dd></div>}
         {count.decidedBy && <div><dt>{tr('Decision by')}</dt><dd>{who(count.decidedBy)}{count.decisionComment ? <span className="muted"> · “{count.decisionComment}”</span> : ''}</dd></div>}
       </dl>
 
       {editable && <p className="muted small">{tr('Type the quantity you counted for each item; it is saved when you leave the field. Leave it empty to clear it.')}</p>}
+      {blind && <p className="notice">{tr('This is a blind count: count what is on the shelf. The quantities the books expect are shown to managers when they approve.')}</p>}
       {lines.length > 0 && (
         <label className="inline-check"><input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> {tr('Show only items not counted yet')}</label>
       )}
@@ -222,23 +226,25 @@ export function CountPage() {
           <thead>
             <tr>
               <th scope="col">{tr('Item')}</th>
-              <th scope="col" className="right">{tr('In the books')}</th>
+              {!blind && <th scope="col" className="right">{tr('In the books')}</th>}
               <th scope="col" className="right">{tr('Counted')}</th>
-              <th scope="col" className="right">{tr('Difference')}</th>
+              {!blind && <th scope="col" className="right">{tr('Difference')}</th>}
             </tr>
           </thead>
           <tbody>
             {shown.map((l) => (
               <tr key={l.itemId}>
                 <td>{cat.itemName(l.itemId)}</td>
-                <td className="right">{qty(l.expectedQty)}</td>
+                {!blind && <td className="right">{l.expectedQty === null ? '—' : qty(l.expectedQty)}</td>}
                 <td className="right"><CountedCell count={count} line={l} onSaved={setCount} editable={editable} /></td>
-                <td className={`right ${l.difference !== null && l.difference < 0 ? 'overdue' : ''}`}>
-                  {l.difference === null ? <span className="muted">—</span> : l.difference > 0 ? `+${qty(l.difference)}` : qty(l.difference)}
-                </td>
+                {!blind && (
+                  <td className={`right ${l.difference !== null && l.difference < 0 ? 'overdue' : ''}`}>
+                    {l.difference === null ? <span className="muted">—</span> : l.difference > 0 ? `+${qty(l.difference)}` : qty(l.difference)}
+                  </td>
+                )}
               </tr>
             ))}
-            {shown.length === 0 && <tr><td colSpan={4} className="muted">{lines.length === 0 ? tr('This warehouse has no items to count.') : tr('Every item is counted.')}</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={blind ? 2 : 4} className="muted">{lines.length === 0 ? tr('This warehouse has no items to count.') : tr('Every item is counted.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -251,7 +257,9 @@ export function CountPage() {
             label={tr('Submit for approval')}
             confirmLabel={tr('Yes, submit')}
             disabled={busy || counted < lines.length || lines.length === 0}
-            question={trf('Submit the count with {n} difference(s)? Nobody can change the counted quantities after this.', { n: differences.length })}
+            question={blind
+              ? tr('Submit the count? Nobody can change the counted quantities after this.')
+              : trf('Submit the count with {n} difference(s)? Nobody can change the counted quantities after this.', { n: differences.length })}
             onConfirm={() => act('submit', 'Submitted. A manager now has to approve it.')}
           />
           {counted < lines.length && <span className="muted small">{trf('{n} item(s) still to count', { n: lines.length - counted })}</span>}

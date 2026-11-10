@@ -11,6 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — 065 applied; MT940 reader; inventory slice 3 (stock list, phone actions, blind counts sql/066)
+
+**Objective.** Record Ben's apply of 065; start the bank import groundwork that needs no decision (MT940, after finding which formats
+Egyptian banks offer); finish the inventory redesign (Q4, Q5, M3).
+
+**Actions Completed.** Branch `feat/mt940-and-inventory-slice3`.
+- 065: Ben applied it via CLI; verified read-only (all four `*_decider_not_requester` rules include `self_decided`).
+- Bank formats searched online (no public sample statements exist): Banque Misr e-statement is PDF; CIB's corporate portal offers MT940;
+  NBE and QNB claimed, unconfirmed. Recorded in `BANK_STATEMENT_IMPORT_PLAN.md` §11. `documentation/research/bank-samples/` git-ignored.
+- `packages/shared/src/mt940.ts` (+ 6 tests): reads MT940 statements (several per file, reversals, entry dates across New Year,
+  three-decimal currencies, :86: text), refuses a statement whose lines do not add up to its closing balance.
+- Stock on hand: one row per item and warehouse; status Out / Low / OK per item. Phone bar of big buttons (Request, Receive, Count).
+- `sql/066_blind_counts.sql` + `sql/tests/062_blind_counts.sql`: the company setting; the counts API leaves the expected quantity out
+  for non-managers while counting; count screen hides those columns; switch in Settings → General.
+
+**Database / System Result.** 065 live (applied by Ben). 066 not applied.
+
+**Safety Status.** Lint, typecheck, tests (shared 66 + 1 skipped, API 305 + 7 skipped, web 88) pass; all 66 migrations and 62 SQL
+tests pass locally. 066 must be applied before this branch is merged (the settings screen calls its function). Not viewed in a browser.
+
 ## 2026-11-10 — Inventory redesign: Ben's choices, and slice 1 (the item page)
 
 **Objective.** Ben chose the inventory redesign options (Q1 A item page with tabs, Q2 A "what needs you today", Q3 A grouped menu,

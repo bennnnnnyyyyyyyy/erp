@@ -27,6 +27,8 @@ export type SessionInfo = {
     language: 'en' | 'ar';
     showTutorial: boolean;
     showTour: boolean;
+    /** Blind stock counts (sql/066). */
+    blindCounts: boolean;
   } | null;
   /** The person's own saved language (sql/038), or null to follow the company default. Same in every company they belong to. */
   userLanguage: 'en' | 'ar' | null;

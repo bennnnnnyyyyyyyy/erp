@@ -10,6 +10,7 @@ import { tr, trf } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { ClerkActions } from './ClerkActions';
 import { useCatalog } from './Inventory';
 
 // Inventory overview (inventory redesign Q2 "What needs you today", Ben 10 Nov 2026). What opens when someone clicks Inventory: four
@@ -126,6 +127,7 @@ export function InventoryOverview() {
         {can('inventory.transfers.create') && <Button variant="outline" onClick={() => navigate('/inventory/transfers/new')}>{tr('New transfer')}</Button>}
         {!demoMode && can('inventory.adjustments.create') && <Button variant="outline" onClick={() => navigate('/inventory/counts')}>{tr('Start a count')}</Button>}
       </div>
+      <ClerkActions />
     </section>
   );
 }
