@@ -20,6 +20,8 @@ const GuidePage = lazyNamed(() => import('./help/Guide'), 'GuidePage');
 const NewTransfer = lazyNamed(() => import('./inventory/Transfers'), 'NewTransfer');
 const TransferPage = lazyNamed(() => import('./inventory/Transfers'), 'TransferPage');
 const TransfersList = lazyNamed(() => import('./inventory/Transfers'), 'TransfersList');
+const CountsList = lazyNamed(() => import('./inventory/Counts'), 'CountsList');
+const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
 const ApprovalPoliciesPage = lazyNamed(() => import('./inventory/Inventory'), 'ApprovalPoliciesPage');
 const LedgerPage = lazyNamed(() => import('./inventory/Inventory'), 'LedgerPage');
@@ -119,6 +121,13 @@ const INVENTORY_APP: AppDef = {
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/approval-policies', label: 'Approval policies', permission: READ, component: ApprovalPoliciesPage },
     { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
+    // Stock counts (sql/042): the sample-data demo has no counts, so only in the real app.
+    ...(demoMode
+      ? []
+      : [
+          { path: '/counts', label: 'Stock counts', permission: 'inventory.adjustments.read', component: CountsList },
+          { path: '/counts/:id', label: 'Stock count', permission: 'inventory.adjustments.read', component: CountPage, nav: false, parent: '/counts' },
+        ]),
     { path: '/transfers', label: 'Stock transfers', permission: 'inventory.transfers.read', component: TransfersList },
     { path: '/transfers/new', label: 'New transfer', permission: 'inventory.transfers.create', component: NewTransfer, nav: false, parent: '/transfers' },
     { path: '/transfers/:id', label: 'Transfer', permission: 'inventory.transfers.read', component: TransferPage, nav: false, parent: '/transfers' },

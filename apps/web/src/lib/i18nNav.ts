@@ -42,6 +42,9 @@ export const NAV_AR: Record<string, string> = {
   'Batches and expiry': 'الدفعات وتواريخ الانتهاء',
   'Approval policies': 'سياسات الموافقة',
   'Stock adjustments': 'تسويات المخزون',
+  // machine draft (10 Nov), in the Arabic review sheet
+  'Stock counts': 'جرد المخزون',
+  'Stock count': 'جرد مخزون',
   'Stock transfers': 'تحويلات المخزون',
   'New transfer': 'تحويل جديد',
   Transfer: 'تحويل',
