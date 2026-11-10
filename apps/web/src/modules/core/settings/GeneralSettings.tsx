@@ -188,6 +188,14 @@ export function GeneralSettings() {
               line={tr('People new to the company get a short tour of the screens the first time they sign in.')}
               onToggle={() => flip('/v1/core/org/tour', { show: !session.org?.showTour })}
             />
+            {session.role === 'owner' && (
+              <OptionRow
+                title={tr('Owners may approve their own')}
+                on={!!session.org?.ownerSelfApproval}
+                line={tr('Owners can approve their own requests, transfers, counts, notes and purchase orders. Each one is marked "self-approved" in the audit log. Admins and staff never can.')}
+                onToggle={() => flip('/v1/core/org/owner-self-approval', { on: !session.org?.ownerSelfApproval })}
+              />
+            )}
           </ul>
         </div>
       )}

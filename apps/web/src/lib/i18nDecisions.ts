@@ -318,6 +318,10 @@ export const DECISIONS_AR: Record<string, string> = {
   'The supplier confirmed…': 'أكّد المورد…',
   'Promised delivery date': 'موعد التسليم المتفق عليه',
   "Supplier's reference (optional)": 'مرجع المورد (اختياري)',
+  // owners may approve their own (sql/077, decision D1c)
+  'Owners may approve their own': 'يمكن للمالك اعتماد طلباته بنفسه',
+  'Owners can approve their own requests, transfers, counts, notes and purchase orders. Each one is marked "self-approved" in the audit log. Admins and staff never can.':
+    'يمكن للمالك اعتماد طلباته وتحويلاته وجرده وإشعاراته وأوامر الشراء بنفسه. يُعلَّم كل منها "اعتماد ذاتي" في سجل التدقيق. لا يمكن ذلك للمديرين أو الموظفين أبدًا.',
   // MVP M4: change an alert rule's recipients
   'Recipients of "{name}" changed.': 'تم تغيير مستلمي "{name}".',
   // MVP M4: the guided tour switch
