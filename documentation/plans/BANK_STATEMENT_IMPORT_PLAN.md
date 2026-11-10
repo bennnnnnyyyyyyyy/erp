@@ -231,6 +231,17 @@ version**: it is a published standard, so it can be built and tested without sam
 - Check: each line's balance = the next (older) line's balance minus debit plus credit, which catches a misread amount.
 Egyptian banks' samples are still needed (NBE, Banque Misr, CIB, QNB Egypt).
 
+**Public MT940 samples (10 Nov).** No public statement samples were found for any Egyptian bank (searched NBE, Banque Misr, CIB, QNB
+Egypt; Banque Misr's business user guide only shows a cheque statement exported to Excel). The 54 test files of the open-source parser
+[WoLpH/mt940](https://github.com/WoLpH/mt940) (BSD-3-Clause; Citi, ING, ABN AMRO, Rabobank, ASN, SNS, Triodos, Knab, PostFinance,
+mBank, Sberbank, Raiffeisen, Sparkasse and made-up edge cases) were downloaded to the git-ignored `bank-samples/mt940-public/` as test
+inputs only (data, not code). Our reader first read 8 of them cleanly; it now reads 16. What real files do that the standard does not
+allow, now handled (each with a made-up test in `packages/shared/src/mt940.test.ts`): the entry date left as four spaces; references
+over 16 characters, with spaces or a single "/"; type codes padded with spaces; "30 February" for month-end interest; zero-amount
+lines; the `{5:}` trailer block; a closing balance without a currency. Also fixed: a `:61:` after the closing balance was added to the
+closed statement (now refused). Every other sample is explained: about 20 are fragments without a statement, about 13 do not add up
+(checked with a separate calculation) and are rightly refused whole, and MT942 intra-day reports have no balances.
+
 **PDF reading (OCR) options** (prices from 2026 comparison articles, not official pages; check before signing up). A monthly
 statement is a few pages, so any of them costs cents per company per month; the deciding factor is how well it reads **Arabic tables**,
 which no published benchmark covers, so the two best candidates should be tried on real statements from `bank-samples/`.

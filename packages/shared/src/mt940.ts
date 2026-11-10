@@ -30,7 +30,9 @@ function fields(text: string): { tag: string; value: string }[] {
     .replace(/\r\n?/g, '\n')
     .replace(/\{[1-3]:[^}]*\}/g, '')
     .replace(/\{4:\n?/g, '')
-    .replace(/\n-\}/g, '\n');
+    .replace(/\n-\}/g, '\n')
+    // the trailer block, e.g. "{5:}" or "{5:{CHK:...}}" after "-}" (ASN Bank sample): otherwise it sticks to the closing balance
+    .replace(/\{5:(?:\{[^}]*\}|[^{}])*\}/g, '');
   const out: { tag: string; value: string }[] = [];
   for (const raw of body.split('\n')) {
     const m = /^:(\d{2}[A-Z]?):(.*)$/.exec(raw);
@@ -43,14 +45,17 @@ function fields(text: string): { tag: string; value: string }[] {
   return out;
 }
 
+/** YYMMDD to an ISO date. Some banks (German ones, for interest) date the end of a month as its 30th, even "30 February": a day
+ *  29-31 past the month's end is read as the month's last day. Anything else invalid is refused. */
 const yymmdd = (s: string): string | null => {
   if (!/^\d{6}$/.test(s)) return null;
   const y = 2000 + Number(s.slice(0, 2));
   const m = Number(s.slice(2, 4));
   const d = Number(s.slice(4, 6));
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  if (dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
-  return dt.toISOString().slice(0, 10);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  if (d > last && d < 29) return null;
+  return new Date(Date.UTC(y, m - 1, Math.min(d, last))).toISOString().slice(0, 10);
 };
 
 /** MT940 amounts use a comma and may end with it ("300," is 300.00). */
@@ -59,16 +64,21 @@ const mtAmount = (s: string | undefined) => (s ?? '').replace(/,$/, ',0');
 const minorDigitsOf = (ccy: string) => (['KWD', 'BHD', 'OMR', 'JOD', 'TND', 'LYD', 'IQD'].includes(ccy) ? 3 : ccy === 'JPY' ? 0 : 2);
 
 /** "C251101EGP1234,56" -> { sign, date, currency, minor }. */
-function balance(v: string): { date: string; currency: string; minor: number } | null {
-  const m = /^([CD])(\d{6})([A-Z]{3})([\d,]+)$/.exec(v.trim());
+function balance(v: string, fallbackCurrency = ''): { date: string; currency: string; minor: number } | null {
+  // The currency is sometimes left out of a closing balance (an older German sample): it is then the opening balance's.
+  const m = /^([CD])(\d{6})([A-Z]{3})?(\d[\d,]*)$/.exec((v.split('\n')[0] ?? '').trim());
   if (!m) return null;
   const date = yymmdd(m[2] ?? '');
-  const minor = parseStatementAmount(mtAmount(m[4]), { decimal: ',', minorDigits: minorDigitsOf(m[3] ?? '') });
-  if (!date || minor === null) return null;
-  return { date, currency: m[3] ?? '', minor: m[1] === 'D' ? -minor : minor };
+  const ccy = m[3] ?? fallbackCurrency;
+  const minor = parseStatementAmount(mtAmount(m[4]), { decimal: ',', minorDigits: minorDigitsOf(ccy) });
+  if (!date || minor === null || !ccy) return null;
+  return { date, currency: ccy, minor: m[1] === 'D' ? -minor : minor };
 }
 
-const LINE_61 = /^(\d{6})(\d{4})?(RC|RD|C|D)([A-Z])?([\d,]+)([NSF][A-Z0-9]{3})([^/\n]{0,16})(?:\/\/([^\n]{0,16}))?(?:\n([\s\S]*))?$/;
+// Real files bend the standard (seen in public samples from Citi, ASN, Rabobank, Sberbank and others, 10 Nov 2026): the entry date
+// left as four spaces, a type code padded with spaces or not starting with N/S/F, and references longer than 16 characters, with spaces
+// or a single "/". So: the reference runs to "//" or the end of the line, and the bank reference to the end of the line.
+const LINE_61 = /^(\d{6})(\d{4}| {4})?(RC|RD|C|D)([A-Z])?(\d[\d,]*)([A-Z][A-Z0-9 ]{3})(.*?)(?:\/\/(.*))?(?:\n([\s\S]*))?$/;
 
 /** Reads every statement in an MT940 file. Lines that cannot be read and statements whose balances do not add up are returned as
  *  errors (never imported: a statement that does not add up is refused whole). */
@@ -103,6 +113,7 @@ export function readMt940(text: string): { statements: Mt940Statement[]; errors:
   };
 
   let prev = '';
+  let lastLine: StatementLine | undefined; // the line the last :61: produced (none when it was refused or left out)
   for (const f of fields(text)) {
     const after = prev;
     prev = f.tag;
@@ -125,7 +136,7 @@ export function readMt940(text: string): { statements: Mt940Statement[]; errors:
       }
       case '62F':
       case '62M': {
-        const b = balance(f.value);
+        const b = balance(f.value, cur?.currency ?? '');
         if (cur && b) {
           if (cur.currency && b.currency !== cur.currency) {
             errors.push({ statement: statements.length + 1, reason: 'currency', detail: `${cur.currency} opening, ${b.currency} closing` });
@@ -136,17 +147,29 @@ export function readMt940(text: string): { statements: Mt940Statement[]; errors:
       }
       case '61': {
         row++;
+        lastLine = undefined;
         if (!cur) break;
+        // A line after the closing balance belongs to no statement: refused, never added to the one already closed.
+        if (cur.closingMinor !== undefined) {
+          errors.push({
+            statement: statements.length + 1,
+            reason: 'line',
+            detail: `after the closing balance: ${f.value.split('\n')[0] ?? ''}`,
+          });
+          break;
+        }
         const m = LINE_61.exec(f.value);
         const valueDate = m ? yymmdd(m[1] ?? '') : null;
         const minor = m ? parseStatementAmount(mtAmount(m[5]), { decimal: ',', minorDigits: minorDigitsOf(cur.currency ?? '') }) : null;
-        if (!m || !valueDate || minor === null || minor === 0) {
+        if (!m || !valueDate || minor === null) {
           errors.push({ statement: statements.length + 1, reason: 'line', detail: f.value.split('\n')[0] ?? '' });
           break;
         }
+        // A zero line (a waived fee, a notice; seen in Citi's sample) changes nothing and has nothing to match: left out.
+        if (minor === 0) break;
         // The entry (booking) date is MMDD in the value date's year, or the year next to it when the two straddle New Year.
         let bookingDate = valueDate;
-        if (m[2]) {
+        if (m[2]?.trim()) {
           const vy = Number(valueDate.slice(0, 4));
           const vm = Number(valueDate.slice(5, 7));
           const em = Number(m[2].slice(0, 2));
@@ -155,7 +178,7 @@ export function readMt940(text: string): { statements: Mt940Statement[]; errors:
         }
         const credit = m[3] === 'C' || m[3] === 'RD'; // a reversal of a debit is money in, and the other way round
         const reference = [m[7]?.trim() === 'NONREF' ? '' : (m[7] ?? '').trim(), m[8] ? m[8].trim() : ''].filter(Boolean).join(' / ');
-        cur.lines.push({
+        lastLine = {
           row,
           bookingDate,
           valueDate,
@@ -163,12 +186,13 @@ export function readMt940(text: string): { statements: Mt940Statement[]; errors:
           reference,
           amountMinor: credit ? minor : -minor,
           balanceMinor: null,
-        });
+        };
+        cur.lines.push(lastLine);
         break;
       }
       case '86': {
         // Only the :86: right after a :61: describes that line; one at the end of a statement is about the statement.
-        const last = after === '61' ? cur?.lines[cur.lines.length - 1] : undefined;
+        const last = after === '61' ? lastLine : undefined;
         if (last) last.description = [last.description, f.value.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()].filter(Boolean).join(' ');
         break;
       }

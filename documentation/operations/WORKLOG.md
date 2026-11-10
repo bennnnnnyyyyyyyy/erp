@@ -11,6 +11,24 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — MT940 reader tested on 54 public bank samples; 7 real-world variations handled
+
+**Objective.** Ben: "find any statements to train on". No Egyptian samples exist publicly; test the MT940 reader on what does.
+
+**Actions Completed.** Branch `feat/mt940-real-world`.
+- Searched for public statements from NBE, Banque Misr, CIB and QNB Egypt: none found. Downloaded the 54 MT940 test files of the
+  BSD-licensed parser WoLpH/mt940 into the git-ignored `documentation/research/bank-samples/mt940-public/` (data only; no code read or
+  copied). Ran our reader over all of them (script outside the repo).
+- `packages/shared/src/mt940.ts`: entry date as spaces; long references with spaces or "/"; type codes with spaces; day 29-31 past a
+  month's end read as its last day; zero lines left out; `{5:}` trailer stripped; closing balance without currency; a `:61:` after the
+  closing balance refused (it was added to the closed statement), and its `:86:` no longer attached to the line before.
+- 8 tests with made-up values (`packages/shared/src/mt940.test.ts`). Findings in `BANK_STATEMENT_IMPORT_PLAN.md` §11.
+
+**Database / System Result.** None.
+
+**Safety Status.** Lint and typecheck clean; tests pass (shared 74 + 1 skipped, web 97). Clean reads 8 → 16 of 54; every other sample
+explained (fragments, statements that do not add up, MT942 without balances). Still unproven on an Egyptian bank's file.
+
 ## 2026-11-10 — Bank statement import part 2 (sql/068: record what a line was, rules, bank charges, who may reconcile); 067 applied
 
 **Objective.** Ben: "start bank import part 2". Let a bank line with nothing to match be recorded from the statement itself, add
