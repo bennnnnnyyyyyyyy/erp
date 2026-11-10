@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Supplier confirmation and promised date, late orders (sql/073)
+
+**Objective.** Dynamics review gap 4, as part of "finish everything doable today".
+
+**Actions Completed.** Branch `feat/po-approval`. `sql/073_pur_order_confirmation.sql` + `sql/tests/069_order_confirmation.sql` (see
+`sql/README.md`). API `POST /purchasing/orders/:id/confirm` (`purchasing.orders.receive`); orders carry `promisedDate`, `supplierRef`,
+`confirmedAt` (the list falls back while 073 or 069 is not applied). Web: "Late" (red) in the list and on the order, computed in the
+company's time zone; on the order "The supplier confirmed…" / "Change the promised date"; Arabic drafts.
+
+**Database / System Result.** None yet. Not wired to alert rules yet (`pur_late_orders()` is ready for it).
+
+**Safety Status.** Lint and typecheck clean; API 340 + 7 skipped, web 109; SQL test 069 passes locally. Not viewed in a browser.
+
 ## 2026-11-10 — Supplier delivery note number on receipts (sql/072); guided tour switch (MVP M4)
 
 **Objective.** Ben: finish everything doable today. Dynamics review gap 1, and the second of the two MVP M4 small gaps.

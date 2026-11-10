@@ -307,6 +307,17 @@ export const DECISIONS_AR: Record<string, string> = {
   // supplier delivery note number on receipts (sql/072)
   "Supplier's delivery note number (optional)": 'رقم إذن تسليم المورد (اختياري)',
   "Supplier's delivery notes": 'أذون تسليم المورد',
+  // supplier confirmation and promised date (sql/073)
+  Late: 'متأخر',
+  'Late:': 'متأخر:',
+  'The promised delivery date was saved.': 'تم حفظ موعد التسليم المتفق عليه.',
+  'The supplier promised delivery by {date}.': 'وعد المورد بالتسليم بحلول {date}.',
+  "Supplier's reference": 'مرجع المورد',
+  'Not confirmed by the supplier yet.': 'لم يؤكد المورد بعد.',
+  'Change the promised date': 'تغيير موعد التسليم',
+  'The supplier confirmed…': 'أكّد المورد…',
+  'Promised delivery date': 'موعد التسليم المتفق عليه',
+  "Supplier's reference (optional)": 'مرجع المورد (اختياري)',
   // MVP M4: the guided tour switch
   'Guided tour for new staff': 'جولة تعريفية للموظفين الجدد',
   'On: people new to the company get a short tour of the screens the first time they sign in.':

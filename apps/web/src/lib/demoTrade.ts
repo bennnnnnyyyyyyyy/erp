@@ -38,6 +38,10 @@ export type PurchaseOrder = {
   approvalDecidedAt?: string | null;
   approvalNote?: string | null;
   approvalSelf?: boolean;
+  /** sql/073: the date the supplier promised; an open order past it is late. */
+  promisedDate?: string | null;
+  supplierRef?: string | null;
+  confirmedAt?: string | null;
   /** sql/072 (real API, one order only): the supplier's delivery note numbers received against this order. */
   deliveryNotes?: { id: string; number: string; receivedBy: string; receivedAt: string }[];
 };

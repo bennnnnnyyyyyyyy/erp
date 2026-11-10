@@ -42,9 +42,14 @@ type OrderRow = {
   approval_decided_at?: string | null;
   approval_note?: string | null;
   approval_self?: boolean;
+  // sql/073
+  promised_date?: string | null;
+  supplier_ref?: string | null;
+  confirmed_at?: string | null;
 };
 const ORDER_COLUMNS = 'id, number, supplier_id, warehouse_id, status, currency, created_by, created_at, received_at';
 const APPROVAL_COLUMNS = 'approval, approval_decided_by, approval_decided_at, approval_note, approval_self';
+const CONFIRM_COLUMNS = 'promised_date, supplier_ref, confirmed_at'; // sql/073
 const supplier = (s: SupplierRow) => ({
   id: s.id,
   code: s.code,
@@ -69,7 +74,9 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
     return query;
   };
   // With the approval columns; without them while sql/069 is not applied yet, so the orders still show (memory: merged before migration).
-  let { data, error } = await read(`${ORDER_COLUMNS}, ${APPROVAL_COLUMNS}`);
+  // Newest columns first; each fallback drops what a not-yet-applied migration adds (073, then 069).
+  let { data, error } = await read(`${ORDER_COLUMNS}, ${APPROVAL_COLUMNS}, ${CONFIRM_COLUMNS}`);
+  if (error && isMissingSchema(error)) ({ data, error } = await read(`${ORDER_COLUMNS}, ${APPROVAL_COLUMNS}`));
   if (error && isMissingSchema(error)) ({ data, error } = await read(ORDER_COLUMNS));
   if (error) throw error;
   const rows = (data ?? []) as unknown as OrderRow[];
@@ -120,6 +127,10 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
       approvalDecidedAt: o.approval_decided_at ?? null,
       approvalNote: o.approval_note ?? null,
       approvalSelf: o.approval_self ?? false,
+      /** sql/073: the supplier's confirmation; an open order past promisedDate is late. */
+      promisedDate: o.promised_date ?? null,
+      supplierRef: o.supplier_ref ?? null,
+      confirmedAt: o.confirmed_at ?? null,
       lines: orderLines,
       /** Open, with some goods already in (sql/064): the screens say "Partly received". */
       partlyReceived: o.status === 'ordered' && orderLines.some((l) => l.receivedQty > 0),
@@ -274,6 +285,18 @@ purchasingRoutes.post('/orders/:id/decide', requirePermission('purchasing.orders
   if (decision === 'rejected' && !note) invalid('A reason is needed to reject');
   if (note.length > 500) invalid('The note is too long');
   await callRpc<unknown>(userDb(c), 'pur_decide_order', { p_order_id: id, p_decision: decision, p_note: note || null });
+  return ok(c, await oneOrder(c, id));
+});
+
+// sql/073: the supplier confirmed the order for a date (and maybe their own reference). Changing the date later is allowed and audited.
+purchasingRoutes.post('/orders/:id/confirm', requirePermission('purchasing.orders.receive'), async (c) => {
+  const id = idParam(c);
+  const body = await jsonBody(c);
+  const date = text(body.promisedDate);
+  const ref = text(body.supplierRef);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) invalid('promisedDate: a date (YYYY-MM-DD)');
+  if (ref.length > 60) invalid("The supplier's reference is at most 60 characters");
+  await callRpc<unknown>(userDb(c), 'pur_confirm_order', { p_order_id: id, p_promised_date: date, p_supplier_ref: ref || null });
   return ok(c, await oneOrder(c, id));
 });
 

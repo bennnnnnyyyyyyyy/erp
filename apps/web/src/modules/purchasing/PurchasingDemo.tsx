@@ -8,12 +8,13 @@ import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { Party, PurchaseOrder } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
+import { todayIn } from '../../lib/dates';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 import { ConfirmButton } from '../../components/FormToggle';
-import { OrderApproval, OrderApprovalSetting } from './OrderApproval';
+import { OrderApproval, OrderApprovalSetting, OrderConfirmation } from './OrderApproval';
 
 import { tr, trf } from '../../lib/i18n';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
@@ -21,10 +22,20 @@ import { tr, trf } from '../../lib/i18n';
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
 const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Awaiting receipt', received: 'Received', cancelled: 'Cancelled' };
 /** The order's state in words: waiting for approval and rejected (sql/069) come before the receipt states. */
-const statusLabel = (o: PurchaseOrder) =>
-  o.approval === 'pending' ? 'Waiting for approval' : o.approval === 'rejected' ? 'Rejected' : o.partlyReceived ? 'Partly received' : STATUS[o.status];
-const statusPill = (o: PurchaseOrder) => (
-  <Pill status={o.approval === 'pending' ? 'submitted' : o.approval === 'rejected' ? 'rejected' : o.status} label={tr(statusLabel(o))} />
+/** An open order whose promised date (sql/073) is before today, in the company's own calendar. */
+export const isLate = (o: PurchaseOrder, today: string = todayIn()) => o.status === 'ordered' && Boolean(o.promisedDate) && (o.promisedDate as string) < today;
+const statusLabel = (o: PurchaseOrder, today: string = todayIn()) =>
+  o.approval === 'pending'
+    ? 'Waiting for approval'
+    : o.approval === 'rejected'
+      ? 'Rejected'
+      : isLate(o, today)
+        ? 'Late'
+        : o.partlyReceived
+          ? 'Partly received'
+          : STATUS[o.status];
+const statusPill = (o: PurchaseOrder, today: string = todayIn()) => (
+  <Pill status={o.approval === 'pending' ? 'submitted' : o.approval === 'rejected' || isLate(o, today) ? 'rejected' : o.status} label={tr(statusLabel(o, today))} />
 );
 
 export function Suppliers() {
@@ -42,7 +53,7 @@ export function PurchaseOrders() {
     { key: 'number', label: tr('Order'), value: (o) => o.number, render: (o) => <Link to={`/purchasing/orders/${o.id}`}><code>{o.number}</code></Link> },
     { key: 'supplier', label: tr('Supplier'), value: (o) => supplier(o.supplierId) },
     { key: 'wh', label: tr('Deliver to'), value: (o) => cat.warehouseName(o.warehouseId) },
-    { key: 'status', label: tr('Status'), value: (o) => statusLabel(o), render: statusPill },
+    { key: 'status', label: tr('Status'), value: (o) => statusLabel(o), render: (o) => statusPill(o) },
     { key: 'total', label: tr('Total'), value: (o) => o.totalMinor, align: 'right', render: (o) => money(o.totalMinor, o.currency) },
     { key: 'when', label: tr('Ordered'), value: (o) => o.createdAt, render: (o) => <span className="nowrap">{formatDateTime(o.createdAt, session.org)}</span> },
   ];
@@ -272,6 +283,10 @@ export function PurchaseOrderPage() {
 
       <OrderApproval order={o} canDecide={hasPermission(session.permissions, 'purchasing.orders.approve')} mine={o.createdBy === session.userId}
         onDone={(text) => { setResult({ ok: true, text }); order.reload(); }} />
+      {byLine && (
+        <OrderConfirmation key={`${o.id}:${o.promisedDate ?? ''}`} order={o} canConfirm={canReceive} late={isLate(o)}
+          onDone={(text) => { setResult({ ok: true, text }); order.reload(); }} />
+      )}
 
       {o.status === 'ordered' && o.approval !== 'pending' && receiving && (
         <ReceiveForm order={o} itemName={cat.itemName} onCancel={() => setReceiving(false)}

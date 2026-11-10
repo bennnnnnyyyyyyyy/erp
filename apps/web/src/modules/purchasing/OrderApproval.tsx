@@ -72,6 +72,62 @@ export function OrderApproval({ order, canDecide, mine, onDone }: {
   );
 }
 
+/** On the order page (sql/073): the date the supplier promised, and a small form to record or change it. */
+export function OrderConfirmation({ order, canConfirm, late, onDone }: {
+  order: PurchaseOrder;
+  canConfirm: boolean;
+  late: boolean;
+  onDone: (text: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(order.promisedDate ?? '');
+  const [ref, setRef] = useState(order.supplierRef ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const open = order.status === 'ordered' && order.approval !== 'pending' && order.approval !== 'rejected';
+  if (!order.promisedDate && !(open && canConfirm)) return null;
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/v1/purchasing/orders/${order.id}/confirm`, { method: 'POST', body: JSON.stringify({ promisedDate: date, supplierRef: ref.trim() }) });
+      setEditing(false);
+      onDone(tr('The promised delivery date was saved.'));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={late ? 'notice error stack' : 'stack'} style={{ marginBlockStart: '0.75rem' }}>
+      {order.promisedDate ? (
+        <p>
+          {late ? <strong>{tr('Late:')} </strong> : null}
+          {trf('The supplier promised delivery by {date}.', { date: order.promisedDate })}
+          {order.supplierRef ? <> {tr("Supplier's reference")}: <bdi className="mono">{order.supplierRef}</bdi></> : null}
+        </p>
+      ) : (
+        <p className="muted small">{tr('Not confirmed by the supplier yet.')}</p>
+      )}
+      {open && canConfirm && !editing && (
+        <div><Button size="sm" variant="outline" onClick={() => setEditing(true)}>{order.promisedDate ? tr('Change the promised date') : tr('The supplier confirmed…')}</Button></div>
+      )}
+      {open && canConfirm && editing && (
+        <div className="form-row">
+          <label>{tr('Promised delivery date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>{tr("Supplier's reference (optional)")}<input value={ref} maxLength={60} onChange={(e) => setRef(e.target.value)} /></label>
+          <Button size="sm" disabled={busy || !date} onClick={save}>{tr('Save')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{tr('Cancel')}</Button>
+        </div>
+      )}
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
 /** On the purchase orders list, for those who manage orders: whether orders need approval, and from what total. */
 export function OrderApprovalSetting({ currency }: { currency: string }) {
   const saved = useLoad(() => api<{ on: boolean; fromMinor: number }>('/v1/purchasing/order-approval'));
