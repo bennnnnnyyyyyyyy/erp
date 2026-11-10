@@ -11,6 +11,35 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Bank statement import part 2 (sql/068: record what a line was, rules, bank charges, who may reconcile); 067 applied
+
+**Objective.** Ben: "start bank import part 2". Let a bank line with nothing to match be recorded from the statement itself, add
+rules for recurring lines (bank fees), and the Bank charges account (Ben's Q5). Stop the API answering 500 when code is merged before
+its migration (it happened with PRs #27 and #35).
+
+**Actions Completed.** Branch `feat/bank-import-2`.
+- `sql/068_trs_bank_statements_2.sql` + `sql/tests/064_bank_statements_2.sql`: `trs_match_rules`, `trs_save_rule`, `trs_delete_rule`,
+  `trs_prepare_bank_charges` (account "Bank charges / مصروفات وعمولات بنكية" under 33 and its category, created once),
+  `trs_explain_line` (expense, supplier payment, customer payment or transfer, posted through the existing functions and matched in the
+  same transaction), `trs_reconcile_roles`.
+- API (`apps/api/src/modules/treasury/statements.ts`): reconcile roles (read), bank charges, rules (list, add, change, delete), explain a
+  line; each statement line now carries the rule it matches. `apps/api/src/lib/errors.ts` `isMissingSchema` + `index.ts`: a missing
+  table, column or function answers **503 `not_set_up`** ("This feature is not set up yet…") instead of 500. Auth tests for all routes.
+- Web (`apps/web/src/modules/treasury/Statements.tsx`): "Record what it was…" on each open line (kind by direction; expense category with
+  Bank charges as default, the open invoice or bill closest in amount first, or the other account); "Record as the rule says" for lines
+  a rule matches; Rules section; "Who may reconcile" (owner edits, others see it). 36 Arabic machine drafts in `lib/i18nDecisions.ts`,
+  including the 503 message.
+- `sql/README.md`: 067 marked applied, 068 row added.
+
+**Database / System Result.** 067 applied to live by Ben on 10 Nov (after the merge of #35), checked read-only afterwards: 5 RLS tables,
+8 functions, no write grants. 068 not applied; a dry run on live inside a rolled-back transaction passed on 10 Nov (RLS on
+`trs_match_rules`, 6 functions, anonymous callers cannot explain a line, the internal Bank charges helper and inserts are not open to
+users), and a read-only check afterwards confirmed nothing was kept.
+
+**Safety Status.** `npm run lint` and `npm run typecheck` clean; tests pass (shared 66 + 1 skipped, API 327 + 7 skipped, web 97); all 68
+migrations and 64 SQL tests pass locally (PGlite); documentation links OK. Not viewed in a browser. **068 must be applied before this
+branch is merged**; until then the new routes answer 503 not_set_up. PDF reading (OCR) not started: waiting for Egyptian samples.
+
 ## 2026-11-10 — Bank statement import part 1 (sql/067, API, screens); 066 applied; Google decided; npm incident
 
 **Objective.** Ben approved the bank import plan with answers to Q1–Q5 and the Google recommendations; build the import (part 1).
