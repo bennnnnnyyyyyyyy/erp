@@ -124,7 +124,7 @@ export function parseStatementDate(text: string, format: StatementDateFormat): s
     const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000);
     return iso(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
   }
-  const [p0 = '', p1 = '', p2 = '', ...extra] = s.split(/[/.\-]/);
+  const [p0 = '', p1 = '', p2 = '', ...extra] = s.split(/[/.-]/);
   if (extra.length || ![p0, p1, p2].every((p) => /^\d+$/.test(p))) return null;
   const [a, b, c] = [Number(p0), Number(p1), Number(p2)];
   if (format === 'yyyy-mm-dd') return p0.length === 4 ? iso(a, b, c) : null;
@@ -177,24 +177,42 @@ export function readStatement(
   const at = (r: string[], i: number | null | undefined) => (i == null ? '' : (r[i] ?? '').trim());
   const opts = { decimal: m.decimal ?? '.', minorDigits };
   if (m.amount == null && m.moneyIn == null && m.moneyOut == null) throw new Error('mapping needs an amount column, or money in / out');
-  rows.forEach((r, idx) => {
+  for (const [idx, r] of rows.entries()) {
     const row = idx + 1;
-    if (idx < m.skipRows) return;
-    if (r.length <= Math.max(m.date, m.description)) return errors.push({ row, reason: 'columns' });
+    if (idx < m.skipRows) continue;
+    const fail = (reason: StatementRowError['reason']) => errors.push({ row, reason });
+    if (r.length <= Math.max(m.date, m.description)) {
+      fail('columns');
+      continue;
+    }
     const bookingDate = parseStatementDate(at(r, m.date), m.dateFormat);
-    if (!bookingDate) return errors.push({ row, reason: 'date' });
+    if (!bookingDate) {
+      fail('date');
+      continue;
+    }
     let amount: number | null;
     if (m.amount != null) amount = parseStatementAmount(at(r, m.amount), opts);
     else {
       const inn = at(r, m.moneyIn) === '' ? null : parseStatementAmount(at(r, m.moneyIn), opts);
       const out = at(r, m.moneyOut) === '' ? null : parseStatementAmount(at(r, m.moneyOut), opts);
-      if ((at(r, m.moneyIn) !== '' && inn === null) || (at(r, m.moneyOut) !== '' && out === null))
-        return errors.push({ row, reason: 'amount' });
-      if (inn && out) return errors.push({ row, reason: 'both_in_and_out' });
+      if ((at(r, m.moneyIn) !== '' && inn === null) || (at(r, m.moneyOut) !== '' && out === null)) {
+        fail('amount');
+        continue;
+      }
+      if (inn && out) {
+        fail('both_in_and_out');
+        continue;
+      }
       amount = inn ? Math.abs(inn) : out ? -Math.abs(out) : inn === 0 || out === 0 ? 0 : null;
     }
-    if (amount === null) return errors.push({ row, reason: 'amount' });
-    if (amount === 0) return errors.push({ row, reason: 'zero' });
+    if (amount === null) {
+      fail('amount');
+      continue;
+    }
+    if (amount === 0) {
+      fail('zero');
+      continue;
+    }
     const balanceText = at(r, m.balance);
     lines.push({
       row,
@@ -205,7 +223,7 @@ export function readStatement(
       amountMinor: amount,
       balanceMinor: balanceText ? parseStatementAmount(balanceText, opts) : null,
     });
-  });
+  }
   return { lines, errors };
 }
 
