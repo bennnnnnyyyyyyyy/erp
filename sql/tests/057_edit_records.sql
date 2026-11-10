@@ -75,7 +75,7 @@ begin
   if exists (select 1 from public.audit_log where entity_id = c::text) then raise exception 'FAIL I1c: another company sees the customer history'; end if;
   reset role;
 
-  if has_function_privilege('anon', 'public.sal_update_customer(uuid, text, text, text, text)', 'execute')
+  if has_function_privilege('anon', 'public.sal_update_customer(uuid, text, text, text, text, text, text, text, text, text, text, text, text)', 'execute')
      or has_function_privilege('anon', 'public.inv_update_item(uuid, text, text)', 'execute') then
     raise exception 'FAIL A1: anonymous callers can edit';
   end if;

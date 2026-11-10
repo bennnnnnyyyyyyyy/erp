@@ -5,6 +5,7 @@ import { formatMoney, hasPermission, type TreasuryAccount } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
+import { ErrorToast } from '../../components/Toast';
 import { api } from '../../lib/api';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
@@ -48,7 +49,7 @@ function useNotice() {
     setBusy(true); setMessage(null);
     try { setMessage({ ok: true, text: await work() }); after(); } catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
-  return { message, busy, run };
+  return { message, busy, run, clear: () => setMessage(null) };
 }
 
 export function ExpensesPage() {
@@ -56,7 +57,7 @@ export function ExpensesPage() {
   const categories = useLoad(() => api<Category[]>('/v1/finance/categories'));
   const expenses = useLoad(() => api<Expense[]>('/v1/finance/expenses'));
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));   // purchasing may be off
-  const { message, busy, run } = useNotice();
+  const { message, busy, run, clear } = useNotice();
   const [date, setDate] = useState(today());
   const [categoryId, setCategoryId] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -84,7 +85,8 @@ export function ExpensesPage() {
     <section className="page wide">
       <h1>{tr('Expenses')}</h1>
       <p className="muted">{tr('Operating expenses such as rent, salaries, utilities and transport.')}</p>
-      {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
+      {message?.ok && <p className="notice">{message.text}</p>}
+      <ErrorToast message={message && !message.ok ? message.text : null} onClose={clear} />
 
       <FormToggle label={tr('Record an expense')}>
         <div className="form-row">
@@ -164,7 +166,7 @@ export function PaymentsPage() {
   const openOut = useLoad(() => api<OpenItem[]>('/v1/finance/open-items?direction=out'));
   const customers = useLoad(() => api<Named[]>('/v1/sales/customers').catch(() => [] as Named[]));   // sales may be off
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));   // purchasing may be off
-  const { message, busy, run } = useNotice();
+  const { message, busy, run, clear } = useNotice();
   // "Record a payment →" on an invoice or expense page links here with ?for=c:<id> (customer invoice), s:<id> (supplier invoice) or
   // e:<id> (expense): the form opens already pointing at it, with what is still owed as the amount.
   const [preset] = useState(() => { const f = new URLSearchParams(window.location.search).get('for') ?? ''; return /^[cse]:[0-9a-f-]{36}$/i.test(f) ? f : ''; });
@@ -222,7 +224,8 @@ export function PaymentsPage() {
     <section className="page wide">
       <h1>{tr('Payments')}</h1>
       <p className="muted">{tr('Customer receipts, and payments to suppliers and for expenses.')}</p>
-      {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
+      {message?.ok && <p className="notice">{message.text}</p>}
+      <ErrorToast message={message && !message.ok ? message.text : null} onClose={clear} />
 
       <FormToggle label={tr('Record a payment')} open={formOpen} onOpenChange={setFormOpen}>
         <div className="form-row">

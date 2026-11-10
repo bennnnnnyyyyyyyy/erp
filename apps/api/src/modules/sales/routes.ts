@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { HttpError } from '../../lib/errors';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -103,27 +103,60 @@ async function one(c: Context<AppEnv>, id: string) {
   if (!o) throw new HttpError(404, 'Sales order not found', 'not_found');
   return o;
 }
+const CUSTOMER_DETAIL_COLUMNS = 'tax_number,commercial_registry,email,address,bank_name,bank_account,default_currency,notes';
+
+/** The optional customer details from a request body, as the database function's parameters (sql/081). Empty means none. */
+function customerDetails(body: Record<string, unknown>) {
+  const limited = (v: string, max: number, label: string) => {
+    if (v.length > max) invalid(`${label} is too long (up to ${max} characters)`);
+    return v || null;
+  };
+  const email = limited(text(body.email), 200, 'Email');
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) invalid('That email address is not valid');
+  const currency = text(body.defaultCurrency).toUpperCase();
+  if (currency && !/^[A-Z]{3}$/.test(currency)) invalid('A currency is a 3-letter code, for example EGP');
+  const all = {
+    p_tax_number: limited(text(body.taxNumber), 40, 'Tax registration number'),
+    p_commercial_registry: limited(text(body.commercialRegistry), 40, 'Commercial registry number'),
+    p_email: email,
+    p_address: limited(text(body.address), 500, 'Address'),
+    p_bank_name: limited(text(body.bankName), 120, 'Bank name'),
+    p_bank_account: limited(text(body.bankAccount), 60, 'Bank account'),
+    p_default_currency: currency || null,
+    p_notes: limited(text(body.notes), 2000, 'Notes'),
+  };
+  // Only what was given: with none, the call is the old one and works before sql/081 is applied.
+  return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== null));
+}
+
+type CustomerRow = {
+  id: string;
+  code: string;
+  name: string;
+  contact: string | null;
+  city: string | null;
+  phone: string | null;
+  payment_terms_days: number | null;
+  tax_number?: string | null;
+  commercial_registry?: string | null;
+  email?: string | null;
+  address?: string | null;
+  bank_name?: string | null;
+  bank_account?: string | null;
+  default_currency?: string | null;
+  notes?: string | null;
+};
+
 salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (c) => {
-  const { data, error } = await userDb(c)
-    .from('sal_customers')
-    .select('id,code,name,contact,city,phone,payment_terms_days')
-    .eq('org_id', orgOf(c))
-    .is('deleted_at', null)
-    .order('name');
+  const read = (columns: string) =>
+    userDb(c).from('sal_customers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
+  // Until sql/081 is applied the new columns do not exist: read the old ones so the list still works.
+  let { data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS}`);
+  if (error && isMissingSchema(error)) ({ data, error } = await read('id,code,name,contact,city,phone,payment_terms_days'));
   if (error) throw error;
   return ok(
     c,
-    (
-      (data ?? []) as {
-        id: string;
-        code: string;
-        name: string;
-        contact: string | null;
-        city: string | null;
-        phone: string | null;
-        payment_terms_days: number | null;
-      }[]
-    ).map((x) => ({
+    ((data ?? []) as unknown as CustomerRow[]).map((x) => ({
       id: x.id,
       kind: 'customer',
       code: x.code,
@@ -133,6 +166,15 @@ salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (
       phone: x.phone ?? '',
       /** null = the company default (sql/041). */
       paymentTermsDays: x.payment_terms_days,
+      // sql/081: business details of the company, shown only to people who can read customers (never in public report links).
+      taxNumber: x.tax_number ?? '',
+      commercialRegistry: x.commercial_registry ?? '',
+      email: x.email ?? '',
+      address: x.address ?? '',
+      bankName: x.bank_name ?? '',
+      bankAccount: x.bank_account ?? '',
+      defaultCurrency: x.default_currency ?? '',
+      notes: x.notes ?? '',
     })),
   );
 });
@@ -156,6 +198,7 @@ salesRoutes.put('/customers/:id', requirePermission('sales.customers.manage'), a
     p_contact: text(b.contact) || null,
     p_city: text(b.city) || null,
     p_phone: text(b.phone) || null,
+    ...customerDetails(b),
   });
   return ok(c, { id, kind: 'customer', name, contact: text(b.contact), city: text(b.city), phone: text(b.phone) });
 });
@@ -179,6 +222,7 @@ salesRoutes.post('/customers', requirePermission('sales.customers.manage'), asyn
     p_phone: text(b.phone) || null,
     // sql/050: a typed code, or an automatic one (C-00001) when empty.
     p_code: text(b.code) || null,
+    ...customerDetails(b),
   });
   return ok(c, { id, kind: 'customer', name, contact: text(b.contact), city: text(b.city), phone: text(b.phone) }, 201);
 });
