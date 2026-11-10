@@ -34,7 +34,8 @@ its migration (it happened with PRs #27 and #35).
 **Database / System Result.** 067 applied to live by Ben on 10 Nov (after the merge of #35), checked read-only afterwards: 5 RLS tables,
 8 functions, no write grants. 068 not applied; a dry run on live inside a rolled-back transaction passed on 10 Nov (RLS on
 `trs_match_rules`, 6 functions, anonymous callers cannot explain a line, the internal Bank charges helper and inserts are not open to
-users), and a read-only check afterwards confirmed nothing was kept.
+users), and a read-only check afterwards confirmed nothing was kept. **068 then applied to live by Ben via CLI** (its verification:
+`anon_explains` false, `users_call_internal` false); read-only check afterwards: `trs_match_rules` with RLS, 6 functions, no user inserts.
 
 **Safety Status.** `npm run lint` and `npm run typecheck` clean; tests pass (shared 66 + 1 skipped, API 327 + 7 skipped, web 97); all 68
 migrations and 64 SQL tests pass locally (PGlite); documentation links OK. Not viewed in a browser. **068 must be applied before this
