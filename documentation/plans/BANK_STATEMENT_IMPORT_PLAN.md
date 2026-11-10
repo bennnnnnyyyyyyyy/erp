@@ -218,6 +218,19 @@ version**: it is a published standard, so it can be built and tested without sam
 | Q4 | Standard accounting and ERP practice | As common ERPs do: an authorised person (owner by default, same setting as Q2) may undo a closed reconciliation with a reason, audited; never for a date on or before the books' lock date. Corrections after that are new entries. |
 | Q5 | Standard accounting | Bank charges post to a "Bank charges" expense account. A "Bank charges" expense category is seeded and pointed at that ledger account, so a person can pick the category (simple) and the accountant sees the right account. |
 
+**First real sample (10 Nov): a QNB Qatar PDF** (2016, Qatari riyal, a personal current account; kept in the git-ignored
+`bank-samples/qnb/`, not QNB Egypt). What its layout means for the PDF reader (structure only, no data copied):
+- Every column header is bilingual (Date/التاريخ, Description/الوصف, Debit/مدين, Credit/ائتمان, Balance/الرصيد); money out and in are
+  separate columns, with a running balance after every line; "(DR)" marks a debit (overdrawn) balance.
+- Lines run **newest first**; dates are `dd-mm-yyyy`; amounts have thousands commas and two decimals.
+- The account header (IBAN, type, currency, statement date, "Page n of N") and the footer disclaimers repeat on every page: skip them.
+- **Each transaction's description spans 4–6 text lines** (type, card number, merchant, reference, date): the reader must join them into
+  one line; the first date and the amounts on the row anchor the transaction.
+- The currency is a name ("QATARI RIYAL"), not an ISO code: map names to codes. Card spending abroad shows the original currency as an
+  ISO numeric code and amount inside the description ("978 18.20" = 18.20 EUR).
+- Check: each line's balance = the next (older) line's balance minus debit plus credit, which catches a misread amount.
+Egyptian banks' samples are still needed (NBE, Banque Misr, CIB, QNB Egypt).
+
 **PDF reading (OCR) options** (prices from 2026 comparison articles, not official pages; check before signing up). A monthly
 statement is a few pages, so any of them costs cents per company per month; the deciding factor is how well it reads **Arabic tables**,
 which no published benchmark covers, so the two best candidates should be tried on real statements from `bank-samples/`.
