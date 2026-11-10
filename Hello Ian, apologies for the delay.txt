@@ -1,0 +1,21 @@
+Hello Ian, apologies for the delay
+
+Update since my last email.
+
+Added to the app:
+
+- The bank statement reader now handles real-world variations found in 54 public bank statement samples, and refuses any line that appears after a statement's closing balance.
+
+Built tonight and passing all automated checks. These go into the app next, after the database updates are applied:
+
+- Purchase order approval: new purchase orders need approval from an owner or manager before goods can be received. The person who created an order cannot approve it, unless they are the company's only owner. Each company sets the amount from which approval is needed, and rejecting an order needs a reason.
+- Import from Excel or CSV: load items with their opening stock, customers and suppliers from a file. Rows are checked before they are saved, failed rows are listed with the reason, and each type has a template to download.
+- Google Sheets links: private, read-only links for stock on hand, open invoices and sales by month. A Google Sheet refreshes from them by itself, and each link can be revoked at any time.
+- Google Chat alerts: alerts and approval notices can go to a company's Google Chat space, as they already can to Slack and Microsoft Teams.
+- A fix to alert messages: email, Slack, Teams and Telegram messages were built but not switched on, so they would have failed to send. They now send.
+- Smaller additions: the supplier's delivery note number on each goods receipt, a promised delivery date on orders that shows "Late" once it passes, a way to change who receives each alert, and a switch to turn the guided tour for new staff on or off.
+- Behind the scenes: the four largest code files were split into smaller ones, so future changes are quicker and cheaper. Nothing changes for users.
+
+Next: apply the database updates and add everything to the app, then a full click-through as owner and as staff.
+
+Ben

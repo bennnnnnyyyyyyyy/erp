@@ -1,0 +1,175 @@
+git fetch --all; git branch -r | Where-Object { $\_ -notmatch '->' } | ForEach-Object {
+
+> >     $localBranch = ($_ -replace '^[\s]*origin/', '').Trim();
+> >     git checkout $localBranch;
+> >     git pull origin $localBranch
+> >
+> > }
+> > Cbranch 'db/batch3-decisions' set up to track 'origin/db/batch3-decisions'.
+> > Switched to a new branch 'db/batch3-decisions'
+> > From https://github.com/bennnnnnyyyyyyyy/erp
+
+- branch db/batch3-decisions -> FETCH_HEAD
+  Already up to date.
+  branch 'db/d1b-self-approval' set up to track 'origin/db/d1b-self-approval'.
+  Switched to a new branch 'db/d1b-self-approval'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch db/d1b-self-approval -> FETCH_HEAD
+  Already up to date.
+  branch 'db/fix-063-self-approval' set up to track 'origin/db/fix-063-self-approval'.
+  Switched to a new branch 'db/fix-063-self-approval'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch db/fix-063-self-approval -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'docs/bank-answers-google'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch docs/bank-answers-google -> FETCH_HEAD
+  Already up to date.
+  Updating files: 100% (122/122), done.
+  Switched to branch 'docs/codex-sync'
+  Your branch is behind 'origin/docs/codex-sync' by 8 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch docs/codex-sync -> FETCH_HEAD
+  Updating 755d2fc..11cba6f
+  Fast-forward
+  apps/api/src/lib/rpc.ts | 11 ++
+  apps/api/src/modules/sales/routes.ts | 1 +
+  apps/web/src/components/LanguageChooser.tsx | 4 +-
+  apps/web/src/lib/api.ts | 29 +++-
+  apps/web/src/lib/demoTrade.ts | 4 +-
+  apps/web/src/lib/i18n.tsx | 4 +-
+  apps/web/src/lib/i18nErrors.test.ts | 23 +++
+  apps/web/src/lib/i18nErrors.ts | 62 ++++++++
+  apps/web/src/lib/i18nUxAudit.ts | 98 ++++++++++++
+  apps/web/src/lib/numbers.test.ts | 34 ++++
+  apps/web/src/lib/numbers.ts | 30 ++++
+  apps/web/src/modules/accounting/Ledger.tsx | 33 ++--
+  apps/web/src/modules/accounting/Setup.tsx | 6 +-
+  apps/web/src/modules/accounting/common.tsx | 18 ++-
+  apps/web/src/modules/alerts/Alerts.tsx | 4 +-
+  apps/web/src/modules/core/Home.tsx | 4 +-
+  apps/web/src/modules/core/OwnerHome.tsx | 12 +-
+  apps/web/src/modules/core/settings/AiTry.tsx | 2 +-
+  .../src/modules/core/settings/BranchesSettings.tsx | 2 +-
+  .../modules/core/settings/IntegrationsSettings.tsx | 18 ++-
+  .../src/modules/core/settings/PeriodSettings.tsx | 10 +-
+  .../modules/core/settings/ProvidersSettings.tsx | 21 +--
+  .../src/modules/core/settings/UsersSettings.tsx | 15 +-
+  apps/web/src/modules/finance/Finance.tsx | 6 +-
+  apps/web/src/modules/finance/ProfitOverview.tsx | 2 +-
+  apps/web/src/modules/help/GettingStarted.tsx | 18 ++-
+  apps/web/src/modules/help/Onboarding.tsx | 13 +-
+  apps/web/src/modules/help/helpContent.ts | 16 +-
+  apps/web/src/modules/help/onboardingContent.ts | 8 +-
+  apps/web/src/modules/help/tourContent.ts | 12 +-
+  apps/web/src/modules/inventory/Batches.tsx | 4 +-
+  apps/web/src/modules/inventory/Inventory.tsx | 56 +++++--
+  apps/web/src/modules/messaging/ConnectPhone.tsx | 6 +-
+  apps/web/src/modules/messaging/Messaging.tsx | 17 +-
+  apps/web/src/modules/purchasing/PurchasingDemo.tsx | 25 ++-
+  .../src/modules/purchasing/SupplierInvoices.tsx | 4 +-
+  apps/web/src/modules/sales/CustomerInvoices.tsx | 22 ++-
+  apps/web/src/modules/sales/SalesDemo.tsx | 33 +++-
+  apps/web/src/modules/tasks/Tasks.tsx | 7 +-
+  apps/web/src/modules/trade/common.tsx | 25 ++-
+  apps/web/src/modules/treasury/Treasury.tsx | 6 +-
+  documentation/operations/WORKLOG.md | 19 +++
+  documentation/planning/2026-11-09-ux-decisions.md | 177 +++++++++++++++++++++
+  packages/shared/src/money.test.ts | 13 ++
+  packages/shared/src/money.ts | 18 ++-
+  45 files changed, 803 insertions(+), 149 deletions(-)
+  create mode 100644 apps/web/src/lib/i18nErrors.test.ts
+  create mode 100644 apps/web/src/lib/i18nErrors.ts
+  create mode 100644 apps/web/src/lib/i18nUxAudit.ts
+  create mode 100644 apps/web/src/lib/numbers.test.ts
+  create mode 100644 apps/web/src/lib/numbers.ts
+  create mode 100644 documentation/planning/2026-11-09-ux-decisions.md
+  create mode 100644 packages/shared/src/money.test.ts
+  Switched to branch 'docs/review-correction'
+  Your branch is up to date with 'origin/docs/review-correction'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch docs/review-correction -> FETCH_HEAD
+  Already up to date.
+  branch 'docs/review-status' set up to track 'origin/docs/review-status'.
+  Switched to a new branch 'docs/review-status'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch docs/review-status -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'docs/stock-correction'
+  Your branch is up to date with 'origin/docs/stock-correction'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch docs/stock-correction -> FETCH_HEAD
+  Already up to date.
+  branch 'docs/ux-decisions-answers' set up to track 'origin/docs/ux-decisions-answers'.
+  Switched to a new branch 'docs/ux-decisions-answers'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch docs/ux-decisions-answers -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'feat/bank-import-2'
+  Your branch is up to date with 'origin/feat/bank-import-2'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch feat/bank-import-2 -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'feat/mt940-and-inventory-slice3'
+  Your branch is up to date with 'origin/feat/mt940-and-inventory-slice3'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch feat/mt940-and-inventory-slice3 -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'feat/mt940-real-world'
+  Your branch is up to date with 'origin/feat/mt940-real-world'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch feat/mt940-real-world -> FETCH_HEAD
+  Already up to date.
+  branch 'fix/audit-review-nov9' set up to track 'origin/fix/audit-review-nov9'.
+  Switched to a new branch 'fix/audit-review-nov9'
+  fatal: couldn't find remote ref fix/audit-review-nov9
+  Switched to branch 'main'
+  Your branch is up to date with 'origin/main'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch main -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'mvp/overnight-checks'
+  Your branch is up to date with 'origin/mvp/overnight-checks'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch mvp/overnight-checks -> FETCH_HEAD
+  Already up to date.
+  branch 'plans/bank-import-cbe-sheets' set up to track 'origin/plans/bank-import-cbe-sheets'.
+  Switched to a new branch 'plans/bank-import-cbe-sheets'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch plans/bank-import-cbe-sheets -> FETCH_HEAD
+  Already up to date.
+  branch 'ui/app-left-menu' set up to track 'origin/ui/app-left-menu'.
+  Switched to a new branch 'ui/app-left-menu'
+  fatal: couldn't find remote ref ui/app-left-menu
+  Switched to branch 'ui/integrations-redesign'
+  Your branch is behind 'origin/ui/integrations-redesign' by 3 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch ui/integrations-redesign -> FETCH_HEAD
+  Updating 53d9e27..f598014
+  Fast-forward
+  documentation/operations/WORKLOG.md | 14 ++++++++++++++
+  sql/README.md | 2 +-
+  2 files changed, 15 insertions(+), 1 deletion(-)
+  branch 'ux/batch1-decisions' set up to track 'origin/ux/batch1-decisions'.
+  Switched to a new branch 'ux/batch1-decisions'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch ux/batch1-decisions -> FETCH_HEAD
+  Already up to date.
+  branch 'ux/batch2-decisions' set up to track 'origin/ux/batch2-decisions'.
+  Switched to a new branch 'ux/batch2-decisions'
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch ux/batch2-decisions -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'ux/d9-wizard'
+  Your branch is up to date with 'origin/ux/d9-wizard'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch ux/d9-wizard -> FETCH_HEAD
+  Already up to date.
+  Switched to branch 'ux/inventory-redesign'
+  Your branch is up to date with 'origin/ux/inventory-redesign'.
+  From https://github.com/bennnnnnyyyyyyyy/erp
+- branch ux/inventory-redesign -> FETCH_HEAD
+  Already up to date.
+  PS C:\Users\ben.arthur\Desktop\ERP>

@@ -6,61 +6,61 @@ clicked through the screens as owner and as staff. This list does that, in the o
 
 ## Before you start
 
-- [ ] **Three test accounts:** owner A (new email), staff B (invited by A as *member*), and owner C of a *second* company (another
+- [x] **Three test accounts:** owner A (new email), staff B (invited by A as _member_), and owner C of a _second_ company (another
       new email). Use test emails, not real customers.
-- [ ] Two browsers or one normal and one private window, so A and B are signed in at the same time.
+- [x] Two browsers or one normal and one private window, so A and B are signed in at the same time.
 - [ ] A phone (or the browser's phone view, F12 → device toolbar) for the phone checks.
-- [ ] A small CSV or Excel bank statement you make up (date, description, amount, balance), 5–10 lines.
+- [ ] A small CSV or Excel bank statement you make up (date, description, amount, balance), 5–10 lines. (you make that)
 - [ ] Write down anything wrong with: screen, what you did, what you expected, what happened, a screenshot. Send the list to Claude.
 
 Mark each line ✅ works, ❌ broken, or ⚠️ works but confusing.
 
 ## 1. Sign-up and set-up (owner A)
 
-- [ ] Sign up with A's email; the sign-in link arrives and works.
-- [ ] Set up your company: name, currency EGP, time zone Cairo, "What do you sell?" answered; the right apps are switched on.
-- [ ] Settings → General: company details save; the language switch changes everything to Arabic and back.
-- [ ] Settings → Branches: add one branch.
-- [ ] Settings → Users: invite B as member; B gets the email, signs in, accepts, and lands in A's company.
-- [ ] Settings → Apps: switch Accounting and Treasury on. Accounting → Accounting setup: finish it (opening date, chart of accounts).
-- [ ] My settings (as A and as B): change own name; change password.
+- [x] Sign up with A's email; the sign-in link arrives and works.
+- [x] Set up your company: name, currency EGP, time zone Cairo, "What do you sell?" answered; the right apps are switched on.
+- [x] Settings → General: company details save; the language switch changes everything to Arabic and back.
+- [x] Settings → Branches: add one branch.
+- [x] Settings → Users: invite B as member; B gets the email, signs in, accepts, and lands in A's company.
+- [x] Settings → Apps: switch Accounting and Treasury on. Accounting → Accounting setup: finish it (opening date, chart of accounts).
+- [x] My settings (as A and as B): change own name; change password.
 
 ## 2. Inventory (owner A unless stated)
 
-- [ ] Inventory opens on the Overview: four numbers and "Needs you today" make sense for an empty company.
-- [ ] Add 3 items (one batch-tracked with expiry). Item page opens from Stock on hand; edit an item's name (English and Arabic).
-- [ ] Add a second warehouse.
+- [x] Inventory opens on the Overview: four numbers and "Needs you today" make sense for an empty company.
+- [ ] Add 3 items (one batch-tracked with expiry) (what do yu mean). Item page opens from Stock on hand; edit an item's name (English and Arabic).
+- [x] Add a second warehouse.
 - [ ] Reorder levels: set one; Stock forecast shows the item.
-- [ ] Approval policies: open it; the default rule makes sense.
-- [ ] **As staff B:** New stock request for an item with no stock: refused with a clear message.
-- [ ] (After §3 receiving) **As B:** request stock out → **as A:** approve it → stock goes down; B cannot approve own request.
-- [ ] Stock transfers: A creates a transfer between warehouses; it needs approval by someone else; after approval both warehouses show it.
+- [x] Approval policies: open it; the default rule makes sense.
+- [x] **As staff B:** New stock request for an item with no stock: refused with a clear message. (ui is shit why text give me a popup)
+- [ ] (After §3 receiving) **As B:** request stock out → **as A:** approve it → stock goes down; B cannot approve own request. (what?)
+- [ ] Stock transfers: A creates a transfer between warehouses; it needs approval by someone else; after approval both warehouses show it. (why would it need approval if A is owner) (give owner option to choose if he can approove his own stock transferes)
 - [ ] Stock adjustments: A records a loss of 1 with a reason; approval rule applies.
 - [ ] Stock counts: start a count for a warehouse, enter quantities (one different from the books), submit, approve as the other
       person; the difference becomes a stock move.
-- [ ] Settings → General: switch **blind counts** on; **as B** start a count: the expected quantity is hidden; as A it is shown.
+- [x] Settings → General: switch **blind counts** on; **as B** start a count: the expected quantity is hidden; as A it is shown. (why does it have its own setting, this shold be an option amongst stuff)
 - [ ] Batches and expiry: the batch-tracked item shows its batch and expiry date.
 - [ ] Stock ledger: every move above is listed, with who and when.
 - [ ] **Phone:** Stock on hand shows one row per item and warehouse; the big buttons Request, Receive, Count work.
 
 ## 3. Buying (owner A, staff B where stated)
 
-- [ ] Suppliers: add one; edit its phone.
-- [ ] New purchase order: 2 items from the supplier.
+- [x] Suppliers: add one; edit its phone.
+- [x] New purchase order: 2 items from the supplier.
 - [ ] Receive **part** of it ("rest coming"): the order shows partly received; stock goes up.
-- [ ] Receive the rest: the order closes as received.
-- [ ] Purchase invoice from the order: cannot bill more than arrived.
-- [ ] Payments: pay the supplier from the bank account (Cash and banks must have one; add it if not).
+- [x] Receive the rest: the order closes as received.
+- [x] Purchase invoice from the order: cannot bill more than arrived.
+- [ ] Payments: pay the supplier from the bank account (Cash and banks must have one; add it if not). (for here should have the pending invoices not paid (purchases menu))
 
 ## 4. Selling
 
-- [ ] Customers: add one; edit it.
-- [ ] New sales order **as B**; approval by **A**; issue the goods; stock goes down.
-- [ ] Sales invoice from the order; open it; the totals are right.
-- [ ] Payments: record the customer's payment into the bank.
-- [ ] Credit note on the invoice (needs approval by the other person); the customer's balance goes down.
+- [x] Customers: add one; edit it.
+- [x] New sales order **as B**; approval by **A**; issue the goods; stock goes down.
+- [x] Sales invoice from the order; open it; the totals are right.
+- [x] Payments: record the customer's payment into the bank.
+- [ ] Credit note on the invoice (needs approval by the other person); the customer's balance goes down. (isnt this stupid, if i can get a nonline reference id this step would be unneeded)
 - [ ] Statement of account for the customer and the supplier: lines and balances match what you did.
-- [ ] Online orders screen opens (empty is fine; Shopify is in test mode).
+- [x] Online orders screen opens (empty is fine; Shopify is in test mode).
 
 ## 5. Money and accounting (owner A)
 
