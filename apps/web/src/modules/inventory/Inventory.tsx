@@ -16,6 +16,7 @@ import { useSession } from '../../session';
 import { parseAmount } from '../../lib/numbers';
 import { Pill } from '../trade/common';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
+import { ClerkActions } from './ClerkActions';
 
 import { tr, trf } from '../../lib/i18n';
 // Inventory slice 1 screens. They call /v1/inventory/... : the real API in the real app, and the in-browser sample
@@ -67,7 +68,9 @@ export function useCatalog() {
 
 // ------------------------------------------------------------------ stock on hand and items
 
-type StockLine = DemoItem & { onHand: number; reserved: number; available: number };
+/** One row of Stock on hand: an item in one warehouse (inventory redesign Q4 B), or the item alone when it has no stock anywhere.
+ *  `totalAvailable` is the item's available stock in all warehouses: the status compares it with the item's reorder level. */
+type StockLine = DemoItem & { warehouseId: string | null; onHand: number; reserved: number; available: number; totalAvailable: number };
 
 function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehouse[]; onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '' });
@@ -191,25 +194,33 @@ export function StockPage() {
   const canEdit = canAdd && !demoMode;
   const canAddWarehouse = hasPermission(session.permissions, 'inventory.warehouses.manage');
 
-  const rows: StockLine[] = (cat.items.data ?? []).map((i) => {
-    const mine = (stock.data ?? []).filter((s) => s.itemId === i.id && (warehouseId === 'all' || s.warehouseId === warehouseId));
-    const sum = (f: (s: StockRow) => number) => mine.reduce((a, s) => a + f(s), 0);
-    return { ...i, onHand: sum((s) => s.onHand), reserved: sum((s) => s.reserved), available: sum((s) => s.available) };
+  // One row per item and warehouse (Ben, 10 Nov: Q4 B). An item with no stock anywhere still gets one row, so new items show.
+  const items = cat.items.data ?? [];
+  const totalAvailable = (itemId: string) => (stock.data ?? []).filter((s) => s.itemId === itemId).reduce((a, s) => a + s.available, 0);
+  const rows: StockLine[] = items.flatMap((i): StockLine[] => {
+    const all = (stock.data ?? []).filter((s) => s.itemId === i.id);
+    const total = all.reduce((a, s) => a + s.available, 0);
+    const mine = all.filter((s) => warehouseId === 'all' || s.warehouseId === warehouseId);
+    if (mine.length === 0) return warehouseId === 'all' ? [{ ...i, warehouseId: null, onHand: 0, reserved: 0, available: 0, totalAvailable: total }] : [];
+    return mine.map((s) => ({ ...i, warehouseId: s.warehouseId, onHand: s.onHand, reserved: s.reserved, available: s.available, totalAvailable: total }));
   });
+  const isLow = (i: DemoItem, available: number) => i.reorderLevel !== null && available <= i.reorderLevel;
 
   const columns: Column<StockLine>[] = [
     { key: 'sku', label: 'SKU', value: (r) => r.sku, render: (r) => <code>{r.sku}</code> },
     { key: 'name', label: tr('Item'), value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
+    { key: 'wh', label: tr('Warehouse'), value: (r) => (r.warehouseId ? cat.warehouseName(r.warehouseId) : ''), render: (r) => (r.warehouseId ? cat.warehouseName(r.warehouseId) : <span className="muted">{tr('No stock yet')}</span>) },
     { key: 'ar', label: tr('Arabic name'), value: (r) => r.nameAr, render: (r) => <span dir="rtl">{r.nameAr}</span> },
     { key: 'uom', label: tr('Unit'), value: (r) => r.uom },
-    // Status against the item's reorder level. The old bar showed available ÷ on hand, which is almost always 100%: every row had the
-    // same full bar and it said nothing.
-    { key: 'level', label: tr('Status'), value: (r) => (r.reorderLevel === null ? '' : r.available <= r.reorderLevel ? 'low' : 'ok'), render: (r) =>
-      r.reorderLevel === null
-        ? <span className="muted" title={tr('No reorder level set')}>—</span>
-        : r.available <= r.reorderLevel
-          ? <Pill status="rejected" label={tr('Low')} />
-          : <Pill status="received" label={tr('OK')} /> },
+    // Status of the item (all warehouses) against its reorder level, which is set per item. "Out" when nothing is available anywhere.
+    { key: 'level', label: tr('Status'), value: (r) => (r.totalAvailable <= 0 ? 'out' : r.reorderLevel === null ? '' : isLow(r, r.totalAvailable) ? 'low' : 'ok'), render: (r) =>
+      r.totalAvailable <= 0
+        ? <Pill status="rejected" label={tr('Out')} />
+        : r.reorderLevel === null
+          ? <span className="muted" title={tr('No reorder level set')}>—</span>
+          : isLow(r, r.totalAvailable)
+            ? <Pill status="submitted" label={tr('Low')} />
+            : <Pill status="received" label={tr('OK')} /> },
     { key: 'onHand', label: tr('On hand'), value: (r) => r.onHand, align: 'right', render: (r) => qty(r.onHand) },
     { key: 'reserved', label: tr('Reserved'), value: (r) => r.reserved, align: 'right', render: (r) => (r.reserved ? qty(r.reserved) : <span className="muted">0</span>) },
     { key: 'available', label: tr('Available'), value: (r) => r.available, align: 'right', render: (r) => <strong>{qty(r.available)}</strong> },
@@ -226,8 +237,9 @@ export function StockPage() {
   ];
 
   // Totals of units are left out on purpose: they add kilograms, litres and pieces together (287,963.501 "units").
-  const lowCount = rows.filter((r) => r.reorderLevel !== null && r.available <= r.reorderLevel).length;
-  const reservedItems = rows.filter((r) => r.reserved > 0).length;
+  // The numbers count items, not rows (an item in two warehouses is one item).
+  const lowCount = items.filter((i) => isLow(i, totalAvailable(i.id))).length;
+  const reservedItems = items.filter((i) => (stock.data ?? []).some((s) => s.itemId === i.id && s.reserved > 0)).length;
   const waiting = (requests.data ?? []).filter((r) => r.status === 'submitted').length;
 
   return (
@@ -238,7 +250,7 @@ export function StockPage() {
         <div className="stats">
           <div className="stat" style={{ '--i': 0 } as CSSProperties}>
             <div className="stat-label">{tr('Items')}</div>
-            <div className="stat-value">{rows.length}</div>
+            <div className="stat-value">{items.length}</div>
             <div className="stat-note">{warehouseId === 'all' ? trf('in {n} warehouses', { n: cat.warehouses.data?.length ?? 0 }) : cat.warehouseName(warehouseId)}</div>
           </div>
           <Link to="/inventory/reorder-levels" className={lowCount > 0 ? 'stat warn' : 'stat'} style={{ '--i': 1, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
@@ -263,7 +275,7 @@ export function StockPage() {
           title={tr('Stock on hand')}
           rows={rows}
           columns={columns}
-          rowKey={(r) => r.id}
+          rowKey={(r) => `${r.id}:${r.warehouseId ?? "-"}`}
           rowHref={(r) => `/inventory/items/${r.id}`}
           toolbar={
             <>
@@ -287,6 +299,7 @@ export function StockPage() {
       {adding && cat.warehouses.data && (
         <AddItemModal warehouses={cat.warehouses.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); cat.items.reload(); stock.reload(); }} />
       )}
+      <ClerkActions />
     </section>
   );
 }

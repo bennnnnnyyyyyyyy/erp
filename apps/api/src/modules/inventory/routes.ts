@@ -754,10 +754,14 @@ async function loadCounts(c: Context<AppEnv>, id?: string) {
     if (le) throw le;
     lines.set(id, (ls ?? []) as CountLineRow[]);
   }
+  // Blind counts (sql/066): while a count is being counted, people other than owners and admins do not get the expected quantity.
+  const t = c.var.tenant;
+  const blindFor = (status: string) => t.blindCounts && status === 'counting' && t.role !== 'owner' && t.role !== 'admin';
   return rows.map((r) => ({
     id: r.id,
     number: r.number,
     warehouseId: r.warehouse_id,
+    blind: blindFor(r.status),
     note: r.note,
     status: r.status,
     requesterId: r.requester_id,
@@ -770,9 +774,9 @@ async function loadCounts(c: Context<AppEnv>, id?: string) {
     lines: id
       ? (lines.get(r.id) ?? []).map((l) => ({
           itemId: l.item_id,
-          expectedQty: Number(l.expected_qty),
+          expectedQty: blindFor(r.status) ? null : Number(l.expected_qty),
           countedQty: l.counted_qty === null ? null : Number(l.counted_qty),
-          difference: l.counted_qty === null ? null : Number(l.counted_qty) - Number(l.expected_qty),
+          difference: l.counted_qty === null || blindFor(r.status) ? null : Number(l.counted_qty) - Number(l.expected_qty),
           countedAt: l.counted_at,
         }))
       : undefined,

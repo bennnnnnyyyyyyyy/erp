@@ -567,3 +567,13 @@ td input { margin-top: 0; }
 .task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .task-list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.65rem 0.9rem; border: 1px solid var(--border-strong); border-radius: 0.6rem; background: var(--surface-1, transparent); }
 .task-list li span { min-width: 0; }
+
+/* Phones: the warehouse clerk's three actions as big buttons at the bottom of the screen (inventory redesign Q5, 10 Nov 2026). */
+.clerk-actions { display: none; }
+@media (max-width: 720px) {
+  .clerk-actions {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 0.5rem; position: sticky; inset-block-end: 0;
+    padding: 0.6rem; margin-inline: -0.6rem; background: var(--background); border-block-start: 1px solid var(--border); z-index: 5;
+  }
+  .clerk-actions button { min-height: 56px; font-size: 1rem; font-weight: 600; }
+}

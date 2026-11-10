@@ -155,4 +155,17 @@ export const DECISIONS_AR: Record<string, string> = {
   'Needs you today': 'ما يحتاجك اليوم',
   'Nothing needs you right now.': 'لا شيء يحتاجك الآن.',
   'and {n} more': 'و{n} غيرها',
+  // Blind counts (sql/066), stock list and phone actions (inventory slice 3, 10 Nov). MACHINE DRAFT: in the Arabic review sheet.
+  'Blind stock counts': 'الجرد الأعمى',
+  'On: staff count what is on the shelf without seeing what the books expect. Owners and admins see it when approving.':
+    'مُفعّل: يعدّ الموظفون ما على الرف دون أن يروا ما تتوقعه الدفاتر. يراه المالكون والمديرون عند الموافقة.',
+  'Off: everyone counting sees the quantity the books expect next to what they count.':
+    'متوقف: يرى كل من يجرد الكمية التي تتوقعها الدفاتر بجانب ما يعدّه.',
+  'Switch blind counts off': 'إيقاف الجرد الأعمى',
+  'Switch blind counts on': 'تفعيل الجرد الأعمى',
+  'Quick actions': 'إجراءات سريعة',
+  'This is a blind count: count what is on the shelf. The quantities the books expect are shown to managers when they approve.':
+    'هذا جرد أعمى: اعدّ ما على الرف. تظهر الكميات التي تتوقعها الدفاتر للمديرين عند الموافقة.',
+  'Submit the count? Nobody can change the counted quantities after this.': 'إرسال الجرد؟ لا يمكن لأحد تغيير الكميات المعدودة بعد ذلك.',
+  'No stock yet': 'لا يوجد مخزون بعد',
 };

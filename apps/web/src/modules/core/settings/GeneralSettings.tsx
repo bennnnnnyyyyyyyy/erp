@@ -177,6 +177,27 @@ export function GeneralSettings() {
           </div>
         </div>
       )}
+      {canEdit && !demoMode && session.modules.includes('inventory') && (
+        <div className="form-card stack">
+          <h2>{tr('Blind stock counts')}</h2>
+          <p className="muted small">
+            {session.org?.blindCounts
+              ? tr('On: staff count what is on the shelf without seeing what the books expect. Owners and admins see it when approving.')
+              : tr('Off: everyone counting sees the quantity the books expect next to what they count.')}
+          </p>
+          <div>
+            <Button variant="outline" type="button" onClick={async () => {
+              setError(null);
+              try {
+                await api('/v1/core/org/blind-counts', { method: 'POST', body: JSON.stringify({ on: !session.org?.blindCounts }) });
+                reloadSession();
+              } catch (err) {
+                setError((err as Error).message);
+              }
+            }}>{session.org?.blindCounts ? tr('Switch blind counts off') : tr('Switch blind counts on')}</Button>
+          </div>
+        </div>
+      )}
       {canEdit && !demoMode && org.data ? <PeriodSettings org={org.data} onSaved={org.reload} /> : null}
     </section>
   );

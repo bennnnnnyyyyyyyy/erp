@@ -133,3 +133,8 @@ After each slice: checked in the browser in English and Arabic before it is merg
   "Needs you today" (approvals, approved requests to issue, transfers to receive, low items, batches expiring within 30 days), each
   with its button, then shortcuts; each person sees only what their role can act on. Stock on hand moved to `/inventory/stock` (every
   link updated). Menu: Overview, Stock on hand, Requests, Transfers; then Counting, Planning, Records and rules.
+- **Slice 3: built** on branch `feat/mt940-and-inventory-slice3`. Stock on hand shows one row per item and warehouse (Q4 B), with a
+  Warehouse column, and an item with no stock anywhere still shows once ("No stock yet"); the status (Out / Low / OK) is the item's,
+  across all warehouses, because reorder levels are per item. Phones (Q5 A): every table was already shown as cards below 720 px (UX
+  audit, 9 Nov); added a bar of big buttons at the bottom for the clerk (Request, Receive, Count) on the overview and Stock on hand.
+  Blind counts (M3 C): a switch in Settings → General (`sql/066`); with it on, staff count without seeing the expected quantity.

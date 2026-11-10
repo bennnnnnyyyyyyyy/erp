@@ -127,6 +127,14 @@ orgRoutes.put('/payment-terms', requirePermission('core.org.manage'), async (c) 
 });
 
 // Switch the in-app guided tour on or off for this company (sql/039). Owners and admins only; off by default.
+// Blind stock counts on or off (sql/066; MVP decision M3). Owners and admins; the database checks again and audits.
+orgRoutes.post('/blind-counts', requirePermission('core.org.manage'), async (c) => {
+  const on = (await jsonBody(c)).on;
+  if (typeof on !== 'boolean') invalid('on must be true or false');
+  await callRpc<boolean>(userDb(c), 'core_set_blind_counts', { p_on: on });
+  return ok(c, { on });
+});
+
 orgRoutes.post('/tour', requirePermission('core.org.manage'), async (c) => {
   const show = (await jsonBody(c)).show;
   if (typeof show !== 'boolean') invalid('show must be true or false');

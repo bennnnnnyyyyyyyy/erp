@@ -8,4 +8,5 @@ export * from './modules/einvoicing';
 export * from './accounting';
 export * from './treasury';
 export * from './bankStatements';
+export * from './mt940';
 export * from './integrations';
