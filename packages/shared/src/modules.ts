@@ -14,7 +14,7 @@ export type ModuleManifest = {
   /** Extra keys the built-in member role gets (members otherwise get only `.read` keys). */
   memberGrants?: string[];
   /** Suite on the home screen and in Settings → Apps. */
-  suite: 'Core' | 'Warehouse' | 'Sales & Purchasing' | 'Finance';
+  suite: 'Core' | 'Warehouse' | 'Team and messages' | 'Sales & Purchasing' | 'Finance';
   /**
    * Switched on only by its own set-up flow, never by the plain Apps toggle (accounting: `acc_switch_on`, which posts the history
    * first; the database refuses any other way with USE_SWITCH_ON, and it can never be switched off).
@@ -28,7 +28,7 @@ export const MODULES: readonly ModuleManifest[] = [
   {
     key: 'core',
     name: 'Core',
-    description: 'Organization, users, roles, settings and the audit log.',
+    description: 'Your company, people, roles, settings and a record of every change.',
     core: true,
     dependsOn: [],
     permissions: [
@@ -49,7 +49,7 @@ export const MODULES: readonly ModuleManifest[] = [
   {
     key: 'inventory',
     name: 'Inventory',
-    description: 'Items, warehouses, stock, outgoing stock requests and approvals.',
+    description: 'Items, warehouses, how much stock you have, and a manager approving before goods leave.',
     core: false,
     dependsOn: [],
     permissions: [
@@ -90,21 +90,21 @@ export const MODULES: readonly ModuleManifest[] = [
   {
     key: 'tasks',
     name: 'Tasks',
-    description: 'Assign warehouse work with a due time, and follow it up.',
+    description: 'Give jobs to people with a due time, and follow them up.',
     core: false,
     dependsOn: [],
     permissions: ['tasks.tasks.read', 'tasks.tasks.create', 'tasks.tasks.update'],
     memberGrants: ['tasks.tasks.update'],
-    suite: 'Warehouse',
+    suite: 'Team and messages',
   },
   {
     key: 'messaging',
     name: 'Messaging',
-    description: 'Notifications, reminders and escalation. Delivery goes through channels; approvals stay in the database.',
+    description: 'Sends reminders and notifications to your team, in the app and to email or chat apps.',
     core: false,
     dependsOn: [],
     permissions: ['messaging.notifications.read', 'messaging.outbox.manage'],
-    suite: 'Warehouse',
+    suite: 'Team and messages',
   },
   {
     key: 'purchasing',
@@ -129,7 +129,7 @@ export const MODULES: readonly ModuleManifest[] = [
   {
     key: 'sales',
     name: 'Sales',
-    description: 'Customer orders fulfilled through approved warehouse stock requests.',
+    description: 'Customer orders and invoices; goods leave the warehouse only after a manager approves.',
     core: false,
     dependsOn: ['inventory'],
     permissions: [
@@ -153,7 +153,7 @@ export const MODULES: readonly ModuleManifest[] = [
     // Tax settings are read by everyone and changed by owner/admin only. Sending to ETA (later slices) gets its own keys.
     key: 'einvoicing',
     name: 'E-invoicing (Egypt)',
-    description: 'Tax settings, branches, tax rates and ETA codes, for sending invoices to the Egyptian Tax Authority.',
+    description: 'Tax settings and codes for sending your invoices to the Egyptian Tax Authority.',
     core: false,
     dependsOn: ['sales', 'inventory'],
     permissions: ['einvoicing.settings.read', 'einvoicing.settings.manage'],
@@ -174,12 +174,11 @@ export const MODULES: readonly ModuleManifest[] = [
     // Owner/admin only (no ".read" key): the rules decide who hears what.
     key: 'alerts',
     name: 'Alerts',
-    description:
-      'Rules that tell the right people when stock is low, a batch is about to expire, an invoice is late or the month is losing money.',
+    description: 'Warns the right people when stock is low, goods are about to expire, an invoice is late or the month is losing money.',
     core: false,
     dependsOn: ['messaging'],
     permissions: ['alerts.rules.view', 'alerts.rules.manage'],
-    suite: 'Warehouse',
+    suite: 'Team and messages',
   },
   {
     // documentation/plans/ACCOUNTING_PLAN.md section 4. No key ends in ".read", so members and viewers get nothing (the database also
@@ -187,7 +186,7 @@ export const MODULES: readonly ModuleManifest[] = [
     // the head accountant, and switch-on to the owner.
     key: 'accounting',
     name: 'Accounting',
-    description: 'General ledger: chart of accounts, automatic entries from every document, manual journals with approval, trial balance.',
+    description: 'Your books: chart of accounts, entries made automatically from every document, manual journals and the trial balance.',
     core: false,
     dependsOn: [],
     permissions: [
@@ -208,7 +207,7 @@ export const MODULES: readonly ModuleManifest[] = [
     // switch otherwise). Owners and admins only; the database narrows managing accounts to the owner and the head accountant.
     key: 'treasury',
     name: 'Treasury',
-    description: 'Cash boxes and bank accounts by branch, payments through them, transfers between them, balances from the ledger.',
+    description: 'Cash boxes and bank accounts, payments through them, transfers between them and their balances.',
     core: false,
     dependsOn: ['accounting', 'finance'],
     permissions: [

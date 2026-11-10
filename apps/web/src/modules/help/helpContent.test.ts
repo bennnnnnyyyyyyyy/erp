@@ -15,7 +15,7 @@ describe('tutorial content', () => {
     expect(ar.steps.length).toBe(en.steps.length);
     expect(ar.checklist.length).toBe(en.checklist.length);
     expect(ar.notReady.length).toBe(en.notReady.length);
-    expect(en.steps.length).toBe(9);
+    expect(en.steps.length).toBe(10);
     expect(en.checklist.length).toBe(7);
   });
   it('has no empty text', () => {
@@ -32,7 +32,7 @@ describe('tutorial content', () => {
     en.steps.forEach((s, i) => expect(bold(ar.steps[i]!.body)).toBe(bold(s.body)));
     en.notReady.forEach((s, i) => expect(bold(ar.notReady[i]!)).toBe(bold(s)));
   });
-  it('keeps the numbers and cross-references identical (step 4 and step 8 are referred to by number)', () => {
+  it('keeps the numbers and cross-references identical (step 8 and step 9 are referred to by number)', () => {
     const digits = (s: string) => (s.match(/\d+/g) ?? []).join(',');
     en.steps.forEach((s, i) => expect(digits(ar.steps[i]!.body)).toBe(digits(s.body)));
   });

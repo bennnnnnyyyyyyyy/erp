@@ -9,6 +9,7 @@ import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 import { CurrencySelect, TimeZoneSelect } from '../../../components/ZoneCurrencyFields';
 import { PeriodSettings } from './PeriodSettings';
+import { markTourSeen } from '../../help/tourAuto';
 
 function OptionRow({ title, line, on, onToggle }: { title: string; line: string; on: boolean; onToggle: () => void }) {
   return (
@@ -82,6 +83,8 @@ export function GeneralSettings() {
     setError(null);
     try {
       await api(path, { method: 'POST', body: JSON.stringify(body) });
+      // The owner or admin who switches the guided tour on has just seen it described: they are not sent through it themselves.
+      if (path === '/v1/core/org/tour' && body.show === true && session.org) markTourSeen(session.userId, session.org.id);
       reloadSession();
     } catch (err) {
       setError((err as Error).message);
