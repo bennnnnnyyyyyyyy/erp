@@ -25,6 +25,12 @@ that as "Cannot reach the server". It becomes approvable once PR #39 is deployed
 
 **Safety Status.** Code not yet deployed: merge PR #39 next. Then approve PO-0003 and check the new screens.
 
+**CI on PR #39 found a bug in 070** (SQL test 066 failed: `gen_random_bytes(integer) does not exist`). Supabase keeps pgcrypto in the
+`extensions` schema; `core_create_report_link`'s search_path was `public` only, so creating a report link fails on live too (070 is
+applied). Fix: `sql/078_fix_report_link_token.sql` (adds `extensions` to that function's search_path, like 054). Claude's local test
+runner had pgcrypto in `public`, which hid it; the runner now installs it in `extensions` like Supabase, and reproduces the failure
+without 078. With 078: all 78 migrations and 73 SQL tests pass locally.
+
 ## 2026-11-10 — Walkthrough fixes merged (sql/074, 075, 076); pop-ups; self-approval switch
 
 **Objective.** Fix Ben's walkthrough notes (see `documentation/planning/2026-11-10-walkthrough-review.md`).
