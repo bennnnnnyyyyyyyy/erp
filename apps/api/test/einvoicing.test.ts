@@ -25,6 +25,9 @@ const routes: [string, string][] = [
   ['PUT', `/v1/einvoicing/items/${ID}/codes`],
   ['GET', '/v1/sales/notes'],
   ['GET', `/v1/sales/notes/${ID}`],
+  ['GET', `/v1/sales/notes?invoiceId=${ID}`],
+  ['POST', `/v1/sales/invoices/${ID}/returns`],
+  ['GET', `/v1/sales/invoices/${ID}`],
   ['POST', `/v1/sales/invoices/${ID}/notes`],
   ['POST', `/v1/sales/notes/${ID}/approve`],
   ['POST', `/v1/sales/notes/${ID}/reject`],
@@ -86,6 +89,16 @@ describe('e-invoicing and credit / debit note API', () => {
     for (const fn of ['sal_submit_note', 'sal_submit_return_note', 'sal_decide_note', 'sal_cancel_note'])
       expect(notesSource).toContain(`'${fn}'`);
     expect(notesSource).not.toMatch(/\.(insert|update|delete|upsert)\(/);
+  });
+
+  it('filters the note list by invoice and checks the id, and the invoice route returns line ids and approved note totals', () => {
+    expect(notesSource).toContain("c.req.query('invoiceId')");
+    expect(notesSource).toContain("invalid('invoiceId must be an id')");
+    expect(notesSource).toContain("q.eq('invoice_id', invoiceId)");
+    const salesSource = readFileSync(join(__dirname, '../src/modules/sales/routes.ts'), 'utf8');
+    expect(salesSource).toContain('creditedMinor');
+    expect(salesSource).toContain('debitedMinor');
+    expect(salesSource).toContain("'id,order_line_id,qty,unit_price_minor'");
   });
 
   it('asks for approval permission on approve and reject, never the create permission', () => {

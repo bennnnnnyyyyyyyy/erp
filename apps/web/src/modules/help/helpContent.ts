@@ -137,7 +137,7 @@ const GUIDE_EN: GuideContent = {
     '**Arabic.** Every screen. Each person chooses English or Arabic in Settings → General.',
     '**Accounting.** The profit figures are a management view (no VAT, cost is the average cost of stock). It is not a full ledger, tax return or Egypt e-invoicing.',
     '**Manufacturing.** No bill of materials or production orders yet, so profit for a factory is approximate.',
-    '**Import and returns.** Importing items from a file, and customer or supplier returns and credit notes, are planned.',
+    '**Import and returns.** Importing items from a file and supplier returns are planned. Customer credit notes, debit notes and returns already exist: open a sales invoice and use Credit note or Debit note; another owner or manager approves them.',
     '**Sample data.** In the sample companies everything is invented and clearly marked.',
   ],
   draftNote: null,

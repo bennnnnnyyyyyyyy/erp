@@ -278,11 +278,26 @@ salesRoutes.get('/invoices/:id', requirePermission('sales.invoices.read'), async
   const row = r as InvoiceRow;
   const { data: ls, error: le } = await userDb(c)
     .from('sal_invoice_lines')
-    .select('order_line_id,qty,unit_price_minor')
+    .select('id,order_line_id,qty,unit_price_minor')
     .eq('org_id', orgOf(c))
     .eq('invoice_id', id);
   if (le) throw le;
-  const lines = ((ls ?? []) as { order_line_id: string; qty: number; unit_price_minor: number }[]).map((l) => ({
+  // Approved credit and debit notes (sql/037): what the customer now owes is the total less credited plus debited.
+  const { data: ns, error: ne } = await userDb(c)
+    .from('sal_notes')
+    .select('kind,total_minor')
+    .eq('org_id', orgOf(c))
+    .eq('invoice_id', id)
+    .eq('status', 'approved');
+  if (ne) throw ne;
+  let creditedMinor = 0;
+  let debitedMinor = 0;
+  for (const n of (ns ?? []) as { kind: string; total_minor: number }[]) {
+    if (n.kind === 'credit') creditedMinor += Number(n.total_minor);
+    else if (n.kind === 'debit') debitedMinor += Number(n.total_minor);
+  }
+  const lines = ((ls ?? []) as { id: string; order_line_id: string; qty: number; unit_price_minor: number }[]).map((l) => ({
+    id: l.id,
     orderLineId: l.order_line_id,
     qty: Number(l.qty),
     unitPriceMinor: Number(l.unit_price_minor),
@@ -298,6 +313,8 @@ salesRoutes.get('/invoices/:id', requirePermission('sales.invoices.read'), async
     status: row.status,
     lines,
     totalMinor: lines.reduce((n, l) => n + Math.round(l.qty * l.unitPriceMinor), 0),
+    creditedMinor,
+    debitedMinor,
     createdAt: row.created_at,
   });
 });
