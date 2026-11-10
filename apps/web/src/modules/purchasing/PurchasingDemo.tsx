@@ -100,6 +100,7 @@ function ReceiveForm({ order, itemName, onDone, onCancel }: {
   const left = (l: PurchaseOrder['lines'][number]) => l.qty - (l.receivedQty ?? 0);
   const [qtys, setQtys] = useState<Record<string, string>>(() => Object.fromEntries(open.map((l) => [l.lineId as string, String(left(l))])));
   const [restComing, setRestComing] = useState<'' | 'yes' | 'no'>('');
+  const [deliveryNote, setDeliveryNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const parsed = open.map((l) => {
@@ -121,7 +122,11 @@ function ReceiveForm({ order, itemName, onDone, onCancel }: {
     try {
       await api(`/v1/purchasing/orders/${order.id}/receive`, {
         method: 'POST',
-        body: JSON.stringify({ lines: parsed.map((p) => ({ lineId: p.line.lineId, qty: p.qty })), restComing: short ? restComing === 'yes' : false }),
+        body: JSON.stringify({
+          lines: parsed.map((p) => ({ lineId: p.line.lineId, qty: p.qty })),
+          restComing: short ? restComing === 'yes' : false,
+          deliveryNote: total > 0 ? deliveryNote.trim() : '',
+        }),
       });
       onDone(
         !short
@@ -165,6 +170,12 @@ function ReceiveForm({ order, itemName, onDone, onCancel }: {
           <label><input type="radio" name="rest" checked={restComing === 'yes'} onChange={() => setRestComing('yes')} /> {tr('Yes, keep the order open for the rest')}</label>
           <label><input type="radio" name="rest" checked={restComing === 'no'} onChange={() => setRestComing('no')} /> {tr('No, close the order: the rest will not come')}</label>
         </fieldset>
+      )}
+      {total > 0 && (
+        <label className="narrow">
+          {tr("Supplier's delivery note number (optional)")}
+          <input value={deliveryNote} maxLength={60} onChange={(e) => setDeliveryNote(e.target.value)} />
+        </label>
       )}
       {error && <p className="error">{error}</p>}
       <div className="form-actions">
@@ -222,6 +233,12 @@ export function PurchaseOrderPage() {
         <div><dt>{tr('Ordered')}</dt><dd>{formatDateTime(o.createdAt, session.org)}</dd></div>
         {o.receivedAt && <div><dt>{tr('Received')}</dt><dd>{formatDateTime(o.receivedAt, session.org)}</dd></div>}
         <div><dt>{tr('Total')}</dt><dd className="amount">{money(o.totalMinor, o.currency)}</dd></div>
+        {o.deliveryNotes && o.deliveryNotes.length > 0 && (
+          <div>
+            <dt>{tr("Supplier's delivery notes")}</dt>
+            <dd>{o.deliveryNotes.map((d) => <div key={d.id}><bdi className="mono">{d.number}</bdi> <span className="muted small">· {formatDateTime(d.receivedAt, session.org)}</span></div>)}</dd>
+          </div>
+        )}
       </dl>
 
       <div className="table-wrap">

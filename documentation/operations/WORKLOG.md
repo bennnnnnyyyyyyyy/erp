@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Supplier delivery note number on receipts (sql/072); guided tour switch (MVP M4)
+
+**Objective.** Ben: finish everything doable today. Dynamics review gap 1, and the second of the two MVP M4 small gaps.
+
+**Actions Completed.** Branch `feat/po-approval`.
+- `sql/072_pur_delivery_notes.sql` + `sql/tests/068_delivery_notes.sql`: `pur_receipts` and `pur_receive_with_note` (see `sql/README.md`).
+- API: `POST /purchasing/orders/:id/receive` takes an optional `deliveryNote` (≤ 60); one order carries its `deliveryNotes`
+  (empty while 072 is not applied). Web: the field on "What arrived?", and the notes on the order page.
+- Settings → General: "Guided tour for new staff" on/off (the API `POST /v1/core/org/tour` already existed; no screen had it).
+- Arabic drafts for both.
+
+**Database / System Result.** None yet.
+
+**Safety Status.** Lint and typecheck clean; API 339 + 7 skipped, web 109; SQL test 068 passes locally. Not viewed in a browser.
+
 ## 2026-11-10 — Imports from a file (Sheets A) and private report links for Google Sheets (sql/070)
 
 **Objective.** Ben: Google Sheets options A and C "do it now". Built by two Sonnet agents in their own worktrees (orchestrated by

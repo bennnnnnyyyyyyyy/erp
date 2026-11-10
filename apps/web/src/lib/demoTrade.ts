@@ -38,6 +38,8 @@ export type PurchaseOrder = {
   approvalDecidedAt?: string | null;
   approvalNote?: string | null;
   approvalSelf?: boolean;
+  /** sql/072 (real API, one order only): the supplier's delivery note numbers received against this order. */
+  deliveryNotes?: { id: string; number: string; receivedBy: string; receivedAt: string }[];
 };
 export type SOStatus = 'open' | 'stock_requested' | 'approved' | 'delivered' | 'cancelled';
 export type SalesOrder = {

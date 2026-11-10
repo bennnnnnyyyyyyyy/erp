@@ -198,6 +198,27 @@ export function GeneralSettings() {
           </div>
         </div>
       )}
+      {canEdit && !demoMode && (
+        <div className="form-card stack">
+          <h2>{tr('Guided tour for new staff')}</h2>
+          <p className="muted small">
+            {session.org?.showTour
+              ? tr('On: people new to the company get a short tour of the screens the first time they sign in.')
+              : tr('Off: nobody is shown the tour. Each person can still open the Guide.')}
+          </p>
+          <div>
+            <Button variant="outline" type="button" onClick={async () => {
+              setError(null);
+              try {
+                await api('/v1/core/org/tour', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTour }) });
+                reloadSession();
+              } catch (err) {
+                setError((err as Error).message);
+              }
+            }}>{session.org?.showTour ? tr('Switch the tour off') : tr('Switch the tour on')}</Button>
+          </div>
+        </div>
+      )}
       {canEdit && !demoMode && org.data ? <PeriodSettings org={org.data} onSaved={org.reload} /> : null}
     </section>
   );

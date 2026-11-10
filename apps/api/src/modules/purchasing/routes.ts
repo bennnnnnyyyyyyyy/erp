@@ -130,7 +130,21 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
 async function oneOrder(c: Context<AppEnv>, id: string) {
   const [order] = await loadOrders(c, id);
   if (!order) throw new HttpError(404, 'Purchase order not found', 'not_found');
-  return order;
+  // sql/072: the supplier delivery notes received against this order (none until it is applied).
+  const { data, error } = await userDb(c)
+    .from('pur_receipts')
+    .select('id, delivery_note_no, received_by, received_at')
+    .eq('org_id', orgOf(c))
+    .eq('order_id', id)
+    .order('received_at', { ascending: true });
+  if (error && !isMissingSchema(error)) throw error;
+  const deliveryNotes = ((data ?? []) as { id: string; delivery_note_no: string; received_by: string; received_at: string }[]).map((r) => ({
+    id: r.id,
+    number: r.delivery_note_no,
+    receivedBy: r.received_by,
+    receivedAt: r.received_at,
+  }));
+  return { ...order, deliveryNotes };
 }
 
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
@@ -231,7 +245,17 @@ purchasingRoutes.post('/orders/:id/receive', requirePermission('purchasing.order
   });
   if (typeof body.restComing !== 'boolean' || lines.some((l) => !UUID_RE.test(l.lineId) || !Number.isFinite(l.qty) || l.qty < 0))
     invalid('Each line needs a quantity of 0 or more, and say whether the rest is still coming');
-  await callRpc<unknown>(userDb(c), 'pur_receive_lines', { p_order_id: id, p_lines: lines, p_rest_coming: body.restComing });
+  // sql/072: the supplier's delivery note number, optional; with one, the receipt and the note are recorded together.
+  const note = text(body.deliveryNote);
+  if (note.length > 60) invalid('The delivery note number is at most 60 characters');
+  if (note)
+    await callRpc<unknown>(userDb(c), 'pur_receive_with_note', {
+      p_order_id: id,
+      p_lines: lines,
+      p_rest_coming: body.restComing,
+      p_delivery_note: note,
+    });
+  else await callRpc<unknown>(userDb(c), 'pur_receive_lines', { p_order_id: id, p_lines: lines, p_rest_coming: body.restComing });
   return ok(c, await oneOrder(c, id));
 });
 purchasingRoutes.post('/orders/:id/cancel', requirePermission('purchasing.orders.manage'), async (c) => {

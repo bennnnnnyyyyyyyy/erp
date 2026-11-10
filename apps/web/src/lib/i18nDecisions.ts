@@ -304,6 +304,16 @@ export const DECISIONS_AR: Record<string, string> = {
   'New orders need approval by an owner or manager before goods can be received': 'أوامر الشراء الجديدة تحتاج اعتماد المالك أو المدير قبل استلام البضاعة',
   'From an order total of ({currency})': 'ابتداءً من إجمالي أمر قدره ({currency})',
   '0 means every order. Orders already created keep their state.': 'صفر يعني كل الأوامر. الأوامر الموجودة تبقى على حالها.',
+  // supplier delivery note number on receipts (sql/072)
+  "Supplier's delivery note number (optional)": 'رقم إذن تسليم المورد (اختياري)',
+  "Supplier's delivery notes": 'أذون تسليم المورد',
+  // MVP M4: the guided tour switch
+  'Guided tour for new staff': 'جولة تعريفية للموظفين الجدد',
+  'On: people new to the company get a short tour of the screens the first time they sign in.':
+    'مفعّلة: يحصل الموظفون الجدد على جولة قصيرة في الشاشات عند أول تسجيل دخول.',
+  'Off: nobody is shown the tour. Each person can still open the Guide.': 'متوقفة: لا تُعرض الجولة على أحد. يمكن لكل شخص فتح الدليل بنفسه.',
+  'Switch the tour off': 'إيقاف الجولة',
+  'Switch the tour on': 'تشغيل الجولة',
   // imports from a file (Sheets option A)
   'Items (with opening stock)': 'الأصناف (مع رصيد افتتاحي)',
   'Import from a file': 'الاستيراد من ملف',
