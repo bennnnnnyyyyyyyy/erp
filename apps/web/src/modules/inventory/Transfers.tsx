@@ -95,7 +95,8 @@ export function TransfersList() {
           columns={columns}
           rowKey={(t) => t.id}
           rowHref={(t) => `/inventory/transfers/${t.id}`}
-          empty={tr('No transfers yet.')}
+          empty={tr('No transfers yet. A transfer moves stock from one warehouse to another; a manager approves it first.')}
+          emptyAction={canCreate ? <Button onClick={() => navigate('/inventory/transfers/new')}>{tr('Move between warehouses')}</Button> : undefined}
           toolbar={
             <>
               <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label={tr('Filter')}>
@@ -103,7 +104,7 @@ export function TransfersList() {
                 <option value="submitted">{tr('Waiting for approval')}</option>
                 <option value="dispatched">{tr('In transit')}</option>
               </select>
-              {canCreate && <Button type="submit" onClick={() => navigate('/inventory/transfers/new')}>{tr('New transfer')}</Button>}
+              {canCreate && <Button type="submit" onClick={() => navigate('/inventory/transfers/new')}>{tr('Move between warehouses')}</Button>}
             </>
           }
         />
@@ -152,8 +153,8 @@ export function NewTransfer() {
   return (
     <section className="page">
       <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
-      <h1>{tr('New transfer')}</h1>
-      <p className="muted">{tr('Quantities are reserved at the source warehouse until approval.')}</p>
+      <h1>{tr('Move between warehouses')}</h1>
+      <p className="muted">{tr('Your manager will be asked to approve this. The quantities are reserved at the first warehouse until then; the stock arrives at the second one when it is received there.')}</p>
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">

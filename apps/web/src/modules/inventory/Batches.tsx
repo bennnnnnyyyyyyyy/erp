@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
-import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
+import { ReceiveBatchForm } from './ReceiveBatchForm';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -36,7 +36,6 @@ export function BatchesPage() {
   const conditions = useLoad(() => api<Condition[]>('/v1/inventory/storage-conditions'));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [f, setF] = useState({ itemId: '', warehouseId: '', batchNo: '', qty: '', mfg: '', exp: '', cost: '' });
   const [cond, setCond] = useState({ name: '', min: '', max: '' });
   const canReceive = session.permissions.includes('inventory.batches.receive');
   const canManage = session.permissions.includes('inventory.batches.manage');
@@ -57,24 +56,7 @@ export function BatchesPage() {
       <p className="muted">{tr('Batch and expiry tracking. Stock is issued first-expiry, first-out (FEFO).')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
-      {canReceive && (
-        <FormToggle label={tr('Receive a batch')}>
-          <div className="form-row">
-            <label>{tr('Item')}<select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Choose…')}</option>{items.data.filter((i) => i.tracksBatches).map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
-            <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-            <label>{tr('Batch number')}<input value={f.batchNo} onChange={(e) => setF({ ...f, batchNo: e.target.value })} /></label>
-            <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
-            <label>{tr('Made on (optional)')}<input type="date" value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>
-            <label>{tr('Expires on')}<input type="date" value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} /></label>
-            {/* sql/046: the cost of what was received. Required once accounting is on; otherwise optional (it also updates the average cost). */}
-            <label>{tr('Unit cost (needed with accounting)')}<input inputMode="decimal" placeholder="0.00" value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} /></label>
-          </div>
-          <div><Button disabled={busy || !f.itemId || !f.warehouseId || !f.batchNo.trim() || !(Number(f.qty) > 0)} onClick={() => run(async () => {
-            await api('/v1/inventory/batches', { method: 'POST', body: JSON.stringify({ itemId: f.itemId, warehouseId: f.warehouseId, batchNo: f.batchNo, qty: Number(f.qty), mfgDate: f.mfg, expiryDate: f.exp, unitCostMinor: f.cost.trim() ? Math.round(Number(f.cost) * 100) : null }) });
-            return trf('Batch {no} received.', { no: f.batchNo.trim() });
-          }, () => { setF({ ...f, batchNo: '', qty: '', mfg: '', exp: '', cost: '' }); reloadAll(); })}>{busy ? tr('Saving…') : tr('Receive batch')}</Button></div>
-        </FormToggle>
-      )}
+      {canReceive && <ReceiveBatchForm items={items.data} warehouses={warehouses.data} onReceived={reloadAll} />}
 
       <h2 className="related">{tr('Expiring in the next 90 days')}</h2>
       <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Batch')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col">{tr('Expires')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
@@ -95,7 +77,7 @@ export function BatchesPage() {
               return trf('Batch {no} is now {status}.', { no: b.batchNo, status: tr(to) });
             }, reloadAll)}>{b.status === 'quarantined' ? tr('Release') : tr('Quarantine')}</Button>}</td></tr>
         ))}
-        {!batches.data.length && <tr><td colSpan={7} className="muted empty">{tr('No batches yet.')}</td></tr>}
+        {!batches.data.length && <tr><td colSpan={7} className="muted empty">{canReceive ? tr('No batches yet. Use "Receive a batch" above to add the first one.') : tr('No batches yet.')}</td></tr>}
       </tbody></table></div>
 
       <h2 className="related">{tr('Storage conditions')}</h2>

@@ -6,19 +6,19 @@ import { navigate } from '../../lib/router';
 import { useSession } from '../../session';
 
 /** Phones only (the CSS hides it on wider screens): the warehouse clerk's three actions as big buttons at the bottom (inventory
- *  redesign Q5, Ben 10 Nov 2026). Each button shows only if this person may do it. */
+ *  redesign Q5, Ben 10 Nov 2026). Each button shows only if this person may do it. Wording follows the task-first overview. */
 export function ClerkActions() {
   const session = useSession();
   const can = (key: string) => hasPermission(session.permissions, key);
-  const request = can('inventory.request.create');
-  const receive = session.modules.includes('purchasing') && can('purchasing.orders.receive');
+  const send = can('inventory.request.create');
+  const receive = (session.modules.includes('purchasing') && can('purchasing.orders.receive')) || can('inventory.items.manage') || (!demoMode && can('inventory.batches.receive'));
   const count = !demoMode && can('inventory.adjustments.create');
-  if (!request && !receive && !count) return null;
+  if (!send && !receive && !count) return null;
   return (
     <div className="clerk-actions" role="group" aria-label={tr('Quick actions')}>
-      {request && <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Request')}</Button>}
-      {receive && <Button variant="outline" onClick={() => navigate('/purchasing/orders')}>{tr('Receive')}</Button>}
-      {count && <Button variant="outline" onClick={() => navigate('/inventory/counts')}>{tr('Count')}</Button>}
+      {send && <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button>}
+      {receive && <Button variant="outline" onClick={() => navigate('/inventory/receive')}>{tr('Receive goods')}</Button>}
+      {count && <Button variant="outline" onClick={() => navigate('/inventory/count')}>{tr('Count stock')}</Button>}
     </div>
   );
 }

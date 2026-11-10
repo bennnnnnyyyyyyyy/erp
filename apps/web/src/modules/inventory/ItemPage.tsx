@@ -14,6 +14,7 @@ import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { EditItemModal, MOVE_KIND_LABEL, useCatalog } from './Inventory';
+import { ItemBatchSwitch } from './ItemBatchSwitch';
 
 // One page per item (inventory redesign Q1, Ben 10 Nov 2026). Everything the app knows about one item, which used to be spread over
 // six screens: totals, stock per warehouse, its movements, batches, units, average cost and its history. Read-only apart from Edit;
@@ -47,7 +48,7 @@ export function ItemPage() {
   const [tab, setTab] = useState<Tab>('stock');
   const [editing, setEditing] = useState(false);
 
-  const item = cat.items.data?.find((i) => i.id === id) as (DemoItem & { tracksBatches?: boolean }) | undefined;
+  const item = cat.items.data?.find((i) => i.id === id) as (DemoItem & { tracksBatches?: boolean; storageConditionId?: string | null }) | undefined;
   if (cat.items.error) return <section className="page"><p className="error">{cat.items.error}</p></section>;
   if (!cat.ready || !stock.data) return <section className="page"><Loading /></section>;
   if (!item) return <section className="page"><Link to="/inventory/stock" className="back-link">{tr('← Stock on hand')}</Link><p className="error">{tr('Item not found')}</p></section>;
@@ -83,10 +84,13 @@ export function ItemPage() {
         </h1>
         <div className="form-actions">
           {can('inventory.items.manage') && !demoMode && <Button variant="outline" onClick={() => setEditing(true)}>{tr('Edit')}</Button>}
-          <Button variant="outline" onClick={() => navigate('/inventory/requests/new')}>{tr('Request stock')}</Button>
-          {can('inventory.adjustments.create') && !demoMode && <Button variant="outline" onClick={() => navigate('/inventory/counts')}>{tr('Count')}</Button>}
+          {can('inventory.request.create') && <Button variant="outline" onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button>}
+          {can('inventory.adjustments.create') && !demoMode && <Button variant="outline" onClick={() => navigate('/inventory/count')}>{tr('Count stock')}</Button>}
         </div>
       </div>
+      {!demoMode && (can('inventory.batches.read') || can('inventory.batches.manage')) && (
+        <ItemBatchSwitch itemId={item.id} tracks={Boolean(item.tracksBatches)} conditionId={item.storageConditionId ?? null} canManage={can('inventory.batches.manage')} onChanged={() => cat.items.reload()} />
+      )}
 
       <div className="stats">
         <div className="stat" style={{ '--i': 0 } as CSSProperties}><div className="stat-label">{tr('On hand')}</div><div className="stat-value">{qty(onHand)}</div><div className="stat-note">{item.uom}</div></div>

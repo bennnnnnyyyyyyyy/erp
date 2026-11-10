@@ -11,7 +11,9 @@ import { tr, trf } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { ActionCards } from './ActionCards';
 import { ClerkActions } from './ClerkActions';
+import { overviewActions } from './overviewActions';
 import { useCatalog } from './Inventory';
 
 // Inventory overview (inventory redesign Q2 "What needs you today", Ben 10 Nov 2026). What opens when someone clicks Inventory: four
@@ -100,6 +102,8 @@ export function InventoryOverview() {
   return (
     <section className="page">
       <h1>{tr('Inventory')}</h1>
+      <h2 className="related">{tr('What do you want to do?')}</h2>
+      <ActionCards cards={overviewActions(can, session.modules.includes('purchasing'))} label={tr('What do you want to do?')} />
       <div className="stats">
         {stat(0, tr('Low on stock'), low.length, low.length ? tr('at or below their reorder level') : tr('nothing below its reorder level'), '/inventory/reorder-levels', low.length > 0)}
         {stat(1, tr('Waiting for approval'), waiting, waiting ? tr('requests, transfers and counts') : tr('nothing pending'), '/inventory/requests', waiting > 0)}
@@ -123,10 +127,7 @@ export function InventoryOverview() {
       {tasks.length > shown.length && <p className="muted small">{trf('and {n} more', { n: tasks.length - shown.length })}</p>}
 
       <div className="form-actions" style={{ marginBlockStart: '1.5rem' }}>
-        <Button onClick={() => navigate('/inventory/stock')}>{tr('Stock on hand')}</Button>
-        {can('inventory.request.create') && <Button variant="outline" onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</Button>}
-        {can('inventory.transfers.create') && <Button variant="outline" onClick={() => navigate('/inventory/transfers/new')}>{tr('New transfer')}</Button>}
-        {!demoMode && can('inventory.adjustments.create') && <Button variant="outline" onClick={() => navigate('/inventory/counts')}>{tr('Start a count')}</Button>}
+        <Button variant="outline" onClick={() => navigate('/inventory/stock')}>{tr('Stock on hand')}</Button>
       </div>
       <ClerkActions />
     </section>

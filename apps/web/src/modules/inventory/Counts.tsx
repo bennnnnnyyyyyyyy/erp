@@ -113,7 +113,7 @@ export function CountsList() {
         </form>
       )}
       {counts.data && cat.ready ? (
-        <ListView title={tr('Stock counts')} rows={counts.data} columns={columns} rowKey={(c) => c.id} rowHref={(c) => `/inventory/counts/${c.id}`} empty={tr('No stock counts yet.')} />
+        <ListView title={tr('Stock counts')} rows={counts.data} columns={columns} rowKey={(c) => c.id} rowHref={(c) => `/inventory/counts/${c.id}`} empty={canStart ? tr('No stock counts yet. A count checks the shelves against the books, one warehouse at a time. Use "Start a count" above.') : tr('No stock counts yet.')} />
       ) : (
         <Loading error={counts.error} />
       )}
