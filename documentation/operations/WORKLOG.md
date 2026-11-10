@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — 069–077 applied to live (by Ben); PR #39
+
+**Objective.** Put tonight's database changes live before merging PR #39 (`feat/po-approval`).
+
+**Actions Completed.** Ben applied 069–073 (before the code was deployed) and then 074–077 via CLI; their own verification queries
+showed anon refused and users allowed as designed (074 `anon_edits_warehouses` false; 075 `anon_can_ask` false; 076 `new_columns` 8;
+077 `companies_with_it_on` 0). PR #39 opened. Ben removed private drafts from git tracking in the main checkout (`git rm --cached`).
+
+**Database / System Result.** All of 069–077 live; read-only check afterwards: every object present. Between applying 069 and deploying
+the code, a purchase order made in the old app (PO-0003, test company) waits for approval and its receipt is refused; the old app shows
+that as "Cannot reach the server". It becomes approvable once PR #39 is deployed.
+
+**Safety Status.** Code not yet deployed: merge PR #39 next. Then approve PO-0003 and check the new screens.
+
 ## 2026-11-10 — Walkthrough fixes merged (sql/074, 075, 076); pop-ups; self-approval switch
 
 **Objective.** Fix Ben's walkthrough notes (see `documentation/planning/2026-11-10-walkthrough-review.md`).
