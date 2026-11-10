@@ -60,6 +60,10 @@ documentation/research/**/import/
 documentation/research/**/*.pdf
 documentation/research/**/*.png
 documentation/research/**/*.jpg
+# Transcripts of third-party videos (licensing): our own notes go in the teardowns, the transcripts stay local.
+documentation/research/VIDEO*.MD
+documentation/research/video transcribe*
+documentation/research/**/transcripts/
 # Third-party documentation saved for reference (unknown licences: never committed). Covers eta-sdk/ and the integration folders.
 # The three files already tracked here (README.md, arabic-glossary.md, egypt-accounting/UNIFIED_CHART_OF_ACCOUNTS.md) are our own
 # writing; git keeps tracking them, because an ignore rule does not untrack files.
