@@ -13,6 +13,11 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
     message: 'You cannot approve your own request: another owner or manager must approve it',
     code: 'self_approval',
   },
+  NOT_APPROVED: {
+    status: 409,
+    message: 'This purchase order needs approval before goods can be received',
+    code: 'not_approved',
+  },
   INSUFFICIENT_AVAILABLE: { status: 409, message: 'Not enough stock available', code: 'insufficient_available' },
   STORAGE_MISMATCH: {
     status: 409,

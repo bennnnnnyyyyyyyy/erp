@@ -26,6 +26,7 @@ begin
   i := public.inv_create_item('PR-1', 'Boxes', null, 'piece', 0, null);
   j := public.inv_create_item('PR-2', 'Tape', null, 'piece', 0, null);
   s := public.pur_create_supplier('Partial Supplier', null, null, null);
+  perform public.pur_set_po_approval(false, 0); -- sql/069: this test is not about approval
   po := (public.pur_create_order(s, w, jsonb_build_array(jsonb_build_object('itemId', i, 'qty', 10, 'unitCostMinor', 500),
                                                          jsonb_build_object('itemId', j, 'qty', 4, 'unitCostMinor', 200))) ->> 'id')::uuid;
   select id into l1 from public.pur_order_lines where order_id = po and item_id = i;

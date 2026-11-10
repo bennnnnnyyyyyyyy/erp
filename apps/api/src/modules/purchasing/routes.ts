@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { HttpError } from '../../lib/errors';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -36,7 +36,15 @@ type OrderRow = {
   created_by: string;
   created_at: string;
   received_at: string | null;
+  // sql/069 (absent until it is applied)
+  approval?: 'not_needed' | 'pending' | 'approved' | 'rejected';
+  approval_decided_by?: string | null;
+  approval_decided_at?: string | null;
+  approval_note?: string | null;
+  approval_self?: boolean;
 };
+const ORDER_COLUMNS = 'id, number, supplier_id, warehouse_id, status, currency, created_by, created_at, received_at';
+const APPROVAL_COLUMNS = 'approval, approval_decided_by, approval_decided_at, approval_note, approval_self';
 const supplier = (s: SupplierRow) => ({
   id: s.id,
   code: s.code,
@@ -49,17 +57,22 @@ const supplier = (s: SupplierRow) => ({
 });
 
 async function loadOrders(c: Context<AppEnv>, id?: string) {
-  let query = userDb(c)
-    .from('pur_orders')
-    .select('id, number, supplier_id, warehouse_id, status, currency, created_by, created_at, received_at')
-    .eq('org_id', orgOf(c))
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(200);
-  if (id) query = query.eq('id', id);
-  const { data, error } = await query;
+  const read = (columns: string) => {
+    let query = userDb(c)
+      .from('pur_orders')
+      .select(columns)
+      .eq('org_id', orgOf(c))
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (id) query = query.eq('id', id);
+    return query;
+  };
+  // With the approval columns; without them while sql/069 is not applied yet, so the orders still show (memory: merged before migration).
+  let { data, error } = await read(`${ORDER_COLUMNS}, ${APPROVAL_COLUMNS}`);
+  if (error && isMissingSchema(error)) ({ data, error } = await read(ORDER_COLUMNS));
   if (error) throw error;
-  const rows = (data ?? []) as OrderRow[];
+  const rows = (data ?? []) as unknown as OrderRow[];
   const ids = rows.map((o) => o.id);
   const lines = new Map<string, { lineId: string; itemId: string; qty: number; receivedQty: number; unitCostMinor: number }[]>();
   if (ids.length) {
@@ -101,6 +114,12 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
       createdBy: o.created_by,
       createdAt: o.created_at,
       receivedAt: o.received_at,
+      /** sql/069: 'pending' = waiting for approval; nothing can be received until it is approved. */
+      approval: o.approval ?? 'not_needed',
+      approvalDecidedBy: o.approval_decided_by ?? null,
+      approvalDecidedAt: o.approval_decided_at ?? null,
+      approvalNote: o.approval_note ?? null,
+      approvalSelf: o.approval_self ?? false,
       lines: orderLines,
       /** Open, with some goods already in (sql/064): the screens say "Partly received". */
       partlyReceived: o.status === 'ordered' && orderLines.some((l) => l.receivedQty > 0),
@@ -219,6 +238,34 @@ purchasingRoutes.post('/orders/:id/cancel', requirePermission('purchasing.orders
   const id = idParam(c);
   await callRpc<void>(userDb(c), 'pur_cancel_order', { p_order_id: id });
   return ok(c, await oneOrder(c, id));
+});
+
+// sql/069: approve or reject an order waiting for approval (owners and admins, never their own unless the only one; a reason to reject).
+purchasingRoutes.post('/orders/:id/decide', requirePermission('purchasing.orders.approve'), async (c) => {
+  const id = idParam(c);
+  const body = await jsonBody(c);
+  const decision = text(body.decision);
+  const note = text(body.note);
+  if (decision !== 'approved' && decision !== 'rejected') invalid('decision: approved or rejected');
+  if (decision === 'rejected' && !note) invalid('A reason is needed to reject');
+  if (note.length > 500) invalid('The note is too long');
+  await callRpc<unknown>(userDb(c), 'pur_decide_order', { p_order_id: id, p_decision: decision, p_note: note || null });
+  return ok(c, await oneOrder(c, id));
+});
+
+// sql/069: whether purchase orders need approval, and from what total (minor units). Default: on, from 0.
+purchasingRoutes.get('/order-approval', requirePermission('purchasing.orders.read'), async (c) =>
+  ok(c, await callRpc<{ on: boolean; fromMinor: number }>(userDb(c), 'pur_po_approval', {})),
+);
+purchasingRoutes.put('/order-approval', requirePermission('purchasing.orders.manage'), async (c) => {
+  const body = await jsonBody(c);
+  const fromMinor = Number(body.fromMinor ?? 0);
+  if (typeof body.on !== 'boolean' || !Number.isSafeInteger(fromMinor) || fromMinor < 0)
+    invalid('on (true or false) and fromMinor (0 or more)');
+  return ok(
+    c,
+    await callRpc<{ on: boolean; fromMinor: number }>(userDb(c), 'pur_set_po_approval', { p_on: body.on, p_from_minor: fromMinor }),
+  );
 });
 
 purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoices.read'), async (c) => {

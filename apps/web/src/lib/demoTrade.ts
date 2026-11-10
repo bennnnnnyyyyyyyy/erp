@@ -33,6 +33,11 @@ export type PurchaseOrder = {
   createdBy: string;
   createdAt: string;
   receivedAt: string | null;
+  /** sql/069 (real API only; the sample data needs no approval): 'pending' blocks receiving until approved. */
+  approval?: 'not_needed' | 'pending' | 'approved' | 'rejected';
+  approvalDecidedAt?: string | null;
+  approvalNote?: string | null;
+  approvalSelf?: boolean;
 };
 export type SOStatus = 'open' | 'stock_requested' | 'approved' | 'delivered' | 'cancelled';
 export type SalesOrder = {

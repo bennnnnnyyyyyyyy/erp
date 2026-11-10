@@ -37,6 +37,7 @@ begin
   -- S2: receive 10 more at 200 -> average (10x100 + 10x200) / 20 = 150
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   set local role authenticated;
+  perform public.pur_set_po_approval(false, 0); -- sql/069: this test is not about approval
   po := (public.pur_create_order(s, w, jsonb_build_array(jsonb_build_object('itemId', i, 'qty', 10, 'unitCostMinor', 200))) ->> 'id')::uuid;
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);

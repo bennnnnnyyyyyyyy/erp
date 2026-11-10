@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Purchase order approval (sql/069)
+
+**Objective.** Ben, on the Dynamics gaps: purchase orders have no approval; "fix that asap".
+
+**Actions Completed.** Branch `feat/po-approval`.
+- `sql/069_pur_order_approval.sql` + `sql/tests/065_po_approval.sql`: approval state on each order, a company setting (default: every
+  new order), decision by an owner or admin who did not create the order (a sole owner may, flagged and audited), reject with a reason
+  cancels, and a table rule that refuses receiving goods on a waiting or rejected order. Existing orders are unaffected.
+- Older SQL tests that create orders switch approval off (they test receiving, bills, costs and postings); the business-day test 061
+  now has the admin approve the owner's order.
+- API (`apps/api/src/modules/purchasing/routes.ts`): `POST /orders/:id/decide`, `GET/PUT /order-approval`; orders carry their approval;
+  the order list falls back to the old columns while 069 is not applied, so it never breaks. Permission `purchasing.orders.approve`.
+  Error `NOT_APPROVED` (409) with Arabic.
+- Web: "Waiting for approval" / "Rejected" in the list and on the order; Approve / Reject (with a reason) on the order; "Receive goods"
+  hidden while waiting; the setting on the purchase orders page (`apps/web/src/modules/purchasing/OrderApproval.tsx`). 13 Arabic drafts.
+
+**Database / System Result.** None yet: 069 not applied.
+
+**Safety Status.** All 69 migrations and 65 SQL tests pass locally; lint, typecheck clean; API 330 + 7 skipped, web 97. Not viewed in a
+browser. **Apply 069 before merging.**
+
 ## 2026-11-10 — Manufacturing plan (draft); click-through checklist; full automated suite re-run
 
 **Objective.** Ian's questions to Ben; Ben's notes on the reply: "plan for this immediately" (manufacturing), "full workflow tests

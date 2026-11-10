@@ -13,12 +13,19 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 import { ConfirmButton } from '../../components/FormToggle';
+import { OrderApproval, OrderApprovalSetting } from './OrderApproval';
 
 import { tr, trf } from '../../lib/i18n';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
 
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
 const STATUS: Record<PurchaseOrder['status'], string> = { ordered: 'Awaiting receipt', received: 'Received', cancelled: 'Cancelled' };
+/** The order's state in words: waiting for approval and rejected (sql/069) come before the receipt states. */
+const statusLabel = (o: PurchaseOrder) =>
+  o.approval === 'pending' ? 'Waiting for approval' : o.approval === 'rejected' ? 'Rejected' : o.partlyReceived ? 'Partly received' : STATUS[o.status];
+const statusPill = (o: PurchaseOrder) => (
+  <Pill status={o.approval === 'pending' ? 'submitted' : o.approval === 'rejected' ? 'rejected' : o.status} label={tr(statusLabel(o))} />
+);
 
 export function Suppliers() {
   return <PartyList title={tr('Suppliers')} endpoint="/v1/purchasing/suppliers" noun="supplier" addPermission="purchasing.suppliers.manage" />;
@@ -35,7 +42,7 @@ export function PurchaseOrders() {
     { key: 'number', label: tr('Order'), value: (o) => o.number, render: (o) => <Link to={`/purchasing/orders/${o.id}`}><code>{o.number}</code></Link> },
     { key: 'supplier', label: tr('Supplier'), value: (o) => supplier(o.supplierId) },
     { key: 'wh', label: tr('Deliver to'), value: (o) => cat.warehouseName(o.warehouseId) },
-    { key: 'status', label: tr('Status'), value: (o) => o.status, render: (o) => <Pill status={o.status} label={tr(o.partlyReceived ? 'Partly received' : STATUS[o.status])} /> },
+    { key: 'status', label: tr('Status'), value: (o) => statusLabel(o), render: statusPill },
     { key: 'total', label: tr('Total'), value: (o) => o.totalMinor, align: 'right', render: (o) => money(o.totalMinor, o.currency) },
     { key: 'when', label: tr('Ordered'), value: (o) => o.createdAt, render: (o) => <span className="nowrap">{formatDateTime(o.createdAt, session.org)}</span> },
   ];
@@ -57,6 +64,7 @@ export function PurchaseOrders() {
       ) : (
         <Loading />
       )}
+      {hasPermission(session.permissions, 'purchasing.orders.manage') && <OrderApprovalSetting currency={session.org?.defaultCurrency ?? 'EGP'} />}
     </section>
   );
 }
@@ -206,7 +214,7 @@ export function PurchaseOrderPage() {
       <Link to="/purchasing/orders" className="back-link">{tr('← Purchase orders')}</Link>
       <div className="page-head">
         <h1 className="mono">{o.number}</h1>
-        <Pill status={o.status} label={tr(o.partlyReceived ? 'Partly received' : STATUS[o.status])} />
+        {statusPill(o)}
       </div>
       <dl className="facts">
         <div><dt>{tr('Supplier')}</dt><dd>{supplier?.name}{supplier?.city ? <span className="muted"> · {supplier.city}</span> : ''}</dd></div>
@@ -245,11 +253,14 @@ export function PurchaseOrderPage() {
 
       {result && <p className={result.ok ? 'notice' : 'error notice'}>{result.text}</p>}
 
-      {o.status === 'ordered' && receiving && (
+      <OrderApproval order={o} canDecide={hasPermission(session.permissions, 'purchasing.orders.approve')} mine={o.createdBy === session.userId}
+        onDone={(text) => { setResult({ ok: true, text }); order.reload(); }} />
+
+      {o.status === 'ordered' && o.approval !== 'pending' && receiving && (
         <ReceiveForm order={o} itemName={cat.itemName} onCancel={() => setReceiving(false)}
           onDone={(text) => { setReceiving(false); setResult({ ok: true, text }); order.reload(); }} />
       )}
-      {o.status === 'ordered' && !receiving && (canReceive || canManageOrder) && (
+      {o.status === 'ordered' && o.approval !== 'pending' && !receiving && (canReceive || canManageOrder) && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
           {canReceive && byLine && (
             <Button type="submit" disabled={busy} onClick={() => { setResult(null); setReceiving(true); }}>{tr('Receive goods')}</Button>

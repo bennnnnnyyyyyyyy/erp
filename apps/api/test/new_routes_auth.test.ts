@@ -47,6 +47,10 @@ const routes: [string, string][] = [
   ['PUT', `/v1/treasury/statements/rules/${ID}`],
   ['DELETE', `/v1/treasury/statements/rules/${ID}`],
   ['POST', `/v1/treasury/statements/lines/${ID}/explain`],
+  // purchase order approval (sql/069)
+  ['POST', `/v1/purchasing/orders/${ID}/decide`],
+  ['GET', '/v1/purchasing/order-approval'],
+  ['PUT', '/v1/purchasing/order-approval'],
 ];
 
 describe('a migration not applied yet', () => {

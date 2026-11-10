@@ -288,4 +288,20 @@ export const DECISIONS_AR: Record<string, string> = {
   'Only the owner can change this.': 'المالك وحده يمكنه تغيير هذا.',
   // the API's answer when code is deployed before its database update (503 not_set_up)
   'This feature is not set up yet: its database update has not been applied': 'هذه الميزة غير مُفعّلة بعد: لم يُطبَّق تحديث قاعدة البيانات الخاص بها',
+  // purchase order approval (sql/069)
+  'Order approved. The goods can now be received.': 'تم اعتماد الأمر. يمكن الآن استلام البضاعة.',
+  'Order rejected and cancelled.': 'تم رفض الأمر وإلغاؤه.',
+  'self-approved: no second approver in the company': 'اعتماد ذاتي: لا يوجد معتمِد آخر في الشركة',
+  'This order is waiting for approval by an owner or manager. Goods cannot be received until it is approved.':
+    'هذا الأمر بانتظار اعتماد المالك أو المدير. لا يمكن استلام البضاعة قبل اعتماده.',
+  'You created this order, so someone else must approve it, unless you are the only owner or manager.':
+    'أنت من أنشأ هذا الأمر، لذا يجب أن يعتمده شخص آخر، إلا إذا كنت المالك أو المدير الوحيد.',
+  'Approve order': 'اعتماد الأمر',
+  'Reject…': 'رفض…',
+  'Reject and cancel': 'رفض وإلغاء',
+  'Enter an amount of zero or more.': 'أدخل مبلغًا يساوي صفرًا أو أكثر.',
+  'Approval of purchase orders': 'اعتماد أوامر الشراء',
+  'New orders need approval by an owner or manager before goods can be received': 'أوامر الشراء الجديدة تحتاج اعتماد المالك أو المدير قبل استلام البضاعة',
+  'From an order total of ({currency})': 'ابتداءً من إجمالي أمر قدره ({currency})',
+  '0 means every order. Orders already created keep their state.': 'صفر يعني كل الأوامر. الأوامر الموجودة تبقى على حالها.',
 };

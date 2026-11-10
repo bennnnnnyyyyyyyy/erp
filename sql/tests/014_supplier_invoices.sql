@@ -6,7 +6,7 @@ begin
   insert into auth.users(id,aud,role,email) values(u,'authenticated','authenticated','si-owner@tests.invalid'),(v,'authenticated','authenticated','si-member@tests.invalid'),(x,'authenticated','authenticated','si-other@tests.invalid');
   o:=public.bootstrap_organization('SI Test A','si-test-a','si-owner@tests.invalid');other:=public.bootstrap_organization('SI Test B','si-test-b','si-other@tests.invalid');
   insert into public.memberships(org_id,user_id,role) values(o,v,'member');insert into public.org_modules(org_id,module_key) values(o,'inventory'),(o,'purchasing'),(other,'inventory'),(other,'purchasing');
-  perform set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);perform set_config('request.headers',json_build_object('x-org-id',o)::text,true);set local role authenticated;
+  perform set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);perform set_config('request.headers',json_build_object('x-org-id',o)::text,true);set local role authenticated; perform public.pur_set_po_approval(false, 0);
   w:=public.inv_create_warehouse('MAIN','Main');i:=public.inv_create_item('SI-1','Invoice test',null,'piece',0,w);s:=public.pur_create_supplier('Supplier');po:=(public.pur_create_order(s,w,jsonb_build_array(jsonb_build_object('itemId',i,'qty',10,'unitCostMinor',500)))->>'id')::uuid;perform public.pur_receive_order(po);reset role;
   select id into pl from public.pur_order_lines where order_id=po;
   perform set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);set local role authenticated;
