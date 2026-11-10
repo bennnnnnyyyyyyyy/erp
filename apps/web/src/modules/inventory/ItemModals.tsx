@@ -3,7 +3,10 @@ import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
 import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
 import { UnitSelect } from '../../components/UnitSelect';
+import { hasPermission } from '@erp/shared';
 import { api } from '../../lib/api';
+import { demoMode } from '../../lib/demo';
+import { useSession } from '../../session';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import { tr, trf } from '../../lib/i18n';
 
@@ -11,6 +14,11 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
   const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // Batch tracking where people look for it (task-first Inventory, 10 Nov 2026): the same call as Batches and expiry, after the item exists.
+  const session = useSession();
+  const canTrack = !demoMode && hasPermission(session.permissions, 'inventory.batches.manage');
+  const [tracks, setTracks] = useState(false);
+  const [trackFailed, setTrackFailed] = useState(false);
 
   // The company's code format (sql/075): the next free code is filled in and stays editable. With no format yet, an owner or admin is asked once.
   const sku = useSkuFormat();
@@ -24,12 +32,24 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    let made: { id: string };
     try {
-      await api('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null }) });
-      onDone();
+      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null }) });
     } catch (err) {
       setError((err as Error).message);
+      return;
     }
+    if (canTrack && tracks) {
+      try {
+        await api(`/v1/inventory/items/${made.id}/batching`, { method: 'POST', body: JSON.stringify({ tracks: true, conditionId: '' }) });
+      } catch (err) {
+        // The item exists now: do not let the person add it twice. They can switch batches on from the item page.
+        setTrackFailed(true);
+        setError(trf('The item was added, but batch tracking could not be switched on: {reason}. Switch it on from the item page.', { reason: (err as Error).message }));
+        return;
+      }
+    }
+    onDone();
   }
 
   return (
@@ -55,8 +75,16 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
             </select>
           </label>
         </div>
+        {canTrack && (
+          <label className="option-switch">
+            <input type="checkbox" checked={tracks} disabled={trackFailed} onChange={(e) => setTracks(e.target.checked)} />
+            <span>{tr('Track batches and expiry dates')}</span>
+          </label>
+        )}
+        {canTrack && <p className="muted small">{tr('Switch this on for items that expire. You then enter the batch number and the expiry date under Receive goods, Batch. Opening stock goes into an UNBATCHED lot that is issued last.')}</p>}
+        <p className="muted small">{tr('The item is added as soon as you press Add item. Opening stock, if any, goes into the warehouse straight away.')}</p>
         {error && <p className="error">{error}</p>}
-        <div className="form-actions"><Button type="submit">{tr('Add item')}</Button></div>
+        <div className="form-actions">{trackFailed ? <Button type="button" onClick={onDone}>{tr('Close')}</Button> : <Button type="submit">{tr('Add item')}</Button>}</div>
       </form>
     </Modal>
   );

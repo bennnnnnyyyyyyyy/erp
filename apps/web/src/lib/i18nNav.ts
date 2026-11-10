@@ -52,6 +52,18 @@ export const NAV_AR: Record<string, string> = {
   Counting: 'الجرد',
   Planning: 'التخطيط',
   'Records and rules': 'السجلات والقواعد',
+  // task-first Inventory menu (10 Nov 2026), machine draft for the Arabic review sheet
+  Do: 'نفّذ',
+  Stock: 'المخزون',
+  History: 'السجل',
+  'Settings and planning': 'الإعدادات والتخطيط',
+  'Receive goods': 'استلام بضاعة',
+  'Send goods out': 'صرف بضاعة',
+  'Move between warehouses': 'نقل بين المستودعات',
+  'Count stock': 'جرد المخزون',
+  Requests: 'الطلبات',
+  Counts: 'عمليات الجرد',
+  Adjustments: 'التسويات',
   // Settings menu groups (walkthrough fixes)
   Company: 'الشركة',
   'Your account': 'حسابك',

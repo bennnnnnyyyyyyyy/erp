@@ -53,14 +53,15 @@ export function RequestsList() {
           columns={columns}
           rowKey={(r) => r.id}
           rowHref={(r) => `/inventory/requests/${r.id}`}
-          empty={tr('No requests yet.')}
+          empty={tr('No requests yet. A request takes goods out of a warehouse; a manager approves it first.')}
+          emptyAction={hasPermission(session.permissions, 'inventory.request.create') ? <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button> : undefined}
           toolbar={
             <>
               <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as 'all' | 'submitted')} aria-label={tr('Filter')}>
                 <option value="all">{tr('All requests')}</option>
                 <option value="submitted">{tr('Waiting for approval')}</option>
               </select>
-              {hasPermission(session.permissions, 'inventory.request.create') && <Button type="submit" onClick={() => navigate('/inventory/requests/new')}>{tr('New request')}</Button>}
+              {hasPermission(session.permissions, 'inventory.request.create') && <Button type="submit" onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button>}
             </>
           }
         />
@@ -128,8 +129,9 @@ export function NewRequest() {
   return (
     <section className="page">
       <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
-      <h1>{tr('New stock request')}</h1>
-      <p className="muted">{tr('Requested quantities are reserved until a manager decides.')}</p>
+      <h1>{tr('Send goods out')}</h1>
+      <p className="muted">{tr('Stock leaves the warehouse. Your manager will be asked to approve this before the goods leave, and the quantities are reserved until they decide.')}</p>
+      <p className="muted small">{tr('Want to add stock instead?')} <Link to="/inventory/receive">{tr('Receive goods')}</Link></p>
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
           <label>

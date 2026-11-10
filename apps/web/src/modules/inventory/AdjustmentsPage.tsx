@@ -20,6 +20,7 @@ export function AdjustmentsPage() {
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
   const session = useSession();
   const [form, setForm] = useState({ itemId: '', warehouseId: '', countedQty: '', reason: '' });
+  const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canApprove = hasPermission(session.permissions, 'inventory.adjustments.approve');
@@ -36,6 +37,7 @@ export function AdjustmentsPage() {
     try {
       await api('/v1/inventory/adjustments', { method: 'POST', body: JSON.stringify({ ...form, countedQty: Number(form.countedQty) }) });
       setForm({ itemId: '', warehouseId: '', countedQty: '', reason: '' });
+      setFormOpen(false);
       adjustments.reload();
     } catch (err) {
       setError((err as Error).message);
@@ -62,7 +64,8 @@ export function AdjustmentsPage() {
       <h1>{tr('Stock adjustments')}</h1>
       <p className="muted">{tr('Cycle counts. A manager approves any variance before it is posted.')}</p>
       {error && <p className="error notice">{error}</p>}
-      {canCount && <FormToggle label={tr('New cycle count')}><form className="stack" onSubmit={submit}>
+      {canCount && <FormToggle label={tr('Correct a quantity')} open={formOpen} onOpenChange={setFormOpen}><form className="stack" onSubmit={submit}>
+        <p className="muted small">{tr('The books say one number; type what is really there. Your manager will be asked to approve the difference, and stock changes only after they do.')}</p>
         <div className="form-row">
           <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
           <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
@@ -76,7 +79,7 @@ export function AdjustmentsPage() {
           <thead><tr><th scope="col">{tr('Count')}</th><th scope="col">{tr('Item')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col" className="right">{tr('Book')}</th><th scope="col" className="right">{tr('Counted')}</th><th scope="col" className="right">{tr('Difference')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead>
           <tbody>
             {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><Button type="submit" onClick={() => act(a.id, 'approve')}>{tr('Approve')}</Button> <Button variant="outline" type="submit" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</Button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <Button variant="outline" type="submit" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</Button>}</td></tr>)}
-            {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No stock counts yet.')}</td></tr>}
+            {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No corrections yet. Use this when the books say one number and the shelf shows another.')}{canCount && !formOpen && <div className="empty-action"><Button onClick={() => setFormOpen(true)}>{tr('Correct a quantity')}</Button></div>}</td></tr>}
           </tbody>
         </table>
       </div>

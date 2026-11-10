@@ -15,6 +15,8 @@ export type Column<T> = {
   /** Optional cell rendering; defaults to the plain value. */
   render?: (row: T) => ReactNode;
   align?: 'left' | 'right';
+  /** Extra class for the heading and every cell (for example `col-sticky-end` keeps an Actions column in view). */
+  className?: string;
 };
 
 type Props<T> = {
@@ -24,6 +26,8 @@ type Props<T> = {
   /** Used for the CSV file name. */
   title: string;
   empty?: string;
+  /** A button under the empty-state text that does the first one (shown only when the list has no rows at all). */
+  emptyAction?: ReactNode;
   toolbar?: ReactNode;
   actions?: (row: T) => ReactNode;
   /** Where clicking the row goes. Rows without it do not react to the pointer. */
@@ -35,7 +39,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, actions, rowHref }: Props<T>) {
+export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref }: Props<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
 
@@ -95,7 +99,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
           <thead>
             <tr>
               {columns.map((c) => (
-                <th key={c.key} scope="col" className={c.align === 'right' ? 'right' : undefined}>
+                <th key={c.key} scope="col" className={[c.align === 'right' ? 'right' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}>
                   <button className="th-sort" onClick={() => toggleSort(c.key)} aria-label={c.label || tr('Actions')}>
                     {c.label}
                     {sort?.key === c.key ? (sort.dir === 1 ? ' ↑' : ' ↓') : ''}
@@ -111,7 +115,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
                 <>
                   {/* data-label: on a phone each row becomes a card and each cell shows its column name (styles.css). */}
                   {columns.map((c) => (
-                    <td key={c.key} data-label={c.label} className={c.align === 'right' ? 'right' : undefined}>
+                    <td key={c.key} data-label={c.label} className={[c.align === 'right' ? 'right' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}>
                       {c.render ? c.render(r) : c.value(r)}
                     </td>
                   ))}
@@ -124,6 +128,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, toolbar, acti
               <tr>
                 <td colSpan={columns.length + (actions ? 1 : 0)} className="muted empty">
                   {rows.length === 0 ? (empty ?? tr('Nothing here yet.')) : tr('No matches.')}
+                  {rows.length === 0 && emptyAction && <div className="empty-action">{emptyAction}</div>}
                 </td>
               </tr>
             )}
