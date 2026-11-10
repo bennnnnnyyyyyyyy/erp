@@ -395,4 +395,7 @@ export const DECISIONS_AR: Record<string, string> = {
   'Revoked {date}': 'أُلغي في {date}',
   'Open invoices': 'الفواتير المفتوحة',
   'Sales by month': 'المبيعات حسب الشهر',
+  // Google Chat alerts
+  'Google Chat': 'Google Chat',
+  'Posts the chosen messages to one Google Chat space. In Google Chat: open the space, choose Apps & integrations, then Webhooks, add one, and paste the webhook URL here (it starts with https://chat.googleapis.com/).': 'ينشر الرسائل المختارة في مساحة Google Chat واحدة. في Google Chat: افتح المساحة، واختر التطبيقات والتكامل، ثم Webhooks، وأضف واحداً، والصق رابط الـ webhook هنا (يبدأ بـ https://chat.googleapis.com/).',
 };

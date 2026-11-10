@@ -21,11 +21,12 @@ import { ReportLinks } from './ReportLinks';
 // Layout (Ben, 9 Nov 2026): a list on the left, one integration on the right, an overview first. This page only CONNECTS an integration;
 // the apps use it (Pay now links on sales invoices, shipments on sales orders, online orders in Sales, copies of messages).
 
-const NAME: Record<IntegrationKind, string> = { email: 'Email', slack: 'Slack', teams: 'Microsoft Teams', telegram: 'Telegram' };
+const NAME: Record<IntegrationKind, string> = { email: 'Email', slack: 'Slack', teams: 'Microsoft Teams', telegram: 'Telegram', google_chat: 'Google Chat' };
 const HELP: Record<IntegrationKind, string> = {
   email: 'Sends a copy of the chosen messages to each person by email.',
   slack: 'Posts the chosen messages to one Slack channel. In Slack: create an app, turn on Incoming Webhooks, add it to a channel, and paste the webhook URL here.',
   teams: 'Posts the chosen messages to one Teams channel. In Teams: on the channel, open Workflows, choose "Send webhook alerts to a channel", and paste the URL it gives you here.',
+  google_chat: 'Posts the chosen messages to one Google Chat space. In Google Chat: open the space, choose Apps & integrations, then Webhooks, add one, and paste the webhook URL here (it starts with https://chat.googleapis.com/).',
   telegram: 'Sends a copy of the chosen messages on Telegram to each person who has linked it (Messages → Connect WhatsApp and Telegram). Free; each message has an "Open in the app" button.',
 };
 const KIND_LABEL: Record<string, string> = {

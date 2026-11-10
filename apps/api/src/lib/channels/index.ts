@@ -10,7 +10,7 @@ import { makeWhatsAppAdapter } from './whatsapp';
 export type OutboxMessage = {
   id: string;
   org_id: string;
-  /** Empty only for a company-channel post (Slack, Teams: sql/053). */
+  /** Empty only for a company-channel post (Slack, Teams, Google Chat: sql/053, sql/071). */
   recipient_id: string | null;
   channel: string;
   kind: string;
@@ -49,6 +49,7 @@ const ADAPTERS = new Map<string, ChannelAdapter>([
   [inApp.kind, inApp],
   [fake.kind, fake],
   ['whatsapp', makeWhatsAppAdapter()],
+  ...makeIntegrationAdapters().map((a): [string, ChannelAdapter] => [a.kind, a]),
 ]);
 
 /** Channels not connected yet (voice): sending on them fails visibly instead of pretending. */

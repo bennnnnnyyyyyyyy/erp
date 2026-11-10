@@ -1,6 +1,6 @@
 // Integrations, wave 1 (documentation/plans/INTEGRATIONS_PLAN.md; database sql/053). Shapes shared by the API and the web app.
 
-export const INTEGRATION_KINDS = ['email', 'slack', 'teams', 'telegram'] as const;
+export const INTEGRATION_KINDS = ['email', 'slack', 'teams', 'telegram', 'google_chat'] as const;
 export type IntegrationKind = (typeof INTEGRATION_KINDS)[number];
 
 /** Outbox message kinds a company may route to an integration (sql/053 core__integration_kinds). */
@@ -43,7 +43,7 @@ export type IntegrationSettings = {
   /** The end of the saved webhook URL, never the URL itself. */
   secretHint: string | null;
   needsSecret: boolean;
-  /** Whether live mode can work now (email: our sending account is set up; Slack/Teams: a URL is saved). */
+  /** Whether live mode can work now (email: our sending account is set up; Slack/Teams/Google Chat: a URL is saved). */
   liveAvailable: boolean;
   lastStatus: 'sent' | 'failed' | null;
   lastError: string | null;
