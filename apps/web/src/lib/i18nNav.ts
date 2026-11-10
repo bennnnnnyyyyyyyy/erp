@@ -103,6 +103,7 @@ export const NAV_AR: Record<string, string> = {
   Transfers: 'التحويلات',
   'Statement of account': 'كشف حساب',
   Branches: 'الفروع',
+  'Import from a file': 'الاستيراد من ملف',
   // integrations (wave 1)
   Integrations: 'الربط مع خدمات أخرى',
   Payments: 'المدفوعات',
