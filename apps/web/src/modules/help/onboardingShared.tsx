@@ -52,8 +52,6 @@ export const EXPLORE_ROUTES: Record<(typeof STEP_KEYS)[number], string> = {
   done: '/',
 };
 
-export const TIMEZONES = ['Africa/Cairo', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Muscat', 'Europe/London', 'UTC'];
-export const CURRENCIES = ['EGP', 'SAR', 'AED', 'KWD', 'QAR', 'BHD', 'OMR', 'USD', 'EUR', 'GBP'];
 export const inputClass = 'h-10 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm';
 
 /** "Fill with sample data" is shown only to the accounts named in the build setting DEMO_AUTOFILL_EMAILS (the demo presenter). */

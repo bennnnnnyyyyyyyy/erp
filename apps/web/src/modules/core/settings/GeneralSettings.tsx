@@ -7,13 +7,22 @@ import { demoMode } from '../../../lib/demo';
 import { useI18n, type Lang, tr } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
+import { CurrencySelect, TimeZoneSelect } from '../../../components/ZoneCurrencyFields';
 import { PeriodSettings } from './PeriodSettings';
 
-const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'EGP', 'JOD', 'LBP', 'INR', 'PKR', 'PHP'];
-
-function timeZones(): string[] {
-  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] };
-  return intl.supportedValuesOf?.('timeZone') ?? [];
+function OptionRow({ title, line, on, onToggle }: { title: string; line: string; on: boolean; onToggle: () => void }) {
+  return (
+    <li className="option-row">
+      <div>
+        <strong>{title}</strong>
+        <p className="muted small">{line}</p>
+      </div>
+      <label className="option-switch">
+        <input type="checkbox" role="switch" checked={on} onChange={onToggle} aria-label={title} />
+        <span>{on ? tr('On') : tr('Off')}</span>
+      </label>
+    </li>
+  );
 }
 
 export function GeneralSettings() {
@@ -69,6 +78,16 @@ export function GeneralSettings() {
     }
   }
 
+  async function flip(path: string, body: Record<string, boolean>) {
+    setError(null);
+    try {
+      await api(path, { method: 'POST', body: JSON.stringify(body) });
+      reloadSession();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   return (
     <section className="page">
       <h1>{tr('General')}</h1>
@@ -100,18 +119,7 @@ export function GeneralSettings() {
           <div className="form-row">
             <label>
               {tr('Default currency')}
-              <input
-                required
-                list="currencies"
-                maxLength={3}
-                value={form.defaultCurrency}
-                onChange={(e) => set('defaultCurrency', e.target.value.toUpperCase())}
-              />
-              <datalist id="currencies">
-                {COMMON_CURRENCIES.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
+              <CurrencySelect value={form.defaultCurrency} onChange={(v) => set('defaultCurrency', v)} />
             </label>
             <label>
               {tr('Date format')}
@@ -134,12 +142,7 @@ export function GeneralSettings() {
           </label>
           <label>
             {tr('Time zone')}
-            <input required list="timezones" value={form.timezone} onChange={(e) => set('timezone', e.target.value)} />
-            <datalist id="timezones">
-              {timeZones().map((tz) => (
-                <option key={tz} value={tz} />
-              ))}
-            </datalist>
+            <TimeZoneSelect value={form.timezone} onChange={(v) => set('timezone', v)} />
             <span className="hint muted">{tr('Dates and times across the app are shown in this zone.')}</span>
           </label>
         </fieldset>
@@ -162,61 +165,30 @@ export function GeneralSettings() {
       </form>
       {canEdit && !demoMode && (
         <div className="form-card stack">
-          <h2>{tr('Getting-started guide')}</h2>
-          <p className="muted small">{session.org?.showTutorial ? tr('A short tutorial for new companies, shown as the "Getting started" app. It is on for this company.') : tr('A short tutorial for new companies, shown as the "Getting started" app. It is off for this company.')}</p>
-          <div>
-            <Button variant="outline" type="button" onClick={async () => {
-              setError(null);
-              try {
-                await api('/v1/core/org/tutorial', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTutorial }) });
-                reloadSession();
-              } catch (err) {
-                setError((err as Error).message);
-              }
-            }}>{session.org?.showTutorial ? tr('Hide the guide') : tr('Show the guide')}</Button>
-          </div>
-        </div>
-      )}
-      {canEdit && !demoMode && session.modules.includes('inventory') && (
-        <div className="form-card stack">
-          <h2>{tr('Blind stock counts')}</h2>
-          <p className="muted small">
-            {session.org?.blindCounts
-              ? tr('On: staff count what is on the shelf without seeing what the books expect. Owners and admins see it when approving.')
-              : tr('Off: everyone counting sees the quantity the books expect next to what they count.')}
-          </p>
-          <div>
-            <Button variant="outline" type="button" onClick={async () => {
-              setError(null);
-              try {
-                await api('/v1/core/org/blind-counts', { method: 'POST', body: JSON.stringify({ on: !session.org?.blindCounts }) });
-                reloadSession();
-              } catch (err) {
-                setError((err as Error).message);
-              }
-            }}>{session.org?.blindCounts ? tr('Switch blind counts off') : tr('Switch blind counts on')}</Button>
-          </div>
-        </div>
-      )}
-      {canEdit && !demoMode && (
-        <div className="form-card stack">
-          <h2>{tr('Guided tour for new staff')}</h2>
-          <p className="muted small">
-            {session.org?.showTour
-              ? tr('On: people new to the company get a short tour of the screens the first time they sign in.')
-              : tr('Off: nobody is shown the tour. Each person can still open the Guide.')}
-          </p>
-          <div>
-            <Button variant="outline" type="button" onClick={async () => {
-              setError(null);
-              try {
-                await api('/v1/core/org/tour', { method: 'POST', body: JSON.stringify({ show: !session.org?.showTour }) });
-                reloadSession();
-              } catch (err) {
-                setError((err as Error).message);
-              }
-            }}>{session.org?.showTour ? tr('Switch the tour off') : tr('Switch the tour on')}</Button>
-          </div>
+          <h2>{tr('Company options')}</h2>
+          <p className="muted small">{tr('Switches for how the whole company works. Each one can be changed at any time.')}</p>
+          <ul className="option-list">
+            <OptionRow
+              title={tr('Getting-started guide')}
+              on={!!session.org?.showTutorial}
+              line={tr('A short tutorial for new companies, shown as the "Getting started" app.')}
+              onToggle={() => flip('/v1/core/org/tutorial', { show: !session.org?.showTutorial })}
+            />
+            {session.modules.includes('inventory') && (
+              <OptionRow
+                title={tr('Blind stock counts')}
+                on={!!session.org?.blindCounts}
+                line={tr('Staff count what is on the shelf without seeing what the books expect. Owners and admins see it when approving.')}
+                onToggle={() => flip('/v1/core/org/blind-counts', { on: !session.org?.blindCounts })}
+              />
+            )}
+            <OptionRow
+              title={tr('Guided tour for new staff')}
+              on={!!session.org?.showTour}
+              line={tr('People new to the company get a short tour of the screens the first time they sign in.')}
+              onToggle={() => flip('/v1/core/org/tour', { show: !session.org?.showTour })}
+            />
+          </ul>
         </div>
       )}
       {canEdit && !demoMode && org.data ? <PeriodSettings org={org.data} onSaved={org.reload} /> : null}

@@ -340,6 +340,13 @@ export const MENU_GROUPS: Record<string, Record<string, string>> = {
     '/reorder-levels': 'Planning', '/forecast': 'Planning', '/batches': 'Planning',
     '/ledger': 'Records and rules', '/approval-policies': 'Records and rules',
   },
+  // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
+  settings: {
+    '': 'Company', '/branches': 'Company', '/users': 'Company', '/apps': 'Company',
+    '/me': 'Your account',
+    '/integrations': 'Connections', '/import': 'Connections',
+    '/audit': 'Records',
+  },
 };
 
 /**

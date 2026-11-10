@@ -5,7 +5,7 @@ import { demoMode } from '../../../lib/demo';
 import { useI18n, type Lang, tr, trf } from '../../../lib/i18n';
 import { Link } from '../../../lib/router';
 import { supabase } from '../../../lib/supabase';
-import { useSession } from '../../../session';
+import { useReloadSession, useSession } from '../../../session';
 
 // Settings > My settings (decision D10, 9 Nov 2026): what every person controls for themselves. Staff see only this page in Settings;
 // company pages (General, Users, Branches, Apps, Audit log) are for owners and managers.
@@ -43,6 +43,38 @@ function ChangePassword() {
   );
 }
 
+// Your display name: kept in your sign-in profile (full_name), which is what the people list and the audit trail show.
+function ChangeName({ current }: { current: string }) {
+  const reload = useReloadSession();
+  const [name, setName] = useState(current);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const clean = name.trim().replace(/\s+/g, ' ');
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (clean.length < 2 || clean.length > 120) return setMessage({ ok: false, text: tr('Enter your name (2 to 120 characters).') });
+    setBusy(true);
+    setMessage(null);
+    const { error } = await supabase.auth.updateUser({ data: { full_name: clean } });
+    setBusy(false);
+    if (error) return setMessage({ ok: false, text: error.message });
+    setName(clean);
+    reload();
+    setMessage({ ok: true, text: tr('Name changed.') });
+  }
+  return (
+    <form className="stack" onSubmit={save}>
+      <label>
+        {tr('Name')}
+        <input required minLength={2} maxLength={120} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+        <span className="hint muted">{tr('Shown to your colleagues and in the audit log.')}</span>
+      </label>
+      {message ? <p className={message.ok ? 'notice' : 'error'} role={message.ok ? 'status' : 'alert'}>{message.text}</p> : null}
+      <div className="form-actions"><Button type="submit" variant="outline" disabled={busy || clean === current || clean.length < 2}>{busy ? tr('Saving…') : tr('Change name')}</Button></div>
+    </form>
+  );
+}
+
 export function MySettings() {
   const session = useSession();
   const { t, personalLang, orgLang, setPersonalLang } = useI18n();
@@ -68,10 +100,11 @@ export function MySettings() {
       <div className="form-card stack">
         <h2>{tr('My account')}</h2>
         <dl className="facts">
-          {session.name ? <div><dt>{tr('Name')}</dt><dd>{session.name}</dd></div> : null}
+          {demoMode && session.name ? <div><dt>{tr('Name')}</dt><dd>{session.name}</dd></div> : null}
           <div><dt>{tr('Email')}</dt><dd><bdi>{session.email}</bdi></dd></div>
           {session.role ? <div><dt>{tr('Role')}</dt><dd>{trf('{role} at {company}', { role: tr(ROLE_NAME[session.role] ?? session.role), company: session.org?.name ?? '' })}</dd></div> : null}
         </dl>
+        {demoMode ? null : <ChangeName current={session.name ?? ''} />}
         {demoMode ? null : <ChangePassword />}
       </div>
 

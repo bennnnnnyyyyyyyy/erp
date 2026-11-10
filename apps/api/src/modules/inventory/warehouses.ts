@@ -35,6 +35,17 @@ export function registerWarehouseRoutes(inventoryRoutes: Hono<AppEnv>) {
     return ok(c, { id: idParam(c), branchId });
   });
 
+  // Fix a warehouse's name or code (sql/074). Owners and admins; audited with before and after.
+  inventoryRoutes.put('/warehouses/:id', requirePermission('inventory.warehouses.manage'), async (c) => {
+    const body = await jsonBody(c);
+    const id = idParam(c);
+    const name = text(body.name);
+    const code = text(body.code);
+    if (!name) invalid('A name is required');
+    await callRpc<void>(userDb(c), 'inv_update_warehouse', { p_warehouse_id: id, p_name: name, p_code: code || null });
+    return ok(c, { id, name, ...(code ? { code } : {}) });
+  });
+
   inventoryRoutes.post('/warehouses', requirePermission('inventory.warehouses.manage'), async (c) => {
     const body = await jsonBody(c);
     const code = text(body.code);
