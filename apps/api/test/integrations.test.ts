@@ -5,7 +5,13 @@ import { defaultPermissionsFor } from '@erp/shared';
 import app from '../src/index';
 import type { Bindings } from '../src/env';
 import type { OutboxMessage } from '../src/lib/channels';
-import { type IntegrationDeps, type IntegrationState, makeIntegrationAdapters } from '../src/lib/channels/integrations';
+import {
+  googleChatPayload,
+  isGoogleChatWebhookUrl,
+  type IntegrationDeps,
+  type IntegrationState,
+  makeIntegrationAdapters,
+} from '../src/lib/channels/integrations';
 import { groupRates } from '../src/jobs/fx';
 import { CBE_SIMULATED_SPREAD, cbeRates, simulateCbe } from '../src/lib/rates/cbe';
 import { parseUpdate, startLink } from '../src/lib/telegram';
@@ -40,8 +46,8 @@ function fakes(state: IntegrationState | null, secret: string | null = null) {
       return new Response('{}', { status: 200 });
     }) as unknown as typeof fetch,
   };
-  const [email, slack, teams, telegram] = makeIntegrationAdapters(deps);
-  return { email: email!, slack: slack!, teams: teams!, telegram: telegram!, calls };
+  const [email, slack, teams, telegram, googleChat] = makeIntegrationAdapters(deps);
+  return { email: email!, slack: slack!, teams: teams!, telegram: telegram!, googleChat: googleChat!, calls };
 }
 
 describe('integration adapters', () => {
@@ -87,6 +93,66 @@ describe('integration adapters', () => {
     const f = fakes({ enabled: true, mode: 'live' }, 'https://hooks.slack.com/services/a/b/c');
     await f.slack.send(msg({ channel: 'slack', secret_body: 'CODE 123456' }), env);
     expect(String(f.calls[0]!.init.body)).not.toContain('123456');
+  });
+});
+
+describe('google chat', () => {
+  const GURL = 'https://chat.googleapis.com/v1/spaces/AAAA1234/messages?key=k&token=t';
+  const gmsg = (over: Partial<OutboxMessage> = {}) => msg({ channel: 'google_chat', recipient_id: null, ...over });
+
+  it('accepts only chat.googleapis.com space webhook URLs', () => {
+    expect(isGoogleChatWebhookUrl(GURL)).toBe(true);
+    for (const bad of [
+      'http://chat.googleapis.com/v1/spaces/AAAA1234/messages?key=k',
+      'https://chat.googleapis.com.evil.example/v1/spaces/AAAA1234/messages',
+      'https://chat.googleapis.com/v1/other/AAAA1234/messages',
+      'https://hooks.slack.com/services/a/b/c',
+      'https://chat.googleapis.com/v1/spaces/',
+      `${GURL} extra`,
+      '',
+    ])
+      expect(isGoogleChatWebhookUrl(bad)).toBe(false);
+  });
+
+  it('builds a simple text message: bold subject, then the body', () => {
+    expect(googleChatPayload({ subject: 'REQ-1 needs approval', body: 'Two items' })).toEqual({
+      text: '*REQ-1 needs approval*\n\nTwo items',
+    });
+    expect(googleChatPayload({ subject: 'a *b* c', body: '' })).toEqual({ text: '*a b c*' });
+  });
+
+  it('simulated mode makes no network call; live posts the text to the saved URL', async () => {
+    const sim = fakes({ enabled: true, mode: 'simulated' }, GURL);
+    expect(await sim.googleChat.send(gmsg(), env)).toBe('simulated');
+    expect(sim.calls).toEqual([]);
+    const f = fakes({ enabled: true, mode: 'live' }, GURL);
+    expect(await f.googleChat.send(gmsg(), env)).toBe('google_chat-webhook');
+    expect(f.calls[0]!.url).toBe(GURL);
+    expect(f.calls[0]!.init.method).toBe('POST');
+    expect(JSON.parse(String(f.calls[0]!.init.body))).toEqual({ text: '*REQ-1 needs approval*\n\nTwo items' });
+  });
+
+  it('refuses a missing or foreign URL, never sends a one-time code, and a failed call is a visible error', async () => {
+    await expect(fakes({ enabled: true, mode: 'live' }, null).googleChat.send(gmsg(), env)).rejects.toThrow(/No Google Chat webhook URL/);
+    const foreign = fakes({ enabled: true, mode: 'live' }, 'https://evil.example/v1/spaces/AAAA1234/x');
+    await expect(foreign.googleChat.send(gmsg(), env)).rejects.toThrow(/not valid/);
+    expect(foreign.calls).toEqual([]);
+    const f = fakes({ enabled: true, mode: 'live' }, GURL);
+    await f.googleChat.send(gmsg({ secret_body: 'CODE 123456' }), env);
+    expect(String(f.calls[0]!.init.body)).not.toContain('123456');
+    const failing = makeIntegrationAdapters({
+      state: async () => ({ enabled: true, mode: 'live' }),
+      secret: async () => GURL,
+      email: async () => null,
+      telegramChat: async () => null,
+      fetch: (async () => new Response('space not found', { status: 404 })) as unknown as typeof fetch,
+    })[4]!;
+    const err = await failing.send(gmsg(), env).catch((e: Error) => e.message);
+    expect(err).toBe('Google Chat returned 404: space not found');
+  });
+
+  it('is skipped for a company that switched it off', async () => {
+    expect(await fakes({ enabled: false, mode: 'live' }, GURL).googleChat.send(gmsg(), env)).toBe('skipped (switched off)');
   });
 });
 
@@ -210,6 +276,10 @@ describe('integration routes', () => {
     ['GET', '/v1/core/integrations'],
     ['PUT', `/v1/core/integrations/${ID}`],
     ['PUT', '/v1/core/integrations/slack/secret'],
+    ['PUT', '/v1/core/integrations/google_chat'],
+    ['PUT', '/v1/core/integrations/google_chat/secret'],
+    ['DELETE', '/v1/core/integrations/google_chat/secret'],
+    ['POST', '/v1/core/integrations/google_chat/test'],
     ['DELETE', '/v1/core/integrations/slack/secret'],
     ['POST', `/v1/core/integrations/${ID}/test`],
     ['GET', '/v1/core/integrations/providers'],

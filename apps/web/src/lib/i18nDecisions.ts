@@ -288,4 +288,7 @@ export const DECISIONS_AR: Record<string, string> = {
   'Only the owner can change this.': 'المالك وحده يمكنه تغيير هذا.',
   // the API's answer when code is deployed before its database update (503 not_set_up)
   'This feature is not set up yet: its database update has not been applied': 'هذه الميزة غير مُفعّلة بعد: لم يُطبَّق تحديث قاعدة البيانات الخاص بها',
+  // Google Chat alerts
+  'Google Chat': 'Google Chat',
+  'Posts the chosen messages to one Google Chat space. In Google Chat: open the space, choose Apps & integrations, then Webhooks, add one, and paste the webhook URL here (it starts with https://chat.googleapis.com/).': 'ينشر الرسائل المختارة في مساحة Google Chat واحدة. في Google Chat: افتح المساحة، واختر التطبيقات والتكامل، ثم Webhooks، وأضف واحداً، والصق رابط الـ webhook هنا (يبدأ بـ https://chat.googleapis.com/).',
 };

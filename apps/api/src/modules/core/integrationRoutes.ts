@@ -15,6 +15,7 @@ import {
   type ProviderSettings,
 } from '@erp/shared';
 import { aiCapUsd } from '../../lib/ai';
+import { GOOGLE_CHAT_URL_PREFIX, isGoogleChatWebhookUrl } from '../../lib/channels/integrations';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
@@ -65,7 +66,7 @@ integrationRoutes.get('/', requirePermission('core.integrations.view'), async (c
         mode: r?.mode ?? 'simulated',
         messageKinds: r?.settings?.kinds ?? [],
         secretHint: r?.secret_hint ?? null,
-        needsSecret: kind === 'slack' || kind === 'teams',
+        needsSecret: kind === 'slack' || kind === 'teams' || kind === 'google_chat',
         liveAvailable: kind === 'email' ? emailReady : kind === 'telegram' ? telegramReady : Boolean(r?.secret_hint),
         lastStatus: r?.last_status ?? null,
         lastError: r?.last_error ?? null,
@@ -93,9 +94,11 @@ integrationRoutes.put('/:kind', requirePermission('core.integrations.manage'), a
 // Write-only: the URL is never returned, only a short hint.
 integrationRoutes.put('/:kind/secret', requirePermission('core.integrations.manage'), async (c) => {
   const kind = kindParam(c.req.param('kind'));
-  if (kind === 'email' || kind === 'telegram') invalid('Only Slack and Teams take a webhook URL');
+  if (kind === 'email' || kind === 'telegram') invalid('Only Slack, Teams and Google Chat take a webhook URL');
   const url = (await jsonBody(c)).url;
   if (typeof url !== 'string' || !/^https:\/\//.test(url.trim()) || url.length > 2000) invalid('Paste the full https webhook URL');
+  if (kind === 'google_chat' && !isGoogleChatWebhookUrl(url.trim()))
+    invalid(`A Google Chat webhook URL starts with ${GOOGLE_CHAT_URL_PREFIX}`);
   const hint = await callRpc<string>(userDb(c), 'core_set_integration_secret', { p_kind: kind, p_secret: url.trim() });
   return ok(c, { kind, secretHint: hint });
 });
