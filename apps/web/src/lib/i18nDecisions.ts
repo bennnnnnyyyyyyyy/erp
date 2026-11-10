@@ -318,6 +318,8 @@ export const DECISIONS_AR: Record<string, string> = {
   'The supplier confirmed…': 'أكّد المورد…',
   'Promised delivery date': 'موعد التسليم المتفق عليه',
   "Supplier's reference (optional)": 'مرجع المورد (اختياري)',
+  // MVP M4: change an alert rule's recipients
+  'Recipients of "{name}" changed.': 'تم تغيير مستلمي "{name}".',
   // MVP M4: the guided tour switch
   'Guided tour for new staff': 'جولة تعريفية للموظفين الجدد',
   'On: people new to the company get a short tour of the screens the first time they sign in.':

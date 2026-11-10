@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Google Chat alerts (sql/071), channel adapters registered, large files split, alert recipients; dry run of 069-073
+
+**Objective.** Ben: finish everything doable today, using Sonnet agents orchestrated by Claude.
+
+**Actions Completed.** Branch `feat/po-approval` (one branch, one pull request for tonight's work).
+- **Google Chat alerts** (Sonnet agent, reviewed and merged): `sql/071_google_chat_channel.sql` + `sql/tests/067_google_chat_channel.sql`;
+  adapter in `apps/api/src/lib/channels/integrations.ts` (`{"text": ...}`; simulated mode makes no call); Settings → Integrations shows it
+  like Slack and Teams. No Google logo added (trademark): the screen shows a "G".
+- **Bug fixed (found by the agent, checked by Claude):** `apps/api/src/lib/channels/index.ts` imported the email, Slack, Teams and
+  Telegram adapters but never registered them, so those messages failed with "Channel ... is not configured". Now registered. Live
+  integrations are all in simulated mode, so after deploy they record simulated deliveries instead of failing.
+- **Large files split** (Sonnet agent, pure move, reviewed): `apps/api/src/modules/inventory/routes.ts` (1,114 lines → 10 files),
+  `apps/web/src/modules/inventory/Inventory.tsx`, `apps/web/src/modules/help/Onboarding.tsx`, `apps/web/src/modules/treasury/Statements.tsx`;
+  largest new file 294 lines; same 114 API routes and identical test counts before and after.
+- **Alert rules: change recipients** (MVP M4, last of the two): "Change" next to each rule's recipients (the API existed).
+- Gap 5 (minimum order and pack size) **not done**: the forecast has no supplier per item, so it needs the forecast function reworked;
+  left for a planned change rather than a rushed one.
+
+**Database / System Result.** One dry run on live of 069, 070, 071, 072 and 073 together inside a rolled-back transaction passed (279
+orders stay `not_needed`; integrations kept; `google_chat` allowed; anon can only read a report through a link); a read-only check
+afterwards confirmed nothing was kept. None applied.
+
+**Safety Status.** Combined branch: lint and typecheck clean; shared 74 + 1 skipped, API 349 + 7 skipped, web 109; all 73 migrations
+and 69 SQL tests pass locally; doc links OK. Nothing viewed in a browser. **Apply 069, 070, 071, 072, 073 in that order before merging.**
+
 ## 2026-11-10 — Supplier confirmation and promised date, late orders (sql/073)
 
 **Objective.** Dynamics review gap 4, as part of "finish everything doable today".
