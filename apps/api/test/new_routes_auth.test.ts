@@ -39,7 +39,24 @@ const routes: [string, string][] = [
   ['GET', `/v1/treasury/statements/accounts/${ID}/reconciliations`],
   ['POST', `/v1/treasury/statements/accounts/${ID}/reconcile`],
   ['POST', `/v1/treasury/statements/reconciliations/${ID}/reopen`],
+  // bank statements part 2 (sql/068)
+  ['GET', '/v1/treasury/statements/reconcile-roles'],
+  ['POST', '/v1/treasury/statements/bank-charges/prepare'],
+  ['GET', '/v1/treasury/statements/rules'],
+  ['POST', '/v1/treasury/statements/rules'],
+  ['PUT', `/v1/treasury/statements/rules/${ID}`],
+  ['DELETE', `/v1/treasury/statements/rules/${ID}`],
+  ['POST', `/v1/treasury/statements/lines/${ID}/explain`],
 ];
+
+describe('a migration not applied yet', () => {
+  it('is recognised from the database error codes (so the API answers 503 not_set_up, not 500)', async () => {
+    const { isMissingSchema } = await import('../src/lib/errors');
+    for (const code of ['42P01', '42703', '42883', 'PGRST202', 'PGRST204', 'PGRST205'])
+      expect(isMissingSchema({ code, message: 'x' })).toBe(true);
+    for (const e of [{ code: '23505' }, new Error('x'), null, undefined, { code: 42883 }]) expect(isMissingSchema(e)).toBe(false);
+  });
+});
 
 describe('routes added on 9-10 November', () => {
   it.each(routes)('%s %s needs a signed-in user', async (method, path) => {

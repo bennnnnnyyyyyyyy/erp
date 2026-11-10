@@ -11,7 +11,7 @@ import { processFawryCallback, processPaymobCallback } from './lib/payments/link
 import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
 import { processInbound } from './lib/whatsappInbound';
 import { processTelegramUpdate } from './lib/telegramInbound';
-import { HttpError } from './lib/errors';
+import { HttpError, isMissingSchema } from './lib/errors';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
 import { KB, MB, limitBody } from './middleware/bodyLimit';
@@ -133,6 +133,11 @@ app.notFound((c) => fail(c, 404, 'Not found'));
 app.onError((err, c) => {
   if (err instanceof HttpError) return fail(c, err.status as ContentfulStatusCode, err.message, err.code);
   if (err.name === 'NotConfiguredError') return fail(c, 503, err.message, 'not_configured');
+  // Code deployed before its database update: say so, instead of "something went wrong".
+  if (isMissingSchema(err)) {
+    console.error('missing database object (migration not applied?)', (err as { message?: string }).message);
+    return fail(c, 503, 'This feature is not set up yet: its database update has not been applied', 'not_set_up');
+  }
   console.error(err);
   return fail(c, 500, 'Something went wrong on our side');
 });

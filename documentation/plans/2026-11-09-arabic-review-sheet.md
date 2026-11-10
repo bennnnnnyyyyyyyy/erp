@@ -66,3 +66,5 @@ Placeholders such as `{name}`, `{item}` and `{n}` must stay exactly as they are 
 | 52 | Settings, stock counts | (the 9 texts of blind counts, the phone action bar and "No stock yet") | see `apps/web/src/lib/i18nDecisions.ts`, section "Blind counts" | |
 | 53 | Bank statements | (about 70 texts of the bank statement screens and file messages; accounting terms to check: تسوية بنكية, كشف حساب, مطابقة) | see `apps/web/src/lib/i18nDecisions.ts`, section "Bank statements" | |
 | 54 | Menu | Bank statements / Bank statement | كشوف الحساب البنكية / كشف حساب بنكي | |
+| 55 | Bank statements | (the 36 texts of part 2: recording what a line was, rules, who may reconcile; terms to check: بند المصروف, مصروفات وعمولات بنكية, تسوية) | see `apps/web/src/lib/i18nDecisions.ts`, section "bank statements part 2" | |
+| 56 | Errors | This feature is not set up yet: its database update has not been applied | هذه الميزة غير مُفعّلة بعد: لم يُطبَّق تحديث قاعدة البيانات الخاص بها | |
