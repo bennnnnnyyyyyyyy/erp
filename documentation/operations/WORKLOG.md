@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Ben's walkthrough; owners may approve their own (sql/077, decision D1c)
+
+**Objective.** Ben clicked through the app (old version, before tonight's branch) and left notes (`notes.md`, outside the repo) and
+ticks in `documentation/operations/2026-11-11-click-through-checklist.md` (main checkout). Decision on approvals: "all of them, and the
+single owner can do everything as is". Claude may use Chrome on the test company.
+
+**Actions Completed.**
+- `sql/077_core_owner_self_approval.sql` + `sql/tests/073_owner_self_approval.sql`; `POST /v1/core/org/owner-self-approval`; the
+  session carries `ownerSelfApproval`. `agents.md` records decision D1c next to D1/D1b. The on/off switch on General settings follows
+  once the settings screen rework (below) is merged.
+- Two Sonnet agents started on the walkthrough notes, on branches built from `feat/po-approval`: `fix/walkthrough-setup` (time zone
+  and currency dropdowns, one setup page per question, no Arabic warehouse name, editable warehouses, own name, Settings menu grouped,
+  errors as popups) and `fix/walkthrough-items` (items columns, SKU format and auto-numbering, unit dropdown, supplier details, unpaid
+  bills on supplier payments, quantities without trailing zeros and a plain "not enough stock" message).
+
+**Database / System Result.** None.
+
+**Safety Status.** All 74 migrations and 70 SQL tests pass locally; lint and typecheck clean; API 350 + 7 skipped.
+
 ## 2026-11-10 — Google Chat alerts (sql/071), channel adapters registered, large files split, alert recipients; dry run of 069-073
 
 **Objective.** Ben: finish everything doable today, using Sonnet agents orchestrated by Claude.

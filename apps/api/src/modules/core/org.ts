@@ -135,6 +135,14 @@ orgRoutes.post('/blind-counts', requirePermission('core.org.manage'), async (c) 
   return ok(c, { on });
 });
 
+// Owners may approve their own requests (sql/077, decision D1c). Owners only: the database refuses admins and audits the change.
+orgRoutes.post('/owner-self-approval', requirePermission('core.org.manage'), async (c) => {
+  const on = (await jsonBody(c)).on;
+  if (typeof on !== 'boolean') invalid('on must be true or false');
+  await callRpc<boolean>(userDb(c), 'core_set_owner_self_approval', { p_on: on });
+  return ok(c, { on });
+});
+
 orgRoutes.post('/tour', requirePermission('core.org.manage'), async (c) => {
   const show = (await jsonBody(c)).show;
   if (typeof show !== 'boolean') invalid('show must be true or false');

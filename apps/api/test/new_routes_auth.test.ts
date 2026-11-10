@@ -52,6 +52,7 @@ const routes: [string, string][] = [
   ['GET', '/v1/purchasing/order-approval'],
   ['PUT', '/v1/purchasing/order-approval'],
   ['POST', `/v1/purchasing/orders/${ID}/confirm`], // sql/073
+  ['POST', '/v1/core/org/owner-self-approval'], // sql/077
 ];
 
 describe('a migration not applied yet', () => {

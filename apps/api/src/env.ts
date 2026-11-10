@@ -52,6 +52,8 @@ export type Tenant = {
   showTour: boolean;
   /** Blind stock counts (sql/066): staff do not see the expected quantity while counting. */
   blindCounts: boolean;
+  /** Owners may approve their own requests, each flagged self-approved (sql/077, decision D1c). */
+  ownerSelfApproval: boolean;
   role: Role;
   permissions: string[];
   modules: string[];
