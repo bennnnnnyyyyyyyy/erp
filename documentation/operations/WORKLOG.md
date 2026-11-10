@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-10 — Imports from a file (Sheets A) and private report links for Google Sheets (sql/070)
+
+**Objective.** Ben: Google Sheets options A and C "do it now". Built by two Sonnet agents in their own worktrees (orchestrated by
+Claude Opus), reviewed and merged into `feat/po-approval` so there is one branch and one pull request.
+
+**Actions Completed.**
+- **Imports (option A), web only, no migration:** Settings → Import from a file (`apps/web/src/modules/core/settings/ImportFromFile.tsx`,
+  logic in `apps/web/src/lib/importRows.ts` with 12 tests). Items with opening stock, customers, suppliers from CSV or .xlsx; column
+  guessing from English and Arabic headers; checks before sending (missing name or SKU, bad numbers, duplicate codes in the file); rows
+  sent one by one through the existing routes, so every database rule applies; failed rows listed with the server's message and retried
+  alone; templates to download; 2,000 rows per file; one warehouse per file. `registry.tsx` gained an optional `anyPermission` for pages.
+- **Report links (option C):** `sql/070_core_report_links.sql` + `sql/tests/066_report_links.sql`; API `/v1/core/report-links` (list,
+  create, revoke; `core.integrations.manage`) and the public `GET /r/:token` (format checked first, rate limited, publishable-key client,
+  CSV with formula cells defused, `no-store`, bare 404 on any refusal); Settings → Integrations → "Links for Google Sheets".
+- Reviewed by Claude: the public function, grants and token handling.
+
+**Database / System Result.** 070 dry run on live inside a rolled-back transaction passed (RLS on; anon can call only the read
+function, not the table, the create function or the helper). Not applied.
+
+**Safety Status.** Combined branch: lint and typecheck clean; shared 74 + 1 skipped, API 339 + 7 skipped, web 109; all 70 migrations
+and 66 SQL tests pass locally; doc links OK. Not viewed in a browser. Limits: open invoices do not net credit notes; stock lists only
+quantities above zero; Arabic is machine drafts. **Apply 069 and 070 before merging.**
+
 ## 2026-11-10 — Purchase order approval (sql/069)
 
 **Objective.** Ben, on the Dynamics gaps: purchase orders have no approval; "fix that asap".
@@ -27,7 +50,8 @@ run or deployed.
 - Web: "Waiting for approval" / "Rejected" in the list and on the order; Approve / Reject (with a reason) on the order; "Receive goods"
   hidden while waiting; the setting on the purchase orders page (`apps/web/src/modules/purchasing/OrderApproval.tsx`). 13 Arabic drafts.
 
-**Database / System Result.** None yet: 069 not applied.
+**Database / System Result.** 069 dry run on live inside a rolled-back transaction passed (278 existing orders stay `not_needed`,
+anonymous callers cannot decide, the receive guard is in place). Not applied.
 
 **Safety Status.** All 69 migrations and 65 SQL tests pass locally; lint, typecheck clean; API 330 + 7 skipped, web 97. Not viewed in a
 browser. **Apply 069 before merging.**
