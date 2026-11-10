@@ -51,6 +51,10 @@ beginning."
   company → warehouses and items → suppliers and customers → buying → selling → money → accounting.
 - **B:** only reorder the tutorial; leave the accounting screens as they are.
 
+**Ben's answers (10 Nov 2026): R1 A (task-first Inventory), R2 A (guided accounting setup and the tutorial in a fixed order that
+cannot be skipped at the start).** Built after the two walkthrough-fix branches are merged, since they touch the same screens; the
+items in §2 go with them (Stock on hand columns and supplier payment terms with R1; the Apps page wording and accounting setup with R2).
+
 **R3. Credit note approval** ("if I can get an online reference id this step would be unneeded"). A payment reference proves money
 moved; the approval stops staff lowering what a customer owes without a manager knowing. With decision D1c an owner can now approve
 their own. **Recommended:** keep approval for staff; nothing more.
