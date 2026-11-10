@@ -129,3 +129,7 @@ After each slice: checked in the browser in English and Arabic before it is merg
   owner-and-admin function `inv_item_costs`. No database change.
 - **Next:** slice 2, the overview (Q2) and grouped menu (Q3); then slice 3, the stock list one row per item and warehouse (Q4) and
   phone cards (Q5). The blind-count setting (MVP M3, answer C) needs a small database change and comes with the stock list slice.
+- **Slice 2, overview (Q2) and grouped menu (Q3): built** on the same branch. Inventory now opens on the overview: four numbers, then
+  "Needs you today" (approvals, approved requests to issue, transfers to receive, low items, batches expiring within 30 days), each
+  with its button, then shortcuts; each person sees only what their role can act on. Stock on hand moved to `/inventory/stock` (every
+  link updated). Menu: Overview, Stock on hand, Requests, Transfers; then Counting, Planning, Records and rules.

@@ -24,6 +24,10 @@ Q4 B one row per item and warehouse, Q5 A phone cards) and MVP M3 (blind counts 
 - API: `GET /v1/inventory/ledger?itemId=` (checked id); `GET /v1/inventory/item-costs` (the owner-and-admin function inv_item_costs).
 - `apps/api/test/new_routes_auth.test.ts`: the 12 routes added on 9–10 Nov need a signed-in user; item costs come from the function.
 
+- **Slice 2:** `apps/web/src/modules/inventory/Overview.tsx` opens Inventory: four numbers, "Needs you today" (by role), shortcuts.
+  Stock on hand moved to `/inventory/stock`; links updated (item page, setup wizard, Getting started, purchase order page). Menu
+  grouped as Ben chose (MENU_GROUPS: Counting, Planning, Records and rules); icons for Stock on hand and Stock counts.
+
 **Database / System Result.** None.
 
 **Safety Status.** Lint, typecheck, tests (API 304 + 7 skipped, web 88) pass. Not viewed in a browser.

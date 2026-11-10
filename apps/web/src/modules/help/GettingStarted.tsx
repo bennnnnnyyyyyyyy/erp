@@ -49,8 +49,8 @@ export function Step({ n, title, to, toLabel, children }: { n: number; title: st
 }
 
 // Where each step leads. Language-independent, in the same order as the steps in helpContent.ts.
-const STEP_ROUTES = ['/settings', '/settings/users', '/inventory', '/inventory/requests', '/purchasing', '/sales', '/finance/overview', '/alerts', '/inventory/batches'];
-const CHECKLIST_ROUTES = ['/settings', '/inventory', '/inventory', '/settings/users', '/purchasing/suppliers', '/sales/customers', '/alerts'];
+const STEP_ROUTES = ['/settings', '/settings/users', '/inventory/stock', '/inventory/requests', '/purchasing', '/sales', '/finance/overview', '/alerts', '/inventory/batches'];
+const CHECKLIST_ROUTES = ['/settings', '/inventory/stock', '/inventory/stock', '/settings/users', '/purchasing/suppliers', '/sales/customers', '/alerts'];
 
 export function GettingStartedPage() {
   const session = useSession();

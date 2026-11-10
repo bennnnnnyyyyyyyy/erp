@@ -562,3 +562,8 @@ td input { margin-top: 0; }
 .search-select-list li { padding: 0.45rem 0.6rem; border-radius: calc(var(--radius) * 0.7); cursor: pointer; font-size: 0.9rem; }
 .search-select-list li.is-active, .search-select-list li[aria-selected='true'] { background: var(--accent); }
 .search-select-list li.search-select-none { cursor: default; background: none; }
+
+/* "Needs you today" on the Inventory overview (inventory redesign Q2, 10 Nov 2026). */
+.task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.task-list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.65rem 0.9rem; border: 1px solid var(--border-strong); border-radius: 0.6rem; background: var(--surface-1, transparent); }
+.task-list li span { min-width: 0; }

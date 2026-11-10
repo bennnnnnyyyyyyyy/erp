@@ -49,7 +49,7 @@ export function ItemPage() {
   const item = cat.items.data?.find((i) => i.id === id) as (DemoItem & { tracksBatches?: boolean }) | undefined;
   if (cat.items.error) return <section className="page"><p className="error">{cat.items.error}</p></section>;
   if (!cat.ready || !stock.data) return <section className="page"><Loading /></section>;
-  if (!item) return <section className="page"><Link to="/inventory" className="back-link">{tr('← Stock on hand')}</Link><p className="error">{tr('Item not found')}</p></section>;
+  if (!item) return <section className="page"><Link to="/inventory/stock" className="back-link">{tr('← Stock on hand')}</Link><p className="error">{tr('Item not found')}</p></section>;
 
   const rows = (stock.data ?? []).filter((s) => s.itemId === id);
   const sum = (f: (s: StockRow) => number) => rows.reduce((a, s) => a + f(s), 0);
@@ -74,7 +74,7 @@ export function ItemPage() {
 
   return (
     <section className="page">
-      <Link to="/inventory" className="back-link">{tr('← Stock on hand')}</Link>
+      <Link to="/inventory/stock" className="back-link">{tr('← Stock on hand')}</Link>
       <div className="page-head">
         <h1>
           <code>{item.sku}</code> {item.name}
