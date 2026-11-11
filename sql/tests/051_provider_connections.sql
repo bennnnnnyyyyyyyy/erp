@@ -54,18 +54,19 @@ begin
   if public.core__provider_credentials(o, 'paymob') ? 'secret_key' then raise exception 'FAIL S1f: a removed field is still there'; end if;
   set local role authenticated;
 
-  -- ---- AI1: consent
-  ok := false; begin perform public.core_save_integration('openai', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
+  -- ---- AI1: consent (sql/082: switching on needs the details, so Ollama's are saved first and only consent is missing)
+  perform public.core_save_provider_fields('ollama', '{"base_url": "https://ai.example.com", "model": "qwen2.5:7b"}');
+  ok := false; begin perform public.core_save_integration('openai', true, 'live', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
   if not ok then raise exception 'FAIL AI1a: OpenAI switched on without consent'; end if;
   -- sql/061: Ollama needs the notice too (it is called over the internet).
-  ok := false; begin perform public.core_save_integration('ollama', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
+  ok := false; begin perform public.core_save_integration('ollama', true, 'live', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
   if not ok then raise exception 'FAIL AI1e: Ollama switched on without consent'; end if;
   ok := false; begin perform public.core_set_ai_consent(true); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL AI1b: an admin gave the AI consent'; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   perform public.core_set_ai_consent(true);
-  perform public.core_save_integration('openai', true, 'simulated', null);
-  perform public.core_save_integration('ollama', true, 'simulated', null);
+  perform public.core_save_integration('openai', true, 'live', null);
+  perform public.core_save_integration('ollama', true, 'live', null);
   perform public.core_set_ai_consent(false);
   if (select enabled from public.core_integrations where org_id = o and kind = 'openai') then raise exception 'FAIL AI1c: OpenAI still on after withdrawal'; end if;
   if (select enabled from public.core_integrations where org_id = o and kind = 'ollama') then raise exception 'FAIL AI1d: Ollama still on after withdrawal'; end if;

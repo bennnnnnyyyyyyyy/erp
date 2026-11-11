@@ -9,6 +9,12 @@
 
 ---
 
+**No test mode (11 Nov, Ben: "i dont want this stupid test mode on anything"):** branch `feat/integrations-live`, `sql/082`.
+Every integration is now off or on, and on means the real provider; it can only be switched on once its details are saved. A
+"Check connection" button makes one real, harmless call and shows the provider's answer. To try payments or a store first, use the
+provider's own test keys or test store, not ours. The simulated Central Bank of Egypt table is gone; ETA offers PreProd (ETA's own test
+system) or production. Our tests still use fakes, so a test run never reaches a provider. Section 5's two modes are superseded.
+
 **Build status (6 Nov):**
 - Wave 1 is built on branch `integrations-wave1`: email, Slack, Teams, Telegram and exchange rates, each simulated until switched to
   live.
@@ -91,9 +97,9 @@ adapters (`apps/api/src/lib/channels`) and the ETA transport (`apps/api/src/lib/
 
 - **Kinds:** `MessageChannel` (email, Slack, Teams, Telegram, SMS, WhatsApp, voice), `PaymentGateway`, `Courier`, `StoreConnector`,
   `EInvoiceTransport` (ETA, ZATCA, UAE provider), `AiProvider` and `SpeechProvider`, `RateSource`, `BankFeed`.
-- **Modes per company:**
-  - `simulated`: answers like the real service, sends nothing, labels everything SIMULATED. This is the default, and what tests use.
-  - `live`: the real provider, refused until its credentials are set and checked.
+- **Modes per company:** superseded on 11 Nov (`sql/082`): there is no `simulated` mode for a company any more. An integration is off
+  or on, on means the real provider, and it can only be switched on once its details are saved. "Check connection" makes one real,
+  harmless call. Fakes stay inside our automated tests only.
 - **Shared contract tests** run against the simulator always, and against the real sandbox only when test credentials are present.
   This is how the ETA work does it, so the simulator cannot drift from the real service.
 - **Provider choice is data**, for example `org_integrations (org_id, kind, provider, mode, settings, secret_ref, enabled)`, never code.

@@ -466,7 +466,11 @@ salesRoutes.post('/shipments', requirePermission('sales.orders.fulfill'), async 
     p_address: str(b.address),
     p_cod_minor: cod,
   });
-  if (ship.simulated) return ok(c, ship, 201);
+  // sql/082 removed test mode; a test-mode shipment can only appear while 082 is not applied yet on this database.
+  if (ship.simulated) {
+    await callRpc<void>(db, 'sal_shipment_fail', { p_shipment_id: ship.id, p_reason: 'test mode' }).catch(() => undefined);
+    throw new HttpError(503, 'Shipments are being updated. Try again after the database update (sql/082).', 'not_set_up');
+  }
   try {
     const { tracking } = await createBostaDelivery(c.env, db, ship, new URL(c.req.url).origin);
     return ok(c, { ...ship, tracking }, 201);
@@ -483,12 +487,7 @@ salesRoutes.post('/shipments/:id/cancel', requirePermission('sales.orders.fulfil
   return ok(c, { id, status: 'cancelled' });
 });
 
-salesRoutes.post('/shipments/:id/simulate-step', requirePermission('sales.orders.manage'), async (c) => {
-  const id = idParam(c);
-  return ok(c, await callRpc<{ result: string; status?: string }>(userDb(c), 'sal_simulate_shipment_step', { p_shipment_id: id }));
-});
-
-// ---- Shopify orders in (sql/059): what arrived, what is held for review, and a simulated test order.
+// ---- Shopify orders in (sql/059): what arrived and what is held for review. The test order went with test mode (sql/082).
 salesRoutes.get('/online-orders', requirePermission('core.integrations.view'), async (c) => {
   const { data, error } = await userDb(c)
     .from('sal_shopify_orders')
@@ -498,8 +497,4 @@ salesRoutes.get('/online-orders', requirePermission('core.integrations.view'), a
     .limit(50);
   if (error) throw error;
   return ok(c, data ?? []);
-});
-
-salesRoutes.post('/online-orders/test', requirePermission('core.integrations.manage'), async (c) => {
-  return ok(c, await callRpc<{ result: string; orderNumber?: string; reason?: string }>(userDb(c), 'sal_shopify_test_order', {}), 201);
 });

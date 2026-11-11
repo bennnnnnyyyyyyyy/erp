@@ -7,13 +7,13 @@ import { Notice, useNotice } from '../../accounting/common';
 // Try the assistant and voice transcription (sql/056, sql/060). The answer is only text for a person to read: nothing is changed
 // by it, and it only sees what the person asking is allowed to see.
 
-type Answer = { answer?: string; text?: string; provider: string | null; simulated?: boolean; used?: number };
+type Answer = { answer?: string; text?: string; provider: string | null; used?: number };
 
 export function AiTry({ canManage }: { canManage: boolean }) {
   const { message, busy, run } = useNotice();
   const [question, setQuestion] = useState('');
   const [result, setResult] = useState<string | null>(null);
-  const show = (a: Answer) => setResult(`${a.answer ?? a.text ?? ''}${a.provider ? `\n\n— ${a.provider}${a.simulated ? ` (${tr('simulated')})` : ''}${a.used ? ` · ${trf('{n} items looked at', { n: a.used })}` : ''}` : ''}`);
+  const show = (a: Answer) => setResult(`${a.answer ?? a.text ?? ''}${a.provider ? `\n\n— ${a.provider}${a.used ? ` · ${trf('{n} items looked at', { n: a.used })}` : ''}` : ''}`);
 
   return (
     <div className="form-card stack">

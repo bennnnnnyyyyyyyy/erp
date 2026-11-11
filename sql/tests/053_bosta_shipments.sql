@@ -1,7 +1,7 @@
 -- sql/tests/053_bosta_shipments.sql
 -- Bosta shipments (sql/058). Always rolls back. Needs sql/001-058.
--- Covers: a shipment needs Bosta switched on and an open order; one open shipment per order; simulated shipments get a test tracking
--- number and can be stepped by an owner or admin to delivered; status updates are idempotent, mode-checked and never reopen a finished
+-- Covers: a shipment needs Bosta switched on (sql/082: only with its details saved) and an open order; one open shipment per order;
+-- shipments are always real (pending until Bosta's tracking number); the simulate-step function is gone; status updates are idempotent, mode-checked and never reopen a finished
 -- shipment; unknown references are ignored; a real shipment's keys are served to the server only while brand new; stock and money are
 -- untouched by any status; other companies see nothing; no anonymous use; audit rows.
 
@@ -32,32 +32,32 @@ begin
   set local role authenticated;
   ok := false; begin perform public.sal_create_shipment(so, 'A', '01000000000', 'Cairo', '1 Street'); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
   if not ok then raise exception 'FAIL H1a: a shipment with Bosta off'; end if;
-  perform public.core_save_integration('bosta', true, 'simulated', null);
+  ok := false; begin perform public.core_save_integration('bosta', true, 'live', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
+  if not ok then raise exception 'FAIL H1f: Bosta switched on without its details (sql/082)'; end if;
+  perform public.core_save_provider_fields('bosta', '{"api_key": "bk_test_1", "webhook_secret": "whsec-1"}');
+  perform public.core_save_integration('bosta', true, 'live', null);
   ok := false; begin perform public.sal_create_shipment(so, 'A', '01000000000', 'Cairo', '1 Street', -1); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL H1b: negative cash on delivery'; end if;
   sh := public.sal_create_shipment(so, 'Customer', '01000000000', 'Cairo', '1 Street, Nasr City', 500);
   sid := (sh ->> 'id')::uuid; ref := sh ->> 'reference';
-  if not (sh ->> 'simulated')::boolean then raise exception 'FAIL H1c: not simulated'; end if;
+  if (sh ->> 'simulated')::boolean then raise exception 'FAIL H1c: a simulated shipment (must be real)'; end if;
   ok := false; begin perform public.sal_create_shipment(so, 'Customer', '01000000000', 'Cairo', '1 Street'); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
   if not ok then raise exception 'FAIL H1d: a second open shipment for the order'; end if;
   reset role;
-  if (select tracking from public.sal_shipments where id = sid) not like 'SIM-%' or (select status from public.sal_shipments where id = sid) <> 'created' then
-    raise exception 'FAIL H1e: simulated shipment not ready';
+  if (select tracking from public.sal_shipments where id = sid) is not null or (select status from public.sal_shipments where id = sid) <> 'pending' then
+    raise exception 'FAIL H1e: a new real shipment must wait for Bosta''s tracking number';
   end if;
 
-  -- ---- H2: stepping a simulated shipment
+  -- ---- H2: Bosta's tracking number arrives (as the server saves it); the simulate-step function is gone
   set local role authenticated;
-  r := public.sal_simulate_shipment_step(sid);
-  if r ->> 'status' <> 'picked_up' then raise exception 'FAIL H2a: %', r; end if;
-  r := public.sal_simulate_shipment_step(sid);
-  r := public.sal_simulate_shipment_step(sid);
-  if r ->> 'status' <> 'delivered' then raise exception 'FAIL H2b: %', r; end if;
-  ok := false; begin perform public.sal_simulate_shipment_step(sid); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
-  if not ok then raise exception 'FAIL H2c: stepped past delivered'; end if;
+  perform public.sal_shipment_set_tracking(sid, 'BOSTA-123');
   reset role;
+  if (select status from public.sal_shipments where id = sid) <> 'created' then raise exception 'FAIL H2a: not created after tracking'; end if;
+  if exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'sal_simulate_shipment_step') then
+    raise exception 'FAIL H2b: the simulate-step function still exists';
+  end if;
 
   -- ---- W1: the server's status updates (a real shipment)
-  update public.sal_shipments set simulated = false, status = 'created' where id = sid;
   r := public.sal__apply_shipment_status(ref, 20, 'k-1', null, true);
   if r ->> 'result' <> 'mode_mismatch' then raise exception 'FAIL W1a: simulated update on a real shipment: %', r; end if;
   r := public.sal__apply_shipment_status(ref, 20, 'k-1', null, false);
@@ -74,11 +74,10 @@ begin
   if (select count(*) from public.inv_stock_moves where org_id = o) <> moves_before or (select count(*) from public.fin_payments where org_id = o) <> pays_before then
     raise exception 'FAIL W1h: a status update touched stock or money';
   end if;
-  if (select count(*) from public.audit_log where org_id = o and action in ('sales.shipment.created', 'sales.shipment.status')) < 5 then raise exception 'FAIL W1i: audit rows'; end if;
+  if (select count(*) from public.audit_log where org_id = o and action in ('sales.shipment.created', 'sales.shipment.status')) < 4 then raise exception 'FAIL W1i: audit rows (1 created, 3 status)'; end if;
 
   -- ---- K1: keys
   set local role authenticated;
-  perform public.core_save_provider_fields('bosta', '{"api_key": "bk_test_1", "webhook_secret": "whsec-1"}');
   reset role;
   update public.sal_shipments set status = 'cancelled' where id = sid;   -- (as if it had been cancelled)
   set local role authenticated;
@@ -90,11 +89,11 @@ begin
   update public.sal_shipments set created_at = now() - interval '1 hour' where id = (sh2 ->> 'id')::uuid;
   if public.sal__shipment_credentials((sh2 ->> 'id')::uuid) is not null then raise exception 'FAIL K1c: keys served for an old shipment'; end if;
 
-  -- ---- P1: other companies, anonymous, members cannot step simulations
+  -- ---- P1: other companies, anonymous, members cannot switch Bosta
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  ok := false; begin perform public.sal_simulate_shipment_step(sid); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
-  if not ok then raise exception 'FAIL P1a: a member stepped a simulation'; end if;
+  ok := false; begin perform public.core_save_integration('bosta', false, 'live', null); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
+  if not ok then raise exception 'FAIL P1a: a member switched Bosta'; end if;
   ok := false; begin perform public.sal__apply_shipment_status(ref, 45, 'k-77', null, false); exception when others then ok := true; end;
   if not ok then raise exception 'FAIL P1b: a user applied a status'; end if;
   reset role;

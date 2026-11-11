@@ -564,8 +564,11 @@ financeRoutes.post('/payment-links', requirePermission('finance.entries.manage')
     p_provider: provider,
     p_amount_minor: amount,
   });
-  // Simulated: nothing leaves the system; the screen offers "Simulate payment".
-  if (link.simulated) return ok(c, { ...link, url: null, reference: null }, 201);
+  // sql/082 removed test mode; a test-mode link can only appear while 082 is not applied yet on this database.
+  if (link.simulated) {
+    await callRpc<void>(db, 'fin_payment_link_fail', { p_link_id: link.id, p_reason: 'test mode' }).catch(() => undefined);
+    throw new HttpError(503, 'Payment links are being updated. Try again after the database update (sql/082).', 'not_set_up');
+  }
   const { data: inv } = await db.from('sal_invoices').select('customer_id').eq('org_id', orgOf(c)).eq('id', invoiceId).maybeSingle();
   const { data: cust } = inv
     ? await db
@@ -595,9 +598,4 @@ financeRoutes.post('/payment-links/:id/cancel', requirePermission('finance.entri
   const id = idParam(c);
   await callRpc<void>(userDb(c), 'fin_cancel_payment_link', { p_link_id: id });
   return ok(c, { id, status: 'cancelled' });
-});
-
-financeRoutes.post('/payment-links/:id/simulate-pay', requirePermission('finance.entries.manage'), async (c) => {
-  const id = idParam(c);
-  return ok(c, await callRpc<{ result: string }>(userDb(c), 'fin_simulate_pay_link', { p_link_id: id }));
 });
