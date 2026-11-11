@@ -11,6 +11,38 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-11 — Audit of 11 Nov: Batch 1 and 2 (`sql/084`)
+
+**Objective.** Ben: "go batch 1 and 2" of `documentation/planning/2026-11-11-audit-response.md` (the response to the static audit of
+11 Nov: 1 P1, 13 P2, 3 P3).
+
+**Actions Completed.** Branch `docs/audit-response-11nov`; three Sonnet agents (merged after review) and Claude.
+- P1: `Trial_capture_workbook_v13.xlsx` and `email updates for grant.zip` removed from the repo; archive binaries git-ignored;
+  `agents.md` rule: no personal or third-party material in the repo, accepted risks get a review date. Git history still holds them:
+  Ben to make the repository private.
+- Paymob (finding 2): `sql/084_fin_paymob_order_binding.sql` + test 078; `lib/payments/links.ts` saves and checks Paymob's order id.
+- Rate limit (3): `rateLimit('ip')` before sign-in, separate `IP_LIMITER` binding in `wrangler.toml` (takes effect after deploy).
+- Accessibility (5–7, 11): `Modal` focus trap, return and inert page; disclosure menus; "Actions" headers and a test that fails on an
+  empty `<th>`; demo labels translated.
+- Web lint (8): `biome.json` now lints `apps/web` (no formatting yet: a 14,000-line reformat would collide with work in progress, above
+  all the Design Lab); the 112 existing web findings are warnings to fix gradually; any other rule fails CI.
+- Records (9, 12): architecture page, README and status page updated. ADR-0002/0003 and the ADR-0004 links (13) need Ben (agents may not
+  edit `architecture/decisions/`); text in the response.
+- Windows build (10): `scripts/run-steps.mjs`; `npm run build -w apps/web` checked in PowerShell.
+- CI (4): no workflow change by design (the SQL workflow is separate so a test-database outage cannot block a fix); the gap closes with
+  branch protection requiring both checks (Ben).
+- Tests (14–16): ES256 token tests (malformed, expired, wrong issuer, audience, key, no subject), 403 and module-off per route group,
+  guard for `attachProviderAddress`/`createBostaDelivery`; `sql/tests/079_child_table_isolation.sql` (all 16 tables isolated, plus a
+  check over every `org_id` table: RLS on, no direct writes) and `080_audit_atomicity.sql` (a failed audit insert rolls back request
+  approval, stock issue, purchase receipt and a journal posting).
+
+**Database / System Result.** 084 dry run on live inside a rolled-back transaction passed (`users_settle` false, `anon_set` false,
+`service_settle` true, old overload gone). Not applied.
+
+**Safety Status.** Lint, typecheck clean; shared 74, API 395, web 142; all 82 migrations and 79 SQL tests pass locally; doc links OK.
+Not viewed in a browser. **Apply 084 before merging.** Paymob field names to confirm with a real test transaction before any company
+goes live with payments. Batch 3 (browser workflow tests) needs a test-environment decision.
+
 ## 2026-11-11 — Master-key exceptions written down; security review of the integrations code; fixes (`sql/083`)
 
 **Objective.** Ben: "I want it to be a secure ERP". After PR #42 put real provider keys through the integrations code, approve the

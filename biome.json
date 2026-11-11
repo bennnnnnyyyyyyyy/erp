@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["apps/api/src/**", "apps/api/test/**", "packages/shared/src/**"]
+    "includes": ["apps/api/src/**", "apps/api/test/**", "packages/shared/src/**", "apps/web/src/**/*.ts", "apps/web/src/**/*.tsx"]
   },
   "formatter": {
     "enabled": true,
@@ -21,5 +21,36 @@
       "style": { "noNonNullAssertion": "off" }
     }
   },
-  "assist": { "enabled": false }
+  "assist": { "enabled": false },
+  "overrides": [
+    {
+      "includes": ["apps/web/src/**"],
+      "formatter": { "enabled": false },
+      "linter": {
+        "rules": {
+          "correctness": { "useExhaustiveDependencies": "warn", "noUnusedImports": "warn", "noUnusedVariables": "warn" },
+          "suspicious": {
+            "noArrayIndexKey": "warn",
+            "useIterableCallbackReturn": "warn",
+            "noShadowRestrictedNames": "warn",
+            "noAssignInExpressions": "warn",
+            "noConfusingVoidType": "warn"
+          },
+          "a11y": {
+            "noLabelWithoutControl": "warn",
+            "useSemanticElements": "warn",
+            "useButtonType": "warn",
+            "noAutofocus": "warn",
+            "useAriaPropsSupportedByRole": "warn",
+            "noStaticElementInteractions": "warn",
+            "useFocusableInteractive": "warn",
+            "useAriaPropsForRole": "warn",
+            "noNoninteractiveElementToInteractiveRole": "warn"
+          },
+          "style": { "useImportType": "warn", "useTemplate": "warn" },
+          "complexity": { "useOptionalChain": "warn" }
+        }
+      }
+    }
+  ]
 }
