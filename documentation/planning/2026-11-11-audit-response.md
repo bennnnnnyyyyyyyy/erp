@@ -235,6 +235,11 @@ staging project, never live) with seeded owner, staff and second-company users: 
 purchase order, issue a credit note, and prove company B sees nothing of A. It runs on pull requests next to the smoke test. A
 short plan comes first because it needs a test environment decision.
 
+**Status (11 Nov, evening):** environment chosen as local Supabase inside the CI runner (no staging project, nothing live).
+`.github/workflows/workflow-tests.yml` and the first workflow (stock request, approval, issue, stock check, company B sees nothing) are
+written; its first run is on GitHub. Purchase order receiving and the credit note follow. Finding 14 was also widened: the permission
+test now covers every write route, not one per group (see the worklog).
+
 ---
 
 ## How we work from here
