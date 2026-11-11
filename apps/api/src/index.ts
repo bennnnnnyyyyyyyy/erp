@@ -31,7 +31,8 @@ app.get('/health', (c) => ok(c, { status: 'ok', env: c.env.APP_ENV }));
 
 // Everything under /v1 needs a signed-in user acting inside one organization.
 const v1 = new Hono<AppEnv>();
-v1.use('*', requireAuth, rateLimit('api'), requireTenant);
+// The IP limiter runs before sign-in so unauthenticated floods and token guessing are counted; the per-user one runs after.
+v1.use('*', rateLimit('ip'), requireAuth, rateLimit('api'), requireTenant);
 for (const [key, routes] of Object.entries(MODULE_ROUTES)) {
   v1.use(`/${key}/*`, requireModule(key, findModule(key)?.openBeforeEnabled));
   v1.route(`/${key}`, routes);

@@ -72,7 +72,16 @@ export const PAYMOB_HMAC_FIELDS = [
 
 export const paymobHmacText = (obj: Obj) => PAYMOB_HMAC_FIELDS.map((f) => asText(dig(obj, f))).join('');
 
-export type ParsedCallback = { ref: string; txn: string; amountMinor: number; currency: string; success: boolean; pending: boolean };
+// orderId: the provider's own order id, Paymob only (the signed field order.id). The link is bound to it (sql/084).
+export type ParsedCallback = {
+  ref: string;
+  txn: string;
+  amountMinor: number;
+  currency: string;
+  success: boolean;
+  pending: boolean;
+  orderId?: string;
+};
 
 export function parsePaymobCallback(body: unknown): { obj: Obj; parsed: ParsedCallback } | null {
   if (!isObj(body) || !isObj(body.obj)) return null;
@@ -90,6 +99,8 @@ export function parsePaymobCallback(body: unknown): { obj: Obj; parsed: ParsedCa
       currency: asText(obj.currency).toUpperCase(),
       success: obj.success === true && !refunded,
       pending: obj.pending === true,
+      // order.id is inside Paymob's signed field list, unlike merchant_order_id (audit 11 Nov 2026, finding 2).
+      orderId: asText(dig(obj, 'order.id')),
     },
   };
 }
@@ -211,6 +222,14 @@ export async function attachProviderAddress(
     const j = await readJson(res);
     const secret = typeof j.client_secret === 'string' ? j.client_secret : '';
     if (!res.ok || !secret) throw new Error(`Paymob refused the request (${res.status})`);
+    // Bind the link to Paymob's own order id (sql/084) so the callback is matched by a value Paymob signs, not by our reference.
+    // UNCONFIRMED: the field name. Paymob's intention answer is documented to carry intention_order_id; confirm with a real test
+    // transaction. If it is missing we refuse rather than leave the link unbound.
+    const orderRaw = j.intention_order_id ?? (isObj(j.order) ? j.order.id : undefined);
+    const orderId = orderRaw === undefined || orderRaw === null ? '' : String(orderRaw);
+    if (!orderId) throw new Error('Paymob did not return an order id for this link');
+    const bound = await adminDb(env).rpc('fin__link_set_provider_order', { p_link_id: link.id, p_order_id: orderId });
+    if (bound.error) throw new Error('Could not save the Paymob order id (database update sql/084 needed)');
     const url = `${PAYMOB_BASE}/unifiedcheckout/?publicKey=${encodeURIComponent(c.public_key)}&clientSecret=${encodeURIComponent(secret)}`;
     await callRpc<void>(db, 'fin_payment_link_set_url', { p_link_id: link.id, p_url: url, p_provider_txn: null });
     return { url, reference: null };
@@ -269,6 +288,8 @@ async function settle(env: Bindings, provider: 'paymob' | 'fawry', p: ParsedCall
     p_currency: p.currency,
     p_success: p.success,
     p_simulated: simulated,
+    // Paymob only: the database sends the link to review when it has a saved order id and this one differs. Fawry has none.
+    ...(provider === 'paymob' ? { p_order_id: p.orderId || null } : {}),
   });
   if (error) throw new Error(error.message);
   return { status: 200, body: { handled: (data as { result?: string } | null)?.result ?? 'ok' } };
