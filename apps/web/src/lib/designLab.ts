@@ -119,6 +119,42 @@ export const GROUPS: Group[] = [
   { key: 'focus', section: 'Controls', label: 'Keyboard focus ring', default: 'normal', options: [c('normal', 'Normal'), c('thick', 'Thick'), c('glow', 'Soft glow')] },
   { key: 'scroll', section: 'Controls', label: 'Scrollbars', default: 'default', options: [c('default', 'Browser'), c('thin', 'Thin'), c('hidden', 'Hidden')] },
   { key: 'motion', section: 'Controls', label: 'Motion', default: 'full', options: [c('full', 'Full'), c('reduced', 'Subtle'), c('off', 'None')] },
+
+  // ---------- More colour ----------
+  { key: 'accent', section: 'Colour', label: 'Accent colour (overrides palette accent)', default: 'palette', help: 'The highlight used for the active menu marker, warnings and the Home banner glow.', options: [c('palette', 'From palette'), c('gold', 'Gold'), c('coral', 'Coral'), c('cyan', 'Cyan'), c('lime', 'Lime'), c('pink', 'Pink'), c('orange', 'Orange'), c('violet', 'Violet')] },
+  { key: 'contrast', section: 'Colour', label: 'Text contrast', default: 'normal', options: [c('soft', 'Softer'), c('normal', 'Normal'), c('high', 'High')] },
+  { key: 'sidetint', section: 'Colour', label: 'Sidebar surface', default: 'flat', options: [c('flat', 'Flat'), c('gradient', 'Soft gradient'), c('pattern', 'Faint lattice')] },
+  { key: 'heroglow', section: 'Colour', label: 'Hero accent glow', default: 'on', options: [c('on', 'On'), c('off', 'Off')] },
+  { key: 'checks', section: 'Colour', label: 'Checkboxes and radios', default: 'brand', options: [c('brand', 'Brand colour'), c('accent', 'Accent colour'), c('browser', 'Browser default')] },
+
+  // ---------- More type ----------
+  { key: 'caps', section: 'Type', label: 'Small headings (table headers, sections)', default: 'upper', options: [c('upper', 'UPPERCASE'), c('normal', 'Normal case'), c('smallcaps', 'Small caps')] },
+  { key: 'tracking', section: 'Type', label: 'Letter spacing', default: 'normal', options: [c('tight', 'Tight'), c('normal', 'Normal'), c('wide', 'Wide')] },
+  { key: 'labels', section: 'Type', label: 'Form field labels', default: 'muted', options: [c('muted', 'Muted'), c('bold', 'Bold'), c('dark', 'Dark text'), c('small', 'Small caps-style')] },
+  { key: 'tablefont', section: 'Type', label: 'Table text size', default: 'normal', options: [c('small', 'Small'), c('normal', 'Normal'), c('large', 'Large')] },
+  { key: 'statsize', section: 'Type', label: 'Stat number size', default: 'normal', options: [c('small', 'Small'), c('normal', 'Normal'), c('large', 'Large'), c('xl', 'Huge')] },
+
+  // ---------- More shape and layout ----------
+  { key: 'pagepad', section: 'Shape', label: 'Page margins', default: 'normal', options: [c('tight', 'Tight'), c('normal', 'Normal'), c('airy', 'Airy')] },
+  { key: 'badge', section: 'Shape', label: 'Chip and badge shape', default: 'pill', options: [c('pill', 'Pill'), c('rounded', 'Rounded'), c('square', 'Square')] },
+  { key: 'inputh', section: 'Shape', label: 'Input height', default: 'normal', options: [c('compact', 'Compact'), c('normal', 'Normal'), c('tall', 'Tall')] },
+  { key: 'empty', section: 'Shape', label: 'Empty-list icon', default: 'on', options: [c('on', 'Show'), c('off', 'Hide')] },
+  { key: 'pageanim', section: 'Shape', label: 'Page entrance', default: 'rise', options: [c('rise', 'Rise'), c('fade', 'Fade'), c('none', 'None')] },
+  { key: 'cardhover', section: 'Shape', label: 'Tile hover effect', default: 'lift', options: [c('lift', 'Lift'), c('glow', 'Glow'), c('scale', 'Grow'), c('none', 'None')] },
+  { key: 'modalback', section: 'Shape', label: 'Pop-up backdrop', default: 'dim', options: [c('dim', 'Dim'), c('blur', 'Blur'), c('dark', 'Dark'), c('light', 'Light')] },
+
+  // ---------- More navigation ----------
+  { key: 'topbarh', section: 'Navigation', label: 'Top bar height', default: 'normal', options: [c('compact', 'Compact'), c('normal', 'Normal'), c('tall', 'Tall')] },
+  { key: 'brandtext', section: 'Navigation', label: 'Sidebar "All apps" label', default: 'on', options: [c('on', 'Show'), c('off', 'Hide')] },
+  { key: 'appheader', section: 'Navigation', label: 'Sidebar app header', default: 'card', options: [c('card', 'Card'), c('plain', 'Plain'), c('hidden', 'Hidden')] },
+  { key: 'orgname', section: 'Navigation', label: 'Company name in top bar', default: 'on', options: [c('on', 'Show'), c('off', 'Hide')] },
+  { key: 'navradius', section: 'Navigation', label: 'Menu item shape', default: 'follow', options: [c('follow', 'Follow corner radius'), c('pill', 'Pill'), c('square', 'Square')] },
+
+  // ---------- More home ----------
+  { key: 'herosize', section: 'Home', label: 'Hero banner height', default: 'normal', options: [c('slim', 'Slim'), c('normal', 'Normal'), c('tall', 'Tall')] },
+  { key: 'heroalign', section: 'Home', label: 'Hero text alignment', default: 'start', options: [c('start', 'Start'), c('center', 'Centered')] },
+  { key: 'tilecols', section: 'Home', label: 'Tile size', default: 'normal', options: [c('small', 'Small'), c('normal', 'Normal'), c('large', 'Large')] },
+  { key: 'suitehead', section: 'Home', label: 'Group headings on Home', default: 'line', options: [c('line', 'With rule'), c('pill', 'Pill'), c('plain', 'Plain')] },
 ];
 
 export type State = Record<string, string>;
@@ -214,12 +250,62 @@ export function apply(s: State) {
   else { root.style.removeProperty('--font-head'); root.removeAttribute('data-d-hfont-on'); }
 }
 
-const label = (g: Group, v: string) => (g.kind === 'range' ? (v === '' ? 'off (theme value)' : `${v}${g.unit ?? ''}`) : g.options.find((o) => o.value === v)?.label ?? v);
-/** A plain-text summary Ben can paste back to Claude. Lists what differs from the baked-in defaults first. */
-export function summary(s: State): string {
-  const changed = GROUPS.filter((g) => isChanged(g, s)).map((g) => `${g.section} / ${g.label}: ${label(g, s[g.key] ?? g.default)}`);
-  const all = GROUPS.map((g) => `${g.section} / ${g.label}: ${label(g, s[g.key] ?? g.default)}`);
-  return `Design Lab choices\nChanged from the baked-in look (${changed.length}):\n${changed.join('\n') || '(none)'}\n\nAll options:\n${all.join('\n')}\n\nJSON: ${JSON.stringify(s)}`;
+export const valueLabel = (g: Group, v: string) => (g.kind === 'range' ? (v === '' ? 'off (theme value)' : `${v}${g.unit ?? ''}`) : g.options.find((o) => o.value === v)?.label ?? v);
+
+/* ---------- what Ben edited and what he did not ---------- */
+// Every option is in one of three states: chosen by Ben directly ("user"), set by a bulk action such as a preset, Surprise or an
+// import ("preset"), or never touched (no entry). Every change is also appended to a log with a time, the old and the new value.
+export type Source = 'user' | 'preset' | 'random' | 'import' | 'reset' | 'undo' | 'redo';
+export type Entry = { t: string; key: string; from: string; to: string; src: Source };
+export type Touched = Record<string, 'user' | 'preset'>;
+const LOG_KEY = 'erp.designLab.log.v1';
+const TOUCH_KEY = 'erp.designLab.touched.v1';
+export const loadLog = (): Entry[] => { try { return JSON.parse(localStorage.getItem(LOG_KEY) ?? '[]') as Entry[]; } catch { return []; } };
+export const saveLog = (l: Entry[]) => localStorage.setItem(LOG_KEY, JSON.stringify(l.slice(-600)));
+export const loadTouched = (): Touched => { try { return JSON.parse(localStorage.getItem(TOUCH_KEY) ?? '{}') as Touched; } catch { return {}; } };
+export const saveTouched = (t: Touched) => localStorage.setItem(TOUCH_KEY, JSON.stringify(t));
+/** First run of the tracking: options that already differ from the default were set before tracking existed, so how they got that
+ *  value is unknown. They are marked "preset" (= unconfirmed), never "chosen by you", and one log line per option says so. */
+export function backfill(s: State): { touched: Touched; log: Entry[] } | null {
+  if (localStorage.getItem(TOUCH_KEY) !== null) return null;
+  const t = new Date().toISOString();
+  const touched: Touched = {}; const log: Entry[] = [];
+  for (const g of GROUPS) if (isChanged(g, s)) { touched[g.key] = 'preset'; log.push({ t, key: g.key, from: g.default, to: s[g.key] ?? g.default, src: 'import' }); }
+  return { touched, log };
+}
+export const SRC_LABEL: Record<Source, string> = { user: 'you', preset: 'preset', random: 'surprise', import: 'import', reset: 'reset all', undo: 'undo', redo: 'redo' };
+
+/** One log entry per option whose value differs between two states. */
+export function diffEntries(prev: State, next: State, src: Source): Entry[] {
+  const t = new Date().toISOString();
+  return GROUPS.filter((g) => (prev[g.key] ?? g.default) !== (next[g.key] ?? g.default)).map((g) => ({ t, key: g.key, from: prev[g.key] ?? g.default, to: next[g.key] ?? g.default, src }));
+}
+const groupOf = (key: string) => GROUPS.find((g) => g.key === key);
+export function describeEntry(e: Entry): string {
+  const g = groupOf(e.key);
+  if (!g) return `${e.key}: ${e.from} → ${e.to}`;
+  return e.from === e.to ? `${g.section} / ${g.label}: kept ${valueLabel(g, e.to)}` : `${g.section} / ${g.label}: ${valueLabel(g, e.from)} → ${valueLabel(g, e.to)}`;
+}
+const stamp = (iso: string) => { const d = new Date(iso); return `${d.toLocaleDateString([], { day: '2-digit', month: 'short' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`; };
+export const stampOf = stamp;
+
+/** A plain-text report Ben can paste back to Claude: what he decided, what a preset set, what he never touched, then the log. */
+export function summary(s: State, touched: Touched = {}, log: Entry[] = []): string {
+  const line = (g: Group) => `${g.section} / ${g.label}: ${valueLabel(g, s[g.key] ?? g.default)}${isChanged(g, s) ? '' : ' (baked-in default)'}`;
+  const user = GROUPS.filter((g) => touched[g.key] === 'user');
+  const preset = GROUPS.filter((g) => touched[g.key] === 'preset');
+  const untouched = GROUPS.filter((g) => !touched[g.key]);
+  const changed = GROUPS.filter((g) => isChanged(g, s));
+  const logText = log.length ? log.slice(-80).reverse().map((e) => `${stamp(e.t)}  [${SRC_LABEL[e.src]}]  ${describeEntry(e)}`).join('\n') : '(empty)';
+  return [
+    'Design Lab report',
+    `Decided by Ben (${user.length}) - these are real decisions:`, user.map(line).join('\n') || '(none)', '',
+    `Set by a preset / Surprise / import (${preset.length}) - NOT individually chosen, treat as unconfirmed:`, preset.map(line).join('\n') || '(none)', '',
+    `Never touched (${untouched.length}) - still the baked-in default, no opinion given:`, untouched.map((g) => `${g.section} / ${g.label}`).join('\n') || '(none)', '',
+    `Differs from the baked-in look (${changed.length}):`, changed.map(line).join('\n') || '(none)', '',
+    `Change log (newest first, last 80 of ${log.length}):`, logText, '',
+    `JSON: ${JSON.stringify(s)}`,
+  ].join('\n');
 }
 
 /* ---------- contrast (WCAG) ---------- */
