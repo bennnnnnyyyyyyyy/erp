@@ -14,11 +14,12 @@ build/
 .dev.vars
 !.dev.vars.example
 gpreport.html
+sasas.zip
 # Logs
 logs
 *.log
 npm-debug.log*
-
+conflicts.md
 # Test and coverage
 coverage/
 walkthrough-full.md
