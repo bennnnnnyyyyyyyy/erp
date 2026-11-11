@@ -38,7 +38,7 @@ type NoteRow = {
   created_at: string;
 };
 
-async function loadNotes(c: Context<AppEnv>, id?: string) {
+async function loadNotes(c: Context<AppEnv>, id?: string, invoiceId?: string) {
   const client = userDb(c);
   const org = orgOf(c);
   let q = client
@@ -50,6 +50,7 @@ async function loadNotes(c: Context<AppEnv>, id?: string) {
     .order('created_at', { ascending: false })
     .limit(200);
   if (id) q = q.eq('id', id);
+  if (invoiceId) q = q.eq('invoice_id', invoiceId);
   const { data, error } = await q;
   if (error) throw error;
   const rows = (data ?? []) as NoteRow[];
@@ -118,7 +119,12 @@ async function oneNote(c: Context<AppEnv>, id: string) {
 }
 
 export function registerNoteRoutes(routes: Hono<AppEnv>): void {
-  routes.get('/notes', requirePermission('sales.notes.read'), async (c) => ok(c, await loadNotes(c)));
+  // ?invoiceId=… lists the notes of one invoice (the invoice page); the plain list holds the newest 200.
+  routes.get('/notes', requirePermission('sales.notes.read'), async (c) => {
+    const invoiceId = c.req.query('invoiceId');
+    if (invoiceId !== undefined && !UUID_RE.test(invoiceId)) invalid('invoiceId must be an id');
+    return ok(c, await loadNotes(c, undefined, invoiceId));
+  });
   routes.get('/notes/:id', requirePermission('sales.notes.read'), async (c) => ok(c, await oneNote(c, idParam(c))));
 
   routes.post('/invoices/:id/notes', requirePermission('sales.notes.create'), async (c) => {

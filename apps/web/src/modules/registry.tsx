@@ -22,6 +22,8 @@ const TransferPage = lazyNamed(() => import('./inventory/Transfers'), 'TransferP
 const TransfersList = lazyNamed(() => import('./inventory/Transfers'), 'TransfersList');
 const CountsList = lazyNamed(() => import('./inventory/Counts'), 'CountsList');
 const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
+const ReceiveGoods = lazyNamed(() => import('./inventory/ReceiveGoods'), 'ReceiveGoods');
+const CountStock = lazyNamed(() => import('./inventory/CountStock'), 'CountStock');
 const ItemPage = lazyNamed(() => import('./inventory/ItemPage'), 'ItemPage');
 const InventoryOverview = lazyNamed(() => import('./inventory/Overview'), 'InventoryOverview');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
@@ -67,7 +69,7 @@ const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'Statemen
 const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
-const AccountingSetupPage = lazyNamed(() => import('./accounting/Setup'), 'AccountingSetupPage');
+const AccountingSetupPage = lazyNamed(() => import('./accounting/SetupGuide'), 'AccountingSetupPage');
 const StockValuePage = lazyNamed(() => import('./accounting/Setup'), 'StockValuePage');
 const ChartPage = lazyNamed(() => import('./accounting/Setup'), 'ChartPage');
 const EntriesPage = lazyNamed(() => import('./accounting/Ledger'), 'EntriesPage');
@@ -121,26 +123,28 @@ const INVENTORY_APP: AppDef = {
   description: demoMode ? 'Stock, requests, approvals and the ledger (demo data)' : 'Stock, requests, approvals, transfers and the stock ledger',
   suite: 'Warehouse',
   basePath: '/inventory',
-  // Order and groups: inventory redesign Q2 and Q3 (Ben, 10 Nov 2026). The overview opens first; the clerk's three pages (stock,
-  // requests, transfers) come next as single items; the rest sit in groups (MENU_GROUPS below).
+  // Task-first menu (decision R1 A, 10 Nov 2026): Overview, then Do (receive, send out, move, count), Stock, History, and Settings and
+  // planning (MENU_GROUPS below). Every old URL still opens the same page; only the menu names changed.
   pages: [
     { path: '', label: 'Overview', permission: READ, component: InventoryOverview },
+    { path: '/receive', label: 'Receive goods', permission: READ, component: ReceiveGoods },
     { path: '/stock', label: 'Stock on hand', permission: READ, component: StockPage },
     { path: '/items/:id', label: 'Item', permission: READ, component: ItemPage, nav: false, parent: '/stock' },
-    { path: '/requests', label: 'Stock requests', permission: READ, component: RequestsList },
-    { path: '/requests/new', label: 'New request', permission: READ, component: NewRequest, nav: false, parent: '/requests' },
+    { path: '/requests', label: 'Requests', permission: READ, component: RequestsList },
+    { path: '/requests/new', label: 'Send goods out', permission: 'inventory.request.create', component: NewRequest },
     { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },
-    { path: '/transfers', label: 'Stock transfers', permission: 'inventory.transfers.read', component: TransfersList },
-    { path: '/transfers/new', label: 'New transfer', permission: 'inventory.transfers.create', component: NewTransfer, nav: false, parent: '/transfers' },
+    { path: '/transfers', label: 'Transfers', permission: 'inventory.transfers.read', component: TransfersList },
+    { path: '/transfers/new', label: 'Move between warehouses', permission: 'inventory.transfers.create', component: NewTransfer },
     { path: '/transfers/:id', label: 'Transfer', permission: 'inventory.transfers.read', component: TransferPage, nav: false, parent: '/transfers' },
+    { path: '/count', label: 'Count stock', permission: 'inventory.adjustments.create', component: CountStock },
     // Stock counts (sql/042): the sample-data demo has no counts, so only in the real app.
     ...(demoMode
       ? []
       : [
-          { path: '/counts', label: 'Stock counts', permission: 'inventory.adjustments.read', component: CountsList },
+          { path: '/counts', label: 'Counts', permission: 'inventory.adjustments.read', component: CountsList },
           { path: '/counts/:id', label: 'Stock count', permission: 'inventory.adjustments.read', component: CountPage, nav: false, parent: '/counts' },
         ]),
-    { path: '/adjustments', label: 'Stock adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
+    { path: '/adjustments', label: 'Adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
     ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
@@ -258,11 +262,11 @@ export const APPS: AppDef[] = [
       { path: '/journals/new', label: 'New manual journal', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
       { path: '/journals/:id', label: 'Manual journal', permission: 'accounting.ledger.view', component: JournalPage, nav: false, parent: '/journals' },
       { path: '/journals/:id/edit', label: 'Change draft', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
+      { path: '/setup', label: 'Accounting setup', permission: 'accounting.ledger.view', component: AccountingSetupPage, beforeEnabled: true },
       { path: '/accounts', label: 'Chart of accounts', permission: 'accounting.ledger.view', component: ChartPage, beforeEnabled: true },
       { path: '/accounts/:id', label: 'Account', permission: 'accounting.ledger.view', component: AccountLinesPage, nav: false, parent: '/accounts' },
       // Decision D8 (9 Nov 2026): the stock value check has its own page; only the owner or head accountant can post from it.
       { path: '/stock-value', label: 'Stock value', permission: 'accounting.ledger.view', component: StockValuePage },
-      { path: '/setup', label: 'Accounting setup', permission: 'accounting.ledger.view', component: AccountingSetupPage, beforeEnabled: true },
     ],
   } satisfies AppDef]),
   // Treasury (documentation/plans/TREASURY_PLAN.md §6). Real API only. Owner and admin only; needs accounting on.
@@ -334,11 +338,12 @@ export const SUITE_ORDER: AppDef['suite'][] = ['Warehouse', 'Sales & Purchasing'
  * single menu items. Keyed by app key, then by page path.
  */
 export const MENU_GROUPS: Record<string, Record<string, string>> = {
-  // Ben, 10 Nov 2026 (inventory redesign Q3): Overview, Stock on hand, Requests and Transfers stay single items on top.
+  // Ben, 10 Nov 2026 (task-first Inventory, decision R1 A): Overview on top, then four groups. Order here is the order on screen.
   inventory: {
-    '/counts': 'Counting', '/adjustments': 'Counting',
-    '/reorder-levels': 'Planning', '/forecast': 'Planning', '/batches': 'Planning',
-    '/ledger': 'Records and rules', '/approval-policies': 'Records and rules',
+    '/receive': 'Do', '/requests/new': 'Do', '/transfers/new': 'Do', '/count': 'Do',
+    '/stock': 'Stock', '/batches': 'Stock',
+    '/requests': 'History', '/transfers': 'History', '/counts': 'History', '/adjustments': 'History', '/ledger': 'History',
+    '/reorder-levels': 'Settings and planning', '/forecast': 'Settings and planning', '/approval-policies': 'Settings and planning',
   },
   // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
   settings: {

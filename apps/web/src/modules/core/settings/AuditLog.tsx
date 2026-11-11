@@ -24,9 +24,9 @@ export function AuditLog() {
   const session = useSession();
   const canSeeUsers = hasPermission(session.permissions, 'core.users.read');
   const entries = useLoad(() => api<AuditEntry[]>('/v1/core/audit?limit=200'));
-  // Turns actor ids into emails when the viewer may see the member list.
+  // Turns actor ids of former members into names when the viewer may see the member list.
   const members = useLoad(() => (canSeeUsers ? api<Member[]>('/v1/core/members') : Promise.resolve([] as Member[])));
-  const emails = new Map((members.data ?? []).map((m) => [m.userId, m.email]));
+  const emails = new Map((members.data ?? []).map((m) => [m.userId, m.name || m.email]));
   const who = usePeople();
 
   const columns: Column<AuditEntry>[] = [
@@ -42,7 +42,7 @@ export function AuditLog() {
       value: (e) => {
         if (!e.actor_user_id) return tr('System');
         const name = who(e.actor_user_id);
-        // 'Someone' means the person is no longer in the people list (disabled): fall back to the email, then the id.
+        // 'Someone' means the person is no longer in the people list (disabled): fall back to their name (the email only when they never had one), then the id.
         return name === 'Someone' ? (emails.get(e.actor_user_id) ?? e.actor_user_id) : name;
       },
     },

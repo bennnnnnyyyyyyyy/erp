@@ -14,6 +14,8 @@ import { Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { PaymentLinks } from '../finance/PaymentLinks';
 import { Pill } from '../trade/common';
+import { InvoiceNotes } from './InvoiceNotes';
+import { netInvoiceMinor } from './noteMath';
 
 import { tr, trf } from '../../lib/i18n';
 // Customer invoices: bill a delivered sales order, line by line, and see ordered / delivered / invoiced with a flag for
@@ -21,7 +23,7 @@ import { tr, trf } from '../../lib/i18n';
 
 type OrderLine = { id: string; itemId: string; qty: number; unitPriceMinor: number };
 type Order = { id: string; number: string; customerId: string; status: string; currency: string; requestStatus: string | null; lines: OrderLine[] };
-type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; createdAt: string; lines: { orderLineId: string; qty: number; unitPriceMinor: number }[] };
+type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; createdAt: string; creditedMinor?: number; debitedMinor?: number; lines: { id?: string; orderLineId: string; qty: number; unitPriceMinor: number }[] };
 type Customer = { id: string; name: string };
 type Item = { id: string; sku: string; name: string };
 
@@ -178,6 +180,10 @@ export function CustomerInvoicePage() {
     return i ? `${i.sku} · ${i.name}` : '—';
   };
   const canManage = session.permissions.includes('sales.invoices.manage');
+  // Approved credit and debit notes change what is owed (the invoice itself is never edited).
+  const credited = inv.creditedMinor ?? 0;
+  const debited = inv.debitedMinor ?? 0;
+  const net = netInvoiceMinor(inv.totalMinor, credited, debited);
 
   async function voidIt() {
     setBusy(true); setMessage(null);
@@ -200,6 +206,9 @@ export function CustomerInvoicePage() {
         {inv.dueDate ? <div><dt>{tr('Due date')}</dt><dd>{formatDay(inv.dueDate, session.org)}</dd></div> : null}
         <div><dt>{tr('Created')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
         <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
+        {credited > 0 ? <div><dt>{tr('Credited')}</dt><dd className="amount">−{money(credited, inv.currency)}</dd></div> : null}
+        {debited > 0 ? <div><dt>{tr('Debited')}</dt><dd className="amount">+{money(debited, inv.currency)}</dd></div> : null}
+        {credited > 0 || debited > 0 ? <div><dt>{tr('Amount owed after notes')}</dt><dd className="amount">{money(net, inv.currency)}</dd></div> : null}
       </dl>
 
       <div className="table-wrap"><table>
@@ -214,7 +223,8 @@ export function CustomerInvoicePage() {
 
       {inv.status === 'void' && <p className="muted">{tr('This invoice was voided. Its quantity can be invoiced again.')}</p>}
       {canManage && inv.status === 'issued' && <div className="form-actions" style={{ marginBlockStart: '1rem' }}><ConfirmButton label={tr('Void invoice')} confirmLabel={tr('Yes, void it')} question={tr('Void this invoice? It can not be undone; its quantity can then be invoiced again.')} disabled={busy} onConfirm={voidIt} /></div>}
-      {inv.status === 'issued' && <PaymentsAgainst key={payKey} field="customerInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />}
+      <InvoiceNotes invoice={inv} itemOf={itemOf} onChanged={invoices.reload} />
+      {inv.status === 'issued' && <PaymentsAgainst key={payKey} field="customerInvoiceId" id={inv.id} totalMinor={net} currency={inv.currency} />}
       {inv.status === 'issued' && <PaymentLinks invoiceId={inv.id} onPaid={() => setPayKey((k) => k + 1)} />}
       <RecordHistory key={inv.id} id={inv.id} />
     </section>

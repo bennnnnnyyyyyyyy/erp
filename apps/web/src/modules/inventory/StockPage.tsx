@@ -14,6 +14,7 @@ import { Pill } from '../trade/common';
 import { ClerkActions } from './ClerkActions';
 import { tr, trf } from '../../lib/i18n';
 import { qty, useCatalog } from './inventoryShared';
+import { emptyColumnKeys } from './taskFirst';
 import { AddItemModal, AddWarehouseModal, EditItemModal, EditWarehouseModal } from './ItemModals';
 
 // ------------------------------------------------------------------ stock on hand and items
@@ -52,7 +53,7 @@ export function StockPage() {
   });
   const isLow = (i: DemoItem, available: number) => i.reorderLevel !== null && available <= i.reorderLevel;
 
-  const columns: Column<StockLine>[] = [
+  const allColumns: Column<StockLine>[] = [
     { key: 'sku', label: 'SKU', value: (r) => r.sku, render: (r) => <code>{r.sku}</code> },
     { key: 'name', label: tr('Item'), value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
     { key: 'wh', label: tr('Warehouse'), value: (r) => (r.warehouseId ? cat.warehouseName(r.warehouseId) : ''), render: (r) => (r.warehouseId ? cat.warehouseName(r.warehouseId) : <span className="muted">{tr('No stock yet')}</span>) },
@@ -87,6 +88,7 @@ export function StockPage() {
       ? [{
           key: 'edit',
           label: tr('Actions'),
+          className: 'col-sticky-end',
           value: () => '',
           render: (r: StockLine) => (
             <Button variant="outline" size="sm" onClick={() => setEditing(r)} aria-label={trf('Edit {name}', { name: r.name })}>{tr('Edit')}</Button>
@@ -94,6 +96,15 @@ export function StockPage() {
         }]
       : []),
   ];
+  // Columns that are empty in every row are left out (for example the Arabic name when no item has one), so the table fits a laptop.
+  const hidden = emptyColumnKeys(rows, {
+    ar: (r) => r.nameAr,
+    reorder: (r) => r.reorderLevel,
+    batches: (r) => (r.tracksBatches ? 'yes' : null),
+    cost: (r) => (isManager && costs.data ? costOf.get(r.id) : 'wait'),
+    reserved: (r) => r.reserved || null,
+  });
+  const columns = allColumns.filter((c) => !hidden.has(c.key));
 
   // Totals of units are left out on purpose: they add kilograms, litres and pieces together (287,963.501 "units").
   // The numbers count items, not rows (an item in two warehouses is one item).
@@ -126,14 +137,19 @@ export function StockPage() {
           <Link to="/inventory/requests" className={waiting > 0 ? 'stat warn' : 'stat'} style={{ '--i': 3, textDecoration: 'none', color: 'inherit' } as CSSProperties}>
             <div className="stat-label">{tr('Waiting for approval')}</div>
             <div className="stat-value">{waiting}</div>
-            <div className="stat-note">{waiting > 0 ? tr('awaiting manager approval') : tr('nothing pending')}</div>
+            <div className="stat-note">{waiting > 0 ? tr('requests a manager has not decided yet') : tr('nothing pending')}</div>
           </Link>
         </div>
+      )}
+      {cat.ready && stock.data && (
+        <p className="muted small">{tr('Reserved is stock set aside for requests and transfers that are waiting or approved, so nobody else takes it. Available is On hand minus Reserved. Waiting for approval counts requests a manager has not decided yet.')}</p>
       )}
       {cat.ready && stock.data ? (
         <ListView
           title={tr('Stock on hand')}
           rows={rows}
+          empty={tr('No items yet. An item is something you keep in stock. Add the first one, with its opening stock.')}
+          emptyAction={canAdd && (cat.warehouses.data?.length ?? 0) > 0 ? <Button onClick={() => setAdding(true)}>{tr('Add item')}</Button> : undefined}
           columns={columns}
           rowKey={(r) => `${r.id}:${r.warehouseId ?? "-"}`}
           rowHref={(r) => `/inventory/items/${r.id}`}

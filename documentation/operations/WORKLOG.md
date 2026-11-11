@@ -11,6 +11,35 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-11 — After the walkthrough: credit notes screen, task-first Inventory, guided Accounting setup, tour, customer details (sql/081)
+
+**Objective.** Ben: "do what you can without me" after the walkthrough and the reply to Ian. Keep the promises made in that reply
+(credit notes on the invoice screen, names in the stock history, the tour) and build the approved R1 A and R2 A.
+
+**Actions Completed.** Branch `fix/after-walkthrough` (from `main` after #39); four Sonnet agents in their own worktrees, each merged
+after review:
+- Claude: an error detail that only repeats the message is left out (`apps/api/src/lib/rpc.ts`; "needs approval…: needs approval…").
+- `feat/credit-notes-ui`: credit and debit notes on the sales invoice page (create from lines, optional return to stock, approve,
+  reject, cancel; "amount owed after notes"); `GET /v1/sales/invoices/:id` returns line ids and credited/debited totals; no migration.
+- `fix/walkthrough-round2`: the stock ledger already showed names; the email part appears only for accounts with no name (the live
+  app could not set one until #39). The audit log no longer falls back to email for former members. Tasks already notify the
+  assignee (sql/010); new tasks now deliver at once instead of waiting for the 5-minute pass. Error pop-ups on payment and expense
+  screens. `sql/081_sal_customer_details.sql` + test 075 and the customer screen.
+- `ux/inventory-task-first` (decision R1 A): Overview "What do you want to do?" (Receive goods, Send goods out, Move between
+  warehouses, Count stock, Correct a quantity); menu groups Do / Stock / History / Settings and planning; next-step wording on each
+  form; batch tracking on Add item and the item page; empty columns hidden and Actions visible on Stock on hand; empty-state help;
+  phone bar wording. Screens only.
+- `ux/accounting-setup-tour` (decision R2 A): three-step accounting setup with an "Advanced (for your accountant)" section; Apps page
+  in plain words; no skip on the first setup screen; Getting started reordered with a "Turn on accounting" step; the guided tour starts
+  by itself once per person when the company switch is on.
+
+**Database / System Result.** 081 dry run on live inside a rolled-back transaction passed (`users_edit` true, `anon_creates` false,
+`new_columns` 8). Not applied.
+
+**Safety Status.** Lint and typecheck clean; shared 74 + 1 skipped, API 359 + 7 skipped, web 134; all 79 migrations and 74 SQL tests
+pass locally (Supabase-like setup); doc links OK. Nothing viewed in a browser. Open: help and tour prose still say "New request";
+customer `tax_number` vs e-invoicing `tax_id` needs Ben's decision; Arabic drafts need review. **Apply 081 before merging.**
+
 ## 2026-11-10 — 069–077 applied to live (by Ben); PR #39
 
 **Objective.** Put tonight's database changes live before merging PR #39 (`feat/po-approval`).

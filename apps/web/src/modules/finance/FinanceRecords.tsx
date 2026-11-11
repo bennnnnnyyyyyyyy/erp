@@ -5,6 +5,7 @@ import { formatMoney, hasPermission } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
 import { RecordHistory } from '../../components/RecordHistory';
 import { ConfirmButton } from '../../components/FormToggle';
+import { ErrorToast } from '../../components/Toast';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
 import { Link, useParam } from '../../lib/router';
@@ -68,7 +69,7 @@ function useVoid(path: string, done: () => void) {
     catch (e) { setMessage({ ok: false, text: (e as Error).message }); }
     finally { setBusy(false); }
   }
-  return { busy, message, run };
+  return { busy, message, run, clear: () => setMessage(null) };
 }
 
 export function PaymentPage() {
@@ -109,7 +110,8 @@ export function PaymentPage() {
         <Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Customer receipt') : tr('Payment to supplier or expense')} />
         <PaymentStatus status={p.status} />
       </div>
-      {voiding.message && <p className={voiding.message.ok ? 'notice' : 'error notice'}>{voiding.message.text}</p>}
+      {voiding.message?.ok && <p className="notice">{voiding.message.text}</p>}
+      <ErrorToast message={voiding.message && !voiding.message.ok ? voiding.message.text : null} onClose={voiding.clear} />
       <dl className="facts">
         <div><dt>{tr('Amount')}</dt><dd className="amount">{money(p.amountMinor, p.currency)}</dd></div>
         <div><dt>{tr('Date')}</dt><dd>{formatDay(p.paidOn, session.org)}</dd></div>
@@ -147,7 +149,8 @@ export function ExpensePage() {
         <h1 className="mono">{e.number}</h1>
         <PaymentStatus status={e.status} />
       </div>
-      {voiding.message && <p className={voiding.message.ok ? 'notice' : 'error notice'}>{voiding.message.text}</p>}
+      {voiding.message?.ok && <p className="notice">{voiding.message.text}</p>}
+      <ErrorToast message={voiding.message && !voiding.message.ok ? voiding.message.text : null} onClose={voiding.clear} />
       <dl className="facts">
         <div><dt>{tr('Amount')}</dt><dd className="amount">{money(e.amountMinor, e.currency)}</dd></div>
         <div><dt>{tr('Date')}</dt><dd>{formatDay(e.date, session.org)}</dd></div>

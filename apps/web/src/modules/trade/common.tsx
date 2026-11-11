@@ -86,7 +86,7 @@ function TermsCell({ party, endpoint, onSaved }: { party: Party; endpoint: strin
   );
 }
 
-// Supplier business details (sql/076), edited in the same dialog. Customers do not have them yet.
+// Supplier and customer business details (sql/076, sql/081), edited in the same dialog.
 const DETAIL_BLANK = { taxNumber: '', commercialRegistry: '', email: '', address: '', bankName: '', bankAccount: '', defaultCurrency: '', notes: '' };
 const detailsOf = (p: Party) => ({
   taxNumber: p.taxNumber ?? '', commercialRegistry: p.commercialRegistry ?? '', email: p.email ?? '', address: p.address ?? '',
@@ -124,7 +124,7 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
     e.preventDefault();
     setError(null);
     try {
-      // Customers have no business details yet: send them for suppliers only.
+      // Only the lists that show the details (suppliers, customers) send them; the sample-data demo does not.
       const { taxNumber, commercialRegistry, email, address, bankName, bankAccount, defaultCurrency, notes, ...core } = form;
       const body = withDetails ? { ...core, taxNumber, commercialRegistry, email, address, bankName, bankAccount, defaultCurrency, notes } : core;
       if (editing) {

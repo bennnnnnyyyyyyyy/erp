@@ -5,6 +5,7 @@ import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
+import { runOutboxPass } from '../../jobs/outbox';
 import { requirePermission } from '../../middleware/tenant';
 
 // Tasks (documentation/plans/TASKS_AND_OUTBOX_PLAN.md). Reads run as the signed-in user and filter by organization;
@@ -86,6 +87,17 @@ tasksRoutes.post('/', requirePermission('tasks.tasks.create'), async (c) => {
     p_due_at: dueAt ? new Date(dueAt).toISOString() : null,
     p_description: text(body.description),
   });
+  // The database queued the assignee's notification in the same transaction. Deliver this organization's queue now instead of
+  // waiting up to five minutes for the scheduled pass; if that fails the scheduled pass still sends it.
+  try {
+    c.executionCtx.waitUntil(
+      runOutboxPass(c.env, { orgId: c.var.tenant.orgId }).catch((e) =>
+        console.error('task notify pass failed', e instanceof Error ? e.message : String(e)),
+      ),
+    );
+  } catch {
+    // no execution context (tests): nothing to do
+  }
   return ok(c, await loadTask(c, id), 201);
 });
 

@@ -130,7 +130,11 @@ export async function callRpc<T>(client: SupabaseClient, fn: string, args: Recor
     if (reason) {
       const short = reason.code === 'insufficient_available' && error.details ? stockShortMessage(error.details) : null;
       if (short) throw new HttpError(reason.status, short, reason.code);
-      throw new HttpError(reason.status, error.details ? `${reason.message}: ${trimQty(error.details)}` : reason.message, reason.code);
+      // A detail that only repeats the message (e.g. NOT_APPROVED: "this purchase order needs approval…") is left out, so the person
+      // does not read the same sentence twice (Ben's walkthrough, 10 Nov 2026).
+      const detail = error.details ? trimQty(error.details) : '';
+      const repeats = detail && reason.message.toLowerCase().includes(detail.toLowerCase().replace(/\.$/, ''));
+      throw new HttpError(reason.status, detail && !repeats ? `${reason.message}: ${detail}` : reason.message, reason.code);
     }
     throw error;
   }

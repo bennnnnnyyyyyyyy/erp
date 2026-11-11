@@ -28,7 +28,7 @@ const STATUS: Record<SOStatus, string> = {
 };
 
 export function Customers() {
-  return <PartyList title={tr('Customers')} endpoint="/v1/sales/customers" noun="customer" addPermission="sales.customers.manage" />;
+  return <PartyList title={tr('Customers')} endpoint="/v1/sales/customers" noun="customer" addPermission="sales.customers.manage" detailed />;
 }
 
 export function SalesOrders() {
