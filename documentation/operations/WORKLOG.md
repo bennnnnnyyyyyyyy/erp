@@ -34,7 +34,10 @@ run or deployed.
 - `sql/083_integration_hardening.sql` + `sql/tests/077_integration_hardening.sql`; `apps/api/test/integration_hardening.test.ts`.
 
 **Database / System Result.** 083 dry run on live inside a rolled-back transaction passed (`shopify_shop_once`, `teams_hosts_pinned`
-true; anonymous refused). No Shopify shop domain was saved on live, so the unique index cannot clash. Not applied.
+true; anonymous refused). No Shopify shop domain was saved on live, so the unique index cannot clash. **Applied 2026-11-11 via
+CLI (by Ben)** before the merge of PR #44: `shopify_shop_once` true, `teams_hosts_pinned` true, `anon_sets_secret` false,
+`anon_begins_check` false. Also: the merge of `main` into this branch resolved the worklog and `sql/README.md` conflicts with #43
+(both entries kept; 082's row is the applied one), and 078 is recorded as applied (Ben, 10 Nov).
 
 **Safety Status.** Lint and typecheck clean; API 366 + 7 skipped, web 135, shared 74; all 81 migrations and 76 SQL tests pass locally.
 **Apply 083 before merging** (if merged first, the route falls back to the permission check only).
