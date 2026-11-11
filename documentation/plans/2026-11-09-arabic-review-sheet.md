@@ -68,3 +68,14 @@ Placeholders such as `{name}`, `{item}` and `{n}` must stay exactly as they are 
 | 54 | Menu | Bank statements / Bank statement | كشوف الحساب البنكية / كشف حساب بنكي | |
 | 55 | Bank statements | (the 36 texts of part 2: recording what a line was, rules, who may reconcile; terms to check: بند المصروف, مصروفات وعمولات بنكية, تسوية) | see `apps/web/src/lib/i18nDecisions.ts`, section "bank statements part 2" | |
 | 56 | Errors | This feature is not set up yet: its database update has not been applied | هذه الميزة غير مُفعّلة بعد: لم يُطبَّق تحديث قاعدة البيانات الخاص بها | |
+| 57 | Purchase orders | (the 13 texts of purchase order approval: waiting, approve, reject, the company setting) | see `apps/web/src/lib/i18nDecisions.ts`, section "purchase order approval (sql/069)" | |
+| 58 | Purchase orders | (12 texts: supplier delivery note number; promised date, "Late", supplier's reference) | sections "supplier delivery note number…" and "supplier confirmation and promised date" | |
+| 59 | Settings | (9 texts: owners may approve their own; change an alert rule's recipients; guided tour switch) | sections "owners may approve their own", "MVP M4: …" | |
+| 60 | Import from a file | (41 texts: import screen, checks, templates; term to check: رصيد افتتاحي) | section "imports from a file (Sheets option A)" | |
+| 61 | Links for Google Sheets | (25 texts: report links, warning, revoke) | section "report links (Sheets option C)" | |
+| 62 | Integrations | (2 texts: Google Chat) | section "Google Chat alerts" | |
+| 63 | Setup and settings | (45 texts: currency and time zone pickers, Company options, edit warehouse, error pop-ups, own name) | section "walkthrough fixes: setup and settings" | |
+| 64 | Items and suppliers | (43 texts: units, item code format, columns, unpaid bills, supplier details; terms to check: السجل التجاري, رقم التسجيل الضريبي) | sections "units" to "supplier details" | |
+| 65 | Sales invoices | (31 texts: credit and debit notes; terms to check: إشعار دائن, إشعار مدين) | section "credit and debit notes screen" | |
+| 66 | Inventory | (51 texts: What do you want to do?, Receive goods = استلام بضاعة, Send goods out = صرف بضاعة, Move, Count, Correct; menu groups) | section "task-first inventory"; menu labels in `apps/web/src/lib/i18nNav.ts` | |
+| 67 | Accounting setup and tour | (33 texts: the 3-step guide, Advanced, Apps page descriptions, Getting started order) | section "guided accounting setup and tour"; Getting started steps in `apps/web/src/modules/help/helpContent.ts` | |
