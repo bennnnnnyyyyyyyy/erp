@@ -74,6 +74,9 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 - Never run `DROP`, `TRUNCATE`, broad `DELETE`, bucket destruction or production mutations without explicit user consent and a verified target.
 - Preserve append-only audit behavior. Prefer reviewed SQL migrations and local verification before any production schema change. Migrations are numbered, rerun-safe, and end with read-only verification queries.
 - Do not drive a browser against the live app or a person's session without asking first: give the user the URL and ask them to test manually. The headless CI smoke test of the sample build (`apps/web/e2e`, run by `ci-deploy.yml`) is exempt and must stay.
+- **No personal or third-party material in the repo** (audit 11 Nov 2026, P1): never commit people's emails, phone numbers, addresses,
+  correspondence, exports or competitor files, not even into `documentation/archive/`. Moving a file does not remove it from git
+  history. Private drafts stay outside the repo; binaries in the archive are git-ignored. An "accepted risk" gets a review date.
 - Keep secrets out of source, logs, plans and worklogs. Do not modify `.env`, `.dev.vars`, deployed secrets or production data unless explicitly asked.
 - Never author a commit. Finish the work, then the user will handle the commit and pushing to main.
 

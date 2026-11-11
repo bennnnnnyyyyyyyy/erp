@@ -69,7 +69,7 @@ export function Shipments({ orderId, customerName, customerPhone, customerCity }
                 <th scope="col">{tr('Recipient')}</th>
                 <th scope="col" className="right">{tr('Cash on delivery')}</th>
                 <th scope="col">{tr('Status')}</th>
-                <th scope="col" />
+                <th scope="col"><span className="sr-only">{tr('Actions')}</span></th>
               </tr>
             </thead>
             <tbody>

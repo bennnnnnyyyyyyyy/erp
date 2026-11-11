@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:demo": "vite --mode demo",
     "build:demo": "vite build --mode demo",
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "node ../../scripts/run-steps.mjs \"tsc -p tsconfig.json\" \"vite build\"",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",

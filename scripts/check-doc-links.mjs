@@ -14,7 +14,7 @@ const known = new Set(
     .filter((l) => l && !l.startsWith('#')),
 );
 
-const files = execSync('git ls-files --cached --others --exclude-standard "*.md"', { encoding: 'utf8' })
+const files = execSync('git -c core.quotepath=off ls-files --cached --others --exclude-standard "*.md"', { encoding: 'utf8' })
   .split('\n')
   .filter((f) => f && !f.includes('_TEMPLATE') && !f.endsWith('MODULE_PLAN_TEMPLATE.md') && !f.startsWith('documentation/reference/'));
 

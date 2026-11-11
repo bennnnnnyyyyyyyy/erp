@@ -6,7 +6,10 @@ The system as it is built today. Update this file in the same change that alters
 plan describes intent, this file describes what runs. Decisions that are expensive to reverse
 live in [`decisions/`](decisions/).
 
-Last checked against the code: 6 Nov 2026 (repo audit, finding 5). This page is a map, not a feature list: what is built is in
+Last checked against the code: 11 Nov 2026 (audit finding 9). Requests run with the signed-in person's own JWT (ADR-0003); the
+secret-key client is limited to the "Master-key exceptions" in [`agents.md`](../../agents.md) and guarded by
+`apps/api/test/boundaries.test.ts`. Note: the comment in `sql/001` saying the API uses the service-role key is out of date (old
+migrations are not edited). This page is a map, not a feature list: what is built is in
 [`../plans/checklist.md`](../plans/checklist.md), what reached live is in [`../operations/WORKLOG.md`](../operations/WORKLOG.md).
 
 ## Parts

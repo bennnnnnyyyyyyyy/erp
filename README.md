@@ -2,7 +2,7 @@
 
 A general-purpose ERP for small and mid-size businesses, Egypt first. It is built to cover every business track, one module at a time: the first warehouse, stock and accounting capabilities are built; next comes broader inventory workflows and the connected business tracks. Modules are switched on per company, prices are in Egyptian pounds by default, and the web app works in Arabic and English.
 
-Status (9 Nov 2026): a working early build, deployed at https://erp-live.pages.dev with invented sample data, **not production-ready**. What is built and live, what is only written, and what is not proven is kept in one place, [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (status overview); what was actually run and deployed is in [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md). In short: inventory, purchasing, sales, finance, accounting (general ledger), treasury and integration stages A–E are built; integrations without provider credentials or test transactions remain unproven. Migration `sql/061` was applied on 9 Nov; AI stays off until the owner accepts notice v2. Not yet proven: approvals by WhatsApp and voice on a real phone, real-provider transactions, and a real customer pilot. **Arabic:** every screen has Arabic text, but it is a machine draft that has not been reviewed by a native speaker yet. The clickable no-database demo still exists (below). See [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) for scope.
+Status (11 Nov 2026; migrations 001–078 and 081–083 applied, 079 and 080 unused): a working early build, deployed at https://erp-live.pages.dev with invented sample data, **not production-ready**. What is built and live, what is only written, and what is not proven is kept in one place, [`documentation/plans/checklist.md`](documentation/plans/checklist.md) (status overview); what was actually run and deployed is in [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md). In short: inventory, purchasing, sales, finance, accounting (general ledger), treasury and integration stages A–E are built; integrations without provider credentials or test transactions remain unproven. Migration `sql/061` was applied on 9 Nov; AI stays off until the owner accepts notice v2. Not yet proven: approvals by WhatsApp and voice on a real phone, real-provider transactions, and a real customer pilot. **Arabic:** every screen has Arabic text, but it is a machine draft that has not been reviewed by a native speaker yet. The clickable no-database demo still exists (below). See [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) for scope.
 
 ## What we are testing (hypotheses)
 
@@ -48,7 +48,8 @@ Open http://localhost:5173. The yellow bar lets you act as different people and 
 1. Copy `.env.example` to `.env` at the repo root and fill in the Supabase URL and keys. Never commit `.env`.
 2. `npm run dev:api` and `npm run dev:web`, then open http://localhost:5173.
 
-Note: on this Windows setup npm runs scripts in old PowerShell, so scripts that chain commands with `&&` (for example the `build` script) fail; use the demo build script or run the commands separately.
+Note: on this Windows setup npm runs scripts in old PowerShell, where `&&` fails. Scripts chain steps with
+`scripts/run-steps.mjs` instead (for example the web `build`), so `npm run build -w apps/web` works in PowerShell, cmd and CI.
 
 ## Working on this repo
 
