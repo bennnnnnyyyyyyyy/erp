@@ -5,6 +5,8 @@ export type Bindings = {
   ALLOWED_ORIGINS: string;
   /** Workers rate limiting binding (wrangler.toml [[ratelimits]]); absent in tests and local dev. See middleware/rateLimit.ts. */
   API_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+  /** Per-IP limiter used before sign-in (higher limit than API_LIMITER). Absent in tests and local dev. */
+  IP_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_SECRET_KEY?: string;

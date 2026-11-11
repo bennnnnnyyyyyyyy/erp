@@ -64,6 +64,7 @@ describe('Paymob callback', () => {
       currency: 'EGP',
       success: true,
       pending: false,
+      orderId: '555', // the signed order.id (sql/084)
     });
     expect(parsePaymobCallback({ obj: { ...paymobObj, is_refunded: true } })?.parsed.success).toBe(false);
     expect(parsePaymobCallback({ obj: { ...paymobObj, success: false } })?.parsed.success).toBe(false);

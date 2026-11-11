@@ -24,6 +24,13 @@ name = "API_LIMITER"
 namespace_id = "1001"
 simple = { limit = 600, period = 60 }
 
+# Per-IP limit before sign-in (audit 11 Nov 2026, finding 3): counts requests with no or a bad token too. Higher than the per-user
+# limit because one office shares one IP. Needs a Cloudflare deploy to take effect.
+[[ratelimits]]
+name = "IP_LIMITER"
+namespace_id = "1002"
+simple = { limit = 3000, period = 60 }
+
 # Delivers queued messages and sends reminders and escalations (src/jobs/outbox.ts). Also runnable on demand.
 [triggers]
 crons = ["*/5 * * * *"]

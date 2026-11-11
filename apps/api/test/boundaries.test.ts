@@ -78,6 +78,34 @@ describe('database client boundaries (ADR-0003)', () => {
     expect(offenders).toEqual([]);
   });
 
+  // Audit 11 Nov 2026, finding 14: these two functions read a company's keys with the master key for ONE record. That record must
+  // have been created or loaded by the person's own client in the same handler (so row level security and the role check already
+  // approved it), and the handler must hand over that same client, never the master-key one.
+  it('attachProviderAddress and createBostaDelivery are only called with a record loaded by the signed-in person', () => {
+    const ENTRY = ['attachProviderAddress', 'createBostaDelivery'];
+    const offenders: string[] = [];
+    let calls = 0;
+    for (const { rel, text } of routeFiles()) {
+      for (const name of ENTRY) {
+        for (const m of text.matchAll(new RegExp(`\\b${name}\\(`, 'g'))) {
+          if (text.slice(Math.max(0, m.index - 40), m.index).match(/import|function\s*$/)) continue;
+          calls++;
+          const before = text.slice(0, m.index);
+          const start = Math.max(...['get', 'post', 'put', 'patch', 'delete'].map((v) => before.lastIndexOf(`Routes.${v}(`)));
+          const handler = text.slice(start, m.index);
+          const call = text.slice(m.index, m.index + 200);
+          if (!/const\s+db\s*=\s*userDb\(c\)/.test(handler)) offenders.push(`${rel}: ${name} without const db = userDb(c) in its handler`);
+          if (!new RegExp(`${name}\\(\\s*c\\.env,\\s*db,`).test(call))
+            offenders.push(`${rel}: ${name} not given the person's own client (db)`);
+          if (!/callRpc<[A-Za-z]+>\(\s*db,/.test(handler)) offenders.push(`${rel}: ${name} without a record loaded through db first`);
+          if (/adminDb/.test(handler) || /adminDb/.test(call)) offenders.push(`${rel}: ${name} handler uses adminDb`);
+        }
+      }
+    }
+    expect(calls).toBeGreaterThanOrEqual(2); // the routes exist; a rename must not silently empty this guard
+    expect(offenders).toEqual([]);
+  });
+
   it('only the member routes use the Auth admin helpers', () => {
     const offenders = sourceFiles(srcDir)
       .map((f) => relative(srcDir, f).split(sep).join('/'))
