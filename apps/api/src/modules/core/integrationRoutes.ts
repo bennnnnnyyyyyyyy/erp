@@ -19,7 +19,7 @@ import { GOOGLE_CHAT_URL_PREFIX, isGoogleChatWebhookUrl } from '../../lib/channe
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { HttpError } from '../../lib/errors';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { CHECKABLE, type CheckableKind, checkIntegration } from '../../lib/integrationChecks';
 import { callRpc } from '../../lib/rpc';
@@ -32,6 +32,9 @@ import { requirePermission } from '../../middleware/tenant';
 // one real, harmless call and records the answer.
 export const integrationRoutes = new Hono<AppEnv>();
 export const fxRoutes = new Hono<AppEnv>();
+
+/** Teams webhooks only on Microsoft's hosts (sql/083; same pattern as the database check). */
+export const TEAMS_WEBHOOK_URL = /^https:\/\/([A-Za-z0-9-]+\.)+(webhook\.office\.com|logic\.azure\.com|api\.powerplatform\.com)(:443)?\//;
 
 const kindParam = (k: string | undefined): IntegrationKind => {
   if (!k || !(INTEGRATION_KINDS as readonly string[]).includes(k)) throw new HttpError(404, 'Unknown integration', 'not_found');
@@ -107,6 +110,9 @@ integrationRoutes.put('/:kind/secret', requirePermission('core.integrations.mana
   if (typeof url !== 'string' || !/^https:\/\//.test(url.trim()) || url.length > 2000) invalid('Paste the full https webhook URL');
   if (kind === 'google_chat' && !isGoogleChatWebhookUrl(url.trim()))
     invalid(`A Google Chat webhook URL starts with ${GOOGLE_CHAT_URL_PREFIX}`);
+  // sql/083: Teams only on Microsoft's own hosts (the database checks the same).
+  if (kind === 'teams' && !TEAMS_WEBHOOK_URL.test(url.trim()))
+    invalid('A Teams webhook URL is on webhook.office.com, logic.azure.com or api.powerplatform.com');
   const hint = await callRpc<string>(userDb(c), 'core_set_integration_secret', { p_kind: kind, p_secret: url.trim() });
   return ok(c, { kind, secretHint: hint });
 });
@@ -128,6 +134,12 @@ integrationRoutes.post('/:kind/test', requirePermission('core.integrations.manag
 integrationRoutes.post('/check/:kind', requirePermission('core.integrations.manage'), async (c) => {
   const kind = c.req.param('kind');
   if (!(CHECKABLE as readonly string[]).includes(kind)) throw new HttpError(404, 'Unknown integration', 'not_found');
+  // sql/083: the database checks the role (owner or admin) BEFORE any key is read, and allows one check every 30 seconds.
+  try {
+    await callRpc<void>(userDb(c), 'core_begin_integration_check', { p_kind: kind });
+  } catch (e) {
+    if (!isMissingSchema(e)) throw e; // 083 not applied yet: the route permission above still applies
+  }
   const result = await checkIntegration(c.env, kind as CheckableKind, {
     orgId: c.var.tenant.orgId,
     email: c.var.user.email,

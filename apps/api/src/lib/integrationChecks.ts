@@ -77,6 +77,9 @@ async function webhookUrl(env: Bindings, orgId: string, kind: string): Promise<s
 
 const TEST_TEXT = 'Test from the ERP: if you can read this, the connection works.';
 
+/** Error text without any web address: a webhook URL is a secret and must never reach the screen, `last_error` or the audit log. */
+export const withoutUrls = (text: string): string => text.replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[address]');
+
 // ------------------------------------------------------------------ messages
 
 async function checkEmail(env: Bindings, who: CheckCaller, deps: CheckDeps): Promise<IntegrationCheck> {
@@ -107,7 +110,10 @@ async function checkWebhook(env: Bindings, who: CheckCaller, kind: 'slack' | 'te
         }
       : { text: TEST_TEXT };
   const r = await call(deps, url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  return r.status >= 200 && r.status < 300 ? pass(`Posted a test message to the ${name} channel.`) : fail(`${name} refused: ${reason(r)}`);
+  // Only the status, never the reply body: a webhook host's answer is not shown or stored (security review, 11 Nov 2026).
+  return r.status >= 200 && r.status < 300
+    ? pass(`Posted a test message to the ${name} channel.`)
+    : fail(`${name} refused: HTTP ${r.status}`);
 }
 
 async function checkTelegram(env: Bindings, deps: CheckDeps): Promise<IntegrationCheck> {
@@ -312,7 +318,7 @@ export async function checkIntegration(
     return fail(
       timeout
         ? 'No answer within 10 seconds.'
-        : `Could not reach the provider: ${e instanceof Error ? e.message.slice(0, 150) : 'unknown error'}`,
+        : `Could not reach the provider: ${e instanceof Error ? withoutUrls(e.message).slice(0, 150) : 'unknown error'}`,
     );
   }
 }

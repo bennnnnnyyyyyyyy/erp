@@ -13,6 +13,7 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
     message: 'You cannot approve your own request: another owner or manager must approve it',
     code: 'self_approval',
   },
+  TOO_SOON: { status: 429, message: 'Wait 30 seconds before checking this connection again', code: 'too_soon' },
   NOT_APPROVED: {
     status: 409,
     message: 'This purchase order needs approval before goods can be received',

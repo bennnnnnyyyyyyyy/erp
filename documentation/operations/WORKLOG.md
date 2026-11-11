@@ -11,6 +11,34 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-11 — Master-key exceptions written down; security review of the integrations code; fixes (`sql/083`)
+
+**Objective.** Ben: "I want it to be a secure ERP". After PR #42 put real provider keys through the integrations code, approve the
+"Check connection" use of the secret-key (master-key) client and make the written rule match the code.
+
+**Actions Completed.** Branch `sec/master-key-review`.
+- Ben approved "Check connection" (11 Nov). `agents.md` now lists every file allowed to use the master key, why, and its limits
+  ("Master-key exceptions"); a new one needs his yes. Every use that runs while a person waits was checked: the company always comes
+  from the sign-in (`c.var.tenant.orgId`) or from a record loaded with the person's own sign-in.
+- Guards in `apps/api/test/boundaries.test.ts`: routes may call the master-key entry points only with the signed-in company, and a
+  route that reaches master-key code may never read a company id from the URL, query or body. Proven by breaking a route on purpose
+  (both failed) and restoring it.
+- Security review (Opus agent, read-only) of PR #42 / sql/082: no critical or high finding; no route, job or webhook can reach another
+  company's data or keys. Fixed: (medium) two companies could save the same Shopify shop and disturb each other's order webhooks →
+  unique index; (low) Teams webhook URLs could point anywhere and "Check connection" echoed the reply → Microsoft hosts only, status
+  only; (low) error text could carry a webhook URL into `last_error` and the audit log → addresses stripped (`withoutUrls`, outbox);
+  (low) outbox webhook posts followed redirects → `redirect: 'manual'`; (low) "Check connection" read keys before the database
+  checked the role, and could be pressed endlessly → `core_begin_integration_check` (owner/admin, one per 30 seconds) before any key
+  is read. **Not fixed yet** (low, needs a race): a Paymob callback's reference (`merchant_order_id`) is not covered by Paymob's
+  signature; saving Paymob's order id when the link is made and requiring it on the callback closes it (planned separately).
+- `sql/083_integration_hardening.sql` + `sql/tests/077_integration_hardening.sql`; `apps/api/test/integration_hardening.test.ts`.
+
+**Database / System Result.** 083 dry run on live inside a rolled-back transaction passed (`shopify_shop_once`, `teams_hosts_pinned`
+true; anonymous refused). No Shopify shop domain was saved on live, so the unique index cannot clash. Not applied.
+
+**Safety Status.** Lint and typecheck clean; API 366 + 7 skipped, web 135, shared 74; all 81 migrations and 76 SQL tests pass locally.
+**Apply 083 before merging** (if merged first, the route falls back to the permission check only).
+
 ## 2026-11-11 — No test mode on any integration; "Check connection"; Shopify 2026 fields (`sql/082` NOT applied)
 
 **Objective.** Ben: "all integrations currently are in some stupid test mode, i want to actually check that integrations are working, i
