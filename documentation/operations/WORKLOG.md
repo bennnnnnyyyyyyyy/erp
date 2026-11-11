@@ -11,7 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-11 — No test mode on any integration; "Check connection"; Shopify 2026 fields (`sql/082` NOT applied)
+## 2026-11-11 — `sql/082` applied to live (by Ben); PR #42 merged
+
+**Objective.** Record the merge of PR #42 (no test mode on integrations, entry below) and Ben's run of `sql/082` on live.
+
+**Actions Completed.** Ben merged PR #42 into `main` (321dedb) while its checks were still running, then ran
+`supabase db query --linked -f sql/082_core_integrations_live.sql`.
+
+**Database / System Result.** On live (ggoerp), 082's own verification: `simulated_rows` 0, `on_without_details` 0, `mode_default`
+`'live'`, `sim_functions` 0, `eta_simulated` 0, `eta_default` `'preprod'`. Read-only check afterwards: the 3 integration rows (OpenAI,
+Paymob, Shopify) are `live` and off (Shopify in "Test 2" switched off: no details), the mode check allows only `live`, 3 audit rows,
+`core_record_integration_check` open to users and not to anonymous callers, Shopify requires `shop_domain`, `client_id`,
+`webhook_secret`. No key is saved anywhere, so no integration is on.
+
+**Safety Status.** CI on `main` after the merge: SQL tests (local Supabase) passed; "CI and Cloudflare deploy" passed lint, typecheck,
+tests and doc links, then failed twice (run 43046401760, and its rerun) at "Install the smoke-test browser": Ubuntu's mirror did not
+resolve on GitHub's runners, the same cause that stopped #41's deploy, so **nothing from #41 or #42 was deployed**. Fix in
+`.github/workflows/ci-deploy.yml` (this branch): if `--with-deps` cannot fetch the system packages, install the browser alone; the
+smoke test still runs and still blocks the deploy. Still waiting on Ben: the yes for
+`lib/integrationChecks.ts` as a secret-key exception (entry below), the keys, and the Arabic review.
+
+## 2026-11-11 — No test mode on any integration; "Check connection"; Shopify 2026 fields (`sql/082` applied later the same day, above)
 
 **Objective.** Ben: "all integrations currently are in some stupid test mode, i want to actually check that integrations are working, i
 dont want this stupid test mode on anything", then "work in tandem with them [the other chats] to make sure nothing gets made wrong".
@@ -56,7 +76,7 @@ works once its key exists, and "Check connection" now shows it. No route sends t
 **Database / System Result.** Two dry runs of 082 on live (ggoerp) inside rolled-back transactions passed: all 3 rows `live`, Shopify in
 "Test 2" switched off (no details), default `live`, the 3 simulate functions gone, the check function open to users and not to anon,
 Shopify needs `client_id`, ETA default `preprod`, 3 audit rows. Read-only checks afterwards: nothing kept (3 rows still simulated, 3
-functions present, 0 audit rows). **082 is NOT applied.**
+functions present, 0 audit rows). **082 was not applied at the time of writing; Ben applied it after the merge (entry above).**
 
 **Safety Status.** In the worktree, against its own `packages/shared` (temporary tsconfig/vitest configs, since `node_modules/@erp/shared`
 links to the main checkout; deleted afterwards): typecheck clean (api, web, shared); Biome 0 errors; tests shared 74 + 1 skipped, API 361
