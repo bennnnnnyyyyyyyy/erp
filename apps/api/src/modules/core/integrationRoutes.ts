@@ -7,8 +7,8 @@ import {
   PROVIDER_KINDS,
   PROVIDERS,
   type AiStatus,
-  type CbeRate,
   type FxRate,
+  type IntegrationCheck,
   type IntegrationKind,
   type IntegrationSettings,
   type ProviderKind,
@@ -21,12 +21,15 @@ import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
-import { CBE_CURRENCIES, cbeRates, type MidRate } from '../../lib/rates/cbe';
+import { CHECKABLE, type CheckableKind, checkIntegration } from '../../lib/integrationChecks';
 import { callRpc } from '../../lib/rpc';
 import { requirePermission } from '../../middleware/tenant';
 
 // Settings > Integrations (INTEGRATIONS_PLAN.md wave 1; sql/053). Owners and admins (no ".read" key). Every change is one database
 // function that checks the role again and audits; webhook URLs are write-only (stored in Vault, shown as a hint).
+// sql/082: there is no test mode. An integration is off or on, on means the real provider, and it can only be switched on once its
+// details are saved (the database checks; email and Telegram also need our server account, checked here). "Check connection" makes
+// one real, harmless call and records the answer.
 export const integrationRoutes = new Hono<AppEnv>();
 export const fxRoutes = new Hono<AppEnv>();
 
@@ -37,7 +40,6 @@ const kindParam = (k: string | undefined): IntegrationKind => {
 
 type Row = {
   kind: IntegrationKind;
-  mode: 'simulated' | 'live';
   enabled: boolean;
   settings: { kinds?: string[] } | null;
   secret_hint: string | null;
@@ -49,11 +51,11 @@ type Row = {
 integrationRoutes.get('/', requirePermission('core.integrations.view'), async (c) => {
   const { data, error } = await userDb(c)
     .from('core_integrations')
-    .select('kind, mode, enabled, settings, secret_hint, last_status, last_error, last_delivery_at')
+    .select('kind, enabled, settings, secret_hint, last_status, last_error, last_delivery_at')
     .eq('org_id', c.var.tenant.orgId);
   if (error) throw error;
   const rows = new Map(((data ?? []) as Row[]).map((r) => [r.kind, r]));
-  // Live email needs our sending account on this server; the screen says so instead of letting a company pick a mode that fails.
+  // Email and Telegram need our own account on this server; the screen says so instead of letting a company switch on something that fails.
   const emailReady = Boolean(c.env.RESEND_API_KEY && c.env.EMAIL_FROM);
   const telegramReady = Boolean(c.env.TELEGRAM_BOT_TOKEN);
   return ok<IntegrationSettings[]>(
@@ -63,11 +65,10 @@ integrationRoutes.get('/', requirePermission('core.integrations.view'), async (c
       return {
         kind,
         enabled: r?.enabled ?? false,
-        mode: r?.mode ?? 'simulated',
         messageKinds: r?.settings?.kinds ?? [],
         secretHint: r?.secret_hint ?? null,
         needsSecret: kind === 'slack' || kind === 'teams' || kind === 'google_chat',
-        liveAvailable: kind === 'email' ? emailReady : kind === 'telegram' ? telegramReady : Boolean(r?.secret_hint),
+        ready: kind === 'email' ? emailReady : kind === 'telegram' ? telegramReady : Boolean(r?.secret_hint),
         lastStatus: r?.last_status ?? null,
         lastError: r?.last_error ?? null,
         lastDeliveryAt: r?.last_delivery_at ?? null,
@@ -79,15 +80,22 @@ integrationRoutes.get('/', requirePermission('core.integrations.view'), async (c
 integrationRoutes.put('/:kind', requirePermission('core.integrations.manage'), async (c) => {
   const kind = kindParam(c.req.param('kind'));
   const b = await jsonBody(c);
-  const mode = b.mode === 'live' ? 'live' : b.mode === 'simulated' ? 'simulated' : null;
   const kinds = Array.isArray(b.messageKinds) ? b.messageKinds.filter((k): k is string => typeof k === 'string') : null;
-  if (typeof b.enabled !== 'boolean' || !mode || !kinds) invalid('enabled, mode (simulated or live) and messageKinds are required');
+  if (typeof b.enabled !== 'boolean' || !kinds) invalid('enabled and messageKinds are required');
   if (kinds.some((k) => !(INTEGRATION_MESSAGE_KINDS as readonly string[]).includes(k))) invalid('Unknown message kind');
-  if (kind === 'email' && mode === 'live' && !(c.env.RESEND_API_KEY && c.env.EMAIL_FROM))
-    throw new HttpError(409, 'Live email is not set up on this server yet; keep it simulated', 'not_configured');
-  if (kind === 'telegram' && mode === 'live' && !c.env.TELEGRAM_BOT_TOKEN)
-    throw new HttpError(409, 'Telegram is not set up on this server yet; keep it simulated', 'not_configured');
-  await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: mode, p_kinds: kinds });
+  if (kind === 'email' && b.enabled && !(c.env.RESEND_API_KEY && c.env.EMAIL_FROM))
+    throw new HttpError(
+      409,
+      'Email is not set up on this server yet (our Resend account). It cannot be switched on until it is.',
+      'not_configured',
+    );
+  if (kind === 'telegram' && b.enabled && !c.env.TELEGRAM_BOT_TOKEN)
+    throw new HttpError(
+      409,
+      'Telegram is not set up on this server yet (our bot). It cannot be switched on until it is.',
+      'not_configured',
+    );
+  await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: 'live', p_kinds: kinds });
   return ok(c, { kind });
 });
 
@@ -115,6 +123,29 @@ integrationRoutes.post('/:kind/test', requirePermission('core.integrations.manag
   return ok(c, { kind, outboxId: id }, 201);
 });
 
+// "Check connection" for any integration or provider: one real, harmless call (lib/integrationChecks.ts), answered now and recorded on
+// the integration with the caller's own sign-in (core_record_integration_check, sql/082; owner or admin, audited).
+integrationRoutes.post('/check/:kind', requirePermission('core.integrations.manage'), async (c) => {
+  const kind = c.req.param('kind');
+  if (!(CHECKABLE as readonly string[]).includes(kind)) throw new HttpError(404, 'Unknown integration', 'not_found');
+  const result = await checkIntegration(c.env, kind as CheckableKind, {
+    orgId: c.var.tenant.orgId,
+    email: c.var.user.email,
+    apiBase: new URL(c.req.url).origin,
+  });
+  try {
+    await callRpc<void>(userDb(c), 'core_record_integration_check', {
+      p_kind: kind,
+      p_ok: result.ok,
+      p_message: result.message.slice(0, 300),
+    });
+  } catch (e) {
+    // Not saved yet (no row), or sql/082 not applied: the answer still stands; only the "last check" line is not updated.
+    if (!(e instanceof HttpError)) throw e;
+  }
+  return ok<IntegrationCheck>(c, result);
+});
+
 // ------------------------------------------------------------------ providers (sql/056): payments, shipping, store, AI
 
 const providerParam = (k: string | undefined): ProviderKind => {
@@ -125,13 +156,12 @@ const providerParam = (k: string | undefined): ProviderKind => {
 integrationRoutes.get('/providers', requirePermission('core.integrations.view'), async (c) => {
   const { data, error } = await userDb(c)
     .from('core_integrations')
-    .select('kind, mode, enabled, settings, last_status, last_error, last_delivery_at')
+    .select('kind, enabled, settings, last_status, last_error, last_delivery_at')
     .eq('org_id', c.var.tenant.orgId)
     .in('kind', PROVIDER_KINDS as unknown as string[]);
   if (error) throw error;
   type PRow = {
     kind: ProviderKind;
-    mode: 'simulated' | 'live';
     enabled: boolean;
     settings: { config?: Record<string, string>; saved_fields?: string[] } | null;
     last_status: 'sent' | 'failed' | null;
@@ -139,15 +169,18 @@ integrationRoutes.get('/providers', requirePermission('core.integrations.view'),
     last_delivery_at: string | null;
   };
   const rows = new Map(((data ?? []) as PRow[]).map((r) => [r.kind, r]));
+  const apiBase = new URL(c.req.url).origin;
   return ok<ProviderSettings[]>(
     c,
     PROVIDERS.map((p) => {
       const r = rows.get(p.kind);
+      const saved = r?.settings?.saved_fields ?? [];
       return {
         kind: p.kind,
         enabled: r?.enabled ?? false,
-        mode: r?.mode ?? 'simulated',
-        savedFields: r?.settings?.saved_fields ?? [],
+        ready: p.fields.every((f) => !f.required || saved.includes(f.key)),
+        callbackUrl: p.webhookPath ? `${apiBase}${p.webhookPath}` : null,
+        savedFields: saved,
         config: r?.settings?.config ?? {},
         lastStatus: r?.last_status ?? null,
         lastError: r?.last_error ?? null,
@@ -177,9 +210,8 @@ integrationRoutes.put('/providers/:kind/fields', requirePermission('core.integra
 integrationRoutes.put('/providers/:kind', requirePermission('core.integrations.manage'), async (c) => {
   const kind = providerParam(c.req.param('kind'));
   const b = await jsonBody(c);
-  const mode = b.mode === 'live' ? 'live' : b.mode === 'simulated' ? 'simulated' : null;
-  if (typeof b.enabled !== 'boolean' || !mode) invalid('enabled and mode (simulated or live) are required');
-  await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: mode, p_kinds: [] });
+  if (typeof b.enabled !== 'boolean') invalid('enabled is required');
+  await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: 'live', p_kinds: [] });
   return ok(c, { kind });
 });
 
@@ -220,22 +252,6 @@ fxRoutes.get('/rate', requirePermission('core.org.read'), async (c) => {
   });
   const r = rows?.[0];
   return ok<FxRate | null>(c, r ? { from, to, rate: Number(r.rate), rateDate: r.rate_date, source: r.source } : null);
-});
-
-// Central Bank of Egypt rates, SIMULATED (lib/rates/cbe.ts): Egyptian pounds per unit, buy and sell, worked out from the stored daily
-// mid rate. Not saved and never used to convert anything.
-fxRoutes.get('/cbe', requirePermission('core.org.read'), async (c) => {
-  const date = new Date().toISOString().slice(0, 10);
-  const mids: MidRate[] = [];
-  for (const currency of CBE_CURRENCIES) {
-    const rows = await callRpc<{ rate: number; rate_date: string; source: string }[]>(userDb(c), 'core_fx_rate', {
-      p_on: date,
-      p_from: currency,
-      p_to: 'EGP',
-    });
-    if (rows?.[0]) mids.push({ currency, mid: Number(rows[0].rate), rateDate: rows[0].rate_date });
-  }
-  return ok<CbeRate[]>(c, cbeRates('simulated', mids));
 });
 
 // Today's rates of the usual currencies into the company's currency, for the settings screen.

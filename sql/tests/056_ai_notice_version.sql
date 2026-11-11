@@ -21,7 +21,7 @@ begin
   if (public.ai__provider_state(o) ->> 'consent')::boolean then raise exception 'FAIL V2: the server sees v1 consent as current'; end if;
 
   set local role authenticated;
-  ok := false; begin perform public.core_save_integration('openai', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
+  ok := false; begin perform public.core_save_integration('openai', true, 'live', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
   if not ok then raise exception 'FAIL V3: OpenAI switched on with only v1 consent'; end if;
 
   ok := false; begin perform public.core_set_ai_consent(true, 'v1'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;

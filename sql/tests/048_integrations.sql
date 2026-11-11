@@ -23,15 +23,17 @@ begin
   set local role authenticated;
 
   -- ---- I1: save settings; validation; members refused
-  perform public.core_save_integration('email', true, 'simulated', array['approval_request']);
-  ok := false; begin perform public.core_save_integration('fax', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
+  perform public.core_save_integration('email', true, 'live', array['approval_request']);
+  ok := false; begin perform public.core_save_integration('email', true, 'simulated', null); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
+  if not ok then raise exception 'FAIL I1c: the removed test mode was accepted (sql/082)'; end if;
+  ok := false; begin perform public.core_save_integration('fax', true, 'live', null); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL I1a: unknown integration accepted'; end if;
-  ok := false; begin perform public.core_save_integration('email', true, 'simulated', array['nonsense']); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
+  ok := false; begin perform public.core_save_integration('email', true, 'live', array['nonsense']); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL I1b: unknown message kind accepted'; end if;
 
-  -- ---- I2: live Slack needs a URL; URL rules; the secret cannot be read back
+  -- ---- I2: switching Slack on needs a URL; URL rules; the secret cannot be read back
   ok := false; begin perform public.core_save_integration('slack', true, 'live', array['approval_request']); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
-  if not ok then raise exception 'FAIL I2a: live Slack without a webhook URL'; end if;
+  if not ok then raise exception 'FAIL I2a: Slack switched on without a webhook URL'; end if;
   ok := false; begin perform public.core_set_integration_secret('slack', 'https://evil.example.com/hook/aaaaaaaaaaaaaaaa'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL I2b: a non-Slack URL accepted for Slack'; end if;
   ok := false; begin perform public.core_set_integration_secret('email', 'https://hooks.slack.com/services/x/y/zzzzzzzzzz'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
@@ -89,12 +91,12 @@ begin
   reset role;
   if exists (select 1 from vault.secrets where id = sid) then raise exception 'FAIL T1b: the secret is still in Vault'; end if;
   select mode, enabled into rec from public.core_integrations where org_id = o and kind = 'slack';
-  if rec.mode <> 'simulated' or rec.enabled then raise exception 'FAIL T1c: Slack still live or on after clearing'; end if;
+  if rec.mode <> 'live' or rec.enabled then raise exception 'FAIL T1c: Slack still on after clearing (or not live)'; end if;
 
   -- ---- P1: members and other companies
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
-  ok := false; begin perform public.core_save_integration('email', false, 'simulated', null); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
+  ok := false; begin perform public.core_save_integration('email', false, 'live', null); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL P1a: a member changed an integration'; end if;
   select count(*) into n from public.core_integrations;
   if n <> 0 then raise exception 'FAIL P1b: a member sees % integrations', n; end if;

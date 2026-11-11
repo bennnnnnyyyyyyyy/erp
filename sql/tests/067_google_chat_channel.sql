@@ -87,13 +87,13 @@ begin
   reset role;
   if exists (select 1 from vault.secrets where id = sid) then raise exception 'FAIL T1b: the secret is still in Vault'; end if;
   select mode, enabled into rec from public.core_integrations where org_id = o and kind = 'google_chat';
-  if rec.mode <> 'simulated' or rec.enabled then raise exception 'FAIL T1c: still live or on after clearing'; end if;
+  if rec.mode <> 'live' or rec.enabled then raise exception 'FAIL T1c: still on after clearing (or not live)'; end if;
 
   -- ---- P1: members and other organizations (the URL is saved again first, as the owner)
   set local role authenticated;
   perform public.core_set_integration_secret('google_chat', gurl);
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
-  ok := false; begin perform public.core_save_integration('google_chat', false, 'simulated', null); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
+  ok := false; begin perform public.core_save_integration('google_chat', false, 'live', null); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL P1a: a member changed the channel'; end if;
   ok := false; begin perform public.core_set_integration_secret('google_chat', gurl); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL P1b: a member saved a URL'; end if;
@@ -120,7 +120,7 @@ begin
     raise exception 'FAIL A1: something is open to anonymous users';
   end if;
   set local role anon;
-  ok := false; begin perform public.core_save_integration('google_chat', true, 'simulated', null); exception when others then ok := true; end;
+  ok := false; begin perform public.core_save_integration('google_chat', true, 'live', null); exception when others then ok := true; end;
   reset role;
   if not ok then raise exception 'FAIL A2: an anonymous user saved an integration'; end if;
 

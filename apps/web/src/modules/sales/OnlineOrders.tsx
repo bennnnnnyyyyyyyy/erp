@@ -1,15 +1,14 @@
-import { formatMoney, hasPermission, type ProviderSettings } from '@erp/shared';
+import { formatMoney, type ProviderSettings } from '@erp/shared';
 import { Loading } from '../../components/Loading';
-import { Button } from '../../components/ui/button';
 import { Link } from '../../lib/router';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { tr } from '../../lib/i18n';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
-import { Notice, useNotice } from '../accounting/common';
 
-// Sales > Online orders (sql/059): what arrived from the store, what is held for a person, and a simulated test order. An order that
+// Sales > Online orders (sql/059): what arrived from the store and what is held for a person (sql/082: no test order; to try it, place
+// an order in the store itself, for example a free Shopify development store). An order that
 // arrives becomes an open sales order; stock still needs the normal approved request. Shopify itself is connected in Settings > Integrations.
 
 type Online = {
@@ -27,8 +26,6 @@ type Online = {
 
 export function OnlineOrders() {
   const session = useSession();
-  const { message, busy, run } = useNotice();
-  const canManage = hasPermission(session.permissions, 'core.integrations.manage');
   const list = useLoad(() => api<Online[]>('/v1/sales/online-orders'));
   const providers = useLoad(() => api<ProviderSettings[]>('/v1/core/integrations/providers'));
   if (!list.data || !providers.data) {
@@ -44,23 +41,7 @@ export function OnlineOrders() {
           {tr('Shopify is not switched on.')} <Link to="/settings/integrations#shopify">{tr('Connect it in Settings')}</Link>
         </p>
       ) : null}
-      <Notice message={message} />
-      {canManage && shopify?.enabled && shopify.mode === 'simulated' ? (
-        <div className="form-row">
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const r = await api<{ result: string; orderNumber?: string; reason?: string }>('/v1/sales/online-orders/test', { method: 'POST' });
-                return r.result === 'imported' ? tr('A test order was created in Sales.') : (r.reason ?? r.result);
-              }, list.reload)
-            }
-          >
-            {tr('Send a test order')}
-          </Button>
-        </div>
-      ) : null}
+      {shopify?.enabled ? <p className="muted small">{tr('To try it, place an order in your Shopify store (a free development store works). It appears here within a minute.')}</p> : null}
       {list.data.length ? (
         <div className="table-wrap">
           <table>

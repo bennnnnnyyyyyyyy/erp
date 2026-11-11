@@ -32,9 +32,10 @@ import { HttpError } from './errors';
 // and ElevenLabs accounts: none is set yet (no keys on live, 9 Nov 2026); set one before adding our keys.
 
 export type AiCaller = { orgId: string; userId: string };
-export type AiAnswer = { text: string; provider: 'openai' | 'ollama' | 'elevenlabs' | 'simulated'; simulated: boolean; ownKey: boolean };
+export type AiAnswer = { text: string; provider: 'openai' | 'ollama' | 'elevenlabs'; ownKey: boolean };
 
-type ProviderState = { enabled: boolean; simulated: boolean; credentials: Record<string, string> };
+// sql/082: no test mode; the state's 'simulated' flag is always false once 082 is applied and is not read here.
+type ProviderState = { enabled: boolean; credentials: Record<string, string> };
 type State = { consent: boolean; providers: { openai: ProviderState; elevenlabs: ProviderState; ollama: ProviderState } };
 
 async function state(env: Bindings, orgId: string): Promise<State> {
@@ -115,15 +116,6 @@ export async function askAi(
   const { ollama, openai } = s.providers;
 
   if (ollama.enabled) {
-    if (ollama.simulated) {
-      await record(env, who, { provider: 'simulated', feature, model: null, cost: 0, ownKey: true, ok: true });
-      return {
-        text: '[Simulated AI] This is a test answer from your own AI. Nothing was sent anywhere.',
-        provider: 'simulated',
-        simulated: true,
-        ownKey: true,
-      };
-    }
     const model = ollama.credentials.model;
     try {
       const r = await chatOllama(
@@ -140,7 +132,7 @@ export async function askAi(
         ownKey: true,
         ok: true,
       });
-      return { text: r.text, provider: 'ollama', simulated: false, ownKey: true };
+      return { text: r.text, provider: 'ollama', ownKey: true };
     } catch (e) {
       await record(env, who, { provider: 'ollama', feature, model: model ?? null, cost: 0, ownKey: true, ok: false });
       throw new HttpError(502, e instanceof Error ? e.message : 'Your Ollama server could not be reached', 'provider_error');
@@ -148,15 +140,6 @@ export async function askAi(
   }
 
   if (!openai.enabled) throw off();
-  if (openai.simulated) {
-    await record(env, who, { provider: 'simulated', feature, model: null, cost: 0, ownKey: true, ok: true });
-    return {
-      text: '[Simulated AI] This is a test answer. Nothing was sent to OpenAI.',
-      provider: 'simulated',
-      simulated: true,
-      ownKey: false,
-    };
-  }
   const own = openai.credentials.api_key;
   const apiKey = own || env.OPENAI_API_KEY;
   if (!apiKey) throw noKey();
@@ -176,7 +159,7 @@ export async function askAi(
       ownKey,
       ok: true,
     });
-    return { text: r.text, provider: 'openai', simulated: false, ownKey };
+    return { text: r.text, provider: 'openai', ownKey };
   } catch (e) {
     await record(env, who, { provider: 'openai', feature, model, cost: 0, ownKey, ok: false });
     throw new HttpError(502, e instanceof Error ? e.message : 'OpenAI could not be reached', 'provider_error');
@@ -197,15 +180,6 @@ export async function transcribeAudio(
   if (!chosen.enabled) throw off();
   const provider = useEleven ? 'elevenlabs' : 'openai';
   const seconds = estimateSeconds(audio.bytes.byteLength);
-  if (chosen.simulated) {
-    await record(env, who, { provider: 'simulated', feature: 'transcribe', model: null, seconds, cost: 0, ownKey: true, ok: true });
-    return {
-      text: '[Simulated transcript] This is a test transcript. Nothing was sent to a provider.',
-      provider: 'simulated',
-      simulated: true,
-      ownKey: false,
-    };
-  }
   const own = chosen.credentials.api_key;
   const apiKey = own || (useEleven ? env.ELEVENLABS_API_KEY : env.OPENAI_API_KEY);
   if (!apiKey) throw noKey();
@@ -217,7 +191,7 @@ export async function transcribeAudio(
       ? await transcribeElevenLabs({ apiKey, audio, language }, deps)
       : await transcribeOpenAI({ apiKey, audio, language }, deps);
     await record(env, who, { provider, feature: 'transcribe', model: null, seconds, cost, ownKey, ok: true });
-    return { text: r.text, provider, simulated: false, ownKey };
+    return { text: r.text, provider, ownKey };
   } catch (e) {
     await record(env, who, { provider, feature: 'transcribe', model: null, seconds, cost: 0, ownKey, ok: false });
     throw new HttpError(502, e instanceof Error ? e.message : 'The speech provider could not be reached', 'provider_error');

@@ -57,30 +57,24 @@ begin
   if not ok then raise exception 'FAIL S3b: a bad activity code was accepted'; end if;
   ok := false; begin perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620', 'staging'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL S3c: an unknown mode was accepted'; end if;
-  -- no mode given: the default is simulated (nothing leaves our system)
+  -- no mode given: the default is preprod, ETA's own test system (sql/082: our simulated mode is no longer a choice)
   perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620');
   select eta_mode into s from public.tax_profiles where org_id = oa;
-  if s <> 'simulated' then raise exception 'FAIL S3d: default mode is %, expected simulated', s; end if;
-  perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620', 'preprod');
-  select eta_mode into s from public.tax_profiles where org_id = oa;
-  if s <> 'preprod' then raise exception 'FAIL S3e: mode is %, expected preprod', s; end if;
-  reset role;
-  select count(*) into n from public.audit_log where org_id = oa and action = 'einvoicing.profile.mode_changed';
-  if n <> 1 then raise exception 'FAIL S3f: changing the mode wrote % mode_changed audit rows, expected 1', n; end if;
-  set local role authenticated;
+  if s <> 'preprod' then raise exception 'FAIL S3d: default mode is %, expected preprod', s; end if;
+  ok := false; begin perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620', 'simulated'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
+  if not ok then raise exception 'FAIL S3e: the removed simulated mode was accepted'; end if;
   perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620', 'preprod');
   reset role;
   select count(*) into n from public.audit_log where org_id = oa and action = 'einvoicing.profile.mode_changed';
-  if n <> 1 then raise exception 'FAIL S3g: saving the same mode again logged another mode change'; end if;
+  if n <> 0 then raise exception 'FAIL S3f: saving the same mode logged % mode changes', n; end if;
+  select count(*) into n from public.audit_log where org_id = oa and action = 'einvoicing.profile.saved';
+  if n <> 2 then raise exception 'FAIL S3g: % profile saves audited, expected 2', n; end if;
   set local role authenticated;
   -- production is refused until credentials and a real signer exist, and the saved mode does not change
   ok := false; begin perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620', 'production'); exception when others then ok := (sqlerrm = 'PRODUCTION_NOT_READY'); end;
   if not ok then raise exception 'FAIL S3h: production mode was accepted without credentials and a real signer'; end if;
   select eta_mode into s from public.tax_profiles where org_id = oa;
   if s <> 'preprod' then raise exception 'FAIL S3i: a refused production change altered the mode to %', s; end if;
-  perform public.eta_save_profile('100200300', 'Test Seller LLC', '4620', 'simulated');
-  select eta_mode into s from public.tax_profiles where org_id = oa;
-  if s <> 'simulated' then raise exception 'FAIL S3j: mode is %, expected simulated', s; end if;
   -- ---- S4: branches
   br1 := public.eta_save_branch(null, '0', 'Head office', 'Cairo', 'Nasr City', '1 Test St', '1');
   ok := false; begin perform public.eta_save_branch(null, '0', 'Duplicate', 'Cairo', 'Nasr City', '2 Test St', '2'); exception when unique_violation then ok := true; end;

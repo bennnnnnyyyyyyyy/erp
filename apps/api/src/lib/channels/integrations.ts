@@ -4,11 +4,11 @@ import { appUrl, sendTelegram } from '../telegram';
 import type { ChannelAdapter, OutboxMessage } from './index';
 
 // Email, Slack, Teams and Google Chat (documentation/plans/INTEGRATIONS_PLAN.md wave 1; sql/053). Like every channel, these only DELIVER a
-// message; they never decide anything. Each company's integration has a mode:
-//   simulated -> nothing leaves the system; the message is marked delivered "simulated" (the default, and what tests use)
-//   live      -> email through our sending account (Resend; RESEND_API_KEY and EMAIL_FROM are Worker secrets), Slack, Teams or Google Chat
-//                through the company's own webhook URL, read from Vault by the job only (core__integration_secret)
-// A company that switched an integration off after a message was queued gets "skipped", not a send.
+// message; they never decide anything. There is no test mode (sql/082): a company's integration is off or on, and on means real:
+// email through our sending account (Resend; RESEND_API_KEY and EMAIL_FROM are Worker secrets), Slack, Teams or Google Chat through the
+// company's own webhook URL, read from Vault by the job only (core__integration_secret), Telegram through our bot.
+// A company that switched an integration off after a message was queued gets "skipped", not a send. Tests replace the deps below, so a
+// test run never reaches a provider.
 
 export type IntegrationKind = 'email' | 'slack' | 'teams' | 'telegram' | 'google_chat';
 
@@ -23,7 +23,7 @@ export const googleChatPayload = (m: Pick<OutboxMessage, 'subject' | 'body'>) =>
 });
 
 const WEBHOOK_LABEL = { slack: 'Slack', teams: 'Teams', google_chat: 'Google Chat' } as const;
-export type IntegrationState = { enabled: boolean; mode: 'simulated' | 'live' };
+export type IntegrationState = { enabled: boolean };
 
 /** What the adapters need from the outside world; replaced in tests so nothing real is called. */
 export type IntegrationDeps = {
@@ -40,7 +40,7 @@ const realDeps: IntegrationDeps = {
   async state(env, orgId, kind) {
     const { data, error } = await adminDb(env)
       .from('core_integrations')
-      .select('enabled, mode')
+      .select('enabled')
       .eq('org_id', orgId)
       .eq('kind', kind)
       .maybeSingle<IntegrationState>();
@@ -77,7 +77,7 @@ async function check(res: Response, what: string) {
   throw new Error(`${what} returned ${res.status}${detail ? `: ${detail}` : ''}`);
 }
 
-/** Decides simulated, skipped or live; returns how the message was delivered (recorded as delivered_via). */
+/** Decides skipped or sent; returns how the message was delivered (recorded as delivered_via). */
 async function deliver(
   kind: IntegrationKind,
   message: OutboxMessage,
@@ -89,7 +89,6 @@ async function deliver(
   // A test message is sent whether or not the integration is switched on (that is what testing is for).
   const isTest = message.subject === 'Test message from the ERP';
   if (!state || (!state.enabled && !isTest)) return 'skipped (switched off)';
-  if (state.mode !== 'live') return 'simulated';
   return live();
 }
 

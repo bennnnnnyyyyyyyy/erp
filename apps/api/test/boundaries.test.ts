@@ -18,6 +18,8 @@ const ADMIN_DB_ALLOWED = new Set([
   'lib/store/shopify.ts',
   'lib/aiService.ts',
   'lib/whatsappInbound.ts',
+  // "Check connection" (sql/082): reads a company's saved keys to make one real call; never writes, never returns a key.
+  'lib/integrationChecks.ts',
 ]);
 // Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.
 const AUTH_ADMIN_ALLOWED = new Set(['modules/core/memberRoutes.ts']);

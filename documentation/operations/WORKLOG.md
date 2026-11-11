@@ -11,6 +11,62 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-11 — No test mode on any integration; "Check connection"; Shopify 2026 fields (`sql/082` NOT applied)
+
+**Objective.** Ben: "all integrations currently are in some stupid test mode, i want to actually check that integrations are working, i
+dont want this stupid test mode on anything", then "work in tandem with them [the other chats] to make sure nothing gets made wrong".
+Plan: <https://claude.ai/artifact/Bhoasn4YNGrEb4jsWQJtZi>. Decisions 1-4 taken as recommended there (Ben gave no separate answers):
+remove the simulated CBE table; ETA keeps PreProd and production only; drop the three "try it" database functions (in 082, applied by
+Ben); build on a new branch.
+
+**Coordination.** All four other sessions were told the scope, files and the migration number before any edit, and all answered: no
+clash. `erp-repo-audit-fixes` confirmed 082 and test 076 free (079, 080 unused on purpose) and listed rules to keep (webhook body caps
+and signatures, secret-key allowlist, Vault-only secrets, AI notice v2, outbox retry, CBE never saved, adapters registered, 503 before a
+migration); all kept. `worktree-ui-work-setup` (theme retint) touches none of these files; `step-by-step-app-walkthrough-video` keeps
+Integrations and payment links out of its video; the accounting session had nothing running.
+
+**Found on live first (read-only).** No keys anywhere: the Worker has only `SUPABASE_SECRET_KEY` (no Resend, Telegram, OpenAI,
+ElevenLabs, WhatsApp); 13 companies, 3 integration rows (Paymob Demo off, OpenAI Test Organization off, Shopify "Test 2" on), all
+simulated, none with saved details; no payment links or shipments. So removing test mode alone makes nothing work: each integration
+works once its key exists, and "Check connection" now shows it. No route sends to ETA yet (only tests use the client).
+
+**Actions Completed.** Branch `feat/integrations-live` (worktree `.claude/worktrees/integrations-live`, from `origin/main` 7008ade):
+- `sql/082_core_integrations_live.sql` + `sql/tests/076_integrations_live.sql`; tests 030, 048, 049, 051-056, 067 rewritten for "on means
+  real" (signed callbacks instead of "simulate payment", Bosta tracking instead of simulated steps, Shopify client ID).
+- API: `lib/integrationChecks.ts` (new; one real, harmless call per kind: test email to the caller, test post to Slack/Teams/Google
+  Chat, Telegram `getMe`, a 1 EGP unpaid Paymob request with its checkout page, a Fawry status query for an unknown reference, Bosta
+  pickup locations, Shopify token + shop + webhooks, OpenAI/ElevenLabs/Ollama model or account lists; keys never returned, anything
+  key-like masked; 10-second timeout; added to the secret-key allowlist in `test/boundaries.test.ts`). **Needs Ben's explicit
+  yes:** it is a further exception to the agents.md rule that request routes never reach the secret-key client (like
+  `lib/payments/links.ts` and `lib/aiService.ts`); limits: owner/admin route only, reads the caller's own company's keys, one
+  harmless call, never returns a key, result recorded and audited through `core_record_integration_check`. Once approved, add a line
+  naming it in agents.md (Stock, approval and audit rules: the mutations bullet). Raised by `erp-repo-audit-fixes`. `POST
+  /v1/core/integrations/check/:kind`. No `mode` anywhere; email/Telegram cannot be switched on without our server account; provider
+  list returns `ready` and the full `callbackUrl`. Simulate routes and the Shopify test order removed; a test-mode link or shipment
+  (only possible before 082) answers 503 `not_set_up`. Channels and AI have no simulated branches. `lib/rates/cbe.ts` and
+  `GET /v1/core/fx/cbe` removed. ETA: `ETA_MODES` = preprod, production (default preprod); `transportFor` refuses `simulated`;
+  `SimulatedTransport` stays for tests only.
+- Shared: `IntegrationSettings`/`ProviderSettings` without `mode` (`ready`, `callbackUrl`), `IntegrationCheck`; Shopify fields: shop
+  domain, client ID, client secret (signs webhooks), optional pre-2026 token.
+- Web: "Go live", "Back to test mode", "Simulate payment", "Next status (test)", "Send a test order" and the SIMULATED CBE table removed;
+  statuses Off / On, not checked / Working / Problem; `CheckConnection.tsx` on every integration; switching on asks for confirmation;
+  24 new strings with Arabic machine drafts (`i18nScreens.ts`) for Ben's review. Old records keep their "Simulated" tag as history.
+- Docs: `INTEGRATIONS_PLAN.md` (test mode superseded), `checklist.md`, `sql/README.md` (082 row, run order).
+
+**Database / System Result.** Two dry runs of 082 on live (ggoerp) inside rolled-back transactions passed: all 3 rows `live`, Shopify in
+"Test 2" switched off (no details), default `live`, the 3 simulate functions gone, the check function open to users and not to anon,
+Shopify needs `client_id`, ETA default `preprod`, 3 audit rows. Read-only checks afterwards: nothing kept (3 rows still simulated, 3
+functions present, 0 audit rows). **082 is NOT applied.**
+
+**Safety Status.** In the worktree, against its own `packages/shared` (temporary tsconfig/vitest configs, since `node_modules/@erp/shared`
+links to the main checkout; deleted afterwards): typecheck clean (api, web, shared); Biome 0 errors; tests shared 74 + 1 skipped, API 361
++ 7 skipped, web 135; all 80 migrations and 75 SQL tests pass locally (PGlite). Not run: the web production build and the browser smoke
+test (they resolve the main checkout's shared package); nothing viewed in a browser. **Unconfirmed until a real key is tried:** the
+Fawry "unknown reference" answer, Bosta's v2 `pickup-locations` path, Shopify's client-credentials exchange for the shop. **Apply 082
+before merging.** After deploy, nothing works for real until keys exist: our Resend account and `EMAIL_FROM`, `TELEGRAM_BOT_TOKEN`
+(+ webhook secret, username), `OPENAI_API_KEY`/`ELEVENLABS_API_KEY` (set spending limits first), and each company's own Paymob, Fawry,
+Bosta, Shopify and webhook URLs. Not committed (agents.md: Ben commits).
+
 ## 2026-11-11 — After the walkthrough: credit notes screen, task-first Inventory, guided Accounting setup, tour, customer details (sql/081)
 
 **Objective.** Ben: "do what you can without me" after the walkthrough and the reply to Ian. Keep the promises made in that reply

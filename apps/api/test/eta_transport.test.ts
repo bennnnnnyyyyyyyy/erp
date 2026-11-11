@@ -211,16 +211,15 @@ describe('what a simulated send may store and show', () => {
 });
 
 describe('choosing the transport for a company', () => {
-  const sim = new SimulatedTransport();
   const real = (environment: 'preprod' | 'production') => ({ mode: environment }) as unknown as EtaTransport;
-  const factories: TransportFactories = { simulated: () => sim, real };
+  const factories: TransportFactories = { real };
   const creds = { clientId: 'id', clientSecret: 'secret' };
   const realSigner: Signer = { kind: 'real', sign: async () => 'sig' };
 
-  it('defaults to simulated, needs nothing for it, and never uses the real factory', () => {
-    expect(transportFor({ mode: undefined, credentials: null, signer: null }, factories)).toBe(sim);
-    expect(transportFor({ mode: null, credentials: null, signer: null }, factories)).toBe(sim);
-    expect(transportFor({ mode: 'simulated', credentials: creds, signer: realSigner }, factories)).toBe(sim);
+  it("defaults to preprod (ETA's own test system), which needs credentials; simulated is no longer a company mode (sql/082)", () => {
+    expect(() => transportFor({ mode: undefined, credentials: null, signer: null }, factories)).toThrow(/credentials/i);
+    expect(transportFor({ mode: null, credentials: creds, signer: null }, factories).mode).toBe('preprod');
+    expect(() => transportFor({ mode: 'simulated', credentials: creds, signer: realSigner }, factories)).toThrow(EtaModeError);
   });
   it('preprod needs credentials; it does not need a real signer (version 0.9 documents are not signature-checked)', () => {
     expect(() => transportFor({ mode: 'preprod', credentials: null, signer: null }, factories)).toThrow(EtaModeError);

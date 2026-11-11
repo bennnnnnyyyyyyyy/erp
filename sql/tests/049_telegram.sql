@@ -76,7 +76,7 @@ begin
   -- ---- R1: routing only to people who linked, only chosen kinds; the job finds the chat
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  perform public.core_save_integration('telegram', true, 'simulated', array['approval_request']);
+  perform public.core_save_integration('telegram', true, 'live', array['approval_request']);
   reset role;
   perform public.msg__enqueue(o, u, 'approval_request', 'REQ-9 needs approval', 'b', null, null, 'tg:u');
   perform public.msg__enqueue(o, a, 'approval_request', 'REQ-9 needs approval', 'b', null, null, 'tg:a');   -- a never linked
