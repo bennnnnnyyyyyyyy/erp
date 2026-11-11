@@ -4,6 +4,7 @@ import { defaultPermissionsFor, type ModuleStatus, type Role, type SessionInfo }
 import { Shell } from './components/Shell';
 import { demoActor, demoApi } from './lib/demo';
 import { ACTOR_NAMES } from './lib/demoInventory';
+import { tr } from './lib/i18n';
 import { SessionContext } from './session';
 
 const ROLES: Role[] = ['owner', 'admin', 'member', 'viewer'];
@@ -50,10 +51,10 @@ export function DemoApp() {
   return (
     <SessionContext.Provider value={{ session, reload: () => setTick((t) => t + 1) }}>
       <div className="demo-banner" role="status">
-        <span className="demo-tag">DEMO</span>
-        <span>Demo environment: sample data only. Nothing is saved; reload resets it.</span>
+        <span className="demo-tag">{tr('DEMO')}</span>
+        <span>{tr('Demo environment: sample data only. Nothing is saved; reload resets it.')}</span>
         <label>
-          Acting as{' '}
+          {tr('Acting as')}{' '}
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -63,7 +64,7 @@ export function DemoApp() {
           </select>
         </label>
         <Button variant="outline" type="submit" onClick={() => setRtl((v) => !v)} aria-pressed={rtl}>
-          {rtl ? 'LTR · English layout' : 'RTL · عربي layout'}
+          {rtl ? tr('LTR · English layout') : tr('RTL · Arabic layout')}
         </Button>
       </div>
       <Shell key={role} onSwitchOrg={() => undefined} onSignOut={() => undefined} />

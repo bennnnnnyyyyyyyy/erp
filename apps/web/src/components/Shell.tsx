@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useId, useRef, useState } from 'react';
 import { Loading } from './Loading';
 import { api } from '../lib/api';
 import { demoMode } from '../lib/demo';
@@ -27,11 +27,17 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
 
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      button.current?.focus();
+    };
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', esc);
     return () => {
@@ -42,11 +48,11 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
 
   return (
     <div className="user-menu" ref={ref}>
-      <button className="avatar" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={session.name ?? session.email}>
+      <button ref={button} className="avatar" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={open ? menuId : undefined} title={session.name ?? session.email}>
         {initials(session.email, session.name)}
       </button>
       {open && (
-        <div className="menu" role="menu">
+        <div className="menu" id={menuId}>
           <div className="menu-head">
             {session.name && <div className="font-semibold"><bdi>{session.name}</bdi></div>}
             <div className={session.name ? 'muted small' : undefined}>{session.email}</div>
@@ -54,10 +60,10 @@ function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignO
               <bdi>{session.org?.name}</bdi> · {session.role ? t(session.role) : ''}
             </div>
           </div>
-          <button role="menuitem" className="menu-item" onClick={onSwitchOrg}>
+          <button className="menu-item" onClick={onSwitchOrg}>
             {t('Switch organization')}
           </button>
-          <button role="menuitem" className="menu-item" onClick={onSignOut}>
+          <button className="menu-item" onClick={onSignOut}>
             {t('Sign out')}
           </button>
         </div>

@@ -107,8 +107,10 @@ luck, not process.
 1. **Ben, today:** GitHub → Settings → Branches → add a rule for `main`: *Require a pull request before merging*; *Require status
    checks to pass* and select **"Typecheck, tests and web build"** and **"Migrations and SQL tests on a throwaway local database"**;
    *Require branches to be up to date*. The Merge button then stays grey until both pass. This cannot be forgotten in a hurry.
-2. **Claude, Batch 1:** make the deploy job depend on the SQL tests when SQL changed (one workflow calling the other, or a combined
-   job), so even a direct push cannot deploy code whose SQL tests fail.
+2. **Changed on reflection (Batch 1):** the deploy is *not* chained to the SQL tests. `sql-tests.yml` is separate on purpose (its
+   header): an outage of the throwaway database must not block an urgent API fix, and migrations reach live by hand, not by the
+   deploy. Requiring both checks before merge (item 1) closes the gap the audit describes, without that downside. Direct pushes to
+   `main` are blocked by the same branch-protection rule ("Require a pull request before merging").
 3. Migrations: the rule stays "dry run on live, apply, then merge", and the merge is now blocked until both checks pass.
 
 ## 5. P2 — Pop-up windows declare themselves modal without managing focus
@@ -242,6 +244,20 @@ short plan comes first because it needs a test environment decision.
 - **Every new table ships with its own isolation test**, and the check in finding 15 enforces it.
 - **A gap noted twice is fixed, not noted a third time** (findings 7, 8, 10, 13).
 - **Reports say what was tested, not what was built**: "smoke-tested" is not "tested in a browser" (finding 17).
+
+## Ben's part for findings 9 and 13 (agents may not edit ADRs)
+
+The `documentation/architecture/decisions/` folder is closed to agents by Ben's settings. Paste these:
+
+- **ADR-0002**, the status line → `**Status:** Accepted, as amended by ADR-0003 (confirmed against the code 11 Nov 2026)`;
+  deciders → `Ben`; replace the bullet "The API enforces isolation (service-role client, …)" with: *"The database enforces isolation on
+  every request: the API calls Postgres with the signed-in person's own JWT (ADR-0003), so row level security applies, and it also
+  filters by `c.var.tenant.orgId`. RLS is enabled on every table, using `is_org_member(org_id)`. Amended 11 Nov 2026: the secret-key
+  client is limited to the Master-key exceptions in `agents.md`, guarded by `apps/api/test/boundaries.test.ts`."*
+- **ADR-0003**, the status line → `**Status:** Accepted and implemented (confirmed 11 Nov 2026; exceptions under "Master-key
+  exceptions" in agents.md)`; deciders → `Ben`.
+- **DRAFT ADR-0004**: change both links from `../plans/` to `../../plans/`; then Claude removes the two lines from
+  `scripts/check-doc-links.known.txt`.
 
 ## What Ben needs to do
 
