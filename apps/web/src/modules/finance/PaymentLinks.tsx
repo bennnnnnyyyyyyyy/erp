@@ -84,7 +84,7 @@ export function PaymentLinks({ invoiceId, onPaid }: { invoiceId: string; onPaid:
                 <th scope="col" className="right">{tr('Amount')}</th>
                 <th scope="col">{tr('Status')}</th>
                 <th scope="col">{tr('Pay at')}</th>
-                <th scope="col" />
+                <th scope="col"><span className="sr-only">{tr('Actions')}</span></th>
               </tr>
             </thead>
             <tbody>

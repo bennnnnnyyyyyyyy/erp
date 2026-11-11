@@ -70,7 +70,7 @@ export function ConnectPhonePage() {
       </div>
 
       <h2 className="related">{tr('Your numbers')}</h2>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Number')}</th><th scope="col">{tr('Status')}</th><th scope="col">{tr('Added')}</th><th scope="col">{tr('Confirm')}</th><th scope="col"></th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Number')}</th><th scope="col">{tr('Status')}</th><th scope="col">{tr('Added')}</th><th scope="col">{tr('Confirm')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
         {numbers.map((i) => (
           <tr key={i.id}><td><code>{i.address}</code></td><td>{i.status === 'verified' ? tr('Confirmed') : tr('Waiting for the code')}</td><td>{formatDateTime(i.createdAt, session.org)}</td>
             <td>{i.status === 'pending' && (

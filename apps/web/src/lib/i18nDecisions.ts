@@ -617,4 +617,10 @@ export const DECISIONS_AR: Record<string, string> = {
   'Warns the right people when stock is low, goods are about to expire, an invoice is late or the month is losing money.': 'ينبّه الأشخاص المناسبين عند انخفاض المخزون أو قرب انتهاء صلاحية البضاعة أو تأخر فاتورة أو خسارة الشهر.',
   'Your books: chart of accounts, entries made automatically from every document, manual journals and the trial balance.': 'دفاترك: شجرة الحسابات، والقيود التلقائية من كل مستند، والقيود اليدوية، وميزان المراجعة.',
   'Cash boxes and bank accounts, payments through them, transfers between them and their balances.': 'الصناديق النقدية والحسابات البنكية، والمدفوعات من خلالها، والتحويلات بينها، وأرصدتها.',
+  // audit 11 Nov: accessibility and demo (machine drafts, for Ben's review)
+  'DEMO': 'تجريبي',
+  'Demo environment: sample data only. Nothing is saved; reload resets it.': 'بيئة تجريبية: بيانات نموذجية فقط. لا يُحفظ شيء، وإعادة التحميل تعيد الضبط.',
+  'Acting as': 'التصرف بصفة',
+  'LTR · English layout': 'تخطيط من اليسار لليمين · إنجليزي',
+  'RTL · Arabic layout': 'تخطيط من اليمين لليسار · عربي',
 };
