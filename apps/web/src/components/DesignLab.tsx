@@ -398,7 +398,10 @@ function Panel() {
 }
 
 export function mountDesignLab() {
+  const started = performance.now();
   apply(load());   // choices apply at once, even before the panel is opened
+  // The lab reports its own cost in the browser console (F12), so "is it the lab?" has a number: normally a few milliseconds.
+  requestAnimationFrame(() => console.info(`[design-lab] applied options and mounted in ${(performance.now() - started).toFixed(1)} ms (page loaded ${(performance.now() / 1000).toFixed(1)} s after navigation start). Add ?nolab to the address to load without it.`));
   const host = document.createElement('div');
   host.id = 'design-lab-root';
   document.body.appendChild(host);
