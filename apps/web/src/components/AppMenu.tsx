@@ -1,7 +1,7 @@
 import { useI18n } from '../lib/i18n';
 import { Link } from '../lib/router';
 import { MENU_GROUPS, type AppDef, type AppPage } from '../modules/registry';
-import { PageIcon } from './icons';
+import { AppIcon, LogoMark, PageIcon, appHueStyle } from './icons';
 
 // The current app's menu: a left list in every app (Ben, 9 Nov 2026), with grouped pages (MENU_GROUPS) under a heading. Every item has an
 // icon. It stays in view on a desktop; on a phone it is a drawer opened from the menu button in the top bar.
@@ -40,7 +40,15 @@ function PageLink({ app, page, current }: { app: AppDef; page: AppPage; current:
 export function AppSideMenu({ app, current, open }: { app: AppDef; current: AppPage | undefined; open: boolean }) {
   const { t } = useI18n();
   return (
-    <nav className={open ? 'sidebar open' : 'sidebar'} aria-label={`${t(app.name)} · ${t('Menu')}`}>
+    <nav className={open ? 'sidebar open' : 'sidebar'} style={appHueStyle(app.key)} aria-label={`${t(app.name)} · ${t('Menu')}`}>
+      <Link to="/" className="sidebar-brand" aria-label={t('All apps')}>
+        <LogoMark size={30} />
+        <span>{t('All apps')}</span>
+      </Link>
+      <Link to={app.basePath || '/'} className="sidebar-app">
+        <span className="sidebar-app-icon"><AppIcon appKey={app.key} name={t(app.name)} /></span>
+        <span className="sidebar-app-name">{t(app.name)}</span>
+      </Link>
       {entries(app).map((e) =>
         e.kind === 'page' ? (
           <PageLink key={e.page.path || 'home'} app={app} page={e.page} current={current} />

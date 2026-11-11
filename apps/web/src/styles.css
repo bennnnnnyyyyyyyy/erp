@@ -29,7 +29,7 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--font);
+  margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 var(--font);
   font-feature-settings: 'tnum' 1; -webkit-font-smoothing: antialiased;
 }
 h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 0.4rem; }
@@ -605,3 +605,116 @@ td input { margin-top: 0; }
   [dir='rtl'] .table-wrap th.col-sticky-end, [dir='rtl'] .table-wrap td.col-sticky-end { box-shadow: 1px 0 0 var(--border); }
 }
 .empty-action { margin-block-start: 0.75rem; }
+
+/* ======== Warm theme layer (Ben, Nov 2026) ======== */
+.tile-icon {
+  width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 0.45rem;
+  background: linear-gradient(145deg, oklch(0.95 0.045 var(--h, 265)), oklch(0.90 0.08 var(--h, 265))); color: oklch(0.45 0.17 var(--h, 265));
+  box-shadow: inset 0 0 0 1px oklch(0.8 0.09 var(--h, 265) / 0.5);
+}
+.dark .tile-icon, .dark .topbar-app-icon { background: linear-gradient(145deg, oklch(0.32 0.07 var(--h, 265)), oklch(0.27 0.06 var(--h, 265))); color: oklch(0.82 0.13 var(--h, 265)); box-shadow: inset 0 0 0 1px oklch(0.5 0.1 var(--h, 265) / 0.4); }
+.tile:hover { border-color: oklch(0.65 0.14 var(--h, 265)); }
+.tile { overflow: hidden; }
+.tile::before { content: ''; position: absolute; inset-inline: 0; inset-block-start: 0; height: 3px; background: linear-gradient(90deg, oklch(0.7 0.15 var(--h, 265)), oklch(0.6 0.18 calc(var(--h, 265) + 30))); opacity: 0.85; }
+.logo-mark { flex: none; display: block; }
+
+/* top-bar app icon follows the app's hue */
+.topbar-app-icon { background: oklch(0.93 0.06 var(--h, 200)); color: oklch(0.45 0.17 var(--h, 200)); }
+/* ---- Persistent sidebar (desktop): nav base ---- */
+.nav-item { border-inline-start: 0; font-size: 0.92rem; }
+.nav-item .menu-icon, .nav-item .menu-icon svg { width: 18px; height: 18px; }
+@media (min-width: 721px) {
+  .sidebar { display: flex; position: sticky; overflow-y: auto; }
+  .topbar-app-link, .drawer-toggle { display: none; }
+}
+.stat { position: relative; overflow: hidden; }
+.stat::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; }
+/* ---- Warm paper theme: persistent dark-teal sidebar, breadcrumb top bar, patterned hero ---- */
+:root { --font: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif; --shadow-sm: 0 1px 2px rgb(60 40 10 / 0.06), 0 1px 1px rgb(60 40 10 / 0.04); --shadow-md: 0 12px 32px -8px rgb(60 40 10 / 0.18); --saffron: oklch(0.8 0.15 78); }
+body { background: var(--bg) radial-gradient(1200px 500px at 85% -10%, oklch(0.93 0.02 250 / 0.55), transparent 60%) no-repeat; }
+.dark body { background: var(--bg) radial-gradient(1000px 500px at 85% -10%, oklch(0.3 0.02 250 / 0.45), transparent 60%) no-repeat; }
+h1 { letter-spacing: -0.025em; font-weight: 650; }
+
+/* Top bar: paper, not a second dark band. Its own colour variables so the old rules (written for a dark bar) still work. */
+.topbar { background: color-mix(in srgb, var(--background) 94%, var(--foreground)); color: var(--foreground);
+  --ink-text: var(--foreground); --sidebar-accent: var(--accent); --sidebar-foreground: var(--foreground);
+  border-block-end: 1px solid var(--border); box-shadow: none; }
+.crumbs { display: none; align-items: center; gap: 0.5rem; font-size: 0.92rem; color: var(--muted-foreground); min-width: 0; }
+.crumbs a { color: var(--muted-foreground); text-decoration: none; font-weight: 500; }
+.crumbs a:hover { color: var(--primary); }
+.crumb-here { color: var(--foreground); font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Sidebar */
+.sidebar { background: var(--sidebar); color: var(--sidebar-foreground); border-inline-end: 0; }
+.sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.4rem 1rem; text-decoration: none; color: oklch(0.97 0.02 90); font-weight: 650; font-size: 0.95rem; letter-spacing: 0.01em; }
+.sidebar-brand:hover { color: #fff; }
+.sidebar-app { display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 0.7rem; margin-block-end: 0.5rem; text-decoration: none; color: oklch(0.97 0.02 90); border-radius: 12px; border: 1px solid var(--sidebar-border); background: color-mix(in srgb, var(--sidebar-accent) 55%, transparent); }
+.sidebar-app:hover { background: var(--sidebar-accent); }
+.sidebar-app-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none; color: oklch(0.2 0.04 200);
+  background: linear-gradient(145deg, oklch(0.88 0.13 var(--h, 200)), oklch(0.76 0.14 var(--h, 200))); box-shadow: none; }
+.sidebar-app-icon svg { width: 18px; height: 18px; }
+.sidebar-app-name { font-weight: 650; font-size: 1rem; }
+.nav-item { color: color-mix(in srgb, var(--sidebar-foreground) 82%, transparent); border-radius: 9px; padding: 0.52rem 0.7rem; position: relative; }
+.nav-item .menu-icon { opacity: 0.75; }
+.nav-item:hover { background: color-mix(in srgb, #fff 8%, transparent); color: #fff; }
+.nav-item.active, .dark .nav-item.active { background: color-mix(in srgb, #fff 13%, transparent); color: #fff; font-weight: 650; }
+.nav-item.active .menu-icon, .dark .nav-item.active .menu-icon { color: var(--saffron); opacity: 1; }
+.nav-item.active::before { content: ''; position: absolute; inset-inline-start: -0.7rem; inset-block: 22%; width: 4px; border-radius: 0 4px 4px 0; background: var(--saffron); }
+[dir='rtl'] .nav-item.active::before { border-radius: 4px 0 0 4px; }
+.nav-group-heading { color: color-mix(in srgb, var(--sidebar-foreground) 55%, transparent); letter-spacing: 0.12em; margin-block-start: 0.9rem; }
+@media (min-width: 721px) {
+  .shell.with-sidebar { grid-template-columns: 252px minmax(0, 1fr); grid-template-rows: 56px 1fr; }
+  .shell.with-sidebar > .sidebar { grid-column: 1; grid-row: 1 / -1; inset-block-start: 0; height: 100vh; padding: 1rem 0.9rem 1.5rem; }
+  .shell.with-sidebar > .topbar { grid-column: 2; }
+  .shell.with-sidebar > .content { grid-column: 2; grid-row: 2; }
+  .shell.with-sidebar .apps-btn { display: none; }
+  .shell.with-sidebar .crumbs { display: flex; }
+}
+@media (max-width: 720px) { .sidebar { background: var(--sidebar); } .sidebar-brand { display: none; } }
+
+/* Home hero: deep teal with a quiet geometric lattice (eight-point stars), the one decorative signature */
+.home-hero { position: relative; overflow: hidden; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem;
+  padding: 1.9rem 2rem; border-radius: 20px; color: oklch(0.97 0.02 90); box-shadow: var(--shadow-md);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.10' stroke-width='1'%3E%3Crect x='9' y='9' width='26' height='26'/%3E%3Crect x='9' y='9' width='26' height='26' transform='rotate(45 22 22)'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 44px 44px,
+    linear-gradient(120deg, oklch(0.34 0.024 250), oklch(0.28 0.02 258) 60%, oklch(0.32 0.028 244)); }
+.home-hero::after { content: ''; position: absolute; inset-block-start: -40%; inset-inline-end: -6%; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, oklch(0.82 0.15 78 / 0.38), transparent 65%); pointer-events: none; }
+.home-hero > * { position: relative; z-index: 1; }
+.home-hero h1 { color: #fff; font-size: 3.6rem; letter-spacing: -0.04em; margin: 0.15rem 0 0.1rem; }
+.home-eyebrow { margin: 0; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--saffron); font-weight: 600; }
+.home-org { margin: 0; color: oklch(0.88 0.03 190); }
+.home-hero button, .home-hero a { background: color-mix(in srgb, #fff 14%, transparent); color: #fff; border: 1px solid color-mix(in srgb, #fff 32%, transparent); }
+.home-hero button:hover:not(:disabled) { background: color-mix(in srgb, #fff 24%, transparent); }
+
+/* App tiles: cream cards, teal/saffron icon chips, no rainbow */
+.tile { border-radius: 16px; padding: 1.3rem; }
+.tile::before { background: linear-gradient(90deg, var(--saffron), oklch(0.7 0.14 55)); height: 3px; opacity: 1; }
+.tile-icon, .dark .tile-icon { width: 48px; height: 48px; border-radius: 14px; box-shadow: none;
+  background: oklch(0.93 0.05 var(--h, 200)); color: oklch(0.38 0.09 var(--h, 200)); }
+.dark .tile-icon { background: oklch(0.32 0.06 var(--h, 200)); color: oklch(0.88 0.09 var(--h, 200)); }
+.tile:hover { border-color: oklch(0.6 0.09 200); }
+.suite-heading { color: var(--primary); letter-spacing: 0.14em; }
+
+/* Stat cards */
+.stat { border-radius: 14px; padding: 1.05rem 1.25rem 1rem 1.4rem; }
+.stat::before { width: 5px; background: var(--primary); }
+.stat.warn::before { background: var(--saffron); }
+.stat.warn { background: oklch(0.96 0.045 85); border-color: oklch(0.85 0.09 80); }
+.dark .stat.warn { background: oklch(0.3 0.05 80); }
+.stat-value { font-size: 2.3rem; font-weight: 600; letter-spacing: -0.03em; }
+
+/* Tables: roomier rows, warm header, a hover that tells you the row is live */
+.table-wrap { border-radius: 14px; }
+thead th { background: color-mix(in srgb, var(--primary) 6%, var(--card)); color: var(--primary); letter-spacing: 0.08em; padding-block: 0.8rem; }
+th, td { padding: 0.78rem 1rem; }
+tbody tr:hover { background: color-mix(in srgb, var(--saffron) 9%, transparent); }
+td.right { font-size: 0.92rem; }
+.pill, .status { font-size: 0.8rem; padding: 0.18rem 0.7rem; }
+
+/* Forms and buttons: bigger hit areas, friendlier radius */
+input, select, textarea { padding: 0.62rem 0.8rem; border-radius: 10px; }
+button { border-radius: 10px; }
+.form-card { border-radius: 16px; padding: 1.5rem 1.6rem; }
+.form-card h2 { font-size: 1.1rem; }
+.page > h1 { font-size: 2.6rem; letter-spacing: -0.035em; }
+@media (min-width: 721px) { .content { padding: 1.6rem 2.4rem 4rem; } .page { max-width: 1560px; } }

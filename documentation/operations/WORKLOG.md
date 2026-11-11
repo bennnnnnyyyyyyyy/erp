@@ -2833,3 +2833,20 @@ remove it before deleting the worktree (it is not tracked).
 Re-crawl of the sample build after the fixes: no text under 12px, no unlabelled controls, no empty headers, no contrast failures once
 animations finish. Not verified: live Arabic (the account's saved language overrides the browser setting), live phone, any live screen after
 the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitignored) at Ben's request. Audit scripts are not in the repo.
+
+## 2026-11-11 — Warm UI theme and Design Lab, ported onto main (worktree `ui-warm`)
+
+**Objective.** Ben disliked the grey UI and wants to dictate the whole look. Earlier warm-theme work had been built on `integrations-all`; main then reverted that UI (PR #12) and built its own left menu (#21), inventory screens (#33) and integration headers (#20). The work was re-applied onto `origin/main` (7008ade) on branch `worktree-ui-warm`; nothing is committed.
+
+**Actions Completed.**
+- `theme.css`: warm paper background, deep-teal primary, saffron accent, radius 0.75rem, dark mode re-derived.
+- `icons.tsx`: `LogoMark` and a warm per-app hue (`appHueStyle`). `AppMenu.tsx` (`AppSideMenu`): brand block and app header. `Shell.tsx`: logo, breadcrumbs. `Home.tsx`: patterned hero, tile hue. `styles.css`: one block appended at the end (dark-teal sidebar with saffron marker, paper top bar, hero, tiles, stat cards, tables, forms).
+- Dropped on purpose: the channel-logo cards on Integrations (main has its own `IntegrationLogo`/`IntegrationHeader`).
+- Design Lab (dev server only, behind `import.meta.env.DEV`): `lib/designLab.ts`, `components/DesignLab.tsx`, `design-lab.css`, one line in `main.tsx`. 38 options (palette, fonts, radius, cards, density, sidebar, top bar, hero, tiles, stats, tables, chips, buttons, inputs, motion), 6 presets, "Copy my choices". Google fonts load from the internet in the lab only; the winners get self-hosted, the lab is then deleted.
+- `scripts/dev.mjs` and the root `dev` script: `npm run dev` starts the API and web app together.
+
+**Database / System Result.** None. No SQL, API or shared files changed.
+
+**Safety Status.** `tsc --noEmit` clean for apps/web after the port. Not checked: how it looks on main's new screens (Chrome extension was not connected), `npm test`, phone width. The web server ran in demo mode only; the API was not started (needs `.env`, which was not copied into the worktree). Main's `agents.md` forbids running `npm install` in a worktree; none was run (the font install was refused earlier in any case).
+
+**Addendum (11 Nov), Design Lab picks baked in.** From Ben's Design Lab choices he kept the colours, font and heading choices: `theme.css` is now the graphite palette (light and dark), body text 16px, page titles 2.6rem and the Home hero title 3.6rem, hero gradient graphite. Fonts stay IBM Plex Sans Arabic. All other lab options stay open (Ben was not sure of them). The Design Lab defaults match (palette graphite, headings xl, text large). Not verified: `tsc` ran out of memory on this machine (not a type error; only CSS values and three default strings changed), so rerun `npm run typecheck`; not looked at in a browser. The sample-data demo does not include the apps added on main since its registry was written, so the real app (web + API with `.env`) is needed to see them.

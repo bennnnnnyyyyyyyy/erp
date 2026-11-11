@@ -15,6 +15,9 @@ import { ThemeProvider } from './lib/theme';
 import './theme.css';
 import './styles.css';
 
+// Design Lab: live design options for choosing the look (dev server only; never in a production build).
+if (import.meta.env.DEV) void import('./components/DesignLab').then((m) => m.mountDesignLab());
+
 // The sample-data build has its own bar (with the role switcher). A real build made for a demo gets the plain one.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
