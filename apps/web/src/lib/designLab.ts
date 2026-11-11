@@ -163,6 +163,13 @@ const PRESET_KEY = 'erp.designLab.presets.v1';
 const UI_KEY = 'erp.designLab.ui.v1';
 
 export const defaults = (): State => Object.fromEntries(GROUPS.map((g) => [g.key, g.default]));
+
+/* ---------- Ben's choices, kept in code (Design Lab report of 11 Nov 2026) ---------- */
+export const SEED: State = {"palette":"custom","lhue":"80","lchroma":"0.02","lbg":"130","lacc":"83","appcolor":"brand","bg":"lattice","border":"hairline","selection":"default","hfont":"plex","bfont":"plex","hsize":"xl","hweight":"normal","tsize":"large","fspx":"","lheight":"normal","numfont":"mono","titlealign":"start","radius":"subtle","rpx":"","cards":"shadow","shadow":"strong","density":"comfy","rowpad":"0.5","width":"narrow","cwpx":"","iconw":"normal","avatar":"circle","sidebar":"dark","sbw":"normal","sbwpx":"204","navactive":"marker","navspace":"normal","navicons":"on","navgroups":"off","topbar":"paper","crumbs":"on","logo":"sharp","hero":"banner","tiles":"big","tilebar":"none","stats":"filled","table":"striped","thead":"dark","rowhover":"saffron","chips":"text","btn":"gradient","btnsize":"normal","inputs":"boxed","link":"plain","focus":"normal","scroll":"default","motion":"full","accent":"palette","contrast":"normal","sidetint":"flat","heroglow":"on","checks":"brand","caps":"upper","tracking":"normal","labels":"muted","tablefont":"normal","statsize":"normal","pagepad":"normal","badge":"pill","inputh":"normal","empty":"on","pageanim":"rise","cardhover":"lift","modalback":"dim","topbarh":"normal","brandtext":"off","appheader":"card","orgname":"on","navradius":"follow","herosize":"normal","heroalign":"start","tilecols":"normal","suitehead":"line"};
+/** The 18 options Ben clicked himself. The other options that differ from the defaults (radius, cards, shadow, row height, width,
+ *  sidebar width, group headings, logo, tiles, tile edge, stat cards, chips) were not deliberate picks: kept, but unconfirmed. */
+export const SEED_DECIDED = ['palette', 'lhue', 'lchroma', 'lbg', 'lacc', 'appcolor', 'bg', 'hero', 'table', 'thead', 'btn', 'btnsize', 'link', 'scroll', 'motion', 'brandtext', 'orgname', 'navradius'];
+
 export const isChanged = (g: Group, s: State) => (s[g.key] ?? g.default) !== g.default;
 
 function sanitize(saved: unknown): State {
@@ -184,7 +191,11 @@ function fromUrl(): State | null {
 export function load(): State {
   const shared = fromUrl();
   if (shared) { const s = { ...defaults(), ...shared }; save(s); return s; }
-  try { return { ...defaults(), ...sanitize(JSON.parse(localStorage.getItem(KEY) ?? '{}')) }; } catch { return defaults(); }
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw === null) { const fresh = { ...defaults(), ...sanitize(SEED) }; save(fresh); return fresh; }   // nothing saved here: start from Ben's choices
+    return { ...defaults(), ...sanitize(JSON.parse(raw)) };
+  } catch { return defaults(); }
 }
 export function save(s: State) { localStorage.setItem(KEY, JSON.stringify(s)); }
 export function shareLink(s: State): string {
@@ -213,6 +224,7 @@ export const saveUi = (u: Ui) => localStorage.setItem(UI_KEY, JSON.stringify(u))
 
 export type Preset = { name: string; blurb: string; values: Record<string, string> };
 export const PRESETS: Preset[] = [
+  { name: "Ben's saved choices (11 Nov)", blurb: 'Everything from your Design Lab report, kept in the code.', values: SEED },
   { name: 'Ben\'s picks (graphite)', blurb: 'The current baked-in look.', values: {} },
   { name: 'Warm souk', blurb: 'Cream paper, deep teal, saffron.', values: { palette: 'teal', bg: 'glow', hsize: 'normal', tsize: 'normal' } },
   { name: 'Clean fintech', blurb: 'Indigo, light sidebar, shadows, no pattern.', values: { palette: 'indigo', sidebar: 'light', bg: 'plain', cards: 'shadow', hero: 'gradient', thead: 'plain', navactive: 'pill', hfont: 'manrope', bfont: 'inter', topbar: 'plain', border: 'none' } },
@@ -270,6 +282,13 @@ export function backfill(s: State): { touched: Touched; log: Entry[] } | null {
   if (localStorage.getItem(TOUCH_KEY) !== null) return null;
   const t = new Date().toISOString();
   const touched: Touched = {}; const log: Entry[] = [];
+  if (JSON.stringify(s) === JSON.stringify({ ...defaults(), ...sanitize(SEED) })) {   // restored from Ben's saved choices
+    for (const g of GROUPS) {
+      if (SEED_DECIDED.includes(g.key)) { touched[g.key] = 'user'; log.push({ t, key: g.key, from: g.default, to: s[g.key] ?? g.default, src: 'import' }); }
+      else if (isChanged(g, s)) { touched[g.key] = 'preset'; log.push({ t, key: g.key, from: g.default, to: s[g.key] ?? g.default, src: 'import' }); }
+    }
+    return { touched, log };
+  }
   for (const g of GROUPS) if (isChanged(g, s)) { touched[g.key] = 'preset'; log.push({ t, key: g.key, from: g.default, to: s[g.key] ?? g.default, src: 'import' }); }
   return { touched, log };
 }
