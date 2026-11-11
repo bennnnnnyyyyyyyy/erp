@@ -103,3 +103,8 @@ whatidid.txt
 Hello                                 │
   Ian*.txt
 test-bank-statement.csv
+
+# Audit 11 Nov 2026 (P1): no personal or third-party material in the repo. Binary archives and spreadsheets stay outside git.
+documentation/archive/**/*.zip
+documentation/archive/**/*.xlsx
+documentation/archive/**/*.xls

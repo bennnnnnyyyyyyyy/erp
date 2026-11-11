@@ -20,8 +20,8 @@ in [`../../plans/checklist.md`](../../plans/checklist.md) and [`../../operations
 | `QUESTIONS_FOR_BEN.md` | Open questions for Ben from the owner-insights work |
 | `UI_AUDIT_BRIEF.md` | Brief for the 6 Nov UI audit |
 | `ERP_integrations_table.pdf` | The integrations table the integrations plan was built from |
-| `Trial_capture_workbook_v13.xlsx` | Competitor trial capture workbook |
-| `email updates for grant.zip` | Copies of the daily update emails (30 Oct to 3 Nov) |
+| `Trial_capture_workbook_v13.xlsx` | Competitor trial capture workbook. **Removed from the repo 11 Nov 2026 (audit P1): kept outside git** |
+| `email updates for grant.zip` | Copies of the daily update emails (30 Oct to 3 Nov). **Removed from the repo 11 Nov 2026 (audit P1: personal correspondence); kept outside git** |
 
 ## Later documentation snapshots
 
