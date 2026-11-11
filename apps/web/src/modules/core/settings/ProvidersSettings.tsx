@@ -7,11 +7,13 @@ import { formatDateTime } from '../../../lib/format';
 import { tr, trf } from '../../../lib/i18n';
 import { useSession } from '../../../session';
 import { Notice, useNotice } from '../../accounting/common';
+import { CheckConnection } from './CheckConnection';
 import { IntegrationHeader } from './IntegrationHeader';
 import { connectionStatus } from './integrationStatus';
 
 // Settings > Integrations: one payment, shipping, store or AI provider (sql/056). Secret fields are write-only: once saved they show as
-// "saved" and can only be replaced or removed. Every provider starts simulated. AI needs the owner's consent first.
+// "saved" and can only be replaced or removed. AI needs the owner's consent first. sql/082: there is no test mode; switching on means
+// the real provider, and needs the required details saved. "Check connection" makes one real, harmless call.
 
 // Every AI provider needs the current AI notice, Ollama included (sql/061; repo audit N10).
 const AI_KINDS = new Set(['openai', 'elevenlabs', 'ollama']);
@@ -22,17 +24,16 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
   const [values, setValues] = useState<Record<string, string>>({});
   const needsConsent = AI_KINDS.has(def.kind) && !consented;
   const missing = def.fields.filter((f) => f.required && !item.savedFields.includes(f.key) && !values[f.key]);
-  const setMode = (patch: { enabled?: boolean; mode?: 'simulated' | 'live' }) =>
+  const setEnabled = (enabled: boolean) =>
     run(async () => {
-      await api(`/v1/core/integrations/providers/${def.kind}`, { method: 'PUT', body: JSON.stringify({ enabled: item.enabled, mode: item.mode, ...patch }) });
-      return tr('Saved.');
+      await api(`/v1/core/integrations/providers/${def.kind}`, { method: 'PUT', body: JSON.stringify({ enabled }) });
+      return enabled ? tr('Switched on. It now uses the real provider.') : tr('Switched off.');
     }, onChanged);
   const dirty = Object.values(values).some((v) => v !== '');
 
   return (
     <div className="form-card stack intg-detail">
       <IntegrationHeader kind={def.kind} name={tr(def.name)} summary={tr(def.summary)} status={connectionStatus(item)} />
-      {item.enabled && item.mode === 'simulated' ? <p className="muted small">{tr('Test mode: nothing is really sent.')}</p> : null}
       <Notice message={message} />
       <fieldset className="stack" disabled={!canManage || busy}>
         {def.fields.map((f) => {
@@ -68,24 +69,22 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
           >
             {tr('Save details')}
           </Button>
-          <Button variant={item.enabled ? 'outline' : 'default'} disabled={busy || needsConsent} onClick={() => setMode({ enabled: !item.enabled })}>
-            {item.enabled ? tr('Switch off') : tr('Switch on')}
-          </Button>
-          {item.mode === 'simulated' ? (
-            <ConfirmButton
-              label={tr('Go live')}
-              confirmLabel={tr('Yes, go live')}
-              question={tr('Go live? This will really contact the provider from now on.')}
-              disabled={busy || needsConsent || missing.length > 0 || dirty}
-              onConfirm={() => setMode({ mode: 'live' })}
-            />
-          ) : (
-            <Button variant="outline" disabled={busy} onClick={() => setMode({ mode: 'simulated' })}>
-              {tr('Back to test mode')}
+          {item.enabled ? (
+            <Button variant="outline" disabled={busy} onClick={() => setEnabled(false)}>
+              {tr('Switch off')}
             </Button>
+          ) : (
+            <ConfirmButton
+              label={tr('Switch on')}
+              confirmLabel={tr('Yes, switch on')}
+              question={tr('Switch on? From now on this really contacts the provider. There is no test mode: use the provider\'s own test keys to try it first.')}
+              disabled={busy || needsConsent || missing.length > 0 || dirty}
+              onConfirm={() => setEnabled(true)}
+            />
           )}
         </div>
       ) : null}
+      {canManage && item.savedFields.length > 0 ? <CheckConnection kind={def.kind} disabled={busy || dirty} onChecked={onChanged} /> : null}
       {/* UX audit: this told the owner, in the third person, to accept a notice "below" that is a separate item in the list. */}
       {needsConsent ? (
         <p className="muted small">
@@ -93,8 +92,8 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
           <a href="#ai-notice">{tr('Open the AI notice')}</a>
         </p>
       ) : null}
-      {missing.length ? <p className="muted small">{trf('To go live, fill in: {fields}', { fields: missing.map((f) => tr(f.label)).join(', ') })}</p> : null}
-      {def.webhookPath ? <p className="muted small">{trf('Address to give {name} for its notifications: {url}', { name: tr(def.name), url: `${API_BASE_URL}${def.webhookPath}` })}</p> : null}
+      {missing.length ? <p className="muted small">{trf('To switch it on, fill in: {fields}', { fields: missing.map((f) => tr(f.label)).join(', ') })}</p> : null}
+      {def.webhookPath ? <p className="muted small">{trf('Address to give {name} for its notifications: {url}', { name: tr(def.name), url: item.callbackUrl ?? `${API_BASE_URL}${def.webhookPath}` })}</p> : null}
       {item.lastStatus ? (
         <p className={item.lastStatus === 'failed' ? 'error small' : 'muted small'}>
           {item.lastStatus === 'sent' ? tr('Last call worked') : tr('Last call failed')}

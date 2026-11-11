@@ -535,8 +535,8 @@ td input { margin-top: 0; }
 .intg-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6rem; }
 .intg-summary-item { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.7rem 0.9rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .intg-summary-n { font-size: 1.6rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.intg-summary-live .intg-summary-n { color: var(--ok); }
-.intg-summary-test .intg-summary-n { color: var(--signal-ink); }
+.intg-summary-working .intg-summary-n { color: var(--ok); }
+.intg-summary-unchecked .intg-summary-n { color: var(--signal-ink); }
 .intg-summary-problem .intg-summary-n { color: var(--danger); }
 .intg-summary-off .intg-summary-n { color: var(--muted-foreground); }
 .intg-attention { list-style: none; margin: 0; padding: 0; }

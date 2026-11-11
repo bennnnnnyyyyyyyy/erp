@@ -46,6 +46,21 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 - **Stock is a ledger.** Quantities come from append-only movements; balances are changed only by the posting functions.
 - **Approval channels are abstracted.** In-app, WhatsApp and voice all submit the same decision to the same function. A channel never changes stock by itself.
 - Mutations go through Postgres functions called with the caller's own JWT. The secret-key client is limited to provisioning, webhook ingestion and scheduled jobs, and must not be imported by request routes.
+- **Master-key exceptions (Ben, 11 Nov 2026).** The secret-key client bypasses every company boundary, so each file allowed to use it is
+  listed here and in `apps/api/test/boundaries.test.ts` (`ADMIN_DB_ALLOWED`); a new one needs Ben's explicit yes and a line below.
+  - *No person waiting* (webhooks and jobs): `jobs/outbox.ts`, `jobs/fx.ts`, `lib/channels/*.ts` (delivery), `lib/whatsappInbound.ts`,
+    `lib/telegramInbound.ts`, `lib/store/shopify.ts`, and the callback parts of `lib/payments/links.ts` and `lib/shipping/bosta.ts`.
+    Webhooks act only after their signature or secret is verified, and find the company through our own reference, never the body alone.
+  - *A person is waiting* (each confines itself to that person's company):
+    - `lib/authAdmin.ts`: Supabase Auth account calls from the member routes, only after a database function has approved the action.
+    - `lib/payments/links.ts` `attachProviderAddress`: the link is first created with the person's own sign-in; the key is then read
+      only for that link, only while it is under five minutes old and has no address yet (`fin__link_credentials`).
+    - `lib/shipping/bosta.ts` `createBostaDelivery`: the shipment is loaded with the person's own sign-in; the key is read only for that shipment.
+    - `lib/aiService.ts` (assistant, voice notes) and `lib/integrationChecks.ts` ("Check connection", owners and admins): the company is
+      `c.var.tenant.orgId`, from the sign-in; Check connection makes one harmless call and never returns or logs a key.
+    - `jobs/outbox.ts` "send now" (messages, tasks): only the signed-in company's queue.
+  - Guards: `boundaries.test.ts` fails if any other file imports the client, if a route calls these with any company other than the
+    signed-in one, or if a route that reaches master-key code reads a company id from the URL, query or body.
 
 ## Competitors and licensing
 

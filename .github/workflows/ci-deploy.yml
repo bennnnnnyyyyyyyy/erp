@@ -51,8 +51,12 @@ jobs:
         run: node scripts/check-doc-links.mjs
 
       # Browser smoke test of every screen in the sample build (apps/web/e2e, no secrets, no database). A broken screen stops the deploy.
+      # 11 Nov 2026: Ubuntu's package mirror did not resolve on GitHub's runners ("Temporary failure resolving
+      # azure.archive.ubuntu.com"), so --with-deps failed on the font packages and three deploys never ran (#41, #42 twice). The runner
+      # image already has most of Chromium's libraries: if the system packages cannot be fetched, install the browser alone. The smoke
+      # test below still runs and still stops the deploy if a screen breaks (or if a library really is missing).
       - name: Install the smoke-test browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium || { echo "::warning::System packages could not be fetched; installing the browser alone"; npx playwright install chromium; }
         working-directory: apps/web
 
       - name: Smoke test every screen

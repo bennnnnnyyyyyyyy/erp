@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AI_NOTICE_VERSION, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type CbeRate, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
+import { AI_NOTICE_VERSION, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
@@ -10,13 +10,15 @@ import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 import { Notice, useNotice } from '../../accounting/common';
 import { AiTry } from './AiTry';
+import { CheckConnection } from './CheckConnection';
 import { IntegrationHeader, IntegrationLogo, StatusBadge } from './IntegrationHeader';
 import { connectionStatus, countStatuses, needsAttention, STATUS_LABEL, type Connection, type ConnectionStatus } from './integrationStatus';
 import { AiNotice, ProviderCard } from './ProvidersSettings';
 import { ReportLinks } from './ReportLinks';
 
-// Settings > Integrations (INTEGRATIONS_PLAN.md wave 1; sql/053). Owners and admins. Each integration starts "simulated": messages
-// are marked delivered but nothing leaves the system, so a company can try it safely. Webhook URLs are write-only (a hint is shown).
+// Settings > Integrations (INTEGRATIONS_PLAN.md wave 1; sql/053). Owners and admins. sql/082 (Ben, 11 Nov 2026): there is no test mode.
+// An integration is off or on, on means real, and "Check connection" makes one real, harmless call to show it works. Webhook URLs are
+// write-only (a hint is shown).
 // A channel only delivers: approving still happens in the app.
 // Layout (Ben, 9 Nov 2026): a list on the left, one integration on the right, an overview first. This page only CONNECTS an integration;
 // the apps use it (Pay now links on sales invoices, shipments on sales orders, online orders in Sales, copies of messages).
@@ -43,20 +45,19 @@ function IntegrationCard({ item, canManage, onChanged }: { item: IntegrationSett
   const session = useSession();
   const { message, busy, run } = useNotice();
   const [url, setUrl] = useState('');
-  const save = (patch: Partial<Pick<IntegrationSettings, 'enabled' | 'mode' | 'messageKinds'>>) =>
+  const save = (patch: Partial<Pick<IntegrationSettings, 'enabled' | 'messageKinds'>>) =>
     run(async () => {
       await api(`/v1/core/integrations/${item.kind}`, {
         method: 'PUT',
-        body: JSON.stringify({ enabled: item.enabled, mode: item.mode, messageKinds: item.messageKinds, ...patch }),
+        body: JSON.stringify({ enabled: item.enabled, messageKinds: item.messageKinds, ...patch }),
       });
-      return tr('Saved.');
+      return patch.enabled === true ? tr('Switched on. Messages are really sent from now on.') : patch.enabled === false ? tr('Switched off.') : tr('Saved.');
     }, onChanged);
   const toggleKind = (k: string) => save({ messageKinds: item.messageKinds.includes(k) ? item.messageKinds.filter((x) => x !== k) : [...item.messageKinds, k] });
 
   return (
     <div className="form-card stack intg-detail">
       <IntegrationHeader kind={item.kind} name={tr(NAME[item.kind])} summary={tr(HELP[item.kind])} status={connectionStatus(item)} />
-      {item.enabled && item.mode === 'simulated' ? <p className="muted small">{tr('Test mode: nothing is really sent.')}</p> : null}
       <Notice message={message} />
 
       {item.needsSecret ? (
@@ -93,21 +94,21 @@ function IntegrationCard({ item, canManage, onChanged }: { item: IntegrationSett
 
       {canManage ? (
         <div className="form-row">
-          <Button variant={item.enabled ? 'outline' : 'default'} disabled={busy} onClick={() => save({ enabled: !item.enabled })}>{item.enabled ? tr('Switch off') : tr('Switch on')}</Button>
-          {item.mode === 'simulated' ? (
-            <ConfirmButton label={tr('Go live')} confirmLabel={tr('Yes, go live')} question={tr('Go live? Messages will really be sent from now on.')} disabled={busy || !item.liveAvailable}
-              onConfirm={() => save({ mode: 'live' })} />
+          {item.enabled ? (
+            <Button variant="outline" disabled={busy} onClick={() => save({ enabled: false })}>{tr('Switch off')}</Button>
           ) : (
-            <Button variant="outline" disabled={busy} onClick={() => save({ mode: 'simulated' })}>{tr('Back to test mode')}</Button>
+            <ConfirmButton label={tr('Switch on')} confirmLabel={tr('Yes, switch on')} question={tr('Switch on? Messages will really be sent from now on.')} disabled={busy || !item.ready}
+              onConfirm={() => save({ enabled: true })} />
           )}
-          <Button variant="ghost" disabled={busy} onClick={() => run(async () => {
+          <Button variant="ghost" disabled={busy || !item.ready} onClick={() => run(async () => {
             await api(`/v1/core/integrations/${item.kind}/test`, { method: 'POST' });
             return item.kind === 'email' ? tr('A test email is queued to you; it goes out within five minutes (Messages → Message outbox).') : tr('A test message is queued; it goes out within five minutes (Messages → Message outbox).');
           }, onChanged)}>{tr('Send a test')}</Button>
         </div>
       ) : null}
-      {!item.liveAvailable && item.mode === 'simulated' ? (
-        <p className="muted small">{item.needsSecret ? tr('Save a webhook URL to go live.') : tr('Going live is not available on this server yet. Contact support to switch it on.')}</p>
+      {canManage && item.ready ? <CheckConnection kind={item.kind} disabled={busy} onChecked={onChanged} /> : null}
+      {!item.ready ? (
+        <p className="muted small">{item.needsSecret ? tr('Save a webhook URL to switch it on.') : tr('Not set up on this server yet, so it cannot be switched on. Contact support.')}</p>
       ) : null}
       {item.lastStatus ? (
         <p className={item.lastStatus === 'failed' ? 'error small' : 'muted small'}>
@@ -132,42 +133,7 @@ function ExchangeRates() {
           {rates.data.map((r) => <tr key={r.from}><td>{r.from}</td><td className="right">{r.rate.toFixed(4)}</td><td>{formatDay(r.rateDate, session.org)}</td></tr>)}
         </tbody></table></div>
       ) : <p className="muted small">{tr('No rates saved yet; they arrive with the next scheduled run.')}</p>}
-      <CentralBankRates />
     </div>
-  );
-}
-
-// Central Bank of Egypt buy and sell rates, SIMULATED (apps/api/src/lib/rates/cbe.ts): worked out from the daily rate above, never
-// saved, never used to convert anything. Live rates wait for the source and for the company's choice of buy, sell or mid.
-function CentralBankRates() {
-  const session = useSession();
-  const rates = useLoad(() => api<CbeRate[]>('/v1/core/fx/cbe'));
-  return (
-    <section className="stack" aria-labelledby="cbe-rates">
-      <h3 id="cbe-rates">
-        {tr('Central Bank of Egypt')} <span className="badge">{tr('SIMULATED')}</span>
-      </h3>
-      <p className="muted small">
-        {tr('Practice numbers only: worked out from the daily rate above, not the Central Bank’s own figures. They are not saved and nothing is converted with them. Live rates come later.')}
-      </p>
-      {!rates.data ? <Loading error={rates.error} rows={2} /> : rates.data.length ? (
-        <div className="table-wrap"><table><thead><tr>
-          <th scope="col">{tr('Currency')}</th>
-          <th scope="col" className="right">{tr('Buy (EGP)')}</th>
-          <th scope="col" className="right">{tr('Sell (EGP)')}</th>
-          <th scope="col">{tr('Date')}</th>
-        </tr></thead><tbody>
-          {rates.data.map((r) => (
-            <tr key={r.currency}>
-              <td>{r.currency}</td>
-              <td className="right">{r.buy.toFixed(4)}</td>
-              <td className="right">{r.sell.toFixed(4)}</td>
-              <td>{formatDay(r.rateDate, session.org)}</td>
-            </tr>
-          ))}
-        </tbody></table></div>
-      ) : <p className="muted small">{tr('No rates saved yet; they arrive with the next scheduled run.')}</p>}
-    </section>
   );
 }
 
@@ -175,8 +141,8 @@ function Overview({ connections, aiNoticeNeeded, onOpen }: { connections: Connec
   const counts = countStatuses(connections);
   const attention = needsAttention(connections);
   const summary: { status: ConnectionStatus; n: number }[] = [
-    { status: 'live', n: counts.live },
-    { status: 'test', n: counts.test },
+    { status: 'working', n: counts.working },
+    { status: 'unchecked', n: counts.unchecked },
     { status: 'problem', n: counts.problem },
     { status: 'off', n: counts.off },
   ];
@@ -203,14 +169,14 @@ function Overview({ connections, aiNoticeNeeded, onOpen }: { connections: Connec
             {attention.map(({ connection, status }) => (
               <li key={connection.key}>
                 <IntegrationLogo kind={connection.key} name={connection.name} size="sm" />
-                <span>{trf(status === 'problem' ? '{name}: the last call failed' : '{name} is still in test mode', { name: connection.name })}</span>
+                <span>{trf(status === 'problem' ? '{name}: the last call failed' : '{name} is on but has not been checked yet', { name: connection.name })}</span>
                 <Button size="sm" variant="outline" onClick={() => onOpen(connection.key)}>{tr('Open')}</Button>
               </li>
             ))}
           </ul>
         )}
       </div>
-      <p className="muted small">{tr('Each starts simulated, and nothing reaches a provider until you save the details and go live. Secret keys are saved once and cannot be shown again.')}</p>
+      <p className="muted small">{tr('There is no test mode: switching an integration on uses the real provider. To try a payment or store first, save the provider\'s own test keys, then use Check connection. Secret keys are saved once and cannot be shown again.')}</p>
     </div>
   );
 }
@@ -250,10 +216,10 @@ export function IntegrationsSettings() {
   };
   const consented = Boolean(status.consent && status.consent.version === AI_NOTICE_VERSION);
 
-  const channelConnections: Connection[] = channels.data.map((c) => ({ key: c.kind, name: tr(NAME[c.kind]), enabled: c.enabled, mode: c.mode, lastStatus: c.lastStatus }));
+  const channelConnections: Connection[] = channels.data.map((c) => ({ key: c.kind, name: tr(NAME[c.kind]), enabled: c.enabled, lastStatus: c.lastStatus }));
   const providerConnections: Connection[] = PROVIDERS.flatMap((def) => {
     const p = providers.data?.find((x) => x.kind === def.kind);
-    return p ? [{ key: def.kind, name: tr(def.name), enabled: p.enabled, mode: p.mode, lastStatus: p.lastStatus }] : [];
+    return p ? [{ key: def.kind, name: tr(def.name), enabled: p.enabled, lastStatus: p.lastStatus }] : [];
   });
   const connections = [...providerConnections, ...channelConnections];
   const byKey = new Map(connections.map((c) => [c.key, c]));
@@ -279,7 +245,7 @@ export function IntegrationsSettings() {
   return (
     <section className="page">
       <h1>{tr('Integrations')}</h1>
-      <p className="muted">{tr('Connect outside services here. You then use them inside your apps, such as Sales and Messages. Each starts in test mode, so nothing is really sent until you go live.')}</p>
+      <p className="muted">{tr('Connect outside services here. You then use them inside your apps, such as Sales and Messages. Switching one on uses the real service; Check connection shows whether it works.')}</p>
       <div className={`intg ${current === OVERVIEW_KEY ? '' : 'intg-open'}`}>
         <nav className="intg-menu" aria-label={tr('Integrations')}>
           <button type="button" className={`intg-menu-item ${current === OVERVIEW_KEY ? 'is-current' : ''}`} aria-current={current === OVERVIEW_KEY ? 'page' : undefined} onClick={() => open(OVERVIEW_KEY)}>

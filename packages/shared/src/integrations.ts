@@ -36,15 +36,14 @@ export type ReportLinkCreated = { id: string; token: string; url: string; formul
 
 export type IntegrationSettings = {
   kind: IntegrationKind;
+  /** On means real: there is no test mode (sql/082). */
   enabled: boolean;
-  /** simulated: nothing leaves the system (the default); live: really sent. */
-  mode: 'simulated' | 'live';
   messageKinds: string[];
   /** The end of the saved webhook URL, never the URL itself. */
   secretHint: string | null;
   needsSecret: boolean;
-  /** Whether live mode can work now (email: our sending account is set up; Slack/Teams/Google Chat: a URL is saved). */
-  liveAvailable: boolean;
+  /** Whether it can be switched on now (email, Telegram: our server account is set up; Slack, Teams, Google Chat: a URL is saved). */
+  ready: boolean;
   lastStatus: 'sent' | 'failed' | null;
   lastError: string | null;
   lastDeliveryAt: string | null;
@@ -52,9 +51,14 @@ export type IntegrationSettings = {
 
 export type FxRate = { from: string; to: string; rate: number; rateDate: string; source: string };
 
-/** Central Bank of Egypt rates: Egyptian pounds per unit of a currency (buy, sell and mid). Simulated only for now: the numbers are
- *  worked out from the stored daily mid rate and are NOT the Central Bank's. They are never stored and never used to convert anything. */
-export type CbeRate = { currency: string; buy: number; sell: number; mid: number; rateDate: string; simulated: true };
+/** "Check connection" (sql/082): one real, harmless call to the provider with the saved details, and what came back. */
+export type IntegrationCheck = {
+  ok: boolean;
+  /** Short, plain answer for the screen (the provider's own words when it refused). Never a key. */
+  message: string;
+  /** Something to open, when the check made one: Paymob's checkout page for a small unpaid test payment. */
+  url?: string;
+};
 
 // ------------------------------------------------------------------ providers (sql/056; Ben's choices, 6 Nov)
 
@@ -139,8 +143,22 @@ export const PROVIDERS: readonly ProviderDef[] = [
     webhookPath: '/webhooks/shopify',
     fields: [
       { key: 'shop_domain', label: 'Shop domain', secret: false, required: true, placeholder: 'your-store.myshopify.com' },
-      { key: 'access_token', label: 'Admin API access token', secret: true, required: true, placeholder: 'shpat_…' },
-      { key: 'webhook_secret', label: 'API secret key (signs webhooks)', secret: true, required: true },
+      {
+        key: 'client_id',
+        label: 'Client ID',
+        secret: false,
+        required: true,
+        help: "Your app in Shopify's Dev Dashboard → Settings. Since 2026 there is no permanent token: we ask Shopify for a new one when needed.",
+      },
+      { key: 'webhook_secret', label: 'Client secret (also signs webhooks)', secret: true, required: true },
+      {
+        key: 'access_token',
+        label: 'Admin API access token (only apps made before 2026)',
+        secret: true,
+        required: false,
+        placeholder: 'shpat_…',
+        help: 'Leave empty for a new app.',
+      },
       {
         key: 'warehouse_code',
         label: 'Warehouse code for store orders (optional)',
@@ -207,8 +225,12 @@ export const findProvider = (kind: string) => PROVIDERS.find((p) => p.kind === k
 
 export type ProviderSettings = {
   kind: ProviderKind;
+  /** On means real: there is no test mode (sql/082). */
   enabled: boolean;
-  mode: 'simulated' | 'live';
+  /** Every required field is saved, so it can be switched on. */
+  ready: boolean;
+  /** The full address to give the provider for its callbacks (this API's address plus webhookPath), when it has one. */
+  callbackUrl: string | null;
   /** Names of saved fields (secret or plain); values of secret fields are never returned. */
   savedFields: string[];
   /** Plain (non-secret) values, for showing and editing. */

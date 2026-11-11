@@ -50,6 +50,9 @@ export const ERRORS_AR: Record<string, string> = {
   'You cannot approve your own request': 'لا يمكنك اعتماد طلبك بنفسك',
   'You cannot approve your own request: another owner or manager must approve it': 'لا يمكنك اعتماد طلبك بنفسك: يجب أن يعتمده مالك أو مدير آخر',
   'This purchase order needs approval before goods can be received': 'يجب اعتماد أمر الشراء هذا قبل استلام البضاعة',
+  'Wait 30 seconds before checking this connection again': 'انتظر 30 ثانية قبل فحص هذا الاتصال مرة أخرى',
+  'A Teams webhook URL is on webhook.office.com, logic.azure.com or api.powerplatform.com':
+    'رابط Teams يجب أن يكون على webhook.office.com أو logic.azure.com أو api.powerplatform.com',
   'Supplier name is required': 'اسم المورد مطلوب',
   'Customer name is required': 'اسم العميل مطلوب',
   'Item name is required': 'اسم الصنف مطلوب',

@@ -48,7 +48,6 @@ export function Shipments({ orderId, customerName, customerPhone, customerCity }
   const [f, setF] = useState({ name: customerName, phone: customerPhone, city: customerCity, address: '', cod: '' });
   const allowed = !demoMode && hasPermission(session.permissions, 'sales.orders.read');
   const canMake = hasPermission(session.permissions, 'sales.orders.fulfill');
-  const canStep = hasPermission(session.permissions, 'sales.orders.manage');
   const list = useLoad(() => (allowed ? api<Shipment[]>(`/v1/sales/shipments?orderId=${orderId}`) : Promise.resolve([] as Shipment[])));
   // Bosta must be switched on (needs the integrations view key); without it the section stays hidden unless shipments already exist.
   const providers = useLoad(() => (allowed && hasPermission(session.permissions, 'core.integrations.view') ? api<ProviderSettings[]>('/v1/core/integrations/providers') : Promise.resolve([] as ProviderSettings[])));
@@ -92,11 +91,6 @@ export function Shipments({ orderId, customerName, customerPhone, customerCity }
                   </td>
                   <td>
                     <div className="form-row">
-                      {s.simulated && canStep && ['created', 'picked_up', 'in_transit'].includes(s.status) ? (
-                        <Button variant="outline" disabled={busy} onClick={() => run(async () => { await api(`/v1/sales/shipments/${s.id}/simulate-step`, { method: 'POST' }); return tr('Moved to the next status.'); }, list.reload)}>
-                          {tr('Next status (test)')}
-                        </Button>
-                      ) : null}
                       {canMake && ['pending', 'created'].includes(s.status) ? (
                         <ConfirmButton
                           label={tr('Cancel shipment')}

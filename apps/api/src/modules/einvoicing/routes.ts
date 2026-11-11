@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono';
-import { ETA_MODES } from '@erp/shared';
+import { DEFAULT_ETA_MODE, ETA_MODES } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
@@ -159,10 +159,10 @@ einvoicingRoutes.get('/readiness', requirePermission('einvoicing.settings.read')
 
 einvoicingRoutes.put('/profile', requirePermission('einvoicing.settings.manage'), async (c) => {
   const b = await jsonBody(c);
-  const mode = text(b.mode) || 'simulated';
+  const mode = text(b.mode) || DEFAULT_ETA_MODE;
   if (!text(b.registrationNumber) || !text(b.legalName) || !text(b.activityCode))
     invalid('Registration number, legal name and activity code are required');
-  if (!(ETA_MODES as readonly string[]).includes(mode)) invalid('Mode must be simulated, preprod or production');
+  if (!(ETA_MODES as readonly string[]).includes(mode)) invalid('Mode must be preprod or production');
   await callRpc<void>(userDb(c), 'eta_save_profile', {
     p_registration_number: text(b.registrationNumber),
     p_legal_name: text(b.legalName),

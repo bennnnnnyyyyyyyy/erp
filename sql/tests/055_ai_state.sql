@@ -20,13 +20,13 @@ begin
   perform public.core_save_provider_fields('openai', '{"api_key": "sk-own-1", "model": "gpt-test"}');
   perform public.core_set_ai_consent(true);
   perform public.core_save_integration('ollama', true, 'live', null);
-  perform public.core_save_integration('openai', true, 'simulated', null);
+  perform public.core_save_integration('openai', true, 'live', null);
   ok := false; begin perform public.ai__provider_state(o); exception when others then ok := true; end;
   if not ok then raise exception 'FAIL A2: a user read the AI state'; end if;
   reset role;
 
   s := public.ai__provider_state(o);
-  if not (s ->> 'consent')::boolean or not (s -> 'providers' -> 'openai' ->> 'enabled')::boolean or not (s -> 'providers' -> 'openai' ->> 'simulated')::boolean then raise exception 'FAIL A3: openai state %', s; end if;
+  if not (s ->> 'consent')::boolean or not (s -> 'providers' -> 'openai' ->> 'enabled')::boolean or (s -> 'providers' -> 'openai' ->> 'simulated')::boolean then raise exception 'FAIL A3: openai state (must be live) %', s; end if;
   if s -> 'providers' -> 'openai' -> 'credentials' ->> 'api_key' <> 'sk-own-1' or s -> 'providers' -> 'ollama' -> 'credentials' ->> 'base_url' <> 'https://ai.example.com' then raise exception 'FAIL A4: credentials %', s; end if;
   if (s -> 'providers' -> 'ollama' ->> 'simulated')::boolean then raise exception 'FAIL A5: ollama should be live'; end if;
 

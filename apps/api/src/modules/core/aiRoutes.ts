@@ -68,13 +68,13 @@ aiRoutes.post('/assistant', requirePermission('inventory.items.read'), async (c)
   });
   const user = `Question: ${question.trim()}\n\nDATA (SKU | name | stock):\n${lines.join('\n')}`;
   const a = await askAi(c.env, who(c), 'assistant', SYSTEM, user);
-  return ok(c, { answer: a.text, used: items.length, provider: a.provider, simulated: a.simulated });
+  return ok(c, { answer: a.text, used: items.length, provider: a.provider });
 });
 
 // A one-line check that the chosen provider answers (owner or admin). No company data is sent.
 aiRoutes.post('/test', requirePermission('core.integrations.manage'), async (c) => {
   const a = await askAi(c.env, who(c), 'test', 'Reply with the single word OK.', 'Say OK.');
-  return ok(c, { answer: a.text, provider: a.provider, simulated: a.simulated });
+  return ok(c, { answer: a.text, provider: a.provider });
 });
 
 const MAX_AUDIO = 5 * MB;
@@ -89,5 +89,5 @@ aiRoutes.post('/transcribe', requirePermission('core.org.read'), limitBody(MAX_A
   const lang = form?.get('language');
   const language = typeof lang === 'string' && /^[a-z]{2,3}$/.test(lang) ? lang : undefined;
   const a = await transcribeAudio(c.env, who(c), { bytes: await f.arrayBuffer(), name: f.name || 'audio', type: f.type }, language);
-  return ok(c, { text: a.text, provider: a.provider, simulated: a.simulated });
+  return ok(c, { text: a.text, provider: a.provider });
 });

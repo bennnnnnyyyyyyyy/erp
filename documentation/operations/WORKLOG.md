@@ -11,6 +11,113 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-11 — Master-key exceptions written down; security review of the integrations code; fixes (`sql/083`)
+
+**Objective.** Ben: "I want it to be a secure ERP". After PR #42 put real provider keys through the integrations code, approve the
+"Check connection" use of the secret-key (master-key) client and make the written rule match the code.
+
+**Actions Completed.** Branch `sec/master-key-review`.
+- Ben approved "Check connection" (11 Nov). `agents.md` now lists every file allowed to use the master key, why, and its limits
+  ("Master-key exceptions"); a new one needs his yes. Every use that runs while a person waits was checked: the company always comes
+  from the sign-in (`c.var.tenant.orgId`) or from a record loaded with the person's own sign-in.
+- Guards in `apps/api/test/boundaries.test.ts`: routes may call the master-key entry points only with the signed-in company, and a
+  route that reaches master-key code may never read a company id from the URL, query or body. Proven by breaking a route on purpose
+  (both failed) and restoring it.
+- Security review (Opus agent, read-only) of PR #42 / sql/082: no critical or high finding; no route, job or webhook can reach another
+  company's data or keys. Fixed: (medium) two companies could save the same Shopify shop and disturb each other's order webhooks →
+  unique index; (low) Teams webhook URLs could point anywhere and "Check connection" echoed the reply → Microsoft hosts only, status
+  only; (low) error text could carry a webhook URL into `last_error` and the audit log → addresses stripped (`withoutUrls`, outbox);
+  (low) outbox webhook posts followed redirects → `redirect: 'manual'`; (low) "Check connection" read keys before the database
+  checked the role, and could be pressed endlessly → `core_begin_integration_check` (owner/admin, one per 30 seconds) before any key
+  is read. **Not fixed yet** (low, needs a race): a Paymob callback's reference (`merchant_order_id`) is not covered by Paymob's
+  signature; saving Paymob's order id when the link is made and requiring it on the callback closes it (planned separately).
+- `sql/083_integration_hardening.sql` + `sql/tests/077_integration_hardening.sql`; `apps/api/test/integration_hardening.test.ts`.
+
+**Database / System Result.** 083 dry run on live inside a rolled-back transaction passed (`shopify_shop_once`, `teams_hosts_pinned`
+true; anonymous refused). No Shopify shop domain was saved on live, so the unique index cannot clash. **Applied 2026-11-11 via
+CLI (by Ben)** before the merge of PR #44: `shopify_shop_once` true, `teams_hosts_pinned` true, `anon_sets_secret` false,
+`anon_begins_check` false. Also: the merge of `main` into this branch resolved the worklog and `sql/README.md` conflicts with #43
+(both entries kept; 082's row is the applied one), and 078 is recorded as applied (Ben, 10 Nov).
+
+**Safety Status.** Lint and typecheck clean; API 366 + 7 skipped, web 135, shared 74; all 81 migrations and 76 SQL tests pass locally.
+**Apply 083 before merging** (if merged first, the route falls back to the permission check only).
+
+## 2026-11-11 — `sql/082` applied to live (by Ben); PR #42 merged
+
+**Objective.** Record the merge of PR #42 (no test mode on integrations, entry below) and Ben's run of `sql/082` on live.
+
+**Actions Completed.** Ben merged PR #42 into `main` (321dedb) while its checks were still running, then ran
+`supabase db query --linked -f sql/082_core_integrations_live.sql`.
+
+**Database / System Result.** On live (ggoerp), 082's own verification: `simulated_rows` 0, `on_without_details` 0, `mode_default`
+`'live'`, `sim_functions` 0, `eta_simulated` 0, `eta_default` `'preprod'`. Read-only check afterwards: the 3 integration rows (OpenAI,
+Paymob, Shopify) are `live` and off (Shopify in "Test 2" switched off: no details), the mode check allows only `live`, 3 audit rows,
+`core_record_integration_check` open to users and not to anonymous callers, Shopify requires `shop_domain`, `client_id`,
+`webhook_secret`. No key is saved anywhere, so no integration is on.
+
+**Safety Status.** CI on `main` after the merge: SQL tests (local Supabase) passed; "CI and Cloudflare deploy" passed lint, typecheck,
+tests and doc links, then failed twice (run 43046401760, and its rerun) at "Install the smoke-test browser": Ubuntu's mirror did not
+resolve on GitHub's runners, the same cause that stopped #41's deploy, so **nothing from #41 or #42 was deployed**. Fix in
+`.github/workflows/ci-deploy.yml` (this branch): if `--with-deps` cannot fetch the system packages, install the browser alone; the
+smoke test still runs and still blocks the deploy. Still waiting on Ben: the yes for
+`lib/integrationChecks.ts` as a secret-key exception (entry below), the keys, and the Arabic review.
+
+## 2026-11-11 — No test mode on any integration; "Check connection"; Shopify 2026 fields (`sql/082` applied later the same day, above)
+
+**Objective.** Ben: "all integrations currently are in some stupid test mode, i want to actually check that integrations are working, i
+dont want this stupid test mode on anything", then "work in tandem with them [the other chats] to make sure nothing gets made wrong".
+Plan: <https://claude.ai/artifact/Bhoasn4YNGrEb4jsWQJtZi>. Decisions 1-4 taken as recommended there (Ben gave no separate answers):
+remove the simulated CBE table; ETA keeps PreProd and production only; drop the three "try it" database functions (in 082, applied by
+Ben); build on a new branch.
+
+**Coordination.** All four other sessions were told the scope, files and the migration number before any edit, and all answered: no
+clash. `erp-repo-audit-fixes` confirmed 082 and test 076 free (079, 080 unused on purpose) and listed rules to keep (webhook body caps
+and signatures, secret-key allowlist, Vault-only secrets, AI notice v2, outbox retry, CBE never saved, adapters registered, 503 before a
+migration); all kept. `worktree-ui-work-setup` (theme retint) touches none of these files; `step-by-step-app-walkthrough-video` keeps
+Integrations and payment links out of its video; the accounting session had nothing running.
+
+**Found on live first (read-only).** No keys anywhere: the Worker has only `SUPABASE_SECRET_KEY` (no Resend, Telegram, OpenAI,
+ElevenLabs, WhatsApp); 13 companies, 3 integration rows (Paymob Demo off, OpenAI Test Organization off, Shopify "Test 2" on), all
+simulated, none with saved details; no payment links or shipments. So removing test mode alone makes nothing work: each integration
+works once its key exists, and "Check connection" now shows it. No route sends to ETA yet (only tests use the client).
+
+**Actions Completed.** Branch `feat/integrations-live` (worktree `.claude/worktrees/integrations-live`, from `origin/main` 7008ade):
+- `sql/082_core_integrations_live.sql` + `sql/tests/076_integrations_live.sql`; tests 030, 048, 049, 051-056, 067 rewritten for "on means
+  real" (signed callbacks instead of "simulate payment", Bosta tracking instead of simulated steps, Shopify client ID).
+- API: `lib/integrationChecks.ts` (new; one real, harmless call per kind: test email to the caller, test post to Slack/Teams/Google
+  Chat, Telegram `getMe`, a 1 EGP unpaid Paymob request with its checkout page, a Fawry status query for an unknown reference, Bosta
+  pickup locations, Shopify token + shop + webhooks, OpenAI/ElevenLabs/Ollama model or account lists; keys never returned, anything
+  key-like masked; 10-second timeout; added to the secret-key allowlist in `test/boundaries.test.ts`). **Needs Ben's explicit
+  yes:** it is a further exception to the agents.md rule that request routes never reach the secret-key client (like
+  `lib/payments/links.ts` and `lib/aiService.ts`); limits: owner/admin route only, reads the caller's own company's keys, one
+  harmless call, never returns a key, result recorded and audited through `core_record_integration_check`. Once approved, add a line
+  naming it in agents.md (Stock, approval and audit rules: the mutations bullet). Raised by `erp-repo-audit-fixes`. `POST
+  /v1/core/integrations/check/:kind`. No `mode` anywhere; email/Telegram cannot be switched on without our server account; provider
+  list returns `ready` and the full `callbackUrl`. Simulate routes and the Shopify test order removed; a test-mode link or shipment
+  (only possible before 082) answers 503 `not_set_up`. Channels and AI have no simulated branches. `lib/rates/cbe.ts` and
+  `GET /v1/core/fx/cbe` removed. ETA: `ETA_MODES` = preprod, production (default preprod); `transportFor` refuses `simulated`;
+  `SimulatedTransport` stays for tests only.
+- Shared: `IntegrationSettings`/`ProviderSettings` without `mode` (`ready`, `callbackUrl`), `IntegrationCheck`; Shopify fields: shop
+  domain, client ID, client secret (signs webhooks), optional pre-2026 token.
+- Web: "Go live", "Back to test mode", "Simulate payment", "Next status (test)", "Send a test order" and the SIMULATED CBE table removed;
+  statuses Off / On, not checked / Working / Problem; `CheckConnection.tsx` on every integration; switching on asks for confirmation;
+  24 new strings with Arabic machine drafts (`i18nScreens.ts`) for Ben's review. Old records keep their "Simulated" tag as history.
+- Docs: `INTEGRATIONS_PLAN.md` (test mode superseded), `checklist.md`, `sql/README.md` (082 row, run order).
+
+**Database / System Result.** Two dry runs of 082 on live (ggoerp) inside rolled-back transactions passed: all 3 rows `live`, Shopify in
+"Test 2" switched off (no details), default `live`, the 3 simulate functions gone, the check function open to users and not to anon,
+Shopify needs `client_id`, ETA default `preprod`, 3 audit rows. Read-only checks afterwards: nothing kept (3 rows still simulated, 3
+functions present, 0 audit rows). **082 was not applied at the time of writing; Ben applied it after the merge (entry above).**
+
+**Safety Status.** In the worktree, against its own `packages/shared` (temporary tsconfig/vitest configs, since `node_modules/@erp/shared`
+links to the main checkout; deleted afterwards): typecheck clean (api, web, shared); Biome 0 errors; tests shared 74 + 1 skipped, API 361
++ 7 skipped, web 135; all 80 migrations and 75 SQL tests pass locally (PGlite). Not run: the web production build and the browser smoke
+test (they resolve the main checkout's shared package); nothing viewed in a browser. **Unconfirmed until a real key is tried:** the
+Fawry "unknown reference" answer, Bosta's v2 `pickup-locations` path, Shopify's client-credentials exchange for the shop. **Apply 082
+before merging.** After deploy, nothing works for real until keys exist: our Resend account and `EMAIL_FROM`, `TELEGRAM_BOT_TOKEN`
+(+ webhook secret, username), `OPENAI_API_KEY`/`ELEVENLABS_API_KEY` (set spending limits first), and each company's own Paymob, Fawry,
+Bosta, Shopify and webhook URLs. Not committed (agents.md: Ben commits).
+
 ## 2026-11-11 — After the walkthrough: credit notes screen, task-first Inventory, guided Accounting setup, tour, customer details (sql/081)
 
 **Objective.** Ben: "do what you can without me" after the walkthrough and the reply to Ian. Keep the promises made in that reply
@@ -38,7 +145,11 @@ after review:
 
 **Safety Status.** Lint and typecheck clean; shared 74 + 1 skipped, API 359 + 7 skipped, web 134; all 79 migrations and 74 SQL tests
 pass locally (Supabase-like setup); doc links OK. Nothing viewed in a browser. Open: help and tour prose still say "New request";
-customer `tax_number` vs e-invoicing `tax_id` needs Ben's decision; Arabic drafts need review. **Apply 081 before merging.**
+customer `tax_number` vs e-invoicing `tax_id` needs Ben's decision; Arabic drafts need review.
+
+**Applied and merged (11 Nov).** Ben applied 081 via CLI (`users_edit` true, `anon_creates` false, `new_columns` 8), then merged PR #40
+after both CI checks passed; the deploy from `main` succeeded. Follow-ups on branch `fix/followups`: help text uses the new Inventory
+names (Send goods out, Requests) in English and Arabic.
 
 ## 2026-11-10 — 069–077 applied to live (by Ben); PR #39
 

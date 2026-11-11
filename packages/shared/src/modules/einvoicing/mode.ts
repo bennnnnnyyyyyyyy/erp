@@ -1,18 +1,22 @@
 // How a company talks to ETA, and what a "send" is allowed to leave behind. Shared by the API (which builds the record) and the web
 // app (which shows the badge). Plan: documentation/plans/ETA_EINVOICING_PLAN.md section 14.
 //
-//   simulated  (default)  nothing leaves our system; a stand-in answers like ETA would
-//   preprod               ETA's test system; needs the company's PreProd credentials
+//   preprod    (default)  ETA's own test system; needs the company's PreProd credentials
 //   production            ETA's live system; refused unless credentials AND a real signer are configured
+// sql/082 (Ben, 11 Nov 2026: no test mode on anything): a company can no longer choose our own "simulated" mode. 'simulated' remains
+// only as the mode of the in-process stand-in our tests use (apps/api/src/lib/eta/simulated.ts), so the rules below still hold for it:
 //
-// Rules this file enforces for everything that is sent in simulated mode:
+// Rules this file enforces for everything the stand-in "sends":
 //   1. it carries the visible badge SIMULATED_BADGE;
 //   2. it stores NO real ETA reference (uuid, long id, submission id): those fields are null and the stand-in's own id is kept
 //      separately in `simulationId`, so a simulated document can never be mistaken for, or looked up as, a real ETA document.
 
-export const ETA_MODES = ['simulated', 'preprod', 'production'] as const;
-export type EtaMode = (typeof ETA_MODES)[number];
-export const DEFAULT_ETA_MODE: EtaMode = 'simulated';
+/** What a company can choose (sql/082). */
+export const ETA_MODES = ['preprod', 'production'] as const;
+export type EtaCompanyMode = (typeof ETA_MODES)[number];
+/** A transport's mode: a company mode, or 'simulated' for the test stand-in only. */
+export type EtaMode = EtaCompanyMode | 'simulated';
+export const DEFAULT_ETA_MODE: EtaCompanyMode = 'preprod';
 
 /** The exact visible text. English default; the web app shows a translated version through the i18n key below. */
 export const SIMULATED_BADGE = 'SIMULATED, not sent to ETA';
@@ -21,7 +25,8 @@ export const SIMULATED_BADGE_I18N_KEY = 'einvoicing.simulatedBadge';
 /** Every id the stand-in hands out starts with this, so it cannot be confused with an ETA id. */
 export const SIMULATION_ID_PREFIX = 'SIMULATED-';
 
-export const isEtaMode = (v: unknown): v is EtaMode => typeof v === 'string' && (ETA_MODES as readonly string[]).includes(v);
+/** True only for a mode a company may choose ('simulated' is not one). */
+export const isEtaMode = (v: unknown): v is EtaCompanyMode => typeof v === 'string' && (ETA_MODES as readonly string[]).includes(v);
 export const isSimulationId = (id: string): boolean => id.startsWith(SIMULATION_ID_PREFIX);
 
 /** What we store for one document after a send. */

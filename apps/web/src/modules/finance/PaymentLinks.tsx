@@ -11,7 +11,8 @@ import { useSession } from '../../session';
 import { Notice, useNotice } from '../accounting/common';
 
 // "Pay now" links on a sales invoice (sql/057; Paymob and Fawry). The customer pays on the provider's page or at a Fawry outlet; the
-// provider's signed callback then records the payment here. Nothing is recorded by this screen except a simulated test payment.
+// provider's signed callback then records the payment here; this screen never records a payment itself. sql/082: there is no test
+// mode; a link made with the provider's test keys is a real test link at the provider. Old links marked "Simulated" are history only.
 
 type Link = {
   id: string;
@@ -65,7 +66,7 @@ export function PaymentLinks({ invoiceId, onPaid }: { invoiceId: string; onPaid:
               onClick={() =>
                 run(async () => {
                   await api('/v1/finance/payment-links', { method: 'POST', body: JSON.stringify({ invoiceId, provider: p.kind }) });
-                  return p.mode === 'simulated' ? tr('Test link created. Use "Simulate payment" to try it.') : tr('Link created.');
+                  return tr('Link created.');
                 }, reload)
               }
             >
@@ -106,22 +107,11 @@ export function PaymentLinks({ invoiceId, onPaid }: { invoiceId: string; onPaid:
                       </a>
                     ) : l.provider_txn ? (
                       trf('Fawry reference {ref}', { ref: l.provider_txn })
-                    ) : l.simulated ? (
-                      <span className="muted small">{tr('No real page in test mode')}</span>
                     ) : null}
                   </td>
                   <td>
                     {l.status === 'pending' ? (
                       <div className="form-row">
-                        {l.simulated ? (
-                          <ConfirmButton
-                            label={tr('Simulate payment')}
-                            confirmLabel={tr('Yes, record a test payment')}
-                            question={tr('This records a real payment in your books marked as simulated. Use it only to try the flow.')}
-                            disabled={busy}
-                            onConfirm={() => run(async () => { await api(`/v1/finance/payment-links/${l.id}/simulate-pay`, { method: 'POST' }); return tr('Test payment recorded.'); }, reload)}
-                          />
-                        ) : null}
                         <ConfirmButton
                           label={tr('Cancel link')}
                           confirmLabel={tr('Yes, cancel')}

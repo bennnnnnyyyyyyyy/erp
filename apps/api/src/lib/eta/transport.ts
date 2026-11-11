@@ -1,8 +1,8 @@
 // The one door to ETA. Everything in the app that talks to ETA does it through an EtaTransport, never through a concrete client, so
-// a company's mode decides what actually happens:
-//   simulated  -> SimulatedTransport (simulated.ts): answers like ETA, sends nothing, labels everything SIMULATED
-//   preprod    -> EtaClient (client.ts) against ETA's test system
+// a company's mode decides what actually happens (sql/082: our simulated mode is no longer a company choice):
+//   preprod    -> EtaClient (client.ts) against ETA's own test system (the default)
 //   production -> EtaClient against ETA's live system, refused unless credentials AND a real signer are configured
+// SimulatedTransport (simulated.ts) still exists, for our tests only: it is never chosen for a company.
 // One shared contract test (test/eta_transport.contract.ts) runs against the simulator always and against PreProd only when
 // credentials are present, so the simulator cannot drift from the real thing without a test noticing.
 // See documentation/plans/ETA_EINVOICING_PLAN.md section 14.
@@ -82,12 +82,11 @@ export class EtaModeError extends Error {
 }
 
 export type TransportFactories = {
-  simulated: () => EtaTransport;
   real: (environment: 'preprod' | 'production', credentials: EtaCredentials) => EtaTransport;
 };
 
 export type TransportRequest = {
-  /** The company's saved mode; missing means simulated. */
+  /** The company's saved mode; missing means preprod. */
   mode: string | null | undefined;
   credentials: EtaCredentials | null;
   signer: Signer | null;
@@ -95,15 +94,13 @@ export type TransportRequest = {
 
 /**
  * Picks the transport for a company. Never falls back silently: a mode that cannot be honoured throws instead of quietly
- * sending something somewhere else.
- *   simulated  : always allowed, no credentials needed
+ * sending something somewhere else. 'simulated' is not a company mode (sql/082) and is refused as unknown.
  *   preprod    : credentials required
  *   production : credentials required AND a signer whose kind is `real` (the stub signer never qualifies)
  */
 export function transportFor(req: TransportRequest, factories: TransportFactories): EtaTransport {
   const mode = req.mode ?? DEFAULT_ETA_MODE;
   if (!isEtaMode(mode)) throw new EtaModeError('INVALID_MODE', `Unknown ETA mode "${String(req.mode)}"`);
-  if (mode === 'simulated') return factories.simulated();
   const c = req.credentials;
   if (!c || !c.clientId || !c.clientSecret) {
     throw new EtaModeError('CREDENTIALS_MISSING', `${mode} mode needs the company's ETA credentials; none are configured`);

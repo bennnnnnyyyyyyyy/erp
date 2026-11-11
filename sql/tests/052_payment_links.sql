@@ -2,9 +2,9 @@
 -- Payment links (sql/057). Always rolls back. Needs sql/001-057.
 -- Covers: a link needs the provider switched on and an open invoice; amount limits; one open link per invoice and provider; the
 -- signed callback path (settle) records one card payment, once, whatever the replays; failed, wrong amount, wrong currency, invoice
--- paid meanwhile, and a simulated callback on a real link all leave the books alone (review or refused); simulated links can be paid
--- by an owner or admin and say so; members and other companies see nothing; keys readable only by the server and only for a new
--- link; no anonymous use; every payment is audited.
+-- paid meanwhile, and a callback claiming to be simulated all leave the books alone (review or refused); sql/082: the provider can
+-- only be switched on once its details are saved, links are always real, and the "simulate payment" function is gone; members and
+-- other companies see nothing; keys readable only by the server and only for a new link; no anonymous use; every payment is audited.
 
 do $$
 declare
@@ -44,37 +44,39 @@ begin
   if not ok then raise exception 'FAIL L1a: a link without the provider switched on'; end if;
   ok := false; begin perform public.fin_create_payment_link(cinv, 'stripe'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL L1b: unknown provider'; end if;
-  perform public.core_save_integration('paymob', true, 'simulated', null);
+  ok := false; begin perform public.core_save_integration('paymob', true, 'live', null); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
+  if not ok then raise exception 'FAIL L1f: Paymob switched on without its details (sql/082)'; end if;
+  perform public.core_save_provider_fields('paymob', '{"secret_key": "sk_test_AAA", "public_key": "pk_test_AAA", "hmac_secret": "h", "integration_ids": "1"}');
+  perform public.core_save_integration('paymob', true, 'live', null);
   l := public.fin_create_payment_link(cinv, 'paymob');
-  if (l ->> 'amountMinor')::bigint <> 2500 or not (l ->> 'simulated')::boolean then raise exception 'FAIL L1c: link %', l; end if;
+  if (l ->> 'amountMinor')::bigint <> 2500 or (l ->> 'simulated')::boolean then raise exception 'FAIL L1c: link (must be real) %', l; end if;
   ok := false; begin perform public.fin_create_payment_link(cinv, 'paymob', 2501); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL L1d: more than owed accepted'; end if;
   l2 := public.fin_create_payment_link(cinv, 'paymob', 1000);   -- cancels the first open link
   reset role;
   if (select status from public.fin_payment_links where id = (l ->> 'id')::uuid) <> 'cancelled' then raise exception 'FAIL L1e: older link still open'; end if;
 
-  -- ---- L2: simulated payment by the owner records one card payment, once
-  set local role authenticated;
-  r := public.fin_simulate_pay_link((l2 ->> 'id')::uuid);
+  -- ---- L2: the provider's signed callback (as the server hands it over) records one card payment, once; no simulate function
+  select currency into v_cur from public.sal_invoices where id = cinv;
+  r := public.fin__settle_payment_link('paymob', l2 ->> 'providerRef', 'P-1', 1000, v_cur, true, false);
   if r ->> 'result' <> 'paid' then raise exception 'FAIL L2a: %', r; end if;
-  reset role;
-  select count(*) into n from public.fin_payments where org_id = o and customer_invoice_id = cinv and method = 'card' and amount_minor = 1000 and note like '%SIMULATED%';
-  if n <> 1 then raise exception 'FAIL L2b: % simulated payments', n; end if;
+  select count(*) into n from public.fin_payments where org_id = o and customer_invoice_id = cinv and method = 'card' and amount_minor = 1000;
+  if n <> 1 then raise exception 'FAIL L2b: % card payments', n; end if;
   if public.fin__invoice_outstanding(o, cinv) <> 1500 then raise exception 'FAIL L2c: outstanding %', public.fin__invoice_outstanding(o, cinv); end if;
-  set local role authenticated;
-  ok := false; begin perform public.fin_simulate_pay_link((l2 ->> 'id')::uuid); exception when others then ok := (sqlerrm = 'INVALID_STATE'); end;
-  if not ok then raise exception 'FAIL L2d: a paid link paid again'; end if;
-  reset role;
+  r := public.fin__settle_payment_link('paymob', l2 ->> 'providerRef', 'P-1', 1000, v_cur, true, false);
+  if r ->> 'result' <> 'duplicate' then raise exception 'FAIL L2d: a replayed callback: %', r; end if;
+  if exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'fin_simulate_pay_link') then
+    raise exception 'FAIL L2e: the simulate payment function still exists';
+  end if;
 
-  -- ---- C1: real (non simulated) callbacks. Switch to live-style link by inserting directly as the server would have
+  -- ---- C1: callbacks on a real Fawry link
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  perform public.core_save_integration('fawry', true, 'simulated', null);
+  perform public.core_save_provider_fields('fawry', '{"merchant_code": "M1", "secure_key": "k"}');
+  perform public.core_save_integration('fawry', true, 'live', null);
   l := public.fin_create_payment_link(cinv, 'fawry', 1500);
   reset role;
-  update public.fin_payment_links set simulated = false where id = (l ->> 'id')::uuid;   -- as if the company were live
   v_ref := l ->> 'providerRef';
-  select currency into v_cur from public.sal_invoices where id = cinv;
   r := public.fin__settle_payment_link('fawry', v_ref, 'T-1', 1500, v_cur, true, true);
   if r ->> 'result' <> 'mode_mismatch' then raise exception 'FAIL C1a: simulated callback on a live link: %', r; end if;
   r := public.fin__settle_payment_link('fawry', v_ref, 'T-2', 1400, v_cur, true, false);
