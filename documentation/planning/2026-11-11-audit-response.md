@@ -4,15 +4,18 @@
 **Written by:** Claude (the repo-audit session that built and merged most of the work under review).
 
 For every finding: whether we agree, **what we did wrong** (where it was our doing), **why the fix is right**, and **who does it**.
+Everything under "fix" is planned, including migration 084 and every test named; outcomes are intended and still need verification.
 Nothing here is done yet unless it says so.
 
 ## Summary
 
-We agree with every finding. None shows one company reaching another's data; the audit confirms the database-side tenant,
-approval and audit controls hold. The real problems are three habits, not single bugs:
+We agree with every finding. The audit was a static review: it found no confirmed way for one company to reach another's data, but
+it did not verify at runtime that the tenant, approval and audit controls hold. That runtime and SQL verification is still
+outstanding (Batch 2 and 3 below). The problems it found come from three habits, not single bugs:
 
-1. **We moved fast and let process slip.** PRs were merged before their checks finished (#42, #44), and SQL tests are not required
-   for the deploy. Speed was right; doing it without a safety net was wrong.
+1. **We moved fast and let process slip.** PR #42 was merged while its checks were still running (recorded in the worklog; #44 was
+   merged the same way, seen on its GitHub page on 11 Nov but not recorded), and SQL tests are not required for the deploy. Speed
+   was right; doing it without a safety net was wrong.
 2. **We treated "accepted risk" as permanent.** The personal files in the public repo were accepted on 9 November and never revisited
    as the product became something sold to other companies.
 3. **We tested what we built, not what an attacker or a keyboard user would do.** Unit and SQL tests check our happy paths and our
@@ -55,8 +58,8 @@ agreed to be public. Personal data of people who are not us is not ours to accep
 
 **The fix, and why it is right.**
 1. **Ben, today:** make the GitHub repository **private** (Settings → General → Danger Zone → Change visibility). This removes
-   public access to the files *and* their history in one step, breaks nothing (Cloudflare deploys use a token, not public access),
-   and is reversible. It is the only fix that closes the history exposure without rewriting history.
+   public access to the files *and* their history in one step and is reversible. It is not expected to break anything (deploys
+   authenticate with a token, not public access), but check the next deploy and any external links to the repo afterwards. It is the only fix that closes the history exposure without rewriting history.
 2. **Claude, Batch 1:** remove the two files from the repository and add the archive's binary patterns to `.gitignore`, so a future
    `git add .` cannot bring them back (the same mistake happened on 10 November with the Ian drafts).
 3. **Only if the repo must stay public:** rewrite history (`git filter-repo`) to purge the files, then force-push. This changes every
@@ -74,9 +77,9 @@ agreed to be public. Personal data of people who are not us is not ours to accep
 "unverified" instead of designing it out.
 
 **The fix, and why it is right.** When the link is created, save Paymob's own order id on it; on the callback, require the signed
-`order.id` to equal the saved one before settling (migration 084, `fin__settle_payment_link` recreated from its latest version).
-Now the link is chosen by a value Paymob signed, so an altered reference cannot move a payment to another link. Tests: an altered
-reference is refused; a matching one settles once. Before payments are switched on for a real company, one real Paymob test
+`order.id` to equal the saved one before settling. This is a **planned** migration (084, not yet written), recreating
+`fin__settle_payment_link` from its latest version. The intended outcome: the link is chosen by a value Paymob signed, so an altered
+reference cannot move a payment to another link. Planned tests: an altered reference is refused; a matching one settles once. Before payments are switched on for a real company, one real Paymob test
 callback verifies the field names against Paymob's live answer.
 
 ## 3. P2 — Unauthenticated requests bypass the rate limiter
@@ -87,16 +90,18 @@ callback verifies the field names against Paymob's live answer.
 expensive, abusable traffic is the unauthenticated kind (token guessing, flooding sign-in).
 
 **The fix, and why it is right.** Two layers: an IP-keyed limiter *before* `requireAuth` (generous, so an office behind one IP is
-not blocked), and the existing per-user limiter after it. Every request is counted before any work is done. Test: repeated
-invalid-token requests from one IP reach 429.
+not blocked), and the existing per-user limiter after it. The intended outcome is that every request is counted before sign-in work is done; to be
+verified by a planned test (repeated invalid-token requests from one IP reach 429) and on live after deploy.
 
 ## 4. P2 — CI checks can be bypassed; the SQL suite is separate
 
-**Agree.** #42 and #44 were merged while checks were running, and the deploy does not wait for the SQL tests.
+**Agree.** The worklog records #42 merged while its checks were running (#44 likewise, seen on GitHub, not recorded), and the deploy
+does not wait for the SQL tests. The audit did not see the branch-protection settings; the check names below match the current
+workflows.
 
 **What we did wrong.** We relied on people (including Claude telling Ben "merge once CI is green") instead of on the system. When
-two deploys were blocked by a GitHub runner problem, waiting became the obstacle, and checks were skipped. #44 happened to be fine;
-that is luck, not process.
+two deploys were blocked by a GitHub runner problem, waiting became the obstacle, and checks were skipped. That nothing broke is
+luck, not process.
 
 **The fix, and why it is right.**
 1. **Ben, today:** GitHub → Settings → Branches → add a rule for `main`: *Require a pull request before merging*; *Require status
