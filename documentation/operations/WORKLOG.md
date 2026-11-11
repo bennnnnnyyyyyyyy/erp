@@ -25,7 +25,10 @@ Paymob, Shopify) are `live` and off (Shopify in "Test 2" switched off: no detail
 `webhook_secret`. No key is saved anywhere, so no integration is on.
 
 **Safety Status.** CI on `main` after the merge: SQL tests (local Supabase) passed; "CI and Cloudflare deploy" passed lint, typecheck,
-tests and doc links (smoke test and deploy: see the pull request that carries this entry). Still waiting on Ben: the yes for
+tests and doc links, then failed twice (run 43046401760, and its rerun) at "Install the smoke-test browser": Ubuntu's mirror did not
+resolve on GitHub's runners, the same cause that stopped #41's deploy, so **nothing from #41 or #42 was deployed**. Fix in
+`.github/workflows/ci-deploy.yml` (this branch): if `--with-deps` cannot fetch the system packages, install the browser alone; the
+smoke test still runs and still blocks the deploy. Still waiting on Ben: the yes for
 `lib/integrationChecks.ts` as a secret-key exception (entry below), the keys, and the Arabic review.
 
 ## 2026-11-11 — No test mode on any integration; "Check connection"; Shopify 2026 fields (`sql/082` applied later the same day, above)
