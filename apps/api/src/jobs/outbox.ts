@@ -92,7 +92,8 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
     try {
       via = (await adapterFor(message.channel).send(message, env)) ?? message.channel;
     } catch (e) {
-      error = (e instanceof Error ? e.message : String(e)).slice(0, 300);
+      // Never store a web address: a channel's webhook URL is a secret (security review, 11 Nov 2026).
+      error = (e instanceof Error ? e.message : String(e)).replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[address]').slice(0, 300);
     }
     if (error === null) sent++;
     else failed++;

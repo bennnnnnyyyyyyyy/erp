@@ -159,6 +159,7 @@ export function makeIntegrationAdapters(deps: IntegrationDeps = realDeps): Chann
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          redirect: 'manual', // a webhook host must not bounce our post elsewhere (security review, 11 Nov 2026)
         });
         await check(res, WEBHOOK_LABEL[kind]);
         return `${kind}-webhook`;
