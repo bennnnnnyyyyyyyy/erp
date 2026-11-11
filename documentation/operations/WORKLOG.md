@@ -38,7 +38,11 @@ after review:
 
 **Safety Status.** Lint and typecheck clean; shared 74 + 1 skipped, API 359 + 7 skipped, web 134; all 79 migrations and 74 SQL tests
 pass locally (Supabase-like setup); doc links OK. Nothing viewed in a browser. Open: help and tour prose still say "New request";
-customer `tax_number` vs e-invoicing `tax_id` needs Ben's decision; Arabic drafts need review. **Apply 081 before merging.**
+customer `tax_number` vs e-invoicing `tax_id` needs Ben's decision; Arabic drafts need review.
+
+**Applied and merged (11 Nov).** Ben applied 081 via CLI (`users_edit` true, `anon_creates` false, `new_columns` 8), then merged PR #40
+after both CI checks passed; the deploy from `main` succeeded. Follow-ups on branch `fix/followups`: help text uses the new Inventory
+names (Send goods out, Requests) in English and Arabic.
 
 ## 2026-11-10 — 069–077 applied to live (by Ben); PR #39
 
