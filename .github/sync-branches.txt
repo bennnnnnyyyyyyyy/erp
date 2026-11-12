@@ -1,3 +1,4 @@
 # Branches that .github/workflows/sync-main-into-branches.yml keeps up to date with main (one per line, # for comments).
 # Add a branch here to have main merged into it on every push to main; remove it when the branch is merged and deleted.
-worktree-ui-warm
+# worktree-ui-warm: removed on purpose. It holds the new look, which must NOT be on main/production until Ben says so; syncing main into it
+# would also bring in the revert that takes the new look off production and would undo the look on that branch.
