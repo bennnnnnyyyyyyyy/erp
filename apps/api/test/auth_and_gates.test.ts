@@ -207,3 +207,37 @@ describe('per-IP limiter before sign-in', () => {
     expect(await res.json()).toMatchObject({ code: 'rate_limited' });
   });
 });
+
+// Every write route, not one per group: a viewer (".read" keys only) must be refused before any data is touched. Routes a viewer
+// may use on purpose are listed in VIEWER_MAY with the reason; a new write route fails this test until it checks a permission.
+const VIEWER_MAY: Record<string, string> = {
+  'POST /v1/core/me/language': 'changes only the caller’s own language',
+  'POST /v1/core/ai/assistant': 'answers questions with the caller’s own read access; changes nothing',
+  'POST /v1/core/ai/transcribe': 'turns the caller’s voice note into text; changes nothing',
+  'POST /v1/messaging/notifications/read': 'marks the caller’s own notifications read',
+  'POST /v1/messaging/telegram/link': 'links the caller’s own Telegram',
+  'POST /v1/messaging/identities': 'adds the caller’s own WhatsApp number',
+  'POST /v1/messaging/identities/:id/confirm': 'confirms the caller’s own number with its code',
+  'POST /v1/messaging/identities/:id/revoke': 'removes the caller’s own number',
+};
+const MODULE_KEYS = GROUPS.map(([k]) => k);
+const writeRoutes = [
+  ...new Set(
+    app.routes
+      .filter((r) => ['POST', 'PUT', 'PATCH', 'DELETE'].includes(r.method) && MODULE_KEYS.includes(r.path.split('/')[2] ?? ''))
+      .map((r) => `${r.method} ${r.path}`),
+  ),
+].filter((r) => !(r in VIEWER_MAY));
+
+describe('permission gate on every write route', () => {
+  it('finds the write routes', () => expect(writeRoutes.length).toBeGreaterThan(50));
+  it.each(writeRoutes)('%s: a viewer is refused', async (route) => {
+    const [method = '', path = ''] = route.split(' ');
+    role = 'viewer';
+    modulesOn = MODULE_KEYS;
+    stubFetch([publicJwk()]);
+    const res = await call(method, path.replace(/:[A-Za-z]+(\{[^}]*\})?/g, ID));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ code: 'forbidden' });
+  });
+});

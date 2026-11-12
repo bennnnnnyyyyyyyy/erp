@@ -108,3 +108,6 @@ test-bank-statement.csv
 documentation/archive/**/*.zip
 documentation/archive/**/*.xlsx
 documentation/archive/**/*.xls
+
+# Signing key made by the workflow-tests CI job for the local Supabase (never commit)
+supabase/signing_keys.json
