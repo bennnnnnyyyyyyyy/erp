@@ -15,9 +15,10 @@ import { ThemeProvider } from './lib/theme';
 import './theme.css';
 import './styles.css';
 
-// Design Lab: live design options for choosing the look (dev server only; never in a production build).
+// Design Lab: live design options for choosing the look. In the dev server, and in a preview build made with DESIGN_LAB=1 (the manual
+// preview workflow only: see vite.config.ts); never in a normal or production build, where the branch below is constant-false.
 // Open the app with ?nolab in the address (for example http://localhost:5173/?nolab) to load without the Lab, e.g. to compare speed.
-if (import.meta.env.DEV && !new URLSearchParams(location.search).has('nolab')) void import('./components/DesignLab').then((m) => m.mountDesignLab());
+if ((import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1') && !new URLSearchParams(location.search).has('nolab')) void import('./components/DesignLab').then((m) => m.mountDesignLab());
 
 // The sample-data build has its own bar (with the role switcher). A real build made for a demo gets the plain one.
 createRoot(document.getElementById('root')!).render(

@@ -26,6 +26,10 @@ export default defineConfig(({ mode }) => {
       // Shows the "Demo environment: sample data only" bar. On in the sample-data build, and in a real build
       // when it is made for a demo (set DEMO_ENVIRONMENT=true for that build only).
       'import.meta.env.VITE_DEMO_ENV': JSON.stringify(mode === 'demo' || env.DEMO_ENVIRONMENT === 'true' ? 'true' : ''),
+      // Design Lab (components/DesignLab.tsx): always in the dev server. In a build only when DESIGN_LAB=1 is set for that one build,
+      // which only the manual preview workflow (preview-deploy.yml) does. Every normal build leaves this empty, so the branch in
+      // main.tsx is constant-false and the Lab code is dropped from the bundle.
+      'import.meta.env.VITE_DESIGN_LAB': JSON.stringify(process.env.DESIGN_LAB === '1' ? '1' : ''),
     },
   };
 });
