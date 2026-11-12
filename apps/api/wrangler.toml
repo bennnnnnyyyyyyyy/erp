@@ -15,7 +15,10 @@ mode = "smart"
 # APP_ENV and ALLOWED_ORIGINS from the repo-root .env (see .dev.vars.example).
 [vars]
 APP_ENV = "production"
-ALLOWED_ORIGINS = "https://erp-live.pages.dev"
+# The live app FIRST (it is the default for "Open in the app" links and for invite and reset links). The second entry is the fixed address
+# of the branch preview of the real app (Cloudflare Pages project erp-live, branch worktree-ui-warm), so the new look can be tried with
+# real sign-in and real data before it goes live. It reads and writes the same database as the live app. Delete it when not needed.
+ALLOWED_ORIGINS = "https://erp-live.pages.dev,https://worktree-ui-warm.erp-live.pages.dev"
 
 # Request limit (src/middleware/rateLimit.ts; system audit 2026-11-03, finding 4): 600 requests a minute per signed-in user, or per
 # IP where there is no user (webhooks). A page makes about six requests, so this only stops runaway scripts.
