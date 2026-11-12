@@ -34,6 +34,7 @@ Owner: Ben decides; Claude (UI session) builds and checks. Branch: `worktree-ui-
 - The logo mark is teal and gold while Ben's palette is near-grey: decide whether the logo should follow the palette.
 - On a phone the top bar shows two icons side by side (the logo and the app icon).
 - Design Lab launcher overlaps content on a phone (dev only, does not ship).
+- Sign-in page (checked on the preview, 12 Nov, not signed in): there is no logo above the Sign in title. Also found there and FIXED on the branch: the Gradient button option had dark text on a mid-grey gradient in dark mode (about 2:1, barely readable); the dark-mode gradient is now light with dark text (11:1 and 6.7:1 measured; light mode 5.7:1 and 10.5:1). Needs a redeploy to show on the preview.
 
 ## What Claude needs from Ben (nothing here blocks the others)
 

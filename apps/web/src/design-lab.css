@@ -370,3 +370,10 @@ html[data-d-suitehead='plain'] .suite-heading::after { display: none; }
   html[data-d-hsize='large'] .home-hero h1, html[data-d-hsize='xl'] .home-hero h1 { font-size: 2.4rem; }
   html[data-d-hsize='large'] .page > h1, html[data-d-hsize='large'] h1, html[data-d-hsize='xl'] .page > h1, html[data-d-hsize='xl'] h1 { font-size: 1.9rem; }
 }
+
+/* Gradient buttons in dark mode: the light-mode gradient (mid-dark) has dark text there and was barely readable (found on the sign-in
+   page, 12 Nov). In dark mode use a LIGHT gradient with the dark button text. */
+html.dark[data-d-btn='gradient'] button:not([class]), html.dark[data-d-btn='gradient'] button[class*='bg-primary'] {
+  background: linear-gradient(135deg, oklch(0.84 calc(var(--pc) * 1.1) calc(var(--bh) + 10)), oklch(0.7 calc(var(--pc) * 1.1) calc(var(--bh) - 10)));
+  color: oklch(0.2 0.01 var(--bh)); box-shadow: 0 4px 12px -4px oklch(0.8 var(--pc) var(--bh) / 0.35);
+}
