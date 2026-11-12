@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-12 — Audit of 11 Nov: Batch 3 finished (purchase order and credit note workflows)
+
+**Objective.** Finish finding 17: the workflow suite named in the audit response (stock approval, purchase order receipt, credit
+note, company isolation). The stock workflow passed on PR #46 (merged 12 Nov, all three checks green).
+
+**Actions Completed.**
+- `apps/web/e2e-workflows/purchase-receive.e2e.ts`: the owner places an order for 10 boxes; it waits for approval (on by default,
+  `sql/069`) and cannot be received; the owner, the only owner or manager, approves it (shown as self-approved, D1b); the goods are
+  received; a fresh stock page shows 10 where there were none.
+- `apps/web/e2e-workflows/credit-note.e2e.ts`: on a seeded issued invoice, the owner raises a credit note for 2; it waits for approval
+  and changes nothing; once approved, a fresh load shows 251.00 credited and the amount owed after notes.
+- `apps/web/e2e-workflows/helpers.ts`: sign-in (with the first-sign-in language question) and the search picker, shared by all tests.
+- `scripts/e2e-seed.mjs`: adds a supplier, an item with no stock, a customer and one issued invoice (inserted directly, as
+  `sql/tests/031` does: the order and delivery flow before an invoice is covered by the SQL tests).
+
+**Database / System Result.** None on live.
+
+**Safety Status.** The seed SQL was run on a local copy with all 82 migrations (PGlite, rolled back): it passes. The test files
+typecheck and Playwright lists 5 tests in 3 files. Each selector was checked against the screen code (labels, dialog titles, the
+real-API receive button). The browser tests themselves only run on GitHub (no Docker here). The ADR edits (findings 9 and 13) were
+attempted at Ben's request and refused by the permission settings; they remain Ben's (text in the audit response).
+
 ## 2026-11-11 — Audit of 11 Nov: Batch 3 starts (workflow tests on a real local stack); permission test on every write route
 
 **Objective.** Finding 17 (browser tests only open pages) and finding 14 (the permission test covered one route per group). Also
