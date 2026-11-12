@@ -1,0 +1,90 @@
+name: Preview deploy (sample-data build)
+
+# Manual only: Actions tab > "Preview deploy (sample-data build)" > Run workflow, and pick the branch to preview.
+# It builds the sample-data web app (no real data, no API, no sign-in) from that branch and publishes it as a Cloudflare Pages PREVIEW
+# of the public demo project (erp-demo) at an address of its own, for example https://<branch>.erp-demo-bas.pages.dev.
+#  - It refuses to run on main, so it can never replace the public demo itself.
+#  - "with_lab" (default on) puts the Design Lab in this one build (DESIGN_LAB=1, see apps/web/vite.config.ts). The normal build and
+#    the production deploy (ci-deploy.yml) never set it. A check below fails the run if the Lab is in a build that should not have it.
+#  - It does not touch the real app (erp-live), the API Worker or the database.
+# Note: GitHub only lists a manual workflow in the Actions tab once the file is on the default branch (main).
+
+on:
+  workflow_dispatch:
+    inputs:
+      with_lab:
+        description: 'Include the Design Lab in this preview'
+        type: boolean
+        default: true
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24.x'
+  # The sample-data Pages project (README.md: public demo copy). Its preview URLs are public: sample data only.
+  PAGES_PROJECT: erp-demo
+
+jobs:
+  preview:
+    name: Build and publish the preview
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Refuse main, and check the branch name
+        run: |
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            echo "::error::Do not run this on main: it would replace the public demo. Pick the branch to preview."; exit 1
+          fi
+          if ! printf '%s' "$GITHUB_REF_NAME" | grep -Eq '^[A-Za-z0-9._/-]+$'; then
+            echo "::error::The branch name has characters this workflow does not accept."; exit 1
+          fi
+
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the sample-data web app
+        run: npm run build:demo -w apps/web
+        env:
+          DESIGN_LAB: ${{ inputs.with_lab && '1' || '' }}
+
+      - name: Check that the Design Lab is in the build only if asked for
+        run: |
+          # "Copy my choices" is a label that exists only in the Design Lab panel.
+          if grep -rlq "Copy my choices" apps/web/dist; then found=yes; else found=no; fi
+          echo "Design Lab in the build: $found (asked for: ${{ inputs.with_lab }})"
+          if [ "${{ inputs.with_lab }}" = "true" ] && [ "$found" = "no" ]; then echo "::error::The Lab was asked for but is not in the build."; exit 1; fi
+          if [ "${{ inputs.with_lab }}" != "true" ] && [ "$found" = "yes" ]; then echo "::error::The Lab is in a build that should not have it."; exit 1; fi
+
+      - name: Publish the preview to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/web/dist --project-name ${{ env.PAGES_PROJECT }} --branch ${{ github.ref_name }}
+
+      - name: Show the preview address
+        run: |
+          {
+            echo "### Preview published"
+            echo "- Branch: \`$GITHUB_REF_NAME\`"
+            echo "- Design Lab included: ${{ inputs.with_lab }}"
+            echo "- This deployment: ${{ steps.deploy.outputs.deployment-url }}"
+            echo "- Branch address: ${{ steps.deploy.outputs.pages-deployment-alias-url }}"
+            echo ""
+            echo "Sample data only. The address is public: anyone with the link can open it."
+          } >> "$GITHUB_STEP_SUMMARY"

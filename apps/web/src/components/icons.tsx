@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 // Line icons for apps (home tiles and the top bar) and for each page in an app's menu. Drawn here (no icon library, no copied icon
 // set): 24x24, stroke only, so they follow the text colour in light and dark mode and need no flipping in right-to-left layouts.
@@ -62,4 +62,30 @@ export function PageIcon({ appKey, path }: { appKey: string; path: string }) {
     return <AppIcon appKey={appKey} name="" />;
   }
   return <>{PAGE.find(([re]) => re.test(path))?.[1] ?? DEFAULT_PAGE}</>;
+}
+
+/** One hue (OKLCH degrees) per app, so tiles, the top bar and the menu are told apart by colour and not only by shape. */
+const HUE: Record<string, number> = {
+  inventory: 200, tasks: 165, messaging: 215, purchasing: 70, sales: 150, finance: 190, accounting: 180, treasury: 205,
+  trade: 45, alerts: 55, guide: 75, start: 160, settings: 200,
+};
+export const appHue = (appKey: string): number => HUE[appKey] ?? 265;
+/** Inline style that sets the app's hue for the `--h` colour rules in styles.css. */
+export const appHueStyle = (appKey: string) => ({ '--h': appHue(appKey) }) as CSSProperties;
+
+/** The product mark: a rounded tile with a stacked-block glyph (stock), in the brand gradient. No customer branding is hardcoded here. */
+export function LogoMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg className="logo-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="lm-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="oklch(0.5 0.1 195)" />
+          <stop offset="1" stopColor="oklch(0.34 0.08 210)" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#lm-g)" /><path d="M16 4.5l11.5 11.5L16 27.5 4.5 16z" fill="oklch(0.82 0.15 78)" opacity=".18" />
+      <path d="M16 6.5l8.5 4.6v9.8L16 25.5l-8.5-4.6v-9.8L16 6.5z" fill="none" stroke="oklch(0.86 0.15 80)" strokeWidth="1.9" strokeLinejoin="round" />
+      <path d="M7.8 11.3L16 16l8.2-4.7M16 16v9.2" fill="none" stroke="oklch(0.86 0.15 80)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
 }

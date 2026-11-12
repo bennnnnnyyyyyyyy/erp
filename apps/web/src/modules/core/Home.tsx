@@ -8,7 +8,7 @@ import { useSession } from '../../session';
 import { SUITE_ORDER, type AppDef } from '../registry';
 import { OwnerSummary } from './OwnerHome';
 import { TourButton } from '../help/TourHost';
-import { AppIcon } from '../../components/icons';
+import { AppIcon, appHueStyle } from '../../components/icons';
 
 function greeting(timeZone: string): string {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
@@ -57,12 +57,11 @@ export function Home({ apps }: { apps: AppDef[] }) {
 
   return (
     <section className="home">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="home-hero">
         <div>
+          <p className="home-eyebrow">{today(timeZone, lang)}</p>
           <h1>{t(greeting(timeZone))}</h1>
-          <p className="muted">
-            <bdi>{session.org?.name}</bdi> · {today(timeZone, lang)}
-          </p>
+          <p className="home-org"><bdi>{session.org?.name}</bdi></p>
         </div>
         <TourButton />
       </div>
@@ -83,7 +82,7 @@ export function Home({ apps }: { apps: AppDef[] }) {
           <h2 className="suite-heading">{t(suite)}</h2>
           <div className="tiles">
             {apps.map((a) => (
-              <Link key={a.key} to={a.basePath} className="tile" style={{ '--i': tileIndex++ } as CSSProperties}>
+              <Link key={a.key} to={a.basePath} className="tile" style={{ '--i': tileIndex++, ...appHueStyle(a.key) } as CSSProperties}>
                 <span className="tile-icon" aria-hidden="true">
                   <AppIcon appKey={a.key} name={a.name} />
                 </span>

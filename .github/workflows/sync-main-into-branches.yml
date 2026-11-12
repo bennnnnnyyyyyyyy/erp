@@ -1,0 +1,75 @@
+name: Sync main into long-lived branches
+
+# Whenever main gets a push or a merge, bring it into each branch listed in .github/sync-branches.txt, so those branches do not drift.
+# A clean merge is pushed to the branch. A conflict leaves the branch exactly as it was and fails this run (GitHub then emails the
+# repository owner), so a person resolves it by hand: git fetch && git checkout <branch> && git merge origin/main.
+# Run it by hand from the Actions tab with "Run workflow".
+#
+# Things to know:
+#  - It only pushes to the listed branches, never to main, and never rewrites history (merge commits only, no force-push).
+#  - Commits pushed with the built-in GITHUB_TOKEN do not start other workflows (a GitHub rule), so CI does not run on the
+#    automatic merge commit by itself. It runs on the next normal push or when a pull request is opened or updated.
+#  - After a sync, the branch on GitHub is ahead of a local copy: run "git pull" before the next push from that copy.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One sync at a time, so two quick merges to main cannot race each other.
+concurrency:
+  group: sync-main-into-branches
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Merge main into the listed branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Merge main into each listed branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ ! -f .github/sync-branches.txt ]; then echo "No .github/sync-branches.txt, nothing to do."; exit 0; fi
+          branches=$(grep -v '^[[:space:]]*#' .github/sync-branches.txt | sed '/^[[:space:]]*$/d' || true)
+          if [ -z "$branches" ]; then echo "The branch list is empty, nothing to do."; exit 0; fi
+
+          failed=0
+          summary="$GITHUB_STEP_SUMMARY"
+          echo "### Sync main into branches" >> "$summary"
+
+          for branch in $branches; do
+            # Only plain branch names (the list is a file in the repository, but be strict anyway).
+            if ! printf '%s' "$branch" | grep -Eq '^[A-Za-z0-9._/-]+$'; then echo "::error::Skipping a branch name with unexpected characters"; failed=1; continue; fi
+            if [ "$branch" = "main" ]; then continue; fi
+            if ! git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              echo "::warning::$branch does not exist on GitHub, skipped"; echo "- \`$branch\`: does not exist, skipped" >> "$summary"; continue
+            fi
+
+            git checkout -q -B "$branch" "origin/$branch"
+            behind=$(git rev-list --count "HEAD..origin/main")
+            if [ "$behind" = "0" ]; then echo "$branch: already up to date"; echo "- \`$branch\`: already up to date" >> "$summary"; continue; fi
+
+            if git merge --no-edit -m "Merge main into $branch (auto-sync, $behind new commit(s))" origin/main; then
+              git push origin "$branch"
+              echo "- \`$branch\`: merged $behind new commit(s) from main and pushed" >> "$summary"
+            else
+              files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+              git merge --abort
+              echo "::error::Merging main into $branch conflicts in: $files. The branch was not changed. Resolve it by hand."
+              echo "- \`$branch\`: **CONFLICT** in $files (branch unchanged, resolve by hand)" >> "$summary"
+              failed=1
+            fi
+          done
+
+          exit $failed
