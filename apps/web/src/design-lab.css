@@ -364,3 +364,9 @@ html[data-d-tilecols='large'] .tiles { grid-template-columns: repeat(auto-fill, 
 html[data-d-suitehead='pill'] .suite-heading { display: inline-flex; background: var(--accent); color: var(--accent-foreground); padding: 0.25rem 0.8rem; border-radius: 999px; }
 html[data-d-suitehead='pill'] .suite-heading::after { display: none; }
 html[data-d-suitehead='plain'] .suite-heading::after { display: none; }
+
+/* Phones: the heading size options are for desktop; keep them readable on a small screen (same limits as styles.css). */
+@media (max-width: 720px) {
+  html[data-d-hsize='large'] .home-hero h1, html[data-d-hsize='xl'] .home-hero h1 { font-size: 2.4rem; }
+  html[data-d-hsize='large'] .page > h1, html[data-d-hsize='large'] h1, html[data-d-hsize='xl'] .page > h1, html[data-d-hsize='xl'] h1 { font-size: 1.9rem; }
+}
