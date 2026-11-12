@@ -33,7 +33,9 @@ button.ghost { border-color: transparent; background: transparent; padding: 4px 
 button.mini { padding: 2px 7px; font-size: 11px; }
 .tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
 .note { color: #9aa6b0; font-size: 12px; margin: 8px 0 0; }
-.sec { margin: 16px 0 6px; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.sec { margin: 16px 0 6px; display: flex; align-items: center; gap: 8px; user-select: none; }
+.sechead { flex: 1; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; color: inherit; text-align: left; cursor: pointer; }
+.sechead:hover:not(:disabled) { background: transparent; }
 .sec b { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #e9b949; flex: 1; }
 .sec .count { background: #e9b949; color: #1a1400; border-radius: 999px; padding: 0 7px; font-size: 11px; font-weight: 700; }
 .sec .of { color: #9aa6b0; font-size: 11px; }
@@ -292,8 +294,10 @@ function Panel() {
           </div>
         )}
 
-        <div className="sec" onClick={() => toggleSection('__log')}>
-          <span className="caret">{ui.closed.includes('__log') ? '▸' : '▾'}</span><b>Change log</b><span className="of">{log.length} entries</span>
+        <div className="sec">
+          <button className="sechead" onClick={() => toggleSection('__log')} aria-expanded={!ui.closed.includes('__log')}>
+            <span className="caret">{ui.closed.includes('__log') ? '▸' : '▾'}</span><b>Change log</b><span className="of">{log.length} entries</span>
+          </button>
         </div>
         {!ui.closed.includes('__log') && (
           <>
@@ -363,11 +367,13 @@ function Panel() {
           const decided = all.filter((g) => touched[g.key]).length;
           return (
             <div key={sec}>
-              <div className="sec" onClick={() => toggleSection(sec)}>
-                <span className="caret">{closed ? '▸' : '▾'}</span>
-                <b>{sec}</b>
-                <span className="of">{decided}/{all.length} touched</span>
-                <button className="mini" onClick={(e) => { e.stopPropagation(); surpriseGroups(groups); }} title="Random pick for this section only">Surprise</button>
+              <div className="sec">
+                <button className="sechead" onClick={() => toggleSection(sec)} aria-expanded={!closed}>
+                  <span className="caret">{closed ? '▸' : '▾'}</span>
+                  <b>{sec}</b>
+                  <span className="of">{decided}/{all.length} touched</span>
+                </button>
+                <button className="mini" onClick={() => surpriseGroups(groups)} title="Random pick for this section only">Surprise</button>
               </div>
               {!closed && groups.map((g) => {
                 const status = touched[g.key];
