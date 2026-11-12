@@ -7,7 +7,7 @@ import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
 import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
 import { AppSideMenu } from './AppMenu';
-import { AppIcon, LogoMark, appHueStyle } from './icons';
+import { AppIcon } from './icons';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
 import { TableLabels } from './TableLabels';
@@ -129,17 +129,11 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           </button>
         )}
         <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label={t('All apps')} title={t('All apps')}>
-          <LogoMark size={26} />
+          <span className="grid-icon" aria-hidden="true" />
           {!route && t('Apps')}
         </Link>
-        {route && (
-          <nav className="crumbs" aria-label={t('Where you are')}>
-            <Link to={route.app.basePath || '/'}>{t(route.app.name)}</Link>
-            {route.page && route.page.path !== '' && <><span aria-hidden="true">/</span><span className="crumb-here">{t(route.page.label)}</span></>}
-          </nav>
-        )}
         {route ? (
-          <Link to={route.app.basePath || '/'} className="topbar-app-link" style={appHueStyle(route.app.key)}>
+          <Link to={route.app.basePath || '/'} className="topbar-app-link">
             <span className="topbar-app-icon"><AppIcon appKey={route.app.key} name={t(route.app.name)} /></span>
             <span>{t(route.app.name)}</span>
           </Link>
