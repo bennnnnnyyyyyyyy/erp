@@ -13,7 +13,7 @@ async function signIn(browser: Browser, email: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   page.on('pageerror', (e) => console.log(`[${email}] exception: ${e.message}`));
   // A person with no saved language is asked to choose one on first sign-in (LanguageChooser); whenever it covers the page, pick English.
-  await page.addLocatorHandler(page.locator('[aria-labelledby="lang-chooser-title"]'), async (dialog) => {
+  await page.addLocatorHandler(page.locator('[role="dialog"][aria-labelledby="lang-chooser-title"]').first(), async (dialog) => {
     await dialog.getByRole('button', { name: 'English', exact: true }).click();
   });
   await page.goto('/');
