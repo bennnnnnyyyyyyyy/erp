@@ -11,6 +11,33 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-11 — Audit of 11 Nov: Batch 3 starts (workflow tests on a real local stack); permission test on every write route
+
+**Objective.** Finding 17 (browser tests only open pages) and finding 14 (the permission test covered one route per group). Also
+records that `sql/084` was applied to live by Ben (verification: `users_settle` false, `anon_set` false, `service_settle` true,
+`old_overload` 0) and PR #45 merged with both checks green.
+
+**Actions Completed.**
+- `apps/api/test/auth_and_gates.test.ts`: every POST/PUT/PATCH/DELETE route in every module (179, found from the app itself) is called
+  as a viewer and must answer 403 `forbidden`. Eight personal actions are allowed on purpose and listed with their reason in
+  `VIEWER_MAY` (own language, own notifications, own Telegram/WhatsApp, the read-only assistant and voice-note transcription). A new
+  write route without a permission check now fails the test.
+- `.github/workflows/workflow-tests.yml` (new, separate from the deploy): local Supabase in the runner, every migration, a fresh ES256
+  signing key so the API verifies tokens through JWKS as in production, `scripts/e2e-seed.mjs` (refuses non-local addresses), then the
+  real API (Wrangler local) and web app, and `apps/web/playwright.workflows.config.ts` runs `apps/web/e2e-workflows/`.
+- First workflow, `stock-approval.e2e.ts`: staff signs in with a password and requests 5 of an item; staff has no Approve button; the
+  owner approves and issues; a fresh stock page shows 95 of 100; the other company's owner sees neither the request nor the item,
+  even with the direct link.
+- `.gitignore`: `supabase/signing_keys.json`.
+
+**Database / System Result.** None on live. The workflow job creates and destroys its own local database.
+
+**Safety Status.** Typecheck clean; API tests pass (including 187 in the gate file); shared 74, web 142; lint unchanged (warnings only).
+The workflow job could NOT be run here (no Docker on this machine): its first real run is on GitHub after Ben pushes. If it fails,
+the trace is uploaded as `workflow-test-traces`. Locally verified: the API starts with the same Wrangler command and answers `/health`;
+Playwright lists the 3 tests; the test files typecheck. Next workflows: purchase order receive, customer invoice and credit note.
+Ben: once it is green, add "Sign in and click through real workflows" to the required checks.
+
 ## 2026-11-11 — Audit of 11 Nov: Batch 1 and 2 (`sql/084`)
 
 **Objective.** Ben: "go batch 1 and 2" of `documentation/planning/2026-11-11-audit-response.md` (the response to the static audit of

@@ -1,0 +1,122 @@
+name: Workflow tests (real app, local database)
+
+# Audit 11 Nov 2026, finding 17: browser tests that do real work, not only open pages. A throwaway local Supabase (Docker, inside the
+# runner) gets every migration in sql/, a signing key, and seeded people and companies (scripts/e2e-seed.mjs). Then the real API (Wrangler,
+# local) and web app start against it and Playwright signs in and clicks through workflows (apps/web/e2e-workflows).
+# No secrets, no live data: everything here is made in the runner and thrown away. The seed script refuses any non-local address.
+# Like sql-tests.yml, this is separate from the deploy, and meant to be a required check on pull requests.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflows:
+    name: Sign in and click through real workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      # The job runs downloaded code (npm packages, the browser, the Supabase CLI), so the checkout token is not kept in git config.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Make sure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # Same reason as sql-tests.yml: migrations come from sql/, not from the two copies in supabase/migrations.
+      - name: Start from an empty database
+        run: rm -rf supabase/migrations
+
+      # The API checks sign-in tokens against the published key list (JWKS), as with the real project, so the local sign-in service
+      # needs an ES256 signing key instead of its default shared secret. Made fresh here; never committed.
+      - name: Give the local sign-in service a signing key
+        run: |
+          node -e "
+            const { subtle } = globalThis.crypto;
+            (async () => {
+              const k = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+              const jwk = await subtle.exportKey('jwk', k.privateKey);
+              const out = [{ ...jwk, kid: 'ci-' + Date.now(), alg: 'ES256', use: 'sig', key_ops: ['sign', 'verify'] }];
+              require('fs').writeFileSync('supabase/signing_keys.json', JSON.stringify(out));
+            })();"
+          sed -i 's|^# signing_keys_path = .*|signing_keys_path = "./signing_keys.json"|' supabase/config.toml
+          grep -n '^signing_keys_path' supabase/config.toml
+
+      - name: Start a local Supabase stack
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start; then exit 0; fi
+            echo "::warning::supabase start failed (attempt $attempt of 3); retrying"
+            supabase stop --no-backup || true
+            sleep $((attempt * 30))
+          done
+          echo "::error::The local database could not start after 3 tries. Workflow tests did NOT run; re-run the job."
+          exit 1
+
+      - name: Apply every migration
+        run: |
+          DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          for f in $(ls sql/[0-9]*.sql | sort); do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" > /dev/null || { echo "::error::migration failed: $f"; exit 1; }
+          done
+
+      - name: Settings for this run (local values only)
+        run: |
+          supabase status -o env > /tmp/status.env
+          set -a; . /tmp/status.env; set +a
+          PUB="${PUBLISHABLE_KEY:-$ANON_KEY}"
+          SEC="${SECRET_KEY:-$SERVICE_ROLE_KEY}"
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_PUBLISHABLE_KEY=$PUB" >> "$GITHUB_ENV"
+          echo "SUPABASE_SECRET_KEY=$SEC" >> "$GITHUB_ENV"
+          echo "DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> "$GITHUB_ENV"
+          echo "E2E_PASSWORD=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          # The web app reads the repo-root .env (vite.config.ts); only the two public values go in it.
+          printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\n' "$API_URL" "$PUB" > .env
+
+      - name: Seed people and companies
+        run: node scripts/e2e-seed.mjs
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
+
+      - name: Run the workflow tests
+        run: npx playwright test -c playwright.workflows.config.ts
+        working-directory: apps/web
+
+      - name: Keep the traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-test-traces
+          path: apps/web/test-results
+          retention-days: 7
+
+      - name: Stop the local stack
+        if: always()
+        run: supabase stop --no-backup

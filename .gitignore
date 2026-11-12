@@ -103,8 +103,12 @@ whatidid.txt
 Hello                                 │
   Ian*.txt
 test-bank-statement.csv
-
+benemail.md
+ciissue.md
 # Audit 11 Nov 2026 (P1): no personal or third-party material in the repo. Binary archives and spreadsheets stay outside git.
 documentation/archive/**/*.zip
 documentation/archive/**/*.xlsx
 documentation/archive/**/*.xls
+
+# Signing key made by the workflow-tests CI job for the local Supabase (never commit)
+supabase/signing_keys.json
