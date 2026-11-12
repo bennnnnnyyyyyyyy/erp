@@ -18,7 +18,7 @@ test('a credit note is raised, waits for approval, and once approved lowers what
   await owner.getByRole('button', { name: 'Credit note', exact: true }).click();
   const form = owner.getByRole('dialog', { name: 'New credit note' });
   await expect(form).toBeVisible();
-  await form.getByLabel('Quantity for Face cream 50ml').fill('2');
+  await form.getByLabel(/^Quantity for /).fill('2');
   await form.getByLabel(/^Reason/).fill(REASON);
   await form.getByRole('button', { name: 'Submit for approval' }).click();
   await expect(form).toHaveCount(0, { timeout: 20_000 });
