@@ -11,6 +11,37 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-12 — Financial statements: income statement and balance sheet (`sql/085`)
+
+**Objective.** Roadmap phase 6, first item ([FINANCIAL_STATEMENTS_PLAN.md](../plans/FINANCIAL_STATEMENTS_PLAN.md)), approved by Ben on
+12 Nov ("do them asap"). Plan answers taken as recommended: the comparison defaults to the same period last year; the statements follow
+the trial balance's permission (`accounting.ledger.view`).
+
+**Actions Completed.**
+- `sql/085_acc_statement_lines.sql`: `acc_accounts.statement_line` (nullable, checked list of 14 EAS lines); `acc__default_statement_line`
+  (Egyptian chart code and kind: 11-15 non-current assets, 16 inventory, 17 receivables, 19 cash, 25-26 non-current liabilities, 34 cost
+  of sales, 37 finance costs, 38 income tax, 42 other income; 25, 26, 37 and 38 to confirm with the accountant); `acc__effective_lines`
+  (own line, else nearest ancestor's, else the default); `acc_set_statement_line` (owner or head accountant, audit row in the same
+  transaction, refuses a line from the other statement); `acc_income_statement(from, to)` and `acc_balance_sheet(at)` (owner and admin,
+  posted entries, one currency, natural signs; the balance sheet adds the year's profit to date and earlier unclosed years as equity).
+- `sql/tests/081_financial_statements.sql`: figures, net profit, the balance sheet balances, overrides and their audit, wrong-statement
+  line refused, members refused, the other company sees nothing.
+- `packages/shared/src/accounting.ts`: the EAS layout maths (`buildIncomeStatement`, `buildBalanceSheet`, `sameDateLastYear`), tested in
+  `statements.test.ts`.
+- API (`modules/accounting/routes.ts`): `GET /statements/income`, `GET /statements/balance` (both with comparison and CSV),
+  `GET /statement-lines`, `PUT /accounts/:id/statement-line`. Missing schema answers 503 `not_set_up` (global handler).
+- Web (`modules/accounting/Statements.tsx`): Accounting → Income statement (gross, operating, before-tax and net profit), Balance sheet
+  (with the balance check shown, never hidden), Statement lines (owner or head accountant can change; others see them). Each account opens
+  its entries. Print and CSV. Arabic machine draft for every new string (`i18nNav.ts`, `i18nScreens.ts`).
+- `sql/README.md`: 085 added; 084 recorded as applied to live 11 Nov (Ben's verification output).
+
+**Database / System Result.** None on live yet. Ben: apply `sql/085` with `supabase db query --linked -f sql/085_acc_statement_lines.sql`;
+until then the three pages answer "not set up".
+
+**Safety Status.** Local SQL run (PGlite, all 83 migrations): 80 of 80 SQL tests pass, including the new one. `npm run typecheck` clean;
+`npm test` passes (shared 78, API 555, web 142; the every-write-route test now also covers the new PUT). Biome: no errors. Doc links OK.
+Not verified: a dry run on live, the pages in a browser against real data, and the Arabic (machine draft, to add to the review sheet).
+
 ## 2026-11-12 — Audit of 11 Nov: Batch 3 finished (purchase order and credit note workflows)
 
 **Objective.** Finish finding 17: the workflow suite named in the audit response (stock approval, purchase order receipt, credit

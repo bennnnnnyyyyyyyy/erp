@@ -79,6 +79,9 @@ const JournalEditPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalE
 const JournalPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalPage');
 const TrialBalancePage = lazyNamed(() => import('./accounting/Ledger'), 'TrialBalancePage');
 const AccountLinesPage = lazyNamed(() => import('./accounting/Ledger'), 'AccountLinesPage');
+const IncomeStatementPage = lazyNamed(() => import('./accounting/Statements'), 'IncomeStatementPage');
+const BalanceSheetPage = lazyNamed(() => import('./accounting/Statements'), 'BalanceSheetPage');
+const StatementLinesPage = lazyNamed(() => import('./accounting/Statements'), 'StatementLinesPage');
 
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
@@ -256,6 +259,9 @@ export const APPS: AppDef[] = [
     suite: 'Finance', basePath: '/accounting', pages: [
       { path: '', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage },
       { path: '/trial-balance', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage, nav: false, parent: '' },
+      { path: '/income-statement', label: 'Income statement', permission: 'accounting.ledger.view', component: IncomeStatementPage },
+      { path: '/balance-sheet', label: 'Balance sheet', permission: 'accounting.ledger.view', component: BalanceSheetPage },
+      { path: '/statement-lines', label: 'Statement lines', permission: 'accounting.ledger.view', component: StatementLinesPage, nav: false, parent: '/income-statement' },
       { path: '/entries', label: 'Journal', permission: 'accounting.ledger.view', component: EntriesPage },
       { path: '/entries/:id', label: 'Journal entry', permission: 'accounting.ledger.view', component: EntryPage, nav: false, parent: '/entries' },
       { path: '/journals', label: 'Manual journals', permission: 'accounting.ledger.view', component: JournalsPage },

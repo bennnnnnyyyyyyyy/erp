@@ -13,6 +13,10 @@ import {
   type ManualJournal,
   type SwitchOnPreview,
   type SwitchOnResult,
+  STATEMENT_LINE_LABELS,
+  STATEMENT_LINES,
+  type FinancialLine,
+  type StatementRow,
   type TrialBalanceRow,
   type UncostedReceipt,
 } from '@erp/shared';
@@ -747,6 +751,112 @@ type TbRow = {
 };
 
 // One currency at a time (the company's own by default). ?format=csv downloads it.
+// ---------------------------------------------------------------- financial statements (sql/085)
+
+type StmtDbRow = {
+  line: string;
+  account_id: string | null;
+  code: string | null;
+  name: string;
+  name_ar: string | null;
+  amount_minor: unknown;
+};
+const toStatementRows = (rows: StmtDbRow[] | null): StatementRow[] =>
+  (rows ?? []).map((r) => ({
+    line: r.line as FinancialLine,
+    accountId: r.account_id,
+    code: r.code,
+    name: r.name,
+    nameAr: r.name_ar,
+    amountMinor: num(r.amount_minor),
+  }));
+
+function optionalDate(c: Ctx, key: string): string | null {
+  const v = c.req.query(key);
+  if (!v) return null;
+  if (!DATE_RE.test(v)) invalid(`${key} must be a date (YYYY-MM-DD)`);
+  return v;
+}
+
+function statementCsv(c: Ctx, file: string, current: StatementRow[], compare: StatementRow[] | null, currency: string) {
+  const key = (r: StatementRow) => `${r.line}|${r.accountId ?? r.name}`;
+  const prior = new Map((compare ?? []).map((r) => [key(r), r.amountMinor]));
+  const all = [...current, ...(compare ?? []).filter((r) => !current.some((x) => key(x) === key(r)))];
+  return csvResponse(
+    c,
+    file,
+    compare ? ['line', 'code', 'name', 'name_ar', 'amount', 'comparison'] : ['line', 'code', 'name', 'name_ar', 'amount'],
+    all.map((r) => {
+      const now = current.find((x) => key(x) === key(r))?.amountMinor ?? 0;
+      const base = [STATEMENT_LINE_LABELS[r.line] ?? r.line, r.code ?? '', r.name, r.nameAr ?? '', minorToText(now, currency)];
+      return compare ? [...base, minorToText(prior.get(key(r)) ?? 0, currency)] : base;
+    }),
+  );
+}
+
+accountingRoutes.get('/statements/income', requirePermission('accounting.ledger.view'), async (c) => {
+  const p = period(c);
+  const compareFrom = optionalDate(c, 'compareFrom');
+  const compareTo = optionalDate(c, 'compareTo');
+  if ((compareFrom === null) !== (compareTo === null) || (compareFrom && compareTo && compareTo < compareFrom))
+    invalid('compareFrom and compareTo go together, with compareTo on or after compareFrom');
+  const db = userDb(c);
+  const current = toStatementRows(
+    await callRpc<StmtDbRow[]>(db, 'acc_income_statement', { p_from: p.from, p_to: p.to, p_currency: p.currency }),
+  );
+  const compare =
+    compareFrom && compareTo
+      ? toStatementRows(
+          await callRpc<StmtDbRow[]>(db, 'acc_income_statement', { p_from: compareFrom, p_to: compareTo, p_currency: p.currency }),
+        )
+      : null;
+  const currency = p.currency ?? c.var.tenant.defaultCurrency;
+  if (c.req.query('format') === 'csv') return statementCsv(c, `income-statement-${p.from}-to-${p.to}.csv`, current, compare, currency);
+  return ok(c, { currency, current, compare });
+});
+
+accountingRoutes.get('/statements/balance', requirePermission('accounting.ledger.view'), async (c) => {
+  const at = optionalDate(c, 'at');
+  if (!at) invalid('at is required (YYYY-MM-DD)');
+  const compareAt = optionalDate(c, 'compareAt');
+  const cur = (c.req.query('currency') ?? '').toUpperCase();
+  if (cur && !CUR_RE.test(cur)) invalid('currency must be a three-letter code');
+  const db = userDb(c);
+  const current = toStatementRows(await callRpc<StmtDbRow[]>(db, 'acc_balance_sheet', { p_at: at, p_currency: cur || null }));
+  const compare = compareAt
+    ? toStatementRows(await callRpc<StmtDbRow[]>(db, 'acc_balance_sheet', { p_at: compareAt, p_currency: cur || null }))
+    : null;
+  const currency = cur || c.var.tenant.defaultCurrency;
+  if (c.req.query('format') === 'csv') return statementCsv(c, `balance-sheet-${at}.csv`, current, compare, currency);
+  return ok(c, { currency, current, compare });
+});
+
+/** Each account's own statement line (null = from its parent or the chart default). Separate from /accounts so the chart keeps working
+ *  before sql/085 is applied. */
+accountingRoutes.get('/statement-lines', requirePermission('accounting.ledger.view'), async (c) => {
+  const { data, error } = await userDb(c)
+    .from('acc_accounts')
+    .select('id, statement_line')
+    .eq('org_id', orgOf(c))
+    .is('deleted_at', null)
+    .not('statement_line', 'is', null);
+  if (error) throw error;
+  return ok(
+    c,
+    (data ?? []).map((r: { id: string; statement_line: string }) => ({ accountId: r.id, line: r.statement_line })),
+  );
+});
+
+accountingRoutes.put('/accounts/:id/statement-line', requirePermission('accounting.chart.manage'), async (c) => {
+  const id = idParam(c);
+  const body = await jsonBody(c);
+  const line = body.line === null || body.line === '' ? null : body.line;
+  if (line !== null && !(typeof line === 'string' && (STATEMENT_LINES as readonly string[]).includes(line)))
+    invalid('line must be one of the statement lines, or null for the default');
+  await callRpc<void>(userDb(c), 'acc_set_statement_line', { p_account_id: id, p_line: line });
+  return ok(c, { accountId: id, line });
+});
+
 accountingRoutes.get('/trial-balance', requirePermission('accounting.ledger.view'), async (c) => {
   const p = period(c);
   const rows = await callRpc<TbRow[]>(userDb(c), 'acc_trial_balance', { p_from: p.from, p_to: p.to, p_currency: p.currency });
