@@ -185,3 +185,107 @@ export function journalProblem(lines: readonly JournalLineInput[]): 'too_few_lin
   }
   return dr === cr ? null : 'unbalanced';
 }
+
+// ---------------------------------------------------------------- financial statements (sql/085, FINANCIAL_STATEMENTS_PLAN.md)
+
+export const INCOME_LINES = ['revenue', 'cost_of_sales', 'other_income', 'operating_expenses', 'finance_costs', 'income_tax'] as const;
+export const ASSET_LINES = ['non_current_assets', 'inventory', 'receivables', 'cash', 'other_current_assets'] as const;
+export const CLAIM_LINES = ['equity', 'non_current_liabilities', 'current_liabilities'] as const;
+export const STATEMENT_LINES = [...INCOME_LINES, ...ASSET_LINES, ...CLAIM_LINES] as const;
+export type FinancialLine = (typeof STATEMENT_LINES)[number];
+
+/** English labels (the web app translates them). */
+export const STATEMENT_LINE_LABELS: Record<FinancialLine, string> = {
+  revenue: 'Revenue',
+  cost_of_sales: 'Cost of sales',
+  other_income: 'Other income',
+  operating_expenses: 'Operating expenses',
+  finance_costs: 'Finance costs',
+  income_tax: 'Income tax',
+  non_current_assets: 'Non-current assets',
+  inventory: 'Inventory',
+  receivables: 'Customers and other receivables',
+  cash: 'Cash and cash equivalents',
+  other_current_assets: 'Other current assets',
+  equity: 'Equity',
+  non_current_liabilities: 'Non-current liabilities',
+  current_liabilities: 'Current liabilities',
+};
+
+/** One account (or, with accountId null, a computed equity row) on a statement, in its natural sign. */
+export type StatementRow = {
+  line: FinancialLine;
+  accountId: string | null;
+  code: string | null;
+  name: string;
+  nameAr: string | null;
+  amountMinor: number;
+};
+
+export type StatementSection = { line: FinancialLine; rows: StatementRow[]; totalMinor: number };
+
+function sections(rows: StatementRow[], lines: readonly FinancialLine[]): StatementSection[] {
+  return lines.map((line) => {
+    const mine = rows.filter((r) => r.line === line);
+    return { line, rows: mine, totalMinor: mine.reduce((s, r) => s + r.amountMinor, 0) };
+  });
+}
+
+export type IncomeStatement = {
+  sections: StatementSection[];
+  grossProfitMinor: number;
+  operatingProfitMinor: number;
+  profitBeforeTaxMinor: number;
+  netProfitMinor: number;
+};
+
+/** EAS 1 layout: revenue − cost of sales = gross profit; + other income − operating expenses = operating profit;
+ *  − finance costs = profit before tax; − income tax = net profit. */
+export function buildIncomeStatement(rows: StatementRow[]): IncomeStatement {
+  const s = sections(rows, INCOME_LINES);
+  const t = (line: FinancialLine) => s.find((x) => x.line === line)?.totalMinor ?? 0;
+  const gross = t('revenue') - t('cost_of_sales');
+  const operating = gross + t('other_income') - t('operating_expenses');
+  const beforeTax = operating - t('finance_costs');
+  return {
+    sections: s,
+    grossProfitMinor: gross,
+    operatingProfitMinor: operating,
+    profitBeforeTaxMinor: beforeTax,
+    netProfitMinor: beforeTax - t('income_tax'),
+  };
+}
+
+export type BalanceSheet = {
+  assets: StatementSection[];
+  claims: StatementSection[];
+  totalAssetsMinor: number;
+  totalEquityMinor: number;
+  totalLiabilitiesMinor: number;
+  /** Total assets − (equity + liabilities). Zero when the books balance; any other value is shown, never hidden. */
+  differenceMinor: number;
+};
+
+export function buildBalanceSheet(rows: StatementRow[]): BalanceSheet {
+  const assets = sections(rows, ASSET_LINES);
+  const claims = sections(rows, CLAIM_LINES);
+  const sum = (xs: StatementSection[]) => xs.reduce((s, x) => s + x.totalMinor, 0);
+  const totalAssets = sum(assets);
+  const totalEquity = claims.find((x) => x.line === 'equity')?.totalMinor ?? 0;
+  const totalLiabilities = sum(claims) - totalEquity;
+  return {
+    assets,
+    claims,
+    totalAssetsMinor: totalAssets,
+    totalEquityMinor: totalEquity,
+    totalLiabilitiesMinor: totalLiabilities,
+    differenceMinor: totalAssets - totalEquity - totalLiabilities,
+  };
+}
+
+/** The same day one year earlier (the comparison default), clamped at month end: 2028-02-29 → 2027-02-28. */
+export function sameDateLastYear(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  const last = new Date(Date.UTC(y - 1, m, 0)).getUTCDate();
+  return `${y - 1}-${String(m).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+}
