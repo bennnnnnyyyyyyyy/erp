@@ -35,8 +35,8 @@ the trial balance's permission (`accounting.ledger.view`).
   its entries. Print and CSV. Arabic machine draft for every new string (`i18nNav.ts`, `i18nScreens.ts`).
 - `sql/README.md`: 085 added; 084 recorded as applied to live 11 Nov (Ben's verification output).
 
-**Database / System Result.** None on live yet. Ben: apply `sql/085` with `supabase db query --linked -f sql/085_acc_statement_lines.sql`;
-until then the three pages answer "not set up".
+**Database / System Result.** `sql/085` applied to live 12 Nov by Ben: `has_column` true, `anon_can_read` false, `users_can_read` true,
+`users_can_set` true (the function itself admits only owners and head accountants).
 
 **Safety Status.** Local SQL run (PGlite, all 83 migrations): 80 of 80 SQL tests pass, including the new one. `npm run typecheck` clean;
 `npm test` passes (shared 78, API 555, web 142; the every-write-route test now also covers the new PUT). Biome: no errors. Doc links OK.

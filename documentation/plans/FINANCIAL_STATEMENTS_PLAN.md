@@ -1,6 +1,6 @@
 # Financial Statements Plan (income statement and balance sheet)
 
-**Status:** Approved by Ben 12 Nov 2026 (comparison: same period last year; visible to those who see the trial balance). Built 12 Nov (`sql/085`), not yet applied to live.
+**Status:** Approved by Ben 12 Nov 2026 (comparison: same period last year; visible to those who see the trial balance). Built 12 Nov; `sql/085` applied to live 12 Nov.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 6 ("Financial statements"). Builds on the ledger of
 [ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md) (phase 1, live since 6 Nov).
 
