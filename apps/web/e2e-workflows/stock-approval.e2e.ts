@@ -39,7 +39,10 @@ test('a staff member asks for stock and cannot approve their own request', async
   await staff.goto('/inventory/requests/new');
   await expect(staff.getByRole('heading', { name: 'Send goods out' })).toBeVisible();
   await staff.getByLabel('Reason').fill('Workflow test');
-  await staff.getByLabel('Item', { exact: true }).selectOption({ label: 'GLV-001 · Safety gloves' });
+  // The select sits inside its label, so its accessible name includes the chosen option ("Item Choose an item…"); find it by its label.
+  const itemSelect = staff.locator('label').filter({ hasText: /^Item/ }).locator('select');
+  await expect(itemSelect.locator('option', { hasText: 'Safety gloves' })).toHaveCount(1, { timeout: 20_000 });
+  await itemSelect.selectOption({ label: 'GLV-001 · Safety gloves' });
   await staff.getByLabel(/^Quantity/).fill('5');
   await staff.getByRole('button', { name: 'Submit for approval' }).click();
 
