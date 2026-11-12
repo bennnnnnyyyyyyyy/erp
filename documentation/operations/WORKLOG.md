@@ -3062,3 +3062,12 @@ the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitigno
 **Database / System Result.** None (no SQL). The preview reads and writes the same database as the live app.
 
 **Safety Status.** `wrangler.toml` parses (checked with a TOML parser). Not checked: the change has not been deployed or tested against the live Worker. Remove the second entry when the preview is not needed. Sign-in from the preview address also needs it in Supabase Auth's redirect URLs only for email-link/OAuth flows; password sign-in does not.
+## 2026-11-12 — Undo the new look on production (it was merged by mistake); keep it as a preview
+
+**Objective.** Ben wanted the new look (warm/graphite theme, left menu, Home banner, Design Lab) only as a Cloudflare preview. PR #48 was merged to main (97af299) and the production deploy ran successfully, so the live app (`erp-live`) got the new look. It was my mistake: I walked Ben through a PR and merge when he had asked for a preview.
+
+**Actions Completed.** (1) Started the preview he asked for: `Preview deploy (sample-data build)` on branch `worktree-ui-warm` with the Design Lab (run 43286007482; erp-demo project preview, not production). (2) Prepared branch `undo-new-look-on-production` from `origin/main`: restored the six look files (`theme.css`, `styles.css`, `Shell.tsx`, `AppMenu.tsx`, `icons.tsx`, `Home.tsx`) to their versions before the merge (97af299^1), and removed `worktree-ui-warm` from `.github/sync-branches.txt` so the sync workflow does not merge this undo into the new-look branch. Kept on main: the preview and sync workflows, the dev-only Design Lab code and the `DESIGN_LAB` build switch (a normal build has no Lab). Nothing was pushed or merged by this session. (3) To undo what is live right now without waiting for code: Cloudflare dashboard > Workers & Pages > erp-live > Deployments > the production deployment before 18:56 UTC on 12 Nov > Rollback to this deployment.
+
+**Database / System Result.** None (no SQL). The API Worker was redeployed by the same job with identical API code.
+
+**Safety Status.** Undo branch: `biome ci` 0 errors, web `tsc` 0 errors, web tests 142 passed. Not checked: the undo has not been deployed; the Cloudflare rollback was not done by this session (needs the dashboard). The new look stays on `worktree-ui-warm` (do not merge it to main; use the preview workflow instead). If main later needs the new look, revert this undo commit.
