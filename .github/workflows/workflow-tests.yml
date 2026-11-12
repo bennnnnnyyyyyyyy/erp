@@ -28,7 +28,10 @@ jobs:
     env:
       WRANGLER_SEND_METRICS: 'false'
     steps:
+      # The job runs downloaded code (npm packages, the browser, the Supabase CLI), so the checkout token is not kept in git config.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:

@@ -14,7 +14,19 @@ if (!SUPABASE_URL || !SUPABASE_SECRET_KEY || !DB_URL || !E2E_PASSWORD) {
   console.error('Missing SUPABASE_URL, SUPABASE_SECRET_KEY, DB_URL or E2E_PASSWORD.');
   process.exit(2);
 }
-const local = (u) => /^(postgresql|https?):\/\/([^@/]*@)?(127\.0\.0\.1|localhost)[:/]/.test(u);
+// Checks the host the address really names (parsed, not a text prefix), and refuses connection options that could point psql elsewhere.
+const local = (u) => {
+  let url;
+  try {
+    url = new URL(u);
+  } catch {
+    return false;
+  }
+  const hostOk = ['127.0.0.1', 'localhost'].includes(url.hostname);
+  const schemeOk = ['postgresql:', 'postgres:', 'http:', 'https:'].includes(url.protocol);
+  const noOverride = ![...url.searchParams.keys()].some((k) => ['host', 'hostaddr', 'service'].includes(k.toLowerCase()));
+  return hostOk && schemeOk && noOverride;
+};
 if (!local(SUPABASE_URL) || !local(DB_URL)) {
   console.error('Refusing to seed: SUPABASE_URL and DB_URL must both point at this machine.');
   process.exit(2);

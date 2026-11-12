@@ -75,7 +75,12 @@ test('the other company sees none of it, even with the direct link', async ({ br
   await expect(other.getByText('Company B item')).toBeVisible({ timeout: 20_000 });
   await expect(other.getByText('Safety gloves')).toHaveCount(0);
 
+  // Wait for the API's answer to the direct link, then for the page's error state, so "nothing shown" cannot just mean "still loading".
+  const requestId = requestUrl.split('/').pop() ?? '';
+  const answer = other.waitForResponse((r) => r.url().includes(`/v1/inventory/requests/${requestId}`) && r.request().method() === 'GET');
   await other.goto(requestUrl);
+  expect((await answer).status(), 'company B was given company A’s request').toBe(404);
+  await expect(other.locator('main p.error')).toBeVisible({ timeout: 20_000 });
   await expect(other.getByText('Workflow test')).toHaveCount(0);
-  await expect(other.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+  await expect(other.getByRole('heading', { name: /Safety gloves|REQ-/ })).toHaveCount(0);
 });
