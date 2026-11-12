@@ -725,3 +725,7 @@ button { border-radius: 10px; }
   .home-hero { padding: 1.3rem 1.2rem; }
   .page > h1 { font-size: 1.9rem; }
 }
+
+/* Keyboard focus on the dark sidebar: the normal focus ring is the brand colour, which in light mode is dark and nearly invisible on
+   the dark sidebar (about 1.6:1, found 12 Nov). Use a light ring there. */
+.sidebar :focus-visible { outline: 2px solid oklch(0.94 0.02 90); outline-offset: -2px; }

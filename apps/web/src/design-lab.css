@@ -377,3 +377,6 @@ html.dark[data-d-btn='gradient'] button:not([class]), html.dark[data-d-btn='grad
   background: linear-gradient(135deg, oklch(0.84 calc(var(--pc) * 1.1) calc(var(--bh) + 10)), oklch(0.7 calc(var(--pc) * 1.1) calc(var(--bh) - 10)));
   color: oklch(0.2 0.01 var(--bh)); box-shadow: 0 4px 12px -4px oklch(0.8 var(--pc) var(--bh) / 0.35);
 }
+
+/* The light and "same as page" sidebars need the normal (dark) focus ring again. */
+html[data-d-sidebar='light'] .sidebar :focus-visible, html[data-d-sidebar='paper'] .sidebar :focus-visible { outline-color: var(--primary); }

@@ -20,6 +20,15 @@ Owner: Ben decides; Claude (UI session) builds and checks. Branch: `worktree-ui-
 - Contrast of Ben's near-grey custom palette (WCAG, measured on the page): every pair passes. Lowest: muted text on the page in light mode, 5.99 : 1 (target 4.5). Body text 14.7 : 1 light, 15.9 : 1 dark.
 - Size: compared with the live app, the new look adds about 0.8 KB to the main script (+0.7%) and about 1.9 KB to the stylesheet (+8.5%), both compressed. Paint-cost items removed earlier (fixed background, blurred top bar, logo shadow). No timing test of a real device.
 
+## Review of the real screens on the preview (12 Nov, Chrome, signed in by Ben, read-only: only viewing and navigating, nothing approved, issued, saved or deleted)
+
+Account language was Arabic, so this is also a real right-to-left and real Arabic text check. Fake data per Ben.
+
+- Measured about 45 pages across all 11 apps (Home, Inventory 13 pages, Sales, Purchasing, Finance, Accounting, Settings 8, Tasks, Messaging, Alerts, Start, Guide): no sideways overflow on any page; no text under 12px except on Settings > Integrations (18 items at 10.9px and 11.5px, the small status labels; that screen belongs to the integrations work, not this branch).
+- Looked at: Home (owner summary), Sales orders, Accounting setup guide, Integrations, the "Send goods out" form, Batches and Stock tables, in dark and light mode. Arabic layout is mirrored correctly everywhere I looked; tables, forms and the sidebar read well.
+- Found and FIXED on the branch (needs a preview redeploy to show): in light mode the keyboard focus ring on the dark sidebar was dark-on-dark (about 1.6 : 1); it is now a light ring (`styles.css`). The Gradient buttons were washed out in dark mode (fixed earlier, 2ccff26); they still look washed out on the current preview because it was built before that fix.
+- Found, NOT fixed (decisions for Ben): the "Filled brand" stat cards (one of the 12 unconfirmed options) are big dark blocks even when they show zeros, heavy in light mode; the Paymob logo on the Integrations screen is a blank white square (logo asset, belongs to the integrations work); no logo on the sign-in page.
+- Not covered: pop-ups and error states that need an action to open, the screens that need data I did not want to create, phone width on the real app (Ben is checking on his phone), Safari and Firefox.
 ## Not checked yet (the gaps that remain)
 
 1. The real screens behind sign-in: Sales, Purchasing, Accounting, Settings, forms, long tables with real data, pop-ups. (The demo has only part of the apps.)
