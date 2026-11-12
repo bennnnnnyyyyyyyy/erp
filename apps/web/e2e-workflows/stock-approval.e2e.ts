@@ -33,6 +33,9 @@ async function signIn(browser: Browser, email: string): Promise<Page> {
   return page;
 }
 
+// A reason no screen shows by itself (getByText ignores case and matches inside longer text: "Workflow test" matched "Workflow Test B").
+const REASON = 'E2E-REQ-7F3A';
+
 let requestUrl = '';
 
 test.describe.configure({ mode: 'serial' });
@@ -42,7 +45,7 @@ test('a staff member asks for stock and cannot approve their own request', async
   const staff = await signIn(browser, STAFF_A);
   await staff.goto('/inventory/requests/new');
   await expect(staff.getByRole('heading', { name: 'Send goods out' })).toBeVisible();
-  await staff.getByLabel('Reason').fill('Workflow test');
+  await staff.getByLabel('Reason').fill(REASON);
   // The select sits inside its label, so its accessible name includes the chosen option ("Item Choose an item…"); find it by its label.
   const itemSelect = staff.locator('label').filter({ hasText: /^Item/ }).locator('select');
   await expect(itemSelect.locator('option', { hasText: 'Safety gloves' })).toHaveCount(1, { timeout: 20_000 });
@@ -77,10 +80,11 @@ test('the other company sees none of it, even with the direct link', async ({ br
   const other = await signIn(browser, OWNER_B);
   await other.goto('/inventory/requests');
   await expect(other.getByRole('heading', { name: 'Stock requests' })).toBeVisible();
-  await expect(other.getByText('Workflow test')).toHaveCount(0);
+  await expect(other.getByText('No requests yet.', { exact: false })).toBeVisible({ timeout: 20_000 }); // loaded, and empty
+  await expect(other.locator('main').getByText(REASON)).toHaveCount(0);
   await other.goto('/inventory/stock');
   await expect(other.getByText('Company B item')).toBeVisible({ timeout: 20_000 });
-  await expect(other.getByText('Safety gloves')).toHaveCount(0);
+  await expect(other.locator('main').getByText('Safety gloves')).toHaveCount(0);
 
   // Wait for the API's answer to the direct link, then for the page's error state, so "nothing shown" cannot just mean "still loading".
   const requestId = requestUrl.split('/').pop() ?? '';
@@ -88,6 +92,6 @@ test('the other company sees none of it, even with the direct link', async ({ br
   await other.goto(requestUrl);
   expect((await answer).status(), 'company B was given company A’s request').toBe(404);
   await expect(other.locator('main p.error')).toBeVisible({ timeout: 20_000 });
-  await expect(other.getByText('Workflow test')).toHaveCount(0);
+  await expect(other.locator('main').getByText(REASON)).toHaveCount(0);
   await expect(other.getByRole('heading', { name: /Safety gloves|REQ-/ })).toHaveCount(0);
 });
