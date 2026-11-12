@@ -40,7 +40,7 @@
       "Edit(./sql/030_*.sql)",
       "Edit(./sql/031_*.sql)",
       "Edit(./sql/032_*.sql)",
-      "Edit(./documentation/architecture/decisions/**)",
+      "Edit(./documentation/reviews/**)",
       "Edit(./.agents/**)",
       "Edit(./skills-lock.json)",
       "Read(./.env)",
