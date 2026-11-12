@@ -1,37 +1,8 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { OWNER_A, OWNER_B, STAFF_A, signIn } from './helpers';
 
 // Real workflow, real database (see playwright.workflows.config.ts): a staff member asks for stock, cannot approve it, the owner
 // approves and issues it, the stock goes down by exactly that amount, and the other company sees none of it.
-// People come from scripts/e2e-seed.mjs; the password is E2E_PASSWORD, made fresh for each CI run.
-
-const PASSWORD = process.env.E2E_PASSWORD ?? '';
-const OWNER_A = 'owner-a@e2e.test';
-const STAFF_A = 'staff-a@e2e.test';
-const OWNER_B = 'owner-b@e2e.test';
-
-async function signIn(browser: Browser, email: string): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
-  page.on('pageerror', (e) => console.log(`[${email}] exception: ${e.message}`));
-  // A person with no saved language is asked to choose one on first sign-in (LanguageChooser); whenever it covers the page, pick English.
-  await page.addLocatorHandler(page.locator('[role="dialog"][aria-labelledby="lang-chooser-title"]').first(), async (dialog) => {
-    await dialog.getByRole('button', { name: 'English', exact: true }).click();
-  });
-  await page.goto('/');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  // Signed in only once the sign-in screen has gone and another page heading shows (the sign-in screen has an h1 of its own).
-  const signInHeading = page.getByRole('heading', { name: 'Sign in', exact: true });
-  try {
-    await expect(signInHeading).toHaveCount(0, { timeout: 30_000 });
-  } catch (e) {
-    console.log(`[${email}] still on the sign-in screen: ${await page.locator('main').innerText().catch(() => '')}`);
-    throw e;
-  }
-  await expect(page.locator('main h1').first()).toBeVisible({ timeout: 30_000 });
-  await page.keyboard.press('Escape'); // closes the guided tour if it started by itself
-  return page;
-}
 
 // A reason no screen shows by itself (getByText ignores case and matches inside longer text: "Workflow test" matched "Workflow Test B").
 const REASON = 'E2E-REQ-7F3A';
@@ -41,7 +12,6 @@ let requestUrl = '';
 test.describe.configure({ mode: 'serial' });
 
 test('a staff member asks for stock and cannot approve their own request', async ({ browser }) => {
-  expect(PASSWORD, 'E2E_PASSWORD is not set').not.toBe('');
   const staff = await signIn(browser, STAFF_A);
   await staff.goto('/inventory/requests/new');
   await expect(staff.getByRole('heading', { name: 'Send goods out' })).toBeVisible();

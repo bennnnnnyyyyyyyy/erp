@@ -47,5 +47,9 @@
       "Read(./.env.*)",
       "Read(./.dev.vars)"
     ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }
