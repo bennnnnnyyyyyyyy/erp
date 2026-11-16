@@ -6,6 +6,7 @@ import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
+import { lineOut, noteTotals, type LineOut, type LineRow } from './vatRows';
 
 // Credit and debit notes with approval (sql/037, documentation/plans/ETA_EINVOICING_PLAN.md slice A2). The rules (never credit more
 // than was invoiced, a different person approves, no voiding an invoice with active notes) live in the database functions; these
@@ -41,11 +42,10 @@ type NoteRow = {
 async function loadNotes(c: Context<AppEnv>, id?: string, invoiceId?: string) {
   const client = userDb(c);
   const org = orgOf(c);
+  // '*' so that code shipped before sql/086 still reads notes (net, VAT and gross then come from total_minor; see vatRows.ts).
   let q = client
     .from('sal_notes')
-    .select(
-      'id, number, kind, invoice_id, customer_id, currency, reason, status, total_minor, requester_id, decided_by, decided_at, decision_comment, created_at',
-    )
+    .select('*')
     .eq('org_id', org)
     .order('created_at', { ascending: false })
     .limit(200);
@@ -53,16 +53,16 @@ async function loadNotes(c: Context<AppEnv>, id?: string, invoiceId?: string) {
   if (invoiceId) q = q.eq('invoice_id', invoiceId);
   const { data, error } = await q;
   if (error) throw error;
-  const rows = (data ?? []) as NoteRow[];
+  const rows = (data ?? []) as (NoteRow & Record<string, unknown>)[];
   const ids = rows.map((r) => r.id);
-  const lines = new Map<string, { invoiceLineId: string; qty: number; unitPriceMinor: number }[]>();
+  const lines = new Map<string, (LineOut & { invoiceLineId: string })[]>();
   const approvals = new Map<
     string,
     { approverId: string; decision: string; comment: string | null; channel: string; decidedAt: string }[]
   >();
   if (ids.length > 0) {
     const [l, a] = await Promise.all([
-      client.from('sal_note_lines').select('note_id, invoice_line_id, qty, unit_price_minor').eq('org_id', org).in('note_id', ids),
+      client.from('sal_note_lines').select('*').eq('org_id', org).in('note_id', ids),
       client
         .from('sal_note_approvals')
         .select('note_id, approver_id, decision, comment, channel, decided_at')
@@ -72,11 +72,8 @@ async function loadNotes(c: Context<AppEnv>, id?: string, invoiceId?: string) {
     ]);
     if (l.error) throw l.error;
     if (a.error) throw a.error;
-    for (const x of (l.data ?? []) as { note_id: string; invoice_line_id: string; qty: number; unit_price_minor: number }[]) {
-      lines.set(x.note_id, [
-        ...(lines.get(x.note_id) ?? []),
-        { invoiceLineId: x.invoice_line_id, qty: Number(x.qty), unitPriceMinor: Number(x.unit_price_minor) },
-      ]);
+    for (const x of (l.data ?? []) as (LineRow & { note_id: string; invoice_line_id: string })[]) {
+      lines.set(x.note_id, [...(lines.get(x.note_id) ?? []), { invoiceLineId: x.invoice_line_id, ...lineOut(x) }]);
     }
     for (const x of (a.data ?? []) as {
       note_id: string;
@@ -101,6 +98,8 @@ async function loadNotes(c: Context<AppEnv>, id?: string, invoiceId?: string) {
     currency: r.currency,
     reason: r.reason,
     status: r.status,
+    ...noteTotals(r),
+    /** The gross (net + VAT), as before sql/086 when there was no VAT. */
     totalMinor: Number(r.total_minor),
     requesterId: r.requester_id,
     decidedBy: r.decided_by,

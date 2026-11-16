@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Loading } from '../../components/Loading';
-import { billingFor, formatMoney, type BillingFlag } from '@erp/shared';
+import { billingFor, formatMoney, type BillingFlag, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
@@ -23,7 +23,9 @@ import { tr, trf } from '../../lib/i18n';
 
 type OrderLine = { id: string; itemId: string; qty: number; unitPriceMinor: number };
 type Order = { id: string; number: string; customerId: string; status: string; currency: string; requestStatus: string | null; lines: OrderLine[] };
-type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; createdAt: string; creditedMinor?: number; debitedMinor?: number; lines: { id?: string; orderLineId: string; qty: number; unitPriceMinor: number }[] };
+// netMinor / taxMinor / grossMinor: stored by the database (sql/086); totalMinor is the gross. Optional while an older API answers.
+type InvoiceLine = { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; netMinor?: number; taxMinor?: number; grossMinor?: number };
+type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; netMinor?: number; taxMinor?: number; grossMinor?: number; createdAt: string; creditedMinor?: number; debitedMinor?: number; lines: InvoiceLine[] };
 type Customer = { id: string; name: string };
 type Item = { id: string; sku: string; name: string };
 
@@ -41,6 +43,10 @@ export function CustomerInvoices() {
   const invoices = useLoad(() => api<Invoice[]>('/v1/sales/invoices'));
   const customers = useLoad(() => api<Customer[]>('/v1/sales/customers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
+  // VAT (sql/086): when the company is registered each line may name its rate; empty means the item's, else the company default.
+  // An older API without the route simply means no VAT choice on screen.
+  const vat = useLoad(() => api<VatSettings>('/v1/core/org/vat').catch(() => null));
+  const [lineRate, setLineRate] = useState<Record<string, string>>({});
   // "Create invoice" on a delivered order opens this page with ?order=… already chosen (UX audit: the order page had no way here).
   const preset = new URLSearchParams(window.location.search).get('order') ?? '';
   const [orderId, setOrderId] = useState(preset);
@@ -65,6 +71,8 @@ export function CustomerInvoices() {
   const open = rows.filter((r) => r.billing.some((b) => b.flag === 'under_invoiced'));
   const chosen = rows.find((r) => r.o.id === orderId);
   const canManage = session.permissions.includes('sales.invoices.manage');
+  const vatOn = vat.data?.vatRegistered === true;
+  const defaultRate = vat.data?.rates.find((r) => r.id === vat.data?.defaultVatRateId);
   // Each line starts with what is still to invoice (UX audit: every quantity started empty though the remainder is known).
   const left = (b: { delivered: number; invoiced: number }) => Math.max(0, b.delivered - b.invoiced);
   const qtyFor = (b: { orderLineId: string; delivered: number; invoiced: number }) => {
@@ -76,9 +84,12 @@ export function CustomerInvoices() {
     if (!chosen) return;
     setBusy(true); setMessage(null);
     try {
-      const lines = chosen.billing.filter((b) => qtyFor(b) > 0).map((b) => ({ orderLineId: b.orderLineId, qty: qtyFor(b) }));
+      const lines = chosen.billing.filter((b) => qtyFor(b) > 0).map((b) => {
+        const taxRateId = vatOn ? lineRate[b.orderLineId] : undefined;
+        return { orderLineId: b.orderLineId, qty: qtyFor(b), ...(taxRateId ? { taxRateId } : {}) };
+      });
       const made = await api<{ number: string }>(`/v1/sales/orders/${chosen.o.id}/invoices`, { method: 'POST', body: JSON.stringify({ invoiceDate: date, lines }) });
-      setMessage({ ok: true, text: trf('Invoice {number} created.', { number: made.number }) }); setOrderId(''); setQty({});
+      setMessage({ ok: true, text: trf('Invoice {number} created.', { number: made.number }) }); setOrderId(''); setQty({}); setLineRate({});
       invoices.reload();
     } catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
@@ -113,12 +124,23 @@ export function CustomerInvoices() {
           </div>
           {chosen && (
             <>
-              <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Delivered')}</th><th scope="col" className="right">{tr('Already invoiced')}</th><th scope="col">{tr('Quantity to invoice')}</th></tr></thead><tbody>
+              <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Delivered')}</th><th scope="col" className="right">{tr('Already invoiced')}</th><th scope="col">{tr('Quantity to invoice')}</th>{vatOn ? <th scope="col">{tr('VAT')}</th> : null}</tr></thead><tbody>
                 {chosen.billing.map((b) => (
                   <tr key={b.orderLineId}><td>{item(b.itemId)}</td><td className="right">{b.delivered}</td><td className="right">{b.invoiced}</td>
-                    <td><input type="number" min="0" max={left(b)} step="0.001" aria-label={trf('Quantity to invoice for {item}', { item: item(b.itemId) })} value={qty[b.orderLineId] ?? String(left(b))} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td></tr>
+                    <td><input type="number" min="0" max={left(b)} step="0.001" aria-label={trf('Quantity to invoice for {item}', { item: item(b.itemId) })} value={qty[b.orderLineId] ?? String(left(b))} onChange={(e) => setQty((q) => ({ ...q, [b.orderLineId]: e.target.value }))} /></td>
+                    {vatOn ? (
+                      <td>
+                        <select aria-label={trf('VAT for {item}', { item: item(b.itemId) })} value={lineRate[b.orderLineId] ?? ''} onChange={(e) => setLineRate((r) => ({ ...r, [b.orderLineId]: e.target.value }))}>
+                          <option value="">{defaultRate ? trf('Item or company default ({label})', { label: defaultRate.label }) : tr('Item or company default')}</option>
+                          {vat.data?.rates.map((r) => <option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}
+                          <option value="exempt">{tr('No VAT (exempt)')}</option>
+                        </select>
+                      </td>
+                    ) : null}
+                  </tr>
                 ))}
               </tbody></table></div>
+              {vatOn ? <p className="muted small">{tr('Prices are before VAT. The VAT is worked out on each line when the invoice is created and never changes afterwards.')}</p> : null}
               {!chosen.billing.some((b) => qtyFor(b) > 0) ? <p className="muted small">{tr('Nothing is left to invoice on this order.')}</p> : null}
               <Button disabled={busy || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
             </>
@@ -184,6 +206,10 @@ export function CustomerInvoicePage() {
   const credited = inv.creditedMinor ?? 0;
   const debited = inv.debitedMinor ?? 0;
   const net = netInvoiceMinor(inv.totalMinor, credited, debited);
+  // VAT (sql/086): shown only when the invoice carries any, so invoices without VAT look as they always did.
+  const lineNet = (l: InvoiceLine) => l.netMinor ?? Math.round(l.qty * l.unitPriceMinor);
+  const hasVat = (inv.taxMinor ?? 0) > 0 || inv.lines.some((l) => (l.taxRate ?? 0) > 0);
+  const cols = hasVat ? 6 : 4;
 
   async function voidIt() {
     setBusy(true); setMessage(null);
@@ -205,19 +231,25 @@ export function CustomerInvoicePage() {
         <div><dt>{tr('Invoice date')}</dt><dd>{formatDay(inv.invoiceDate, session.org)}</dd></div>
         {inv.dueDate ? <div><dt>{tr('Due date')}</dt><dd>{formatDay(inv.dueDate, session.org)}</dd></div> : null}
         <div><dt>{tr('Created')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
-        <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
+        {hasVat ? <div><dt>{tr('Before VAT')}</dt><dd className="amount">{money(inv.netMinor ?? 0, inv.currency)}</dd></div> : null}
+        {hasVat ? <div><dt>{tr('VAT')}</dt><dd className="amount">{money(inv.taxMinor ?? 0, inv.currency)}</dd></div> : null}
+        <div><dt>{hasVat ? tr('Total with VAT') : tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
         {credited > 0 ? <div><dt>{tr('Credited')}</dt><dd className="amount">−{money(credited, inv.currency)}</dd></div> : null}
         {debited > 0 ? <div><dt>{tr('Debited')}</dt><dd className="amount">+{money(debited, inv.currency)}</dd></div> : null}
         {credited > 0 || debited > 0 ? <div><dt>{tr('Amount owed after notes')}</dt><dd className="amount">{money(net, inv.currency)}</dd></div> : null}
       </dl>
 
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit price')}</th><th scope="col" className="right">{tr('Line total')}</th></tr></thead>
+        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit price')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
+          {hasVat ? <><th scope="col" className="right">{tr('VAT rate')}</th><th scope="col" className="right">{tr('VAT')}</th></> : null}</tr></thead>
         <tbody>
           {inv.lines.map((l) => (
-            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitPriceMinor, inv.currency)}</td><td className="right">{money(Math.round(l.qty * l.unitPriceMinor), inv.currency)}</td></tr>
+            <tr key={l.id ?? l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitPriceMinor, inv.currency)}</td><td className="right">{money(lineNet(l), inv.currency)}</td>
+              {hasVat ? <><td className="right">{(l.taxRate ?? 0) > 0 ? `${l.taxRate}%` : tr('None')}</td><td className="right">{money(l.taxMinor ?? 0, inv.currency)}</td></> : null}</tr>
           ))}
-          <tr><td colSpan={3} className="right"><strong>{tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
+          {hasVat ? <tr><td colSpan={cols - 1} className="right">{tr('Before VAT')}</td><td className="right">{money(inv.netMinor ?? 0, inv.currency)}</td></tr> : null}
+          {hasVat ? <tr><td colSpan={cols - 1} className="right">{tr('VAT')}</td><td className="right">{money(inv.taxMinor ?? 0, inv.currency)}</td></tr> : null}
+          <tr><td colSpan={cols - 1} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
         </tbody>
       </table></div>
 

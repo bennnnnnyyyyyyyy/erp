@@ -23,6 +23,10 @@ export type OrgSettings = {
   lockDate?: string | null;
   /** Payment terms used when a customer or supplier has none (sql/041). Days after the invoice date. */
   defaultPaymentTermsDays?: number;
+  /** VAT registered (sql/086). Off: new documents carry no VAT. */
+  vatRegistered?: boolean;
+  /** The company's default VAT rate (one of its VAT (T1) tax rates), used when neither the line nor the item names one. */
+  defaultVatRateId?: string | null;
 };
 
 export type OrgSettingsUpdate = Partial<Pick<OrgSettings, 'name' | 'defaultCurrency' | 'timezone' | 'dateFormat'>>;

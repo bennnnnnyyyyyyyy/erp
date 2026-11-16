@@ -36,9 +36,10 @@ begin
   if not ok then raise exception 'FAIL T1b: a plain admin seeded the chart'; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   r := public.acc_prepare();
-  if (r ->> 'accountsAdded')::int <> 37 then raise exception 'FAIL T1c: seeded % accounts, expected 37', r ->> 'accountsAdded'; end if;
+  -- 37 from sql/045, plus group 18 and the two VAT accounts (sql/086); 19 roles plus output_vat and input_vat
+  if (r ->> 'accountsAdded')::int <> 40 then raise exception 'FAIL T1c: seeded % accounts, expected 40', r ->> 'accountsAdded'; end if;
   select count(*) into n from public.acc_account_roles where org_id = o;
-  if n <> 19 then raise exception 'FAIL T1d: % roles seeded, expected 19', n; end if;
+  if n <> 21 then raise exception 'FAIL T1d: % roles seeded, expected 21', n; end if;
   r := public.acc_prepare();
   if (r ->> 'accountsAdded')::int <> 0 then raise exception 'FAIL T1e: a second prepare added accounts'; end if;
   -- every role points at a leaf

@@ -1,10 +1,22 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
-**Status:** Draft, 12 Nov 2026. Waiting for Ben's approval. Not built.
+**Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built (`sql/086`,
+not applied to live yet); parts 2 (`sql/087`, supplier bills) and 3 (VAT summary) not built.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
-**Decision record:** section 12 is the draft ADR-0005 (agents cannot write the ADR folder from this chat; Ben or a fresh chat copies it to
-`documentation/architecture/decisions/ADR-0005-vat-on-documents.md` once approved).
+**Decision record:** [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) (from section 12, accepted 16 Nov).
+
+**Part 1 as built (16 Nov), where it differs from or adds to the text below:**
+- Switching VAT on without naming a rate uses the company's default VAT (T1) rate; when it has none, the standard rate (14%, V009) is
+  added as an ordinary company rate in the same audited step. Reason: the app has no tax rate screen yet (rates exist only in the
+  e-invoicing API), so a company could not otherwise switch on.
+- `GET /v1/core/org/vat` (any member: the setting and the VAT rates) and `PUT /v1/core/org/vat` (owner or admin) instead of a field on
+  the company form. The invoice form offers a VAT choice per line (item or company default, a rate, or exempt) when registered.
+- Account codes as planned: 2871 under 28 and 1811 under 18. Note for the accountant (open question 2): in our unified chart reference
+  group 18 is "Current financial investments"; where 18 is missing it is created as "Current financial investments and other debit
+  balances". Both accounts and roles can be changed in Accounting setup.
+- Bills keep their current columns and maths until part 2; "amount owed" on the sales side uses stored totals and notes everywhere.
+- Revenue figures (owner insights months, best sellers, the monthly sales report link, the loss alert) stay on net amounts.
 
 ## 1. Goal
 
@@ -38,6 +50,42 @@ Sources: [ETA, Law 67/2016 (English)](https://eta.gov.eg/sites/default/files/202
 [KPMG, Oct 2016](https://assets.kpmg.com/content/dam/kpmg/xx/pdf/2016/10/tnf-egypt-october-13-2016.pdf);
 [Mondaq, VAT refund](https://www.mondaq.com/sales-taxes-vat-gst/1550770/vat-refund-from-eta);
 [Flick, credit notes](https://www.flick.network/en-eg/credit-note-in-egypt).
+
+### 2.1 What decides a supply's VAT treatment, and the 2022-2026 amendments (research, 16 Nov 2026)
+
+From secondary sources only (the ETA PDF of the law could not be read in that session); every row is **to confirm** against the
+Official Gazette text or with the accountant.
+
+| Rule | Source |
+|---|---|
+| The treatment comes from the law's own lists, not from a company's item categories: general rate 14% for everything not listed; the exempt list (Article 23 and its annex, about 56-58 items at enactment); schedule ("Table") goods with special or fixed amounts, sometimes on top of VAT | Andersen, KPMG |
+| It can depend on the **buyer's use**: 5% for machinery and equipment used to produce goods or provide services; since July 2026 also medical devices used that way (buses and passenger cars excluded) | RegFollower (Law 149/2026) |
+| It can depend on the **buyer or destination**: exports zero-rated (input VAT still recoverable); free zones and special economic zones have their own treatment; diplomats, agreements and defence exempt (ETA sub-types V001, V002, V005-V007) | ETA sub-type table, Andersen |
+| Law 3/2022 reworded and widened the exempt list | PwC |
+| Law 157/2025 (in force 18 Jul 2025): news agencies now 14%; advertising exempt only for charitable/medical fundraising; crude oil 10% schedule tax; supply-and-install contracting moved from 5% schedule tax to 14% VAT (with input VAT recovery); fixed per-unit amounts for cigarettes and alcohol, rising yearly | EY |
+| Law 149/2026 (issued 28 Jul 2026): sale and rental of land and residential property exempt (commercial and administrative buildings generally not); some financial services exempt; butane and raw quarry materials exempt; natural gas a schedule tax of EGP 20 per 1,000 cubic feet; serial numbers 8 and 10 of Table "First" repealed | RegFollower |
+
+**What it means for the design.**
+- The treatment belongs on the **item**: a rate plus an ETA sub-type (V009 general, V003 exempt, …). This is what `inv_items.default_tax_rate_id` holds. A default on the item category would only save typing; the law does not use categories.
+- A **customer treatment** is also needed: export, free zone, diplomatic, or production use (for 5%). Today the line's rate has to be changed by hand on each invoice. Candidate for part 2 or 3, once the accountant answers below.
+- **Exempt vs zero-rated** must stay distinct (different ETA sub-types; different input VAT recovery; different lines on the return). A plain "exempt" with no rate code, as part 1 allows, is not enough for the VAT summary: use 0% rates with V001 / V003 instead.
+- The lists change about once a year: rates and lists stay **company data the accountant edits**, never code. Copying the rate onto each line (part 1) keeps issued documents right after a change. The 14% rate that switching VAT on adds when a company has none is a convenience that conflicts with "nothing about rates is hardcoded" (ETA plan section 7); revisit it once there is a tax rate screen.
+
+**Question for the accountant** (Arabic below for the session):
+1. For each product or service [pilot company] sells: is it 14%, 5% (machinery for production use), exempt under Article 23 (which annex item number), or a schedule (Table) good?
+2. Does it sell to exporters, free-zone or economic-zone companies, embassies, or buyers who use machines for production? For each such customer, is the treatment the same on every invoice (then we store it on the customer) or does it vary (then it is chosen per line)?
+3. For 5% and exempt sales, what proof does the ETA expect on the e-invoice (buyer certificate, registration, ETA sub-type)?
+4. Did the July 2025 and July 2026 amendments change anything this company sells?
+
+> ١. لكل منتج أو خدمة تبيعها الشركة: هل هو ١٤٪، أم ٥٪ (آلة لاستخدام إنتاجي)، أم معفى وفق المادة ٢٣ (ما رقم البند في الملحق)، أم سلعة جدول؟
+> ٢. هل تبيع لمصدّرين أو شركات منطقة حرة أو منطقة اقتصادية أو سفارات أو مشترين يستخدمون الآلات في الإنتاج؟ لكل عميل من هؤلاء: هل المعاملة واحدة في كل فواتيره (فنحفظها على العميل) أم تختلف (فتُختار لكل بند)؟
+> ٣. للمبيعات بنسبة ٥٪ والمعفاة: ما المستند الذي تطلبه مصلحة الضرائب على الفاتورة الإلكترونية (شهادة المشتري، التسجيل، الكود الفرعي)؟
+> ٤. هل غيّرت تعديلات يوليو ٢٠٢٥ ويوليو ٢٠٢٦ شيئًا مما تبيعه الشركة؟
+
+Sources: [EY, Law 157/2025](https://www.ey.com/en_gl/technical/tax-alerts/egypt-introduces-significant-vat-updates-on-certain-goods-and-services);
+[RegFollower, Law 149/2026](https://regfollower.com/egypt-amends-vat-law-with-changes-for-medical-equipment-real-estate-and-financial-services/);
+[Andersen, VAT in Egypt](https://eg.andersen.com/vat-in-egypt/); [Andersen, latest amendments](https://eg.andersen.com/latest-amendments-to-egyptian-vat-law/);
+[PwC, Law 3/2022](https://pwc.com/m1/en/services/tax/me-tax-legal-news/2022/egypt-issuance-of-law-number-three-to-update-vat-and-stamp-tax-laws.html).
 
 ## 3. What exists today (code survey, 12 Nov)
 
@@ -141,7 +189,7 @@ Three PRs, each usable on its own, each with its migration dry-run here and Ben 
 
 ## 12. Draft ADR-0005: VAT is computed and stored on each document line, once
 
-**Status:** Proposed (with this plan). **Deciders:** Ben.
+**Status:** Accepted 16 Nov; the record is now [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md). **Deciders:** Ben.
 
 **Context.** Totals are recomputed from quantity × price in about 15 places. Adding tax to each would multiply the places where a rounding
 or a rule can differ, and a later rate change would silently change old documents.

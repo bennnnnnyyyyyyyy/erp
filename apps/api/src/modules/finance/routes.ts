@@ -298,26 +298,33 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
       });
   };
   if (direction === 'in') {
-    const invoices = await fetchAll<{ id: string; number: string; customer_id: string; currency: string; due_date: string }>((from, to) =>
-      db()
-        .from('sal_invoices')
-        .select('id, number, customer_id, currency, due_date')
-        .eq('org_id', org)
-        .eq('status', 'issued')
-        .order('id')
-        .range(from, to),
-    );
-    const lines = await fetchAll<{ invoice_id: string; qty: number; unit_price_minor: number }>((from, to) =>
-      db()
-        .from('sal_invoice_lines')
-        .select('invoice_id, qty, unit_price_minor')
-        .eq('org_id', org)
-        .order('invoice_id')
-        .order('order_line_id')
-        .range(from, to),
+    // '*': the stored gross (sql/086) when the database has it, else the old sum of the lines (code shipped before the migration).
+    const invoices = await fetchAll<{ id: string; number: string; customer_id: string; currency: string; due_date: string; gross_minor?: number | null }>(
+      (from, to) => db().from('sal_invoices').select('*').eq('org_id', org).eq('status', 'issued').order('id').range(from, to),
     );
     const total = new Map<string, number>();
-    for (const l of lines) total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_price_minor)));
+    if (invoices.some((i) => i.gross_minor === undefined || i.gross_minor === null)) {
+      const lines = await fetchAll<{ invoice_id: string; qty: number; unit_price_minor: number }>((from, to) =>
+        db()
+          .from('sal_invoice_lines')
+          .select('invoice_id, qty, unit_price_minor')
+          .eq('org_id', org)
+          .order('invoice_id')
+          .order('order_line_id')
+          .range(from, to),
+      );
+      for (const l of lines) total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_price_minor)));
+    } else {
+      for (const i of invoices) total.set(i.id, Number(i.gross_minor));
+    }
+    // Approved credit notes lower what is owed and debit notes raise it (VAT plan section 6; the database check does the same).
+    const notes = await fetchAll<{ invoice_id: string; kind: string; total_minor: number }>((from, to) =>
+      db().from('sal_notes').select('invoice_id, kind, total_minor').eq('org_id', org).eq('status', 'approved').order('id').range(from, to),
+    );
+    for (const n of notes) {
+      if (!total.has(n.invoice_id)) continue;
+      total.set(n.invoice_id, (total.get(n.invoice_id) ?? 0) + (n.kind === 'credit' ? -1 : 1) * Number(n.total_minor));
+    }
     for (const i of invoices) push('customer_invoice', 'c', i.id, i.number, i.customer_id, i.currency, total.get(i.id) ?? 0, i.due_date);
   } else {
     const invoices = await fetchAll<{ id: string; number: string; supplier_id: string; currency: string; due_date: string }>((from, to) =>
