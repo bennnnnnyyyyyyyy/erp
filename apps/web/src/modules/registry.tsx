@@ -66,6 +66,7 @@ const TransfersPage = lazyNamed(() => import('./treasury/Treasury'), 'TransfersP
 const BankStatementsPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementsPage');
 const BankStatementPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementPage');
 const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
+const VatSummaryPage = lazyNamed(() => import('./finance/VatSummary'), 'VatSummaryPage');
 const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
@@ -250,6 +251,7 @@ export const APPS: AppDef[] = [
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
       { path: '/statements', label: 'Statement of account', permission: 'finance.statements.view', component: StatementsPage },
+      { path: '/vat', label: 'VAT summary', permission: 'finance.reports.view', component: VatSummaryPage },
     ],
   } satisfies AppDef]),
   // Accounting (documentation/plans/ACCOUNTING_PLAN.md section 6). Real API only. Owner and admin only. Set-up and the chart show

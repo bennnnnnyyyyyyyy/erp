@@ -7,7 +7,7 @@ import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { parsePurchaseVat } from '../../lib/vatRows';
 import { requirePermission } from '../../middleware/tenant';
-import type { ItemStatementLine, PartyStatementLine } from '@erp/shared';
+import type { ItemStatementLine, PartyStatementLine, VatSummary } from '@erp/shared';
 import { csvResponse, minorToText } from '../../lib/csv';
 import { attachProviderAddress, type LinkInfo, type Payer } from '../../lib/payments/links';
 import { type AgeBucket, ageBucket, daysOverdue, todayUtc } from './ageing';
@@ -110,6 +110,40 @@ financeRoutes.post('/expenses', requirePermission('finance.entries.manage'), asy
   return ok(c, made, 201);
 });
 
+// VAT summary for a period (sql/089, VAT plan part 3), laid out like the return. Owners and admins (the database checks again).
+// ?format=csv: the summary lines, the totals, then every document behind them.
+financeRoutes.get('/vat-summary', requirePermission('finance.reports.view'), async (c) => {
+  const from = text(c.req.query('from'));
+  const to = text(c.req.query('to'));
+  if (!DATE_RE.test(from) || !DATE_RE.test(to)) invalid('from and to must be YYYY-MM-DD');
+  const s = await callRpc<VatSummary>(userDb(c), 'fin_vat_summary', { p_from: from, p_to: to });
+  if (c.req.query('format') !== 'csv') return ok(c, s);
+  const m = (v: number) => minorToText(v, s.currency);
+  const rows: (string | number | null)[][] = [
+    ...s.sales.map((r) => ['sales', r.kind, r.rate, m(r.netMinor), m(r.taxMinor), '', m(r.invoicesNetMinor), m(r.notesNetMinor)]),
+    ...s.purchases.map((r) => ['purchases', r.kind, '', m(r.netMinor), m(r.deductibleTaxMinor), m(r.nonDeductibleTaxMinor), '', '']),
+    ['total', 'output_vat', '', '', m(s.outputTaxMinor), '', '', ''],
+    ['total', 'input_vat_deductible', '', '', m(s.inputTaxMinor), '', '', ''],
+    ['total', s.dueMinor >= 0 ? 'vat_due' : 'vat_credit', '', '', m(Math.abs(s.dueMinor)), '', '', ''],
+    ...s.warnings.map((w) => ['warning', w, '', '', '', '', '', '']),
+    ...s.documents.map((d) => [
+      `document:${d.type}`,
+      `${d.side}:${d.kind}`,
+      d.rate,
+      m(d.netMinor),
+      m(d.taxMinor),
+      m(d.nonDeductibleTaxMinor),
+      d.number,
+      d.date,
+    ]),
+  ];
+  return csvResponse(
+    c,
+    `vat-summary-${from}-to-${to}.csv`,
+    ['section', 'kind', 'rate', 'net', 'vat', 'vat_not_deductible', 'detail', 'detail2'],
+    rows,
+  );
+});
 financeRoutes.post('/expenses/:id/void', requirePermission('finance.entries.manage'), async (c) => {
   const id = idParam(c);
   await callRpc(userDb(c), 'fin_void_expense', { p_expense_id: id });

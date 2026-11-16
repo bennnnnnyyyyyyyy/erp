@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — VAT part 3: the VAT summary (`sql/089`)
+
+**Objective.** Part 3 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (Ben: "do it now"), with the review's must-haves (partial-deduction warning,
+"excludes supplier credit notes").
+
+**Actions Completed.**
+- `sql/089_vat_summary.sql`: `fin_vat_summary(from, to)`, read only, owners and admins. Sales by rate, zero-rated (V001/V002) and
+  exempt, invoices plus approved credit/debit notes by approval day; purchases by kind with deductible and non-deductible VAT (bill
+  lines get their share of the printed VAT); output, input, due or credit; warnings; the documents behind each figure (up to 5000).
+  Company currency only (others counted and warned).
+- `sql/tests/085_vat_summary.sql` (new): known answer for one month (sections, totals 1360 / 1441 / credit 81, warnings, 9 documents,
+  left-out documents, roles, isolation).
+- API: `GET /v1/finance/vat-summary?from=&to=` (+ `format=csv`). Shared type `VatSummary`.
+- Web: Finance → VAT summary (period, warnings, sales and purchase sections, totals, documents filtered by section with links, CSV,
+  print); Arabic machine drafts.
+
+**Database / System Result.** None on live. `sql/089` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 87 migrations): 84 of 84 SQL tests pass. Typecheck clean; tests: shared 81, API 576, web
+144. `biome ci .`: exit 0. Not verified: dry run on live, the page in a browser, the Arabic, the Form 10 section names (accountant).
+
 ## 2026-11-16 — VAT rate screen, owner-only switch, Shopify block and the part 2 review fixes (`sql/088`)
 
 **Objective.** Ben's decisions of 16 Nov (drop the automatic 14%, rate screen then VAT summary, keep the bill tolerance, owners only,
