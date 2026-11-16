@@ -31,7 +31,7 @@ run or deployed.
 Ben via CLI (same result). Test 085 on live first failed at S1a: the summary counted only the test's USD invoice. Cause, checked
 read-only on live: **`organizations.default_currency` defaults to `USD` on live, but `EGP` in `sql/001`** (changed outside the
 migrations; `bootstrap_organization` sets no currency). Not a fault in the summary (it counts the company currency only, by design). The
-test now sets its companies to EGP; re-run on live pending. **Open for Ben:** decide whether live's default goes back to EGP
+test now sets its companies to EGP; re-run on live: ALL TESTS PASSED (everything rolled back). PR #61. **Open for Ben:** decide whether live's default goes back to EGP
 (agents.md: default currency is EGP) with a migration, or the repo records USD.
 
 **Safety Status.** Local SQL run (PGlite, all 87 migrations): 84 of 84 SQL tests pass. Typecheck clean; tests: shared 81, API 576, web
