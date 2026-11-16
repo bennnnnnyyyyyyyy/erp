@@ -1,8 +1,8 @@
 # ADR-0002: Multi-tenancy model
 
-**Status:** Proposed (carried from the previous internal ERP; re-confirm on first commit)
+**Status:** Accepted, as amended by ADR-0003 (confirmed against the code 11 Nov 2026)
 **Date:** 2026-10-28
-**Deciders:** {{DECIDERS}}
+**Deciders:** Ben
 
 ## Context
 
@@ -15,9 +15,11 @@ customer on. Retrofitting tenancy into an ERP after the fact is one of the most 
   tenant (a customer company).
 - A user can belong to several organizations through `memberships` (role per org). The client
   sends the active org in `X-Org-Id`; the API checks the membership on every request.
-- **The API enforces isolation** (service-role client, every query filtered by
-  `c.var.tenant.orgId`). **RLS is enabled on every table** as a second line of defence, using
-  `is_org_member(org_id)`.
+- **The database enforces isolation on every request:** the API calls Postgres with the signed-in
+  person's own JWT (ADR-0003), so row level security applies, and it also filters by
+  `c.var.tenant.orgId`. **RLS is enabled on every table**, using `is_org_member(org_id)`.
+  Amended 11 Nov 2026: the secret-key client is limited to the Master-key exceptions in
+  `agents.md`, guarded by `apps/api/test/boundaries.test.ts`.
 - **Modules are switched on per org** in `org_modules`. This is the hook for pricing tiers.
 - Per-org configuration (currency, time zone, numbering, branding, tax rules) lives in
   `organizations.settings` or module settings tables, never in code.
