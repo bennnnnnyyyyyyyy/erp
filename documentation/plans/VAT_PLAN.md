@@ -1,7 +1,8 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
-**Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built (`sql/086`,
-not applied to live yet); parts 2 (`sql/087`, supplier bills) and 3 (VAT summary) not built.
+**Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
+(`sql/086`, 16 Nov). Parts 2-5 revised after the accountant review (section 13) and not built: 2 bills and expenses with input VAT,
+3 VAT summary in the return's layout, 4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
 **Decision record:** [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) (from section 12, accepted 16 Nov).
@@ -114,8 +115,9 @@ Sources: [EY, Law 157/2025](https://www.ey.com/en_gl/technical/tax-alerts/egypt-
   bills; VAT due or to carry forward; by rate; each figure opens its documents. CSV and print.
 
 **Out (later):**
-- Prices that include VAT (entry is before tax, as on ETA documents; a "prices include VAT" switch can come later).
-- VAT on expenses entered without a supplier bill (expenses have one amount; a later change).
+- Prices that include VAT (entry is before tax, as on ETA documents). Needed before online store (Shopify) orders are invoiced: its own
+  part, see section 10 item 5.
+- ~~VAT on expenses entered without a supplier bill~~: moved **in**, to part 2 (accountant review, 16 Nov; section 13).
 - Withholding, table tax, stamp duty, ETA signing and submission, filing the return to the ETA.
 - Changing invoices issued before this (they stay at zero tax; see 6).
 
@@ -174,18 +176,61 @@ No new keys. The VAT setting: `core.org.manage`. Rates: the existing e-invoicing
 
 ## 10. Rollout
 
-Three PRs, each usable on its own, each with its migration dry-run here and Ben applying it:
+PRs, each usable on its own, each with its migration dry-run here and Ben applying it (revised 16 Nov after the accountant review,
+section 13):
 1. `sql/086`: columns, backfill, roles and accounts, the setting; sales invoices and notes with VAT and posting; amount owed from stored
-   totals everywhere.
-2. `sql/087`: supplier bills with input VAT.
-3. VAT summary report (no migration expected).
+   totals everywhere. **Built and live 16 Nov.**
+2. `sql/087`: input VAT on **supplier bills and on expenses** (net, VAT, gross, the supplier's tax registration number; on bills also
+   the supplier's e-invoice number); a **deductible** flag per bill or expense: deductible VAT posts to input VAT (1811), non-deductible
+   VAT (no e-invoice, or purchases used for exempt or schedule-tax supplies) is added to the cost (expense, or GRNI / price
+   difference); the company's **"VAT from" date**, saved when VAT is switched on.
+3. VAT summary in the **return's layout**: sales split into 14%, 5%, zero-rated exports and exempt; purchases split into local goods
+   and services, capital assets and imports (exact Form 10 sections from the accountant); periods before the "VAT from" date flagged.
+   Needs proper 0% rates with ETA sub-types (V001 export, V003 exempt) instead of a bare "exempt" line.
+4. **Settlement:** a VAT settlement account (role `vat_settlement`); an opening credit balance for a company already filing; a
+   "close the period" journal (Dr output VAT, Cr input VAT, balance to the settlement account) with approval; the payment to the tax
+   authority from treasury; a count of consecutive credit periods for the refund rule (since July 2026: more than four periods; small
+   enterprises under Law 6/2025, turnover up to EGP 20 million: more than three months; to confirm); an editable return-deadline
+   reminder (never hard-coded).
+5. **Prices that include VAT** (per company, or per price list): net = gross ÷ (1 + rate) with its own rounding rule, before online store
+   orders are invoiced.
 
 ## 11. Open questions
 
-1. **Ben:** prices entered before VAT (recommended, ETA style), or a per-company "prices include VAT" choice now?
-2. **Accountant:** account codes 2871 / 1811, or one "VAT settlement" account? The 5% machinery rate and the exempt list. The return
-   deadline. How credit notes for invoices from a closed month are treated.
-3. **Ben:** existing invoices stay at zero tax (recommended). Agree?
+1. ~~**Ben:** prices entered before VAT?~~ Answered 16 Nov: before VAT. "Include VAT" is part 5.
+2. **Accountant:** ~~account codes 2871 / 1811~~ reviewer: keep both and add one settlement account (part 4); the real accountant to
+   confirm. Still open: the 5% rate and the exempt list (section 2.1); the return deadline (reviewer: end of the following month, not
+   hard-coded; to confirm); how a credit note is treated when it falls in a month already filed.
+3. ~~**Ben:** existing invoices stay at zero tax?~~ Answered 16 Nov: yes.
+4. **Accountant (new):** does VAT arise on a customer advance paid before the invoice?
+5. **Accountant (new):** the exact sections of the return (Form 10) for part 3, and the proof the ETA expects for 5% and exempt sales.
+6. **Accountant (new):** must the pilot company register regardless of turnover? Importers, exporters, distribution agents and
+   table-tax suppliers have no threshold (ETA FAQ via Lookuptax); the app keeps a plain "registered: yes/no".
+
+## 13. Accountant review (16 Nov 2026)
+
+Source: [claudetheaccountantreplytoVATPLAN_MD.md](claudetheaccountantreplytoVATPLAN_MD.md) (an AI review written as a senior
+accountant; not a licensed adviser: the real accountant signs off the rate and exemption rows). It found the core design sound
+(VAT stored once per line, rates copied, documents never rewritten, owed amount on the gross).
+
+| # | Point | Outcome |
+|---|---|---|
+| 1 | Expenses carry much of the input VAT (rent, utilities, telecom, fuel, fees) | Moved into part 2 |
+| 2 | Deductible flag; supplier's e-invoice number and tax number; non-deductible VAT to cost | Part 2 |
+| 3 | Settlement, carry-forward, payment, refund-period count | New part 4 |
+| 4 | "VAT from" date so earlier periods are not shown as zero VAT | Date in part 2, warning in part 3 |
+| 5 | Summary in the return's layout | Part 3 |
+| 6 | Prices that include VAT before online store orders are invoiced | New part 5 |
+| 7 | 1811 must not show as an investment | Checked: `sql/085` puts codes starting 18 on "other current assets" |
+| 8 | VAT after discount | Checked: no document has a discount today; when discounts come, VAT is on the net after discount |
+
+Further facts the review adds (to confirm): the July 2026 amendment widened 5% to industrial machinery and medical equipment and added a
+VAT-suspension regime on capital equipment with a five-year clawback (matters for manufacturing); refund after more than four
+consecutive credit periods (three months for small enterprises). Sources:
+[PwC, second tax facilitation package](https://www.pwc.com/m1/en/tax/documents/2026/egypt-second-tax-facilitation-package.pdf);
+[Lookuptax, Law 149 refund window](https://lookuptax.com/tax-changes/egypt/law-149-credit-balance-refund-window-2026);
+[Ecovis, 2026 amendments](https://global.ecovis.com/?p=19666); [VATupdate, filing](https://www.vatupdate.com/?p=357047);
+[Lookuptax, ETA FAQ](https://lookuptax.com/docs/country/egypt-vat-guidelines-indirect-tax).
 
 ## 12. Draft ADR-0005: VAT is computed and stored on each document line, once
 
