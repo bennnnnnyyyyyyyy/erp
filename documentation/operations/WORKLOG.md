@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — Audit findings 9 and 13 closed: architecture records match the code
+
+**Objective.** The 11 Nov audit found ADR-0002 described the old access model (service-role client) and two ADR-0004 links were broken
+and hidden by the link allowlist. Ben lifted the agent block on the ADR folder (`.claude/settings.json`) and asked Claude to make the edits.
+
+**Actions Completed.** ADR-0002: status Accepted as amended by ADR-0003, deciders Ben, the isolation bullet now says the database enforces
+isolation with the person's own JWT and names the master-key exceptions and their guard test. ADR-0003: Accepted and implemented. Draft
+ADR-0004: links fixed to `../../plans/`, note updated. `scripts/check-doc-links.known.txt`: the two ADR-0004 lines removed (list empty).
+
+**Database / System Result.** None.
+
+**Safety Status.** `node scripts/check-doc-links.mjs`: OK (108 files) with nothing skipped. Documentation only.
+
 ## 2026-11-12 — Financial statements: income statement and balance sheet (`sql/085`)
 
 **Objective.** Roadmap phase 6, first item ([FINANCIAL_STATEMENTS_PLAN.md](../plans/FINANCIAL_STATEMENTS_PLAN.md)), approved by Ben on
