@@ -296,3 +296,7 @@ ledger posted. A migration must backfill existing documents (zero tax) and switc
   input VAT would be over-claimed.
 - The summary is labelled **"excludes supplier credit notes"** until those are built; part 3 is not "complete" without them.
 - Rollout for every part from now: dry run on live, apply, CI green, then merge.
+
+**Known trade-off (review, 16 Nov).** Companies registered before `sql/088` had their start moved to the 1st of their month; invoices
+from before the day they switched on are zero VAT but fall inside the VAT range, so the summary shows them as zero VAT. No real company
+is affected yet. **Rule for the first real company: switch VAT on with the start date on the 1st of a month** (the default).
