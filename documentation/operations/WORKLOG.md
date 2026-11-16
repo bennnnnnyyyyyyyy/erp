@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — `sql/086` applied to live; accountant review of the VAT plan received
+
+**Objective.** Put VAT part 1 live after PR #55 was merged, and take in the accountant review
+([claudetheaccountantreplytoVATPLAN_MD.md](../plans/claudetheaccountantreplytoVATPLAN_MD.md)).
+
+**Actions Completed.** Ben ran `supabase db query --linked -f sql/086_tax_on_documents.sql`, then `sql/tests/082_vat_on_documents.sql`
+on live. Checked two review points in the code: no document has a discount (VAT is always on the full net); account 1811 lands on
+"other current assets" through the `sql/085` defaults (codes starting 18), not on investments. `sql/README.md` updated.
+
+**Database / System Result.** `sql/086` live. Last verification row: `users_can_set_vat` true, `anon_can_set_vat` false,
+`users_can_call_owed_helper` false (the CLI showed only the last query; the other two checks were not seen). Test 082 on live:
+ALL TESTS PASSED (everything rolled back). Test 040 on live (default chart now 40 accounts, 21 roles): ALL TESTS PASSED.
+
+**Safety Status.** No dry run on live was recorded before applying. Still to run on live: the first two verification queries of `sql/086`
+(invoices and notes match their lines; every chart has both VAT roles) Not yet verified in a
+browser. The review's eight changes are not in the plan yet: waiting for Ben.
+
 ## 2026-11-16 — VAT part 1: VAT on sales invoices and notes, posting, amount owed (`sql/086`)
 
 **Objective.** Build part 1 of [VAT_PLAN.md](../plans/VAT_PLAN.md), approved by Ben on 16 Nov: prices are typed before VAT; invoices
