@@ -299,9 +299,14 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
   };
   if (direction === 'in') {
     // '*': the stored gross (sql/086) when the database has it, else the old sum of the lines (code shipped before the migration).
-    const invoices = await fetchAll<{ id: string; number: string; customer_id: string; currency: string; due_date: string; gross_minor?: number | null }>(
-      (from, to) => db().from('sal_invoices').select('*').eq('org_id', org).eq('status', 'issued').order('id').range(from, to),
-    );
+    const invoices = await fetchAll<{
+      id: string;
+      number: string;
+      customer_id: string;
+      currency: string;
+      due_date: string;
+      gross_minor?: number | null;
+    }>((from, to) => db().from('sal_invoices').select('*').eq('org_id', org).eq('status', 'issued').order('id').range(from, to));
     const total = new Map<string, number>();
     if (invoices.some((i) => i.gross_minor === undefined || i.gross_minor === null)) {
       const lines = await fetchAll<{ invoice_id: string; qty: number; unit_price_minor: number }>((from, to) =>
@@ -313,7 +318,8 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
           .order('order_line_id')
           .range(from, to),
       );
-      for (const l of lines) total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_price_minor)));
+      for (const l of lines)
+        total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_price_minor)));
     } else {
       for (const i of invoices) total.set(i.id, Number(i.gross_minor));
     }

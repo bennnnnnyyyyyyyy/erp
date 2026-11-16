@@ -35,7 +35,15 @@ export function lineOut(l: LineRow): LineOut {
   const unitPriceMinor = Number(l.unit_price_minor);
   const netMinor = num(l.net_minor) ?? Math.round(qty * unitPriceMinor);
   const taxMinor = num(l.tax_minor) ?? 0;
-  return { qty, unitPriceMinor, taxRateId: l.tax_rate_id ?? null, taxRate: num(l.tax_rate) ?? 0, netMinor, taxMinor, grossMinor: netMinor + taxMinor };
+  return {
+    qty,
+    unitPriceMinor,
+    taxRateId: l.tax_rate_id ?? null,
+    taxRate: num(l.tax_rate) ?? 0,
+    netMinor,
+    taxMinor,
+    grossMinor: netMinor + taxMinor,
+  };
 }
 
 /** The document's stored totals, else the sum of its lines (before sql/086). */
