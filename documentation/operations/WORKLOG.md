@@ -11,6 +11,32 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — VAT rate screen, owner-only switch, Shopify block and the part 2 review fixes (`sql/088`)
+
+**Objective.** Ben's decisions of 16 Nov (drop the automatic 14%, rate screen then VAT summary, keep the bill tolerance, owners only,
+block Shopify with VAT) and the accountant's review of part 2 (non-deductible VAT into the cost of goods, "VAT from" at a month start,
+kind of purchase per bill line, 9-digit tax numbers, exact tolerance wording, part 3 warnings). Ben: "go ahead, all in 088".
+
+**Actions Completed.**
+- `sql/088_vat_rates_and_owner.sql`: `core_save_vat_rate` / `core_remove_vat_rate`; `core_set_vat` owners only with `p_vat_from`, no
+  automatic rate, refused while Shopify is on; existing "VAT from" dates moved to the 1st of their month (audited); `sal_create_invoice`
+  (copied from 086 by script, one check added) refuses Shopify orders while VAT is on; bill lines carry their kind and their share of
+  non-deductible VAT, which raises the items' average cost and posts to stock (or COGS when none is on hand); `fin__purchase_vat`
+  requires a 9-digit supplier tax number for a deduction; `pur_record_supplier_invoice` and `acc__post_pur_invoice` recreated.
+- Tests: `sql/tests/084_vat_rates_and_owner.sql` (new); 082 (no automatic rate) and 083 (stock instead of 334, 9-digit numbers) updated.
+- API: `GET /core/org/vat` lists ETA VAT codes; `PUT /core/org/vat` takes `vatFrom`; `POST/PUT/DELETE /core/org/vat/rates`; bill lines
+  take and return `vatClass` (and `costVatMinor`); `VAT_SHOPIFY_NOT_SUPPORTED` answers 409.
+- Web: Settings → General → VAT lists, adds, edits and removes rates; the switch, default rate and start date for owners only, with a
+  mid-month warning; the bill form has a kind per line; Arabic machine drafts (two strings for the dropped automatic rate removed).
+- Plan: section 14.
+
+**Database / System Result.** None on live. `sql/088` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 86 migrations): 83 of 83 SQL tests pass. Typecheck clean (shared, API, web against this
+branch's shared package; temporary configs removed); tests: shared 81, API 575, web 144. `biome ci .`: exit 0 (152 warnings, as before).
+Not verified: dry run on live, browser, Arabic. Before applying: dry run on live in a rolled-back transaction, then apply, tests 082-084
+on live, CI green, then merge.
+
 ## 2026-11-16 — VAT part 2: input VAT on supplier bills and expenses (`sql/087`)
 
 **Objective.** Build part 2 of [VAT_PLAN.md](../plans/VAT_PLAN.md) as revised after the accountant review (Ben: "A"), with the second
@@ -33,7 +59,8 @@ review's points: a bill's VAT as printed, capital assets identified, a way to re
   the bill and expense pages show the VAT, whether it is deducted, the reference and the kind; Arabic machine drafts.
 - Plan: "Part 2 as built". The second review message arrived cut off (3 of 5 points); the other two are not known.
 
-**Database / System Result.** None on live. `sql/087` is not applied.
+**Database / System Result.** `sql/087` applied to live 16 Nov by Ben via CLI. Last verification row: `users_bill` true, `users_expense`
+true, `anon_expense` false, `users_helper` false (the first query's output was not shown). Test 083 on live: ALL TESTS PASSED (everything rolled back).
 
 **Safety Status.** Local SQL run (PGlite, all 85 migrations): 82 of 82 SQL tests pass. Typecheck clean (shared, API, web against this
 branch's shared package, temporary configs removed); tests: shared 81, API 569, web 144. `biome ci .`: exit 0, no errors (152 warnings

@@ -95,6 +95,9 @@ export type BillLineRow = {
   tax_minor?: number | string | null;
   tax_rate?: number | string | null;
   tax_rate_id?: string | null;
+  vat_class?: string | null;
+  cost_vat_minor?: number | string | null;
+  cost_vat_to?: string | null;
 };
 export type BillLineOut = {
   orderLineId: string;
@@ -104,6 +107,11 @@ export type BillLineOut = {
   taxRate: number;
   netMinor: number;
   taxMinor: number;
+  /** Kind of purchase of the line (sql/088): local, capital or import. */
+  vatClass: string;
+  /** Non-deductible VAT added to the cost of this line's goods, and where it was posted (inventory or cogs). */
+  costVatMinor: number;
+  costVatTo: string | null;
 };
 
 export function billLineOut(l: BillLineRow): BillLineOut {
@@ -117,6 +125,9 @@ export function billLineOut(l: BillLineRow): BillLineOut {
     taxRate: num(l.tax_rate) ?? 0,
     netMinor: num(l.net_minor) ?? Math.round(qty * unitCostMinor),
     taxMinor: num(l.tax_minor) ?? 0,
+    vatClass: l.vat_class ?? 'local',
+    costVatMinor: num(l.cost_vat_minor) ?? 0,
+    costVatTo: l.cost_vat_to ?? null,
   };
 }
 

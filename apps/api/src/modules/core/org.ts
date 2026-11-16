@@ -130,48 +130,90 @@ orgRoutes.put('/payment-terms', requirePermission('core.org.manage'), async (c) 
 });
 
 // The VAT setting and the company's VAT (T1) rates, for the invoice form and Settings. Any member may read them (a sales clerk choosing
-// a line's rate must not need the e-invoicing permission); the rates are company data under row level security.
+// a line's rate must not need the e-invoicing permission); the rates are company data under row level security. subTypes: the ETA VAT
+// sub-types a rate can carry (the same for every company).
 orgRoutes.get('/vat', requirePermission('core.org.read'), async (c) => {
   const org = await loadOrg(c);
-  const { data, error } = await userDb(c)
-    .from('tax_rates')
-    .select('id, sub_type, rate, label, is_default')
-    .eq('org_id', c.var.tenant.orgId)
-    .eq('tax_type', 'T1')
-    .is('deleted_at', null)
-    .order('label');
-  if (error) throw error;
+  const [rates, subs] = await Promise.all([
+    userDb(c)
+      .from('tax_rates')
+      .select('id, sub_type, rate, label, is_default')
+      .eq('org_id', c.var.tenant.orgId)
+      .eq('tax_type', 'T1')
+      .is('deleted_at', null)
+      .order('label'),
+    userDb(c).from('eta_tax_subtypes').select('sub_type, description').eq('tax_type', 'T1').order('sub_type'),
+  ]);
+  if (rates.error) throw rates.error;
+  if (subs.error) throw subs.error;
   const s = toSettings(org);
   return ok(c, {
     vatRegistered: s.vatRegistered ?? false,
     defaultVatRateId: s.defaultVatRateId ?? null,
-    /** The first day VAT applies (sql/087), or null. */
+    /** The first day VAT applies (sql/087, sql/088), or null. */
     vatFrom: typeof org.settings?.vat_from === 'string' ? org.settings.vat_from : null,
-    rates: ((data ?? []) as { id: string; sub_type: string; rate: number | string; label: string; is_default: boolean }[]).map((r) => ({
-      id: r.id,
-      subType: r.sub_type,
-      rate: Number(r.rate),
-      label: r.label,
-      isDefault: r.is_default,
+    rates: ((rates.data ?? []) as { id: string; sub_type: string; rate: number | string; label: string; is_default: boolean }[]).map(
+      (r) => ({
+        id: r.id,
+        subType: r.sub_type,
+        rate: Number(r.rate),
+        label: r.label,
+        isDefault: r.is_default,
+      }),
+    ),
+    subTypes: ((subs.data ?? []) as { sub_type: string; description: string }[]).map((x) => ({
+      code: x.sub_type,
+      description: x.description,
     })),
   });
 });
 
-// VAT registered or not, and the default VAT rate (sql/086). Owners and admins; the database checks the rate is one of the company's
-// VAT (T1) rates and audits the change. Only documents created afterwards are affected.
+// VAT registered or not, the default VAT rate and the first day VAT applies (sql/088). The database allows owners only (the route check
+// is the early rejection for staff), needs an existing VAT rate, refuses while Shopify is on, and audits the change. vatFrom defaults
+// to the first day of the current month; another day is accepted and reported back as vatFromMidMonth.
 orgRoutes.put('/vat', requirePermission('core.org.manage'), async (c) => {
   const b = await jsonBody(c);
   if (typeof b.registered !== 'boolean') invalid('registered must be true or false');
   const rateId = b.defaultRateId === null || b.defaultRateId === undefined ? null : b.defaultRateId;
   if (rateId !== null && (typeof rateId !== 'string' || !UUID_RE.test(rateId))) invalid('defaultRateId must be a tax rate id or null');
-  // No rate when switching on: the company's default VAT rate, else the standard 14% is added as a company rate (sql/086).
-  const saved = await callRpc<{ vatRegistered: boolean; defaultVatRateId: string | null; rateAdded?: boolean }>(userDb(c), 'core_set_vat', {
-    p_registered: b.registered,
-    p_default_rate_id: rateId,
-  });
+  const vatFrom = b.vatFrom === null || b.vatFrom === undefined || b.vatFrom === '' ? null : b.vatFrom;
+  if (vatFrom !== null && (typeof vatFrom !== 'string' || !ISO_DATE.test(vatFrom))) invalid('vatFrom must be YYYY-MM-DD');
+  const saved = await callRpc<{
+    vatRegistered: boolean;
+    defaultVatRateId: string | null;
+    vatFrom: string | null;
+    vatFromMidMonth?: boolean;
+  }>(userDb(c), 'core_set_vat', { p_registered: b.registered, p_default_rate_id: rateId, ...(vatFrom ? { p_vat_from: vatFrom } : {}) });
   return ok(c, saved);
 });
 
+// VAT rates (sql/088): owners and admins add, change and remove the company's VAT rates without the e-invoicing module. The database
+// checks the ETA VAT sub-type, keeps names unique, refuses to remove a rate that items use or that is the default, and audits.
+function vatRateBody(b: Record<string, unknown>) {
+  const subType = typeof b.subType === 'string' ? b.subType.trim().toUpperCase() : '';
+  const label = typeof b.label === 'string' ? b.label.trim() : '';
+  if (!/^V\d{3}$/.test(subType)) invalid('subType must be an ETA VAT sub-type such as V009');
+  if (typeof b.rate !== 'number' || !Number.isFinite(b.rate) || b.rate < 0 || b.rate > 100) invalid('rate must be a number from 0 to 100');
+  if (label.length < 1 || label.length > 100) invalid('A name of 1-100 characters is required');
+  if (b.isDefault !== undefined && typeof b.isDefault !== 'boolean') invalid('isDefault must be true or false');
+  return { p_sub_type: subType, p_rate: b.rate, p_label: label, p_is_default: b.isDefault === true };
+}
+orgRoutes.post('/vat/rates', requirePermission('core.org.manage'), async (c) => {
+  const id = await callRpc<string>(userDb(c), 'core_save_vat_rate', { p_id: null, ...vatRateBody(await jsonBody(c)) });
+  return ok(c, { id }, 201);
+});
+orgRoutes.put('/vat/rates/:id', requirePermission('core.org.manage'), async (c) => {
+  const id = c.req.param('id');
+  if (!UUID_RE.test(id)) invalid('Unknown rate');
+  await callRpc<string>(userDb(c), 'core_save_vat_rate', { p_id: id, ...vatRateBody(await jsonBody(c)) });
+  return ok(c, { id });
+});
+orgRoutes.delete('/vat/rates/:id', requirePermission('core.org.manage'), async (c) => {
+  const id = c.req.param('id');
+  if (!UUID_RE.test(id)) invalid('Unknown rate');
+  await callRpc<void>(userDb(c), 'core_remove_vat_rate', { p_id: id });
+  return ok(c, { id, removed: true });
+});
 // Switch the in-app guided tour on or off for this company (sql/039). Owners and admins only; off by default.
 // Blind stock counts on or off (sql/066; MVP decision M3). Owners and admins; the database checks again and audits.
 orgRoutes.post('/blind-counts', requirePermission('core.org.manage'), async (c) => {

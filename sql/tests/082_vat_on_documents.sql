@@ -267,19 +267,15 @@ begin
   select tax_minor, gross_minor into v_tax, v_gross from public.sal_invoices where id = invb;
   if v_tax <> 0 or v_gross <> 1000 then raise exception 'FAIL V12d: an unregistered company charged VAT from an item default (% / %)', v_tax, v_gross; end if;
 
-  -- ---- V13: switching on with no VAT rate at all adds the standard one (14%, V009) as a company rate, audited
+  -- ---- V13 (sql/088): switching on with no VAT rate at all is refused; nothing is added
   update public.inv_items set default_tax_rate_id = null where id = ib;
   update public.tax_rates set deleted_at = now(), is_default = false where id = rb;
   perform set_config('request.jwt.claims', json_build_object('sub', x, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  j := public.core_set_vat(true, null);
+  ok := false; begin perform public.core_set_vat(true, null); exception when others then ok := (sqlerrm = 'VAT_RATE_MISSING'); end;
   reset role;
-  if (j ->> 'rateAdded')::boolean is not true then raise exception 'FAIL V13a: no rate was added (%)', j; end if;
-  select count(*) into n from public.tax_rates
-   where org_id = ob and id = (j ->> 'defaultVatRateId')::uuid and tax_type = 'T1' and sub_type = 'V009' and rate = 14 and is_default and deleted_at is null;
-  if n <> 1 then raise exception 'FAIL V13b: the added rate is not the standard 14%% VAT rate'; end if;
-  select count(*) into n from public.audit_log where org_id = ob and action = 'organization.vat_changed' and (after ->> 'rate_added')::boolean;
-  if n <> 1 then raise exception 'FAIL V13c: the added rate is not in the audit log'; end if;
-
+  if not ok then raise exception 'FAIL V13a: VAT was switched on with no rate'; end if;
+  select count(*) into n from public.tax_rates where org_id = ob and deleted_at is null;
+  if n <> 0 then raise exception 'FAIL V13b: a rate was added automatically'; end if;
   raise exception 'ALL TESTS PASSED (everything rolled back)';
 end $$;

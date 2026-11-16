@@ -23,6 +23,8 @@ export type VatSettings = {
   /** The first day VAT applies (sql/087): set when VAT is first switched on. Optional while an older API answers. */
   vatFrom?: string | null;
   rates: { id: string; subType: string; rate: number; label: string; isDefault: boolean }[];
+  /** The ETA VAT sub-types a rate can carry (V001 export, V003 exempt, V009 general, …). Optional while an older API answers. */
+  subTypes?: { code: string; description: string }[];
 };
 
 /** A document's totals: the sums of its lines. */

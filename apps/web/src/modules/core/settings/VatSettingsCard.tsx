@@ -1,32 +1,41 @@
 import { useState } from 'react';
 import type { VatSettings } from '@erp/shared';
+import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { tr, trf } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
+import { useSession } from '../../../session';
 
-// VAT registration for the whole company (sql/086, documentation/plans/VAT_PLAN.md). Off by default. When on, each new sales invoice
-// line carries VAT at the line's rate (the item's default VAT rate, else the company default chosen here). Prices are typed before
-// VAT. Invoices issued earlier keep the tax they were issued with. The database checks the role and the rate, and audits the change.
+// VAT for the whole company (sql/086-088, documentation/plans/VAT_PLAN.md). Off by default. The company's VAT rates are listed here
+// (owners and admins add, change and remove them; 0% export and exempt rates carry their ETA codes). Only an owner switches VAT on or
+// off, chooses the default rate and the first day VAT applies (default: the first day of the current month). Prices are typed before
+// VAT; documents issued earlier keep the tax they were issued with. The database checks every rule and audits each change.
+
+type RateForm = { id: string | null; subType: string; rate: string; label: string; isDefault: boolean };
+const emptyRate: RateForm = { id: null, subType: 'V009', rate: '14', label: '', isDefault: false };
+
 export function VatSettingsCard() {
+  const session = useSession();
+  const isOwner = session.role === 'owner';
   const vat = useLoad(() => api<VatSettings>('/v1/core/org/vat'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [from, setFrom] = useState<string | null>(null);
+  const [form, setForm] = useState<RateForm | null>(null);
 
   if (vat.error || !vat.data) return null; // an older API without the route: nothing to show
   const v = vat.data;
   const current = v.rates.find((r) => r.id === v.defaultVatRateId);
+  const fromValue = from ?? v.vatFrom ?? '';
+  const midMonth = fromValue !== '' && !fromValue.endsWith('-01');
 
-  async function save(registered: boolean, defaultRateId: string | null) {
+  async function run(fn: () => Promise<string | null>) {
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      const saved = await api<{ vatRegistered: boolean; defaultVatRateId: string | null; rateAdded?: boolean }>('/v1/core/org/vat', {
-        method: 'PUT',
-        body: JSON.stringify({ registered, defaultRateId }),
-      });
-      if (saved.rateAdded) setNotice(tr('The standard VAT rate (14%) was added as your company rate.'));
+      setNotice(await fn());
       vat.reload();
     } catch (e) {
       setError((e as Error).message);
@@ -35,12 +44,32 @@ export function VatSettingsCard() {
     }
   }
 
+  const setVat = (registered: boolean, defaultRateId: string | null, vatFrom?: string) =>
+    run(async () => {
+      const saved = await api<{ vatFromMidMonth?: boolean }>('/v1/core/org/vat', {
+        method: 'PUT',
+        body: JSON.stringify({ registered, defaultRateId, ...(vatFrom ? { vatFrom } : {}) }),
+      });
+      setFrom(null);
+      return saved.vatFromMidMonth ? tr('Saved. VAT starts in the middle of a tax month: that month\'s return will be part with VAT and part without.') : null;
+    });
+
+  const saveRate = (f: RateForm) =>
+    run(async () => {
+      const body = JSON.stringify({ subType: f.subType, rate: Number(f.rate), label: f.label, isDefault: f.isDefault });
+      if (f.id) await api(`/v1/core/org/vat/rates/${f.id}`, { method: 'PUT', body });
+      else await api('/v1/core/org/vat/rates', { method: 'POST', body });
+      setForm(null);
+      return tr('Rate saved. Documents already issued keep their own rate.');
+    });
+
   return (
     <div className="form-card stack">
       <h2>{tr('VAT')}</h2>
       <p className="muted small">
         {tr('When your company is VAT registered, each new sales invoice and credit or debit note shows VAT on every line. Prices are typed before VAT. Invoices issued before you switch on keep no VAT.')}
       </p>
+
       <ul className="option-list">
         <li className="option-row">
           <div>
@@ -48,7 +77,9 @@ export function VatSettingsCard() {
             <p className="muted small">
               {v.vatRegistered && current
                 ? trf('Default rate: {label} ({rate}%). An item can have its own rate.', { label: current.label, rate: current.rate })
-                : tr('Off: invoices carry no VAT.')}
+                : v.rates.length === 0
+                  ? tr('Add your VAT rate below first.')
+                  : tr('Off: invoices carry no VAT.')}
             </p>
           </div>
           <label className="option-switch">
@@ -57,30 +88,128 @@ export function VatSettingsCard() {
               role="switch"
               aria-checked={v.vatRegistered}
               checked={v.vatRegistered}
-              disabled={busy}
+              disabled={busy || !isOwner || (!v.vatRegistered && v.rates.length === 0)}
               aria-label={tr('VAT registered')}
-              onChange={() => save(!v.vatRegistered, v.defaultVatRateId)}
+              onChange={() => setVat(!v.vatRegistered, v.defaultVatRateId, v.vatRegistered ? undefined : fromValue || undefined)}
             />
             <span>{v.vatRegistered ? tr('On') : tr('Off')}</span>
           </label>
         </li>
       </ul>
-      {v.vatRegistered && v.rates.length > 0 ? (
-        <label>
-          {tr('Default VAT rate')}
-          <select value={v.defaultVatRateId ?? ''} disabled={busy} onChange={(e) => save(true, e.target.value || null)}>
+      {!isOwner ? <p className="muted small">{tr('Only an owner can switch VAT on or off and choose the default rate.')}</p> : null}
+
+      {isOwner && v.rates.length > 0 ? (
+        <div className="form-row">
+          {v.vatRegistered ? (
+            <label>
+              {tr('Default VAT rate')}
+              <select value={v.defaultVatRateId ?? ''} disabled={busy} onChange={(e) => setVat(true, e.target.value || null)}>
+                {v.rates.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label} ({r.rate}%)
+                  </option>
+                ))}
+              </select>
+              <span className="hint muted">{tr('Used on a line when its item has no VAT rate of its own.')}</span>
+            </label>
+          ) : null}
+          <label>
+            {tr('VAT applies from')}
+            <input type="date" value={fromValue} disabled={busy} onChange={(e) => setFrom(e.target.value)} />
+            <span className="hint muted">{tr('Normally the first day of a tax month. Empty: the first day of this month.')}</span>
+          </label>
+          {v.vatRegistered && from !== null && from !== (v.vatFrom ?? '') ? (
+            <Button variant="outline" disabled={busy || !from} onClick={() => setVat(true, v.defaultVatRateId, from)}>
+              {tr('Save the start date')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {midMonth ? <p className="error small">{tr('This date is not the first day of a month: that month\'s return would be part with VAT and part without.')}</p> : null}
+
+      <h3>{tr('VAT rates')}</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{tr('Name')}</th>
+              <th scope="col">{tr('ETA code')}</th>
+              <th scope="col" className="right">{tr('Rate')}</th>
+              <th scope="col">{tr('Default')}</th>
+              <th scope="col">{tr('Actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
             {v.rates.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label} ({r.rate}%)
-              </option>
+              <tr key={r.id}>
+                <td>{r.label}</td>
+                <td>
+                  <code>{r.subType}</code>
+                </td>
+                <td className="right">{r.rate}%</td>
+                <td>{r.isDefault ? tr('Yes') : ''}</td>
+                <td>
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={() => setForm({ id: r.id, subType: r.subType, rate: String(r.rate), label: r.label, isDefault: r.isDefault })}>
+                    {tr('Edit')}
+                  </Button>
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/core/org/vat/rates/${r.id}`, { method: 'DELETE' }); return tr('Rate removed.'); })}>
+                    {tr('Remove')}
+                  </Button>
+                </td>
+              </tr>
             ))}
-          </select>
-          <span className="hint muted">{tr('Used on a line when its item has no VAT rate of its own.')}</span>
-        </label>
-      ) : null}
-      {!v.vatRegistered && v.rates.length === 0 ? (
-        <p className="muted small">{tr('Switching on adds the standard VAT rate (14%) for your company.')}</p>
-      ) : null}
+            {v.rates.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="muted empty">
+                  {tr('No VAT rates yet. Egypt\'s general rate is 14% (code V009); exports are 0% (V001); exempt sales use V003.')}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      {form ? (
+        <div className="stack">
+          <div className="form-row">
+            <label>
+              {tr('Name')}
+              <input value={form.label} maxLength={100} placeholder={tr('e.g. VAT 14%')} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+            </label>
+            <label>
+              {tr('ETA code')}
+              <select value={form.subType} onChange={(e) => setForm({ ...form, subType: e.target.value })}>
+                {(v.subTypes ?? [{ code: 'V009', description: 'General item sales' }]).map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.code} · {s.description}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {tr('Rate (%)')}
+              <input inputMode="decimal" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={form.isDefault} onChange={(e) => setForm({ ...form, isDefault: e.target.checked })} />
+              {tr('Default')}
+            </label>
+          </div>
+          <div className="form-actions">
+            <Button disabled={busy || !form.label.trim() || !Number.isFinite(Number(form.rate)) || form.rate.trim() === ''} onClick={() => saveRate(form)}>
+              {busy ? tr('Saving…') : tr('Save rate')}
+            </Button>
+            <Button variant="ghost" onClick={() => setForm(null)}>
+              {tr('Cancel')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="outline" disabled={busy} onClick={() => setForm(emptyRate)}>
+          {tr('Add a VAT rate')}
+        </Button>
+      )}
+
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error">{error}</p>}
     </div>

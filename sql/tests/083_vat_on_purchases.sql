@@ -1,5 +1,6 @@
 -- sql/tests/083_vat_on_purchases.sql
 -- VAT part 2 (sql/087). Always rolls back. Needs sql/001-087.
+-- Updated for sql/088: non-deductible bill VAT goes to the stock cost; a deduction needs a 9-digit supplier tax number.
 -- Covers: bill lines take a rate (item default, company default, given, exempt) and compute net and VAT; the VAT as printed is kept
 -- within the tolerance and refused beyond it; deductible needs registration, VAT and a document reference, and defaults to that;
 -- posting with input VAT (deductible) or VAT into cost (not deductible), balanced; the amount owed on a bill is its gross; expenses
@@ -79,7 +80,7 @@ begin
   reset role;
   select net_minor, tax_minor, gross_minor, vat_deductible, vat_class, vat_document_ref, supplier_tax_number into v_net, v_tax, v_gross, v_ded, v_class, v_ref, v_tin
     from public.pur_supplier_invoices where id = b1;
-  if (v_net, v_tax, v_gross) <> (2049, 194, 2243) or not v_ded or v_class <> 'local' or v_ref <> 'ETA-UUID-0001' or v_tin <> '100-200-300' then
+  if (v_net, v_tax, v_gross) <> (2049, 194, 2243) or not v_ded or v_class <> 'local' or v_ref <> 'ETA-UUID-0001' or v_tin <> '100200300' then
     raise exception 'FAIL P2d: bill 1 is %/%/% deductible % class % ref % tin %', v_net, v_tax, v_gross, v_ded, v_class, v_ref, v_tin;
   end if;
   select count(*) into n from public.pur_supplier_invoices where id = b1 and line_tax_minor = 193;
@@ -98,8 +99,8 @@ begin
   if n <> 3 then raise exception 'FAIL P3a: bill 1 did not post 2049 GRNI / 194 input VAT / 2243 suppliers (% lines)', n; end if;
   select count(*) into n from public.acc_entry_lines l join public.acc_entries e on e.id = l.entry_id join public.acc_accounts ac on ac.id = l.account_id
    where e.org_id = o and e.source_type = 'supplier_invoice' and e.source_id = b2::text and
-         ((ac.code = '282' and l.debit_minor = 200) or (ac.code = '334' and l.debit_minor = 28) or (ac.code = '281' and l.credit_minor = 228) or ac.code = '1811');
-  if n <> 3 then raise exception 'FAIL P3b: bill 2 did not put its VAT into the cost (% lines)', n; end if;
+         ((ac.code = '282' and l.debit_minor = 200) or (ac.code = '161' and l.debit_minor = 28 and l.item_id = i1) or (ac.code = '281' and l.credit_minor = 228) or ac.code in ('1811', '334'));
+  if n <> 3 then raise exception 'FAIL P3b: bill 2 did not put its VAT into the stock cost (% lines)', n; end if;
 
   -- ---- P4: what is owed on a bill is its gross
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
@@ -115,17 +116,17 @@ begin
   ok := false; begin perform public.fin_record_expense(current_date, cat, 1140, null, 'rent', jsonb_build_object('taxMinor', 1140));
     exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL P5b: an expense that is all VAT was accepted'; end if;
-  e1 := (public.fin_record_expense(current_date, cat, 1140, null, 'November rent', jsonb_build_object('taxMinor', 140, 'taxRateId', r14, 'documentRef', 'ETA-RENT-11')) ->> 'id')::uuid;
+  e1 := (public.fin_record_expense(current_date, cat, 1140, null, 'November rent', jsonb_build_object('taxMinor', 140, 'taxRateId', r14, 'documentRef', 'ETA-RENT-11', 'supplierTaxNumber', '123 456 789')) ->> 'id')::uuid;
   -- an import: customs declaration as the reference, the customs tax number typed
   e2 := (public.fin_record_expense(current_date, cat, 5000, null, 'Customs', jsonb_build_object('taxMinor', 600, 'vatClass', 'import', 'documentRef', 'DECL-77',
-          'supplierTaxNumber', 'CUSTOMS')) ->> 'id')::uuid;
+          'supplierTaxNumber', '987-654-321')) ->> 'id')::uuid;
   -- a capital asset with no reference: class kept, not deductible
   e3 := (public.fin_record_expense(current_date, cat, 2280, sup, 'Machine', jsonb_build_object('taxMinor', 280, 'vatClass', 'capital')) ->> 'id')::uuid;
   j := public.insights_home();
   reset role;
   select net_minor, tax_minor, vat_deductible, vat_class into v_net, v_tax, v_ded, v_class from public.fin_expenses where id = e1;
   if (v_net, v_tax) <> (1000, 140) or not v_ded or v_class <> 'local' then raise exception 'FAIL P5c: rent expense %/% deductible % class %', v_net, v_tax, v_ded, v_class; end if;
-  select count(*) into n from public.fin_expenses where id = e2 and vat_class = 'import' and vat_deductible and supplier_tax_number = 'CUSTOMS' and vat_document_ref = 'DECL-77';
+  select count(*) into n from public.fin_expenses where id = e2 and vat_class = 'import' and vat_deductible and supplier_tax_number = '987654321' and vat_document_ref = 'DECL-77';
   if n <> 1 then raise exception 'FAIL P5d: the import was not recorded as a deductible import'; end if;
   select count(*) into n from public.fin_expenses where id = e3 and vat_class = 'capital' and not vat_deductible and supplier_tax_number = '100-200-300';
   if n <> 1 then raise exception 'FAIL P5e: the capital purchase is wrong (class, deductible or supplier tax number)'; end if;
