@@ -39,3 +39,43 @@ export function vatTotals(lines: readonly VatLine[]): VatLine {
 export function invoiceDueMinor(grossMinor: number, creditedMinor: number, debitedMinor: number): number {
   return grossMinor - creditedMinor + debitedMinor;
 }
+
+/** GET /v1/finance/vat-summary (sql/089): the VAT position for a period, laid out like the return. Amounts in minor units. */
+export type VatSummary = {
+  from: string;
+  to: string;
+  currency: string;
+  vatRegistered: boolean;
+  vatFrom: string | null;
+  /** taxable (per rate), zero_rated (export, ETA V001/V002), exempt; notes are approved credit (negative) and debit notes. */
+  sales: {
+    kind: 'taxable' | 'zero_rated' | 'exempt';
+    rate: number;
+    invoicesNetMinor: number;
+    invoicesTaxMinor: number;
+    notesNetMinor: number;
+    notesTaxMinor: number;
+    netMinor: number;
+    taxMinor: number;
+  }[];
+  /** By kind of purchase: local goods and services, capital assets, imports. */
+  purchases: { kind: 'local' | 'capital' | 'import'; netMinor: number; deductibleTaxMinor: number; nonDeductibleTaxMinor: number }[];
+  outputTaxMinor: number;
+  inputTaxMinor: number;
+  /** Output VAT less deductible input VAT: positive is owed, negative is a credit to carry forward. */
+  dueMinor: number;
+  warnings: ('not_registered' | 'before_vat_from' | 'partial_deduction' | 'other_currency' | 'excludes_supplier_credit_notes')[];
+  otherCurrencyDocuments: number;
+  documents: {
+    type: 'customer_invoice' | 'sales_note' | 'supplier_invoice' | 'expense';
+    id: string;
+    number: string;
+    date: string;
+    side: 'sales' | 'purchases';
+    kind: string;
+    rate: number;
+    netMinor: number;
+    taxMinor: number;
+    nonDeductibleTaxMinor: number;
+  }[];
+};

@@ -1,7 +1,7 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
 **Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Parts 3-5 not built: 3 VAT summary in the return's layout,
+(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built 16 Nov, not applied. Parts 4-5 not built: 3 VAT summary in the return's layout,
 4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
@@ -300,3 +300,11 @@ ledger posted. A migration must backfill existing documents (zero tax) and switc
 **Known trade-off (review, 16 Nov).** Companies registered before `sql/088` had their start moved to the 1st of their month; invoices
 from before the day they switched on are zero VAT but fall inside the VAT range, so the summary shows them as zero VAT. No real company
 is affected yet. **Rule for the first real company: switch VAT on with the start date on the 1st of a month** (the default).
+
+**Part 3 as built (16 Nov, `sql/089`).** Finance → VAT summary (owners and admins): sales by rate, zero-rated exports (ETA V001/V002)
+and exempt, each with invoices and approved credit/debit notes (by approval day); purchases by kind (local, capital, import) with
+deductible and non-deductible VAT (bill lines carry their share of the VAT as printed); output VAT, deductible input VAT, VAT due or credit.
+Warnings: not registered, period before "VAT from", partial deduction (taxable and exempt sales together), other currencies left out,
+and always "excludes supplier credit notes". Each line opens its documents; CSV and print. Section names are ours until the accountant gives
+the Form 10 headings. Voided invoices are left out whatever month they were voided in (a void in a later, already-filed month would
+need a correction: to confirm with the accountant).

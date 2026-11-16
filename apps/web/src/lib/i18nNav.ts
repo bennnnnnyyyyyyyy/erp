@@ -122,6 +122,7 @@ export const NAV_AR: Record<string, string> = {
   'Treasury account': 'حساب الخزينة',
   Transfers: 'التحويلات',
   'Statement of account': 'كشف حساب',
+  'VAT summary': 'ملخص ضريبة القيمة المضافة',
   Branches: 'الفروع',
   'Import from a file': 'الاستيراد من ملف',
   // integrations (wave 1)

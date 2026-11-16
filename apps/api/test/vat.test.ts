@@ -17,6 +17,7 @@ describe('VAT routes', () => {
     ['GET', '/v1/core/org/vat'],
     ['PUT', '/v1/core/org/vat'],
     ['POST', '/v1/core/org/vat/rates'],
+    ['GET', '/v1/finance/vat-summary?from=2026-11-01&to=2026-11-30'],
     ['PUT', '/v1/core/org/vat/rates/11111111-1111-4111-8111-111111111111'],
     ['DELETE', '/v1/core/org/vat/rates/11111111-1111-4111-8111-111111111111'],
   ])('%s %s needs a signed-in user', async (method, path) => {
