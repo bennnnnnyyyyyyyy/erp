@@ -27,7 +27,12 @@ run or deployed.
 - Web: Finance → VAT summary (period, warnings, sales and purchase sections, totals, documents filtered by section with links, CSV,
   print); Arabic machine drafts.
 
-**Database / System Result.** None on live. `sql/089` is not applied.
+**Database / System Result.** Dry run of `sql/089` on live (rolled back): `users_can_read` true, `anon_can_read` false. Applied to live by
+Ben via CLI (same result). Test 085 on live first failed at S1a: the summary counted only the test's USD invoice. Cause, checked
+read-only on live: **`organizations.default_currency` defaults to `USD` on live, but `EGP` in `sql/001`** (changed outside the
+migrations; `bootstrap_organization` sets no currency). Not a fault in the summary (it counts the company currency only, by design). The
+test now sets its companies to EGP; re-run on live pending. **Open for Ben:** decide whether live's default goes back to EGP
+(agents.md: default currency is EGP) with a migration, or the repo records USD.
 
 **Safety Status.** Local SQL run (PGlite, all 87 migrations): 84 of 84 SQL tests pass. Typecheck clean; tests: shared 81, API 576, web
 144. `biome ci .`: exit 0. Not verified: dry run on live, the page in a browser, the Arabic, the Form 10 section names (accountant).

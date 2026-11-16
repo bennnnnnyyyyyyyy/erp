@@ -20,6 +20,8 @@ begin
     (m, 'authenticated', 'authenticated', 'vs-m@tests.invalid'), (x, 'authenticated', 'authenticated', 'vs-x@tests.invalid');
   o := public.bootstrap_organization('VAT Summary A', 'vat-sum-a', 'vs-o@tests.invalid');
   ob := public.bootstrap_organization('VAT Summary B', 'vat-sum-b', 'vs-x@tests.invalid');
+  -- the company currency is set explicitly: the column default on live is not EGP (found 16 Nov), and the summary counts only it
+  update public.organizations set default_currency = 'EGP' where id in (o, ob);
   insert into public.memberships (org_id, user_id, role) values (o, a, 'admin'), (o, m, 'member');
   perform public.core_enable_all_modules(o); perform public.core_enable_all_modules(ob);
   v_month := date_trunc('month', public.acc__local_date(o, now()))::date;
