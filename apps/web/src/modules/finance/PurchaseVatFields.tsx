@@ -3,7 +3,7 @@ import { tr } from '../../lib/i18n';
 import { toMinor } from '../trade/common';
 
 // VAT on a purchase (supplier bill or expense; sql/087, VAT plan part 2). The VAT is entered as printed on the supplier's document.
-// For a bill it may be left empty (the VAT worked out from the line rates is used); the database refuses a figure too far from that.
+// The kind of purchase is chosen per line on a bill, once on an expense (sql/088). For a bill the VAT may be left empty (the VAT worked out from the line rates is used); the database refuses a figure too far from that.
 // "Deduct this VAT" needs the company to be VAT registered and the supplier's e-invoice number (or, for an import, the customs
 // declaration); non-deductible VAT becomes part of the cost.
 
@@ -57,6 +57,7 @@ export function PurchaseVatFields({
             </select>
           </label>
         ) : null}
+        {kind === 'expense' ? (
         <label>
           {tr('Kind of purchase')}
           <select value={value.vatClass} onChange={(e) => set({ vatClass: e.target.value as PurchaseVat['vatClass'] })}>
@@ -65,6 +66,7 @@ export function PurchaseVatFields({
             <option value="import">{tr('Import (customs)')}</option>
           </select>
         </label>
+        ) : null}
       </div>
       <div className="form-row">
         <label>
@@ -89,7 +91,7 @@ export function PurchaseVatFields({
           ? tr('Your company is not VAT registered: VAT paid on purchases is part of the cost.')
           : deducts
             ? tr('This VAT will be deducted from the VAT you owe.')
-            : tr('This VAT will not be deducted: it is added to the cost. A deduction needs the supplier\'s e-invoice number.')}
+            : tr('This VAT will not be deducted: it is added to the cost. A deduction needs the supplier\'s e-invoice number and 9-digit tax number.')}
       </p>
     </fieldset>
   );

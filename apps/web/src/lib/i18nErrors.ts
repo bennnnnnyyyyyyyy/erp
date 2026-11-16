@@ -11,6 +11,7 @@ export const ERRORS_AR: Record<string, string> = {
   'Both accounts must hold the same currency': 'يجب أن يكون الحسابان بنفس العملة',
   'The VAT entered does not match the rates on the lines': 'الضريبة المُدخلة لا تطابق النسب على البنود',
   'This VAT cannot be deducted': 'لا يمكن خصم هذه الضريبة',
+  'VAT and Shopify cannot be used together yet': 'لا يمكن استخدام ضريبة القيمة المضافة مع Shopify معًا بعد',
   'Choose the default VAT rate in Settings, then try again': 'اختر نسبة ضريبة القيمة المضافة الافتراضية من الإعدادات ثم أعد المحاولة',
   'Cannot return more than was delivered and not yet returned': 'لا يمكن إرجاع أكثر مما سُلّم ولم يُرجع بعد',
   'Choose an organization first': 'اختر الشركة أولًا',

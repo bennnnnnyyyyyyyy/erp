@@ -111,6 +111,8 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   // sql/087: purchase VAT as printed, and deductible input VAT.
   VAT_MISMATCH: { status: 409, message: 'The VAT entered does not match the rates on the lines', code: 'vat_mismatch' },
   VAT_NOT_DEDUCTIBLE: { status: 409, message: 'This VAT cannot be deducted', code: 'vat_not_deductible' },
+  // sql/088: Shopify prices include VAT, which is not supported yet (VAT plan part 5).
+  VAT_SHOPIFY_NOT_SUPPORTED: { status: 409, message: 'VAT and Shopify cannot be used together yet', code: 'vat_shopify_not_supported' },
   EMAIL_NOT_CONFIRMED: { status: 403, message: 'Confirm your email address first, then try again', code: 'email_not_confirmed' },
   LIMIT_REACHED: { status: 409, message: 'You have reached the limit of companies you can create', code: 'limit_reached' },
   NOT_SIGNED_IN: { status: 401, message: 'Your session has ended: sign in again', code: 'not_signed_in' },

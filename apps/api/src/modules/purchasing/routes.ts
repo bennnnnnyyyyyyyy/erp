@@ -6,7 +6,15 @@ import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
-import { billLineOut, billTotals, parsePurchaseVat, type BillLineOut, type BillLineRow, type BillRow } from '../../lib/vatRows';
+import {
+  VAT_CLASSES,
+  billLineOut,
+  billTotals,
+  parsePurchaseVat,
+  type BillLineOut,
+  type BillLineRow,
+  type BillRow,
+} from '../../lib/vatRows';
 
 // Orders are immutable commitments. Receipt is a single database function that posts stock and audit atomically.
 export const purchasingRoutes = new Hono<AppEnv>();
@@ -505,7 +513,15 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
       // Optional VAT rate per line (sql/087): a rate id or "exempt"; omitted = the item's, else the company default.
       const taxRateId = text(l.taxRateId);
       if (taxRateId && taxRateId !== 'exempt' && !UUID_RE.test(taxRateId)) invalid('taxRateId must be a tax rate id or "exempt"');
-      return { orderLineId: text(l.orderLineId), qty: Number(l.qty), ...(taxRateId ? { taxRateId } : {}) };
+      // Kind of purchase per line (sql/088): local goods and services, capital asset or import.
+      const vatClass = text(l.vatClass);
+      if (vatClass && !(VAT_CLASSES as readonly string[]).includes(vatClass)) invalid('vatClass must be local, capital or import');
+      return {
+        orderLineId: text(l.orderLineId),
+        qty: Number(l.qty),
+        ...(taxRateId ? { taxRateId } : {}),
+        ...(vatClass ? { vatClass } : {}),
+      };
     })
     .filter((l) => UUID_RE.test(l.orderLineId) && Number.isFinite(l.qty) && l.qty > 0);
   if (!UUID_RE.test(supplierId) || !UUID_RE.test(orderId) || !number || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate) || lines.length === 0)

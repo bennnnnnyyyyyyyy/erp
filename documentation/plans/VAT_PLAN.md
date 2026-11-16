@@ -1,7 +1,7 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
 **Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Part 2 built 16 Nov (`sql/087`, not applied to live). Parts 3-5 not built: 3 VAT summary in the return's layout,
+(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Parts 3-5 not built: 3 VAT summary in the return's layout,
 4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
@@ -261,3 +261,38 @@ Issued documents are never recomputed; corrections are notes or reversing entrie
 
 **Consequences.** One place for the maths; past documents keep their tax when rates change; the ETA submission reads the same numbers the
 ledger posted. A migration must backfill existing documents (zero tax) and switch every recomputation to the stored totals.
+
+## 14. Decisions of 16 Nov and the review of part 2 (`sql/088`)
+
+**Ben's decisions:**
+1. **No rate is added automatically.** Switching VAT on uses the company's default VAT rate, or is refused until one exists
+   (`VAT_RATE_MISSING`). Rates are added in Settings → General → VAT (`core_save_vat_rate` / `core_remove_vat_rate`; no e-invoicing
+   module needed; any ETA VAT code, so 0% export (V001) and exempt (V003) rates are proper rates).
+2. Build order: the rate screen (done here), then part 3.
+3. Bill tolerance kept. Exact rule: the printed VAT may differ from the computed VAT by **the larger of 1 minor unit per line and 5
+   minor units per bill**.
+4. **Only an owner** switches VAT on or off, picks the default rate and the start date.
+5. **Shopify and VAT are not used together** until part 5: VAT cannot be switched on while Shopify is on, and while VAT is on an invoice
+   for a Shopify order is refused (`VAT_SHOPIFY_NOT_SUPPORTED`).
+
+**Review of part 2 (accountant, 16 Nov):**
+6. **Non-deductible VAT on goods is part of their cost.** On a bill it is shared over the lines (by computed VAT; rounding to the
+   largest line), added to each item's average cost over what is on hand (cost log `purchase_vat`) and posted to stock for that item;
+   when none is on hand, to cost of goods sold. No longer to purchase price differences. Bills posted before keep their entries.
+   **On an expense it stays on the expense account**, including expenses of kind "capital asset": there is no fixed-asset register
+   yet, so a machine recorded as an expense is expensed with its VAT. When fixed assets are built, capital expenses (and their
+   non-deductible VAT) go to the asset instead.
+7. **"VAT from"** defaults to the first day of the current month and the owner can choose another date (warned when it is not the
+   1st: the month's return would be split). Companies already registered moved to the first of their month (audited). Part 4's
+   opening credit balance uses the same date.
+8. **Kind of purchase per bill line** (a bill can mix goods and a machine); the bill shows one kind or "mixed". Expenses keep one kind:
+   record a mixed receipt as two expenses.
+9. **Tax numbers:** a deduction needs the supplier's 9-digit Egyptian tax registration number (dashes and spaces ignored, stored as
+   digits), typed or from the supplier. Not checked on the supplier record itself: foreign suppliers (imports) have other numbers.
+   This is stricter than part 2 (a deduction needed only the e-invoice number).
+
+**Part 3 must include (from the review):**
+- A **warning on the summary** when the company has both taxable and exempt sales in the period: partial deduction is not built, so
+  input VAT would be over-claimed.
+- The summary is labelled **"excludes supplier credit notes"** until those are built; part 3 is not "complete" without them.
+- Rollout for every part from now: dry run on live, apply, CI green, then merge.

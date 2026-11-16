@@ -16,6 +16,9 @@ describe('VAT routes', () => {
   it.each([
     ['GET', '/v1/core/org/vat'],
     ['PUT', '/v1/core/org/vat'],
+    ['POST', '/v1/core/org/vat/rates'],
+    ['PUT', '/v1/core/org/vat/rates/11111111-1111-4111-8111-111111111111'],
+    ['DELETE', '/v1/core/org/vat/rates/11111111-1111-4111-8111-111111111111'],
   ])('%s %s needs a signed-in user', async (method, path) => {
     const res = await app.request(path, { method }, env);
     expect(res.status).toBe(401);
@@ -32,7 +35,7 @@ describe('VAT routes', () => {
 
   const org = readFileSync(join(__dirname, '../src/modules/core/org.ts'), 'utf8');
   it('the setting goes through the audited database function, with the manage permission', () => {
-    const route = org.slice(org.indexOf("orgRoutes.put('/vat'"), org.indexOf("orgRoutes.post('/blind-counts'"));
+    const route = org.slice(org.indexOf("orgRoutes.put('/vat'"), org.indexOf("orgRoutes.post('/vat/rates'"));
     expect(route).toContain("requirePermission('core.org.manage')");
     expect(route).toContain("'core_set_vat'");
     expect(route).not.toMatch(/\.from\(/);
