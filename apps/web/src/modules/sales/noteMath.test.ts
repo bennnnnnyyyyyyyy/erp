@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCancel, canDecide, creditableLeft, creditedQty, netInvoiceMinor, noteTotalMinor, type NoteForMath } from './noteMath';
+import { canCancel, canDecide, creditableLeft, creditedQty, netInvoiceMinor, noteTotalMinor, noteVatTotals, type NoteForMath } from './noteMath';
 
 const note = (kind: string, status: string, qty: number, id = 'L1'): NoteForMath => ({ kind, status, lines: [{ invoiceLineId: id, qty }] });
 
@@ -33,5 +33,14 @@ describe('who sees which button', () => {
     expect(canCancel({ status: 'submitted', requesterId: 'u1' }, 'u2', false)).toBe(false);
     expect(canCancel({ status: 'submitted', requesterId: 'u1' }, 'u2', true)).toBe(true);
     expect(canCancel({ status: 'rejected', requesterId: 'u1' }, 'u1', true)).toBe(false);
+  });
+});
+
+describe('note VAT (sql/086)', () => {
+  it("keeps each line's invoice VAT rate and rounds per line, as the database does", () => {
+    expect(noteVatTotals([{ qty: 1, unitPriceMinor: 333, taxRate: 14 }, { qty: 1, unitPriceMinor: 200, taxRate: 5 }])).toEqual({ netMinor: 533, taxMinor: 57, grossMinor: 590 });
+  });
+  it('is the plain total when the invoice had no VAT', () => {
+    expect(noteVatTotals([{ qty: 2, unitPriceMinor: 12550 }])).toEqual({ netMinor: 25100, taxMinor: 0, grossMinor: 25100 });
   });
 });

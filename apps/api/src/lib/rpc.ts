@@ -102,6 +102,12 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
     message: 'You cannot invoice more than was delivered',
     code: 'invoice_qty_exceeds_delivered',
   },
+  // sql/086: VAT registered but no rate to use (no default chosen, or the default rate was removed).
+  VAT_RATE_MISSING: {
+    status: 409,
+    message: 'Choose the default VAT rate in Settings, then try again',
+    code: 'vat_rate_missing',
+  },
   EMAIL_NOT_CONFIRMED: { status: 403, message: 'Confirm your email address first, then try again', code: 'email_not_confirmed' },
   LIMIT_REACHED: { status: 409, message: 'You have reached the limit of companies you can create', code: 'limit_reached' },
   NOT_SIGNED_IN: { status: 401, message: 'Your session has ended: sign in again', code: 'not_signed_in' },

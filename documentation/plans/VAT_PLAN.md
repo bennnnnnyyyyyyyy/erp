@@ -1,10 +1,22 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
-**Status:** Draft, 12 Nov 2026. Waiting for Ben's approval. Not built.
+**Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built (`sql/086`,
+not applied to live yet); parts 2 (`sql/087`, supplier bills) and 3 (VAT summary) not built.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
-**Decision record:** section 12 is the draft ADR-0005 (agents cannot write the ADR folder from this chat; Ben or a fresh chat copies it to
-`documentation/architecture/decisions/ADR-0005-vat-on-documents.md` once approved).
+**Decision record:** [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) (from section 12, accepted 16 Nov).
+
+**Part 1 as built (16 Nov), where it differs from or adds to the text below:**
+- Switching VAT on without naming a rate uses the company's default VAT (T1) rate; when it has none, the standard rate (14%, V009) is
+  added as an ordinary company rate in the same audited step. Reason: the app has no tax rate screen yet (rates exist only in the
+  e-invoicing API), so a company could not otherwise switch on.
+- `GET /v1/core/org/vat` (any member: the setting and the VAT rates) and `PUT /v1/core/org/vat` (owner or admin) instead of a field on
+  the company form. The invoice form offers a VAT choice per line (item or company default, a rate, or exempt) when registered.
+- Account codes as planned: 2871 under 28 and 1811 under 18. Note for the accountant (open question 2): in our unified chart reference
+  group 18 is "Current financial investments"; where 18 is missing it is created as "Current financial investments and other debit
+  balances". Both accounts and roles can be changed in Accounting setup.
+- Bills keep their current columns and maths until part 2; "amount owed" on the sales side uses stored totals and notes everywhere.
+- Revenue figures (owner insights months, best sellers, the monthly sales report link, the loss alert) stay on net amounts.
 
 ## 1. Goal
 
@@ -141,7 +153,7 @@ Three PRs, each usable on its own, each with its migration dry-run here and Ben 
 
 ## 12. Draft ADR-0005: VAT is computed and stored on each document line, once
 
-**Status:** Proposed (with this plan). **Deciders:** Ben.
+**Status:** Accepted 16 Nov; the record is now [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md). **Deciders:** Ben.
 
 **Context.** Totals are recomputed from quantity × price in about 15 places. Adding tax to each would multiply the places where a rounding
 or a rule can differ, and a later rate change would silently change old documents.

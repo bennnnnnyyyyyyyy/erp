@@ -11,6 +11,47 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — VAT part 1: VAT on sales invoices and notes, posting, amount owed (`sql/086`)
+
+**Objective.** Build part 1 of [VAT_PLAN.md](../plans/VAT_PLAN.md), approved by Ben on 16 Nov: prices are typed before VAT; invoices
+issued before VAT keep zero tax. A VAT-registered company issues sales invoices and credit/debit notes with VAT on each line, the tax
+posts to its own account, and every "amount owed" uses the gross net of approved notes.
+
+**Actions Completed.**
+- `sql/086_tax_on_documents.sql`: line columns (`tax_rate_id`, copied `tax_rate`, `net_minor`, `tax_minor`) on invoice and note lines
+  and document totals (`net_minor`, `tax_minor`, `gross_minor`) on invoices and notes; one BEFORE INSERT trigger applies the line rule
+  (net = round(qty × price), tax = round(net × rate / 100), half away from zero); invoice totals are rolled up from their lines and
+  guarded against edits; note `total_minor` = gross (checked). Backfill: existing lines and documents net = gross, tax 0 (note lines'
+  append-only trigger switched off only for that update, inside the transaction). `core_set_vat` (owner/admin, audited). New
+  `sal_create_invoice` (rate per line: given id, else the item's VAT default, else the company default, or `"exempt"`; refused when not
+  registered) and `sal_submit_note` (the invoice line's rate; tax recomputed on the note's quantity and price). Roles `output_vat` and
+  `input_vat`, accounts 2871 Output VAT payable and 1811 Input VAT recoverable added to every existing chart (audited per company) and
+  to new charts. Posting: invoice Dr customers gross / Cr sales net / Cr output VAT; credit note Dr returns net / Dr output VAT /
+  Cr customers gross; debit note the reverse. `sal__invoice_owed` used by the overpayment check, payment links, owner insights, the
+  overdue alert and the open-invoices report link: these four functions are copied from their latest files with only the invoice total
+  swapped (checked identical by script).
+- `sql/tests/082_vat_on_documents.sql` (new, 13 groups) and `sql/tests/040` (the default chart now has 40 accounts and 21 roles).
+- `packages/shared/src/vat.ts` (+ test against the ETA calculator), `ACCOUNT_ROLES` and `OrgSettings` extended.
+- API: invoices and notes return `netMinor`, `taxMinor`, `grossMinor` and per-line `taxRate`, `taxMinor` (`totalMinor` kept as the
+  gross); they read with `*` so the code also answers before the migration is applied (old figures, no VAT). Create invoice accepts a
+  per-line `taxRateId`. Finance open items use the stored gross and approved notes. `GET`/`PUT /v1/core/org/vat`; `VAT_RATE_MISSING`
+  answers 409. Tests: `apps/api/test/vat.test.ts`, `einvoicing.test.ts` updated.
+- Web: invoice page shows before VAT, VAT and total with VAT, and a VAT column (only when the invoice carries VAT); the create form has a
+  VAT choice per line when registered; the note form previews VAT; Settings → General → VAT card; role labels; Arabic machine drafts.
+- [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) written from the plan's section 12 (accepted with the plan).
+
+**Decisions taken while building (in the plan, "Part 1 as built").** There is no tax rate screen in the app, so switching VAT on with no
+rate uses the company's default VAT rate or adds the standard 14% (V009) as a company rate, in the same audited step. Group 18 in our
+unified chart reference is "Current financial investments": the plan's 1811 is kept, flagged for the accountant.
+
+**Database / System Result.** None on live. `sql/086` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 84 migrations): 81 of 81 SQL tests pass, including the new 082. Typecheck clean for shared,
+API and web, and tests pass: shared 81, API 566, web 144. These ran in a git worktree against this branch's `packages/shared`
+(temporary tsconfig paths and vitest alias, removed afterwards; nothing installed). Biome: no errors, no new warnings. Not verified: a dry
+run on live inside a rolled-back transaction (do it before applying), the screens in a browser, and the Arabic (add to the review
+sheet). To apply: dry run, then `supabase db query --linked -f sql/086_tax_on_documents.sql`, then `sql/tests/082` and `040` on live.
+
 ## 2026-11-16 — Audit findings 9 and 13 closed: architecture records match the code
 
 **Objective.** The 11 Nov audit found ADR-0002 described the old access model (service-role client) and two ADR-0004 links were broken

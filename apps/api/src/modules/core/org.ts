@@ -30,10 +30,13 @@ function toSettings(row: OrgRow): OrgSettings {
     language: row.settings?.language === 'ar' ? 'ar' : 'en',
     lockDate: typeof row.settings?.lock_date === 'string' ? row.settings.lock_date : null,
     defaultPaymentTermsDays: typeof row.settings?.default_payment_terms_days === 'number' ? row.settings.default_payment_terms_days : 0,
+    vatRegistered: row.settings?.vat_registered === true,
+    defaultVatRateId: typeof row.settings?.default_vat_rate_id === 'string' ? row.settings.default_vat_rate_id : null,
   };
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isTimeZone(tz: string): boolean {
   try {
@@ -124,6 +127,47 @@ orgRoutes.put('/payment-terms', requirePermission('core.org.manage'), async (c) 
   if (typeof days !== 'number' || !Number.isInteger(days) || days < 0 || days > 365) invalid('days must be a whole number from 0 to 365');
   const saved = await callRpc<number>(userDb(c), 'core_set_default_payment_terms', { p_days: days });
   return ok(c, { defaultPaymentTermsDays: saved });
+});
+
+// The VAT setting and the company's VAT (T1) rates, for the invoice form and Settings. Any member may read them (a sales clerk choosing
+// a line's rate must not need the e-invoicing permission); the rates are company data under row level security.
+orgRoutes.get('/vat', requirePermission('core.org.read'), async (c) => {
+  const org = await loadOrg(c);
+  const { data, error } = await userDb(c)
+    .from('tax_rates')
+    .select('id, sub_type, rate, label, is_default')
+    .eq('org_id', c.var.tenant.orgId)
+    .eq('tax_type', 'T1')
+    .is('deleted_at', null)
+    .order('label');
+  if (error) throw error;
+  const s = toSettings(org);
+  return ok(c, {
+    vatRegistered: s.vatRegistered ?? false,
+    defaultVatRateId: s.defaultVatRateId ?? null,
+    rates: ((data ?? []) as { id: string; sub_type: string; rate: number | string; label: string; is_default: boolean }[]).map((r) => ({
+      id: r.id,
+      subType: r.sub_type,
+      rate: Number(r.rate),
+      label: r.label,
+      isDefault: r.is_default,
+    })),
+  });
+});
+
+// VAT registered or not, and the default VAT rate (sql/086). Owners and admins; the database checks the rate is one of the company's
+// VAT (T1) rates and audits the change. Only documents created afterwards are affected.
+orgRoutes.put('/vat', requirePermission('core.org.manage'), async (c) => {
+  const b = await jsonBody(c);
+  if (typeof b.registered !== 'boolean') invalid('registered must be true or false');
+  const rateId = b.defaultRateId === null || b.defaultRateId === undefined ? null : b.defaultRateId;
+  if (rateId !== null && (typeof rateId !== 'string' || !UUID_RE.test(rateId))) invalid('defaultRateId must be a tax rate id or null');
+  // No rate when switching on: the company's default VAT rate, else the standard 14% is added as a company rate (sql/086).
+  const saved = await callRpc<{ vatRegistered: boolean; defaultVatRateId: string | null; rateAdded?: boolean }>(userDb(c), 'core_set_vat', {
+    p_registered: b.registered,
+    p_default_rate_id: rateId,
+  });
+  return ok(c, saved);
 });
 
 // Switch the in-app guided tour on or off for this company (sql/039). Owners and admins only; off by default.
