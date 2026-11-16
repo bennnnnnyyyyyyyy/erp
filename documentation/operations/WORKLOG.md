@@ -11,6 +11,18 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — New companies default to EGP again (`sql/090`)
+
+**Objective.** Live's `organizations.default_currency` defaulted to `USD` (found while running test 085 on live), against `sql/001`
+and agents.md (EGP). Ben: "existing companies keep everything", "yes write 090".
+
+**Actions Completed.** `sql/090_core_default_currency_egp.sql`: sets the column default back to `EGP`. No existing company is changed.
+Its final check shows the default and the companies per currency (information only).
+
+**Database / System Result.** None on live yet.
+
+**Safety Status.** Local run (PGlite, all 88 migrations): 84 of 84 SQL tests pass. A dry-run file (rolled back) is ready. Companies that
+already use USD by mistake, if any, are a separate per-company decision (changing the currency of a company with documents is not safe).
 ## 2026-11-16 — VAT part 3: the VAT summary (`sql/089`)
 
 **Objective.** Part 3 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (Ben: "do it now"), with the review's must-haves (partial-deduction warning,
