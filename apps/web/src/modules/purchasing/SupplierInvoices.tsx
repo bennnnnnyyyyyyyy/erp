@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
-import { formatMoney, hasPermission } from '@erp/shared';
+import { formatMoney, hasPermission, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -13,12 +13,15 @@ import { RecordHistory } from '../../components/RecordHistory';
 import { Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { UnpaidBills } from './UnpaidBills';
+import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseVat } from '../finance/PurchaseVatFields';
 
 import { tr, trf } from '../../lib/i18n';
 type Summary = { orderId:string;number:string;supplierId:string;currency:string;lines:{orderLineId:string;itemId:string;receivedQty:number;billedQty:number;unitCostMinor:number}[] };
 type Supplier = {id:string;name:string};
 type Item = {id:string;sku:string;name:string};
-type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;dueDate?:string;currency:string;createdAt:string;totalMinor:number;lines:{orderLineId:string;qty:number;unitCostMinor:number}[]};
+// netMinor / taxMinor (as printed) / computedTaxMinor / grossMinor and the VAT details: sql/087. Optional while an older API answers.
+type BillLine = {orderLineId:string;qty:number;unitCostMinor:number;taxRate?:number;netMinor?:number;taxMinor?:number};
+type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;dueDate?:string;currency:string;createdAt:string;totalMinor:number;netMinor?:number;taxMinor?:number;computedTaxMinor?:number;grossMinor?:number;vatDeductible?:boolean;vatClass?:string;vatDocumentRef?:string|null;supplierTaxNumber?:string|null;lines:BillLine[]};
 const money=(amountMinor:number,currency:string)=>formatMoney({amountMinor,currency});
 
 export function SupplierInvoices(){
@@ -26,6 +29,8 @@ export function SupplierInvoices(){
   const invoices=useLoad(()=>api<Invoice[]>('/v1/purchasing/supplier-invoices'));
   const suppliers=useLoad(()=>api<Supplier[]>('/v1/purchasing/suppliers'));
   const items=useLoad(()=>api<Item[]>('/v1/inventory/items'));
+  const vat=useLoad(()=>api<VatSettings>('/v1/core/org/vat').catch(()=>null));
+  const [vatIn,setVatIn]=useState<PurchaseVat>(emptyPurchaseVat);const [lineRate,setLineRate]=useState<Record<string,string>>({});
   const session=useSession();
   const [orderId,setOrderId]=useState('');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
   const [quantities,setQuantities]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [message,setMessage]=useState<{ok:boolean;text:string}|null>(null);
@@ -36,7 +41,7 @@ export function SupplierInvoices(){
   const itemName=(id:string)=>{const i=items.data?.find(v=>v.id===id);return i?`${i.sku} · ${i.name}`:id};
   async function submit(){
     if(!summary)return;setBusy(true);setMessage(null);
-    try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId])}))})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});summaries.reload();invoices.reload();}
+    try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId]),...(lineRate[l.orderLineId]?{taxRateId:lineRate[l.orderLineId]}:{})})),vat:purchaseVatPayload(vatIn)})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});setVatIn(emptyPurchaseVat);setLineRate({});summaries.reload();invoices.reload();}
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
   if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading error={summaries.error??invoices.error??suppliers.error??items.error} /></section>;
@@ -52,7 +57,7 @@ export function SupplierInvoices(){
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>
-      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td></tr>)}</tbody></table></div><Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button></>}
+      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}</tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}</tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" /><Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button></>}
     </FormToggle>}
     <UnpaidBills supplierName={supplierName} />
     <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Purchase order')}</th><th scope="col">{tr('Date recorded')}</th><th scope="col" className="right">{tr('Amount')}</th></tr></thead><tbody>
@@ -76,7 +81,7 @@ export function SupplierInvoicePage() {
   const id = useParam('id');
   const session = useSession();
   // The invoice by id, with each line's item and the order number (the list holds the newest 250 only).
-  const invoice = useLoad(() => api<Omit<Invoice, 'lines'> & { orderNumber: string | null; lines: { orderLineId: string; itemId: string | null; qty: number; unitCostMinor: number }[] }>(`/v1/purchasing/supplier-invoices/${id}`));
+  const invoice = useLoad(() => api<Omit<Invoice, 'lines'> & { orderNumber: string | null; lines: (BillLine & { itemId: string | null })[] }>(`/v1/purchasing/supplier-invoices/${id}`));
   const suppliers = useLoad(() => api<Supplier[]>('/v1/purchasing/suppliers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
 
@@ -84,6 +89,8 @@ export function SupplierInvoicePage() {
   if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoice.data;
   const order = { number: inv.orderNumber };
+  // VAT (sql/087): shown only when the bill carries any, so bills without VAT look as before.
+  const hasVat = (inv.taxMinor ?? 0) > 0 || inv.lines.some((l) => (l.taxRate ?? 0) > 0);
   const supplier = suppliers.data.find((s) => s.id === inv.supplierId)?.name ?? '—';
   const itemOf = (orderLineId: string) => {
     const itemId = inv.lines.find((l) => l.orderLineId === orderLineId)?.itemId;
@@ -101,15 +108,23 @@ export function SupplierInvoicePage() {
         <div><dt>{tr('Invoice date')}</dt><dd>{formatDay(inv.invoiceDate, session.org)}</dd></div>
         {inv.dueDate ? <div><dt>{tr('Due date')}</dt><dd>{formatDay(inv.dueDate, session.org)}</dd></div> : null}
         <div><dt>{tr('Date recorded')}</dt><dd>{formatDateTime(inv.createdAt, session.org)}</dd></div>
-        <div><dt>{tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
+        {hasVat ? <div><dt>{tr('Before VAT')}</dt><dd className="amount">{money(inv.netMinor ?? 0, inv.currency)}</dd></div> : null}
+        {hasVat ? <div><dt>{inv.vatDeductible ? tr('VAT (deducted)') : tr('VAT (part of the cost)')}</dt><dd className="amount">{money(inv.taxMinor ?? 0, inv.currency)}</dd></div> : null}
+        {hasVat && inv.computedTaxMinor !== undefined && inv.computedTaxMinor !== inv.taxMinor ? <div><dt>{tr('VAT worked out from the lines')}</dt><dd className="amount">{money(inv.computedTaxMinor, inv.currency)}</dd></div> : null}
+        <div><dt>{hasVat ? tr('Total with VAT') : tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
+        {inv.vatDocumentRef ? <div><dt>{inv.vatClass === 'import' ? tr('Customs declaration number') : tr('Supplier\'s e-invoice number')}</dt><dd><code>{inv.vatDocumentRef}</code></dd></div> : null}
+        {inv.supplierTaxNumber ? <div><dt>{tr('Supplier\'s tax number')}</dt><dd><code>{inv.supplierTaxNumber}</code></dd></div> : null}
+        {inv.vatClass && inv.vatClass !== 'local' ? <div><dt>{tr('Kind of purchase')}</dt><dd>{inv.vatClass === 'import' ? tr('Import (customs)') : tr('Capital asset (equipment, machinery)')}</dd></div> : null}
       </dl>
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{tr('Line total')}</th></tr></thead>
+        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
+          {hasVat ? <><th scope="col" className="right">{tr('VAT rate')}</th><th scope="col" className="right">{tr('VAT')}</th></> : null}</tr></thead>
         <tbody>
           {inv.lines.map((l) => (
-            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.qty * l.unitCostMinor, inv.currency)}</td></tr>
+            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.netMinor ?? Math.round(l.qty * l.unitCostMinor), inv.currency)}</td>
+              {hasVat ? <><td className="right">{(l.taxRate ?? 0) > 0 ? `${l.taxRate}%` : tr('None')}</td><td className="right">{money(l.taxMinor ?? 0, inv.currency)}</td></> : null}</tr>
           ))}
-          <tr><td colSpan={3} className="right"><strong>{tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
+          <tr><td colSpan={hasVat ? 5 : 3} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
         </tbody>
       </table></div>
       <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />

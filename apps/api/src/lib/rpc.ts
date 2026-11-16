@@ -108,6 +108,9 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
     message: 'Choose the default VAT rate in Settings, then try again',
     code: 'vat_rate_missing',
   },
+  // sql/087: purchase VAT as printed, and deductible input VAT.
+  VAT_MISMATCH: { status: 409, message: 'The VAT entered does not match the rates on the lines', code: 'vat_mismatch' },
+  VAT_NOT_DEDUCTIBLE: { status: 409, message: 'This VAT cannot be deducted', code: 'vat_not_deductible' },
   EMAIL_NOT_CONFIRMED: { status: 403, message: 'Confirm your email address first, then try again', code: 'email_not_confirmed' },
   LIMIT_REACHED: { status: 409, message: 'You have reached the limit of companies you can create', code: 'limit_reached' },
   NOT_SIGNED_IN: { status: 401, message: 'Your session has ended: sign in again', code: 'not_signed_in' },

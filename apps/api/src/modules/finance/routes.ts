@@ -5,6 +5,7 @@ import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
+import { parsePurchaseVat } from '../../lib/vatRows';
 import { requirePermission } from '../../middleware/tenant';
 import type { ItemStatementLine, PartyStatementLine } from '@erp/shared';
 import { csvResponse, minorToText } from '../../lib/csv';
@@ -44,9 +45,10 @@ financeRoutes.post('/categories', requirePermission('finance.entries.manage'), a
 });
 
 financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async (c) => {
+  // '*' so the list also answers before sql/087 (then: no VAT).
   const { data, error } = await userDb(c)
     .from('fin_expenses')
-    .select('id, number, expense_date, category_id, supplier_id, amount_minor, currency, note, status, created_at')
+    .select('*')
     .eq('org_id', orgOf(c))
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
@@ -60,7 +62,9 @@ financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async 
       date: e.expense_date,
       categoryId: e.category_id,
       supplierId: e.supplier_id,
+      /** The total paid, VAT included. */
       amountMinor: Number(e.amount_minor),
+      ...expenseVat(e),
       currency: e.currency,
       note: e.note,
       status: e.status,
@@ -68,6 +72,20 @@ financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async 
     })),
   );
 });
+
+/** An expense's VAT (sql/087), or none for a row read before that migration. */
+function expenseVat(e: Record<string, unknown>) {
+  const amount = Number(e.amount_minor);
+  const tax = e.tax_minor === undefined || e.tax_minor === null ? 0 : Number(e.tax_minor);
+  return {
+    netMinor: e.net_minor === undefined || e.net_minor === null ? amount - tax : Number(e.net_minor),
+    taxMinor: tax,
+    vatDeductible: e.vat_deductible === true,
+    vatClass: typeof e.vat_class === 'string' ? e.vat_class : 'local',
+    vatDocumentRef: typeof e.vat_document_ref === 'string' ? e.vat_document_ref : null,
+    supplierTaxNumber: typeof e.supplier_tax_number === 'string' ? e.supplier_tax_number : null,
+  };
+}
 
 financeRoutes.post('/expenses', requirePermission('finance.entries.manage'), async (c) => {
   const b = await jsonBody(c);
@@ -77,12 +95,17 @@ financeRoutes.post('/expenses', requirePermission('finance.entries.manage'), asy
   const amount = minor(b.amountMinor);
   if (!DATE_RE.test(date) || !UUID_RE.test(categoryId) || amount === null || (supplierId && !UUID_RE.test(supplierId)))
     invalid('A date, a category and an amount above zero are required');
+  // Optional VAT as printed on the receipt (sql/087); the amount stays the total paid.
+  const vat = parsePurchaseVat(b.vat);
+  if (vat?.taxMinor !== undefined && vat.taxMinor >= amount) invalid('The VAT must be below the total');
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'fin_record_expense', {
     p_date: date,
     p_category_id: categoryId,
     p_amount_minor: amount,
     p_supplier_id: supplierId || null,
     p_note: text(b.note) || null,
+    // only sent when given, so the call also works against a database without sql/087
+    ...(vat ? { p_vat: vat } : {}),
   });
   return ok(c, made, 201);
 });
@@ -202,12 +225,7 @@ financeRoutes.get('/payments/:id', requirePermission('finance.reports.view'), as
 
 financeRoutes.get('/expenses/:id', requirePermission('finance.reports.view'), async (c) => {
   const id = idParam(c);
-  const { data: e, error } = await userDb(c)
-    .from('fin_expenses')
-    .select('id, number, expense_date, category_id, supplier_id, amount_minor, currency, note, status, created_at')
-    .eq('org_id', orgOf(c))
-    .eq('id', id)
-    .maybeSingle();
+  const { data: e, error } = await userDb(c).from('fin_expenses').select('*').eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
   if (error) throw error;
   if (!e) throw new HttpError(404, 'Expense not found', 'not_found');
   return ok(c, {
@@ -217,6 +235,7 @@ financeRoutes.get('/expenses/:id', requirePermission('finance.reports.view'), as
     categoryId: e.category_id,
     supplierId: e.supplier_id,
     amountMinor: Number(e.amount_minor),
+    ...expenseVat(e),
     currency: e.currency,
     note: e.note,
     status: e.status,
@@ -333,25 +352,31 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     }
     for (const i of invoices) push('customer_invoice', 'c', i.id, i.number, i.customer_id, i.currency, total.get(i.id) ?? 0, i.due_date);
   } else {
-    const invoices = await fetchAll<{ id: string; number: string; supplier_id: string; currency: string; due_date: string }>((from, to) =>
-      db()
-        .from('pur_supplier_invoices')
-        .select('id, number, supplier_id, currency, due_date')
-        .eq('org_id', org)
-        .order('id')
-        .range(from, to),
-    );
-    const lines = await fetchAll<{ invoice_id: string; qty: number; unit_cost_minor: number }>((from, to) =>
-      db()
-        .from('pur_supplier_invoice_lines')
-        .select('invoice_id, qty, unit_cost_minor')
-        .eq('org_id', org)
-        .order('invoice_id')
-        .order('order_line_id')
-        .range(from, to),
-    );
+    // '*': the stored gross (sql/087, VAT as printed) when the database has it, else the sum of the lines.
+    const invoices = await fetchAll<{
+      id: string;
+      number: string;
+      supplier_id: string;
+      currency: string;
+      due_date: string;
+      gross_minor?: number | null;
+    }>((from, to) => db().from('pur_supplier_invoices').select('*').eq('org_id', org).order('id').range(from, to));
     const total = new Map<string, number>();
-    for (const l of lines) total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Number(l.qty) * Number(l.unit_cost_minor));
+    if (invoices.some((i) => i.gross_minor === undefined || i.gross_minor === null)) {
+      const lines = await fetchAll<{ invoice_id: string; qty: number; unit_cost_minor: number }>((from, to) =>
+        db()
+          .from('pur_supplier_invoice_lines')
+          .select('invoice_id, qty, unit_cost_minor')
+          .eq('org_id', org)
+          .order('invoice_id')
+          .order('order_line_id')
+          .range(from, to),
+      );
+      for (const l of lines)
+        total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_cost_minor)));
+    } else {
+      for (const i of invoices) total.set(i.id, Number(i.gross_minor));
+    }
     for (const i of invoices) push('supplier_invoice', 's', i.id, i.number, i.supplier_id, i.currency, total.get(i.id) ?? 0, i.due_date);
     const expenses = await fetchAll<{
       id: string;

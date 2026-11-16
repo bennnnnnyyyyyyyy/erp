@@ -18,7 +18,7 @@ import { Pill } from '../trade/common';
 // database functions as the list's Void button.
 
 export type Payment = { id: string; number: string; direction: 'in' | 'out'; amountMinor: number; currency: string; paidOn: string; method: string; customerInvoiceId: string | null; supplierInvoiceId: string | null; expenseId: string | null; targetNumber?: string | null; note: string | null; status: 'recorded' | 'void'; createdAt?: string };
-type Expense = { id: string; number: string; date: string; categoryId: string; supplierId: string | null; amountMinor: number; currency: string; note: string | null; status: 'recorded' | 'void'; createdAt?: string };
+type Expense = { id: string; number: string; date: string; categoryId: string; supplierId: string | null; amountMinor: number; currency: string; note: string | null; status: 'recorded' | 'void'; netMinor?: number; taxMinor?: number; vatDeductible?: boolean; vatClass?: string; vatDocumentRef?: string | null; createdAt?: string };
 type CustomerInvoice = { id: string; number: string; customerId: string };
 type SupplierInvoice = { id: string; number: string; supplierId: string };
 type Named = { id: string; name: string };
@@ -152,7 +152,10 @@ export function ExpensePage() {
       {voiding.message?.ok && <p className="notice">{voiding.message.text}</p>}
       <ErrorToast message={voiding.message && !voiding.message.ok ? voiding.message.text : null} onClose={voiding.clear} />
       <dl className="facts">
-        <div><dt>{tr('Amount')}</dt><dd className="amount">{money(e.amountMinor, e.currency)}</dd></div>
+        <div><dt>{(e.taxMinor ?? 0) > 0 ? tr('Total with VAT') : tr('Amount')}</dt><dd className="amount">{money(e.amountMinor, e.currency)}</dd></div>
+        {(e.taxMinor ?? 0) > 0 ? <div><dt>{e.vatDeductible ? tr('VAT (deducted)') : tr('VAT (part of the cost)')}</dt><dd className="amount">{money(e.taxMinor ?? 0, e.currency)}</dd></div> : null}
+        {e.vatDocumentRef ? <div><dt>{e.vatClass === 'import' ? tr('Customs declaration number') : tr('Supplier\'s e-invoice number')}</dt><dd><code>{e.vatDocumentRef}</code></dd></div> : null}
+        {e.vatClass && e.vatClass !== 'local' ? <div><dt>{tr('Kind of purchase')}</dt><dd>{e.vatClass === 'import' ? tr('Import (customs)') : tr('Capital asset (equipment, machinery)')}</dd></div> : null}
         <div><dt>{tr('Date')}</dt><dd>{formatDay(e.date, session.org)}</dd></div>
         <div><dt>{tr('Category')}</dt><dd>{category}</dd></div>
         {supplier && <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>}

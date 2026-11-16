@@ -6,6 +6,7 @@ import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
+import { billLineOut, billTotals, parsePurchaseVat, type BillLineOut, type BillLineRow, type BillRow } from '../../lib/vatRows';
 
 // Orders are immutable commitments. Receipt is a single database function that posts stock and audit atomically.
 export const purchasingRoutes = new Hono<AppEnv>();
@@ -359,38 +360,26 @@ purchasingRoutes.put('/order-approval', requirePermission('purchasing.orders.man
   );
 });
 
+// Bills are read with '*' so the code also answers before sql/087 is applied (then: no VAT, net = Σ round(qty × cost)).
 purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoices.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
+    .select('*')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
     .limit(250);
   if (error) throw error;
-  const invoices = (data ?? []) as {
-    id: string;
-    number: string;
-    supplier_id: string;
-    order_id: string;
-    invoice_date: string;
-    due_date: string;
-    currency: string;
-    created_at: string;
-  }[];
+  const invoices = (data ?? []) as BillRow[];
   const ids = invoices.map((i) => i.id);
-  const lineMap = new Map<string, { orderLineId: string; qty: number; unitCostMinor: number }[]>();
+  const lineMap = new Map<string, BillLineOut[]>();
   if (ids.length) {
     const { data: lines, error: lineError } = await userDb(c)
       .from('pur_supplier_invoice_lines')
-      .select('invoice_id,order_line_id,qty,unit_cost_minor')
+      .select('*')
       .eq('org_id', orgOf(c))
       .in('invoice_id', ids);
     if (lineError) throw lineError;
-    for (const l of (lines ?? []) as { invoice_id: string; order_line_id: string; qty: number; unit_cost_minor: number }[])
-      lineMap.set(l.invoice_id, [
-        ...(lineMap.get(l.invoice_id) ?? []),
-        { orderLineId: l.order_line_id, qty: Number(l.qty), unitCostMinor: Number(l.unit_cost_minor) },
-      ]);
+    for (const l of (lines ?? []) as BillLineRow[]) lineMap.set(l.invoice_id, [...(lineMap.get(l.invoice_id) ?? []), billLineOut(l)]);
   }
   return ok(
     c,
@@ -406,7 +395,7 @@ purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoice
         currency: i.currency,
         createdAt: i.created_at,
         lines,
-        totalMinor: lines.reduce((n, l) => n + l.qty * l.unitCostMinor, 0),
+        ...billTotals(i, lines),
       };
     }),
   );
@@ -415,21 +404,17 @@ purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoice
 // One purchase (supplier) invoice by id, same shape as the list (which holds the newest 250 only).
 purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.invoices.read'), async (c) => {
   const id = idParam(c);
-  const { data: i, error } = await userDb(c)
-    .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
-    .eq('org_id', orgOf(c))
-    .eq('id', id)
-    .maybeSingle();
+  const { data: bill, error } = await userDb(c).from('pur_supplier_invoices').select('*').eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
   if (error) throw error;
-  if (!i) throw new HttpError(404, 'Invoice not found', 'not_found');
+  if (!bill) throw new HttpError(404, 'Invoice not found', 'not_found');
+  const i = bill as BillRow;
   const { data: ls, error: le } = await userDb(c)
     .from('pur_supplier_invoice_lines')
-    .select('order_line_id,qty,unit_cost_minor')
+    .select('*')
     .eq('org_id', orgOf(c))
     .eq('invoice_id', id);
   if (le) throw le;
-  const raw = (ls ?? []) as { order_line_id: string; qty: number; unit_cost_minor: number }[];
+  const raw = (ls ?? []) as BillLineRow[];
   // The item on each line and the order's number, so the page needs no other (capped) list to show them.
   const [orderLines, order] = await Promise.all([
     raw.length
@@ -447,12 +432,7 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
   if (orderLines.error) throw orderLines.error;
   if (order.error) throw order.error;
   const itemOf = new Map(((orderLines.data ?? []) as { id: string; item_id: string }[]).map((l) => [l.id, l.item_id]));
-  const lines = raw.map((l) => ({
-    orderLineId: l.order_line_id,
-    itemId: itemOf.get(l.order_line_id) ?? null,
-    qty: Number(l.qty),
-    unitCostMinor: Number(l.unit_cost_minor),
-  }));
+  const lines = raw.map((l) => ({ ...billLineOut(l), itemId: itemOf.get(l.order_line_id) ?? null }));
   return ok(c, {
     id: i.id,
     number: i.number,
@@ -464,7 +444,7 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
     currency: i.currency,
     createdAt: i.created_at,
     lines,
-    totalMinor: lines.reduce((n, l) => n + l.qty * l.unitCostMinor, 0),
+    ...billTotals(i, lines),
   });
 });
 
@@ -522,17 +502,23 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
   const lines = (Array.isArray(body.lines) ? body.lines : [])
     .map((v) => {
       const l = v as Record<string, unknown>;
-      return { orderLineId: text(l.orderLineId), qty: Number(l.qty) };
+      // Optional VAT rate per line (sql/087): a rate id or "exempt"; omitted = the item's, else the company default.
+      const taxRateId = text(l.taxRateId);
+      if (taxRateId && taxRateId !== 'exempt' && !UUID_RE.test(taxRateId)) invalid('taxRateId must be a tax rate id or "exempt"');
+      return { orderLineId: text(l.orderLineId), qty: Number(l.qty), ...(taxRateId ? { taxRateId } : {}) };
     })
     .filter((l) => UUID_RE.test(l.orderLineId) && Number.isFinite(l.qty) && l.qty > 0);
   if (!UUID_RE.test(supplierId) || !UUID_RE.test(orderId) || !number || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate) || lines.length === 0)
     invalid('Supplier, received order, invoice number, date and billed quantities are required');
+  const vat = parsePurchaseVat(body.vat);
   const id = await callRpc<string>(userDb(c), 'pur_record_supplier_invoice', {
     p_supplier_id: supplierId,
     p_order_id: orderId,
     p_number: number,
     p_invoice_date: invoiceDate,
     p_lines: lines,
+    // only sent when given, so the call also works against a database without sql/087
+    ...(vat ? { p_vat: vat } : {}),
   });
   const { data, error } = await userDb(c)
     .from('pur_supplier_invoices')

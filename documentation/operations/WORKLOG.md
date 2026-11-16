@@ -11,6 +11,34 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-16 — VAT part 2: input VAT on supplier bills and expenses (`sql/087`)
+
+**Objective.** Build part 2 of [VAT_PLAN.md](../plans/VAT_PLAN.md) as revised after the accountant review (Ben: "A"), with the second
+review's points: a bill's VAT as printed, capital assets identified, a way to record import VAT.
+
+**Actions Completed.**
+- `sql/087_vat_on_purchases.sql`: bill lines store a copied rate, net and VAT (trigger); bills store net, computed VAT, VAT as printed
+  (tolerance 1 minor unit per line, at least 5) and gross; expenses store net and VAT as printed (amount stays the gross). Both store
+  deductible, kind of purchase (local, capital, import), document reference and supplier tax number, guarded against edits. New
+  `fin__purchase_vat` checks them (deductible needs registration, VAT and a reference). `pur_record_supplier_invoice` and
+  `fin_record_expense` take `p_vat` (old signatures dropped; sql/068's positional call still resolves). `core_set_vat` records
+  `vat_from`; companies already registered get the date of their switch-on audit row. Posting: deductible VAT to 1811, otherwise
+  into cost. Owed on a bill = gross in `fin_record_payment` and `insights_home` (copied from sql/086, checked identical by script).
+- `sql/tests/083_vat_on_purchases.sql` (new, 9 groups).
+- API: bills and expenses return net, VAT, computed VAT, gross and the VAT details (read with `*`, so they answer before the migration);
+  create accepts per-line `taxRateId` and a `vat` object (sent only when given); open items use the bill's gross; `GET /core/org/vat`
+  returns `vatFrom`; `VAT_MISMATCH`, `VAT_NOT_DEDUCTIBLE` answer 409. `vatRows.ts` moved to `apps/api/src/lib/` (shared by sales,
+  purchasing, finance). Tests in `apps/api/test/vat.test.ts`.
+- Web: a shared "VAT on this purchase" block (`finance/PurchaseVatFields.tsx`) in the bill and expense forms; VAT per line on bills;
+  the bill and expense pages show the VAT, whether it is deducted, the reference and the kind; Arabic machine drafts.
+- Plan: "Part 2 as built". The second review message arrived cut off (3 of 5 points); the other two are not known.
+
+**Database / System Result.** None on live. `sql/087` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 85 migrations): 82 of 82 SQL tests pass. Typecheck clean (shared, API, web against this
+branch's shared package, temporary configs removed); tests: shared 81, API 569, web 144. `biome ci .`: exit 0, no errors (152 warnings
+as before). Not verified: a dry run on live, the screens in a browser, the Arabic.
+
 ## 2026-11-16 — `sql/086` applied to live; accountant review of the VAT plan received
 
 **Objective.** Put VAT part 1 live after PR #55 was merged, and take in the accountant review
