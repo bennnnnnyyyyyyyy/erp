@@ -1,3 +1,5 @@
+ 
+
 # ADR-0002: Multi-tenancy model
 
 **Status:** Accepted, as amended by ADR-0003 (confirmed against the code 11 Nov 2026)
@@ -31,7 +33,7 @@ customer on. Retrofitting tenancy into an ERP after the fact is one of the most 
   rule in `agents.md`, and (planned) a test helper that runs every route as two orgs and checks
   neither sees the other's data.
 - A very large or regulated customer who needs a separate database can be served later with a
-  dedicated Supabase project running the same migrations.
+  dedicated Supabase project running the same migrations. (prepare for that)
 
 ## Alternatives considered
 
