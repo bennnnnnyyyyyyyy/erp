@@ -64,15 +64,29 @@ describe('stored VAT figures', () => {
     });
   });
   it('computes a line the old way before sql/086 (no VAT)', () => {
-    expect(lineOut({ qty: 1.5, unit_price_minor: 101 })).toMatchObject({ netMinor: 152, taxMinor: 0, grossMinor: 152, taxRate: 0, taxRateId: null });
+    expect(lineOut({ qty: 1.5, unit_price_minor: 101 })).toMatchObject({
+      netMinor: 152,
+      taxMinor: 0,
+      grossMinor: 152,
+      taxRate: 0,
+      taxRateId: null,
+    });
   });
   it('takes the document totals as stored, else sums the lines', () => {
     const lines = [lineOut({ qty: 1, unit_price_minor: 100, net_minor: 100, tax_minor: 14 })];
-    expect(docTotals({ net_minor: 2149, tax_minor: 193, gross_minor: 2342 }, lines)).toEqual({ netMinor: 2149, taxMinor: 193, grossMinor: 2342 });
+    expect(docTotals({ net_minor: 2149, tax_minor: 193, gross_minor: 2342 }, lines)).toEqual({
+      netMinor: 2149,
+      taxMinor: 193,
+      grossMinor: 2342,
+    });
     expect(docTotals({}, lines)).toEqual({ netMinor: 100, taxMinor: 14, grossMinor: 114 });
   });
   it('reads a note as stored, else its total is the gross with no VAT', () => {
-    expect(noteTotals({ total_minor: 380, net_minor: 333, tax_minor: 47, gross_minor: 380 })).toEqual({ netMinor: 333, taxMinor: 47, grossMinor: 380 });
+    expect(noteTotals({ total_minor: 380, net_minor: 333, tax_minor: 47, gross_minor: 380 })).toEqual({
+      netMinor: 333,
+      taxMinor: 47,
+      grossMinor: 380,
+    });
     expect(noteTotals({ total_minor: 250 })).toEqual({ netMinor: 250, taxMinor: 0, grossMinor: 250 });
   });
 });
