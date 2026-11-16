@@ -30,7 +30,10 @@ kind of purchase per bill line, 9-digit tax numbers, exact tolerance wording, pa
   mid-month warning; the bill form has a kind per line; Arabic machine drafts (two strings for the dropped automatic rate removed).
 - Plan: section 14.
 
-**Database / System Result.** None on live. `sql/088` is not applied.
+**Database / System Result.** Dry run of `sql/088` on live inside a rolled-back transaction: `bills_off` 0, `vat_from_not_first` 0,
+`users_save_rate` true, `users_set_vat` true. Then applied to live by Ben via CLI: `users_save_rate` true, `users_remove_rate` true,
+`anon_save_rate` false, `vat_with_shopify` 0. `sql/087` had already been applied and test 083 passed on live earlier the same day (entry
+below; the reviewer's question about it was answered from these records). Tests 082, 083 and 084 on live: ALL TESTS PASSED (everything rolled back). PR #59.
 
 **Safety Status.** Local SQL run (PGlite, all 86 migrations): 83 of 83 SQL tests pass. Typecheck clean (shared, API, web against this
 branch's shared package; temporary configs removed); tests: shared 81, API 575, web 144. `biome ci .`: exit 0 (152 warnings, as before).
