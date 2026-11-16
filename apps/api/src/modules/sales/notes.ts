@@ -6,7 +6,7 @@ import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
-import { lineOut, noteTotals, type LineOut, type LineRow } from './vatRows';
+import { lineOut, noteTotals, type LineOut, type LineRow } from '../../lib/vatRows';
 
 // Credit and debit notes with approval (sql/037, documentation/plans/ETA_EINVOICING_PLAN.md slice A2). The rules (never credit more
 // than was invoiced, a different person approves, no voiding an invoice with active notes) live in the database functions; these

@@ -1,8 +1,8 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
 **Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Parts 2-5 revised after the accountant review (section 13) and not built: 2 bills and expenses with input VAT,
-3 VAT summary in the return's layout, 4 settlement, 5 prices that include VAT.
+(`sql/086`, 16 Nov). Part 2 built 16 Nov (`sql/087`, not applied to live). Parts 3-5 not built: 3 VAT summary in the return's layout,
+4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
 **Decision record:** [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) (from section 12, accepted 16 Nov).
@@ -194,6 +194,22 @@ section 13):
    reminder (never hard-coded).
 5. **Prices that include VAT** (per company, or per price list): net = gross ÷ (1 + rate) with its own rounding rule, before online store
    orders are invoiced.
+
+**Part 2 as built (16 Nov, `sql/087`), with the second accountant review (VAT as printed, capital assets, imports):**
+- A bill's VAT is taken **as printed** on the supplier's invoice (`tax_minor`); the VAT worked out from the line rates is kept beside it
+  (`line_tax_minor`). The printed figure may differ by at most 1 minor unit per line, at least 5 (`VAT_MISMATCH` beyond that; the
+  tolerance is ours, to confirm). Left empty, the computed VAT is used. Expenses: the total paid and the VAT as printed; an optional
+  rate checks the VAT within 5 minor units.
+- **Kind of purchase** (`vat_class`) on bills and expenses: `local` goods and services, `capital` asset, `import`. Part 3 splits
+  purchases by it.
+- **Imports**: recorded as an expense of kind `import`, with the customs declaration number as the reference and the customs
+  authority's tax number typed in. No separate customs document.
+- **Deductible** (`vat_deductible`): needs the company VAT registered, VAT above zero and a reference (`VAT_NOT_DEDUCTIBLE`
+  otherwise); defaults to that, and can be switched off. Non-deductible VAT is cost: on a bill it goes to purchase price differences
+  (334), on an expense to the expense account.
+- `settings.vat_from`: set the first time VAT is switched on (companies already registered: the day of that audit row).
+- What is owed on a bill is its gross (payment check, owner insights, open items). Amounts and VAT of bills and expenses cannot be edited.
+- Not yet: the deductible share for companies with both taxable and exempt sales (partial deduction); a credit note from a supplier.
 
 ## 11. Open questions
 

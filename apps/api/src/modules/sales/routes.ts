@@ -9,7 +9,7 @@ import { requirePermission } from '../../middleware/tenant';
 import { createBostaDelivery, type ShipmentInfo } from '../../lib/shipping/bosta';
 import { billingFor } from './billing';
 import { registerNoteRoutes } from './notes';
-import { docTotals, lineOut, noteTotals, type LineOut, type LineRow } from './vatRows';
+import { docTotals, lineOut, noteTotals, type LineOut, type LineRow } from '../../lib/vatRows';
 
 export const salesRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

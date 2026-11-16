@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import app from '../src/index';
 import { HttpError } from '../src/lib/errors';
 import { callRpc } from '../src/lib/rpc';
-import { docTotals, lineOut, noteTotals } from '../src/modules/sales/vatRows';
+import { billLineOut, billTotals, docTotals, lineOut, noteTotals, parsePurchaseVat } from '../src/lib/vatRows';
 
 // VAT part 1 (sql/086). The rules (line maths, rates, posting, amount owed) are proven in sql/tests/082; here: the routes need a
 // signed-in user, the stored figures are read (with the old computation when the database has no VAT columns yet), and the new
@@ -88,5 +88,61 @@ describe('stored VAT figures', () => {
       grossMinor: 380,
     });
     expect(noteTotals({ total_minor: 250 })).toEqual({ netMinor: 250, taxMinor: 0, grossMinor: 250 });
+  });
+});
+
+describe('purchase VAT (sql/087)', () => {
+  const bill = {
+    id: 'b',
+    number: 'S-1',
+    supplier_id: 's',
+    order_id: 'o',
+    invoice_date: '2026-11-16',
+    due_date: '2026-11-16',
+    currency: 'EGP',
+    created_at: '',
+  };
+  it('reads a bill as stored: the printed VAT, with the computed one beside it', () => {
+    const lines = [
+      billLineOut({ invoice_id: 'b', order_line_id: 'l', qty: 3, unit_cost_minor: 333, net_minor: 999, tax_minor: 140, tax_rate: 14 }),
+    ];
+    expect(
+      billTotals(
+        {
+          ...bill,
+          net_minor: 999,
+          line_tax_minor: 140,
+          tax_minor: 141,
+          gross_minor: 1140,
+          vat_deductible: true,
+          vat_document_ref: 'ETA-1',
+        },
+        lines,
+      ),
+    ).toMatchObject({
+      netMinor: 999,
+      taxMinor: 141,
+      computedTaxMinor: 140,
+      grossMinor: 1140,
+      totalMinor: 1140,
+      vatDeductible: true,
+      vatClass: 'local',
+    });
+  });
+  it('computes a bill the old way before sql/087 (rounded per line, no VAT)', () => {
+    const lines = [billLineOut({ invoice_id: 'b', order_line_id: 'l', qty: 1.5, unit_cost_minor: 101 })];
+    expect(billTotals(bill, lines)).toMatchObject({ netMinor: 152, taxMinor: 0, grossMinor: 152, vatDeductible: false });
+  });
+  it('checks the vat object', () => {
+    expect(parsePurchaseVat(undefined)).toBeNull();
+    expect(parsePurchaseVat({})).toBeNull();
+    expect(parsePurchaseVat({ taxMinor: 140, vatClass: 'import', documentRef: ' DECL-7 ', deductible: true })).toEqual({
+      taxMinor: 140,
+      vatClass: 'import',
+      documentRef: 'DECL-7',
+      deductible: true,
+    });
+    for (const bad of [{ taxMinor: -1 }, { taxMinor: 1.5 }, { vatClass: 'rent' }, { deductible: 'yes' }, { taxRateId: 'x' }, []])
+      expect(() => parsePurchaseVat(bad)).toThrow();
   });
 });

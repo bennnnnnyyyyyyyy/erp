@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
-import { formatMoney, hasPermission, type TreasuryAccount } from '@erp/shared';
+import { formatMoney, hasPermission, type TreasuryAccount, type VatSettings } from '@erp/shared';
+import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseVat } from './PurchaseVatFields';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
@@ -64,6 +65,9 @@ export function ExpensesPage() {
   const [supplierId, setSupplierId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  // VAT as printed on the receipt (sql/087); the amount stays the total paid.
+  const vat = useLoad(() => api<VatSettings>('/v1/core/org/vat').catch(() => null));
+  const [vatIn, setVatIn] = useState<PurchaseVat>(emptyPurchaseVat);
   // "Paid now" (decision D7, 9 Nov 2026): record the payment with the expense. With treasury on, the money comes from a cash box or bank
   // account, starting on the one this person used last; without treasury, from cash or bank.
   const canPay = hasPermission(session.permissions, 'finance.entries.manage');
@@ -97,7 +101,7 @@ export function ExpensesPage() {
               {categories.data.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label>{tr('Amount')}<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
+          <label>{tr('Total paid (with VAT)')}<input inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
           <label>{tr('Supplier (optional)')}
             <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
               <option value="">{tr('None')}</option>
@@ -106,6 +110,7 @@ export function ExpensesPage() {
           </label>
         </div>
         <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
+        <PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="expense" />
         {canPay ? (
           <div className="form-row">
             <label className="flex items-center gap-2"><input type="checkbox" checked={paidNow} onChange={(e) => setPaidNow(e.target.checked)} />{tr('Paid now')}</label>
@@ -122,7 +127,7 @@ export function ExpensesPage() {
         ) : null}
         <div className="form-row">
           <Button disabled={busy || !categoryId || toMinor(amount) <= 0} onClick={() => run(async () => {
-            const made = await api<{ id: string; number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note }) });
+            const made = await api<{ id: string; number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note, vat: purchaseVatPayload(vatIn) }) });
             if (!paidNow) return trf('Expense {number} recorded.', { number: made.number });
             // The payment is a second step: if it is refused, the expense stays recorded and unpaid, and the message says so.
             const box = treasuryOn ? payBoxes.find((b) => b.id === fromValue) : undefined;
@@ -136,7 +141,7 @@ export function ExpensesPage() {
             }
             rememberBox('expense', fromValue);
             return trf('Expense {number} recorded and paid.', { number: made.number });
-          }, () => { setAmount(''); setNote(''); expenses.reload(); })}>{busy ? tr('Saving…') : paidNow ? tr('Record expense and payment') : tr('Record expense')}</Button>
+          }, () => { setAmount(''); setNote(''); setVatIn(emptyPurchaseVat); expenses.reload(); })}>{busy ? tr('Saving…') : paidNow ? tr('Record expense and payment') : tr('Record expense')}</Button>
           <label>{tr('New category')}<input placeholder={tr('e.g. Rent')} value={newCategory} onChange={(e) => setNewCategory(e.target.value)} /></label>
           <Button variant="outline" disabled={busy || !newCategory.trim()} onClick={() => run(async () => {
             await api('/v1/finance/categories', { method: 'POST', body: JSON.stringify({ name: newCategory }) });

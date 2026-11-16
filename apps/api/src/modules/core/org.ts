@@ -145,6 +145,8 @@ orgRoutes.get('/vat', requirePermission('core.org.read'), async (c) => {
   return ok(c, {
     vatRegistered: s.vatRegistered ?? false,
     defaultVatRateId: s.defaultVatRateId ?? null,
+    /** The first day VAT applies (sql/087), or null. */
+    vatFrom: typeof org.settings?.vat_from === 'string' ? org.settings.vat_from : null,
     rates: ((data ?? []) as { id: string; sub_type: string; rate: number | string; label: string; is_default: boolean }[]).map((r) => ({
       id: r.id,
       subType: r.sub_type,

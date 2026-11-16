@@ -9,6 +9,8 @@ export const ERRORS_AR: Record<string, string> = {
   'An organization needs at least one owner': 'يجب أن يكون للشركة مالك واحد على الأقل',
   'Billed quantity cannot exceed received quantity': 'لا يمكن أن تتجاوز الكمية المفوترة الكمية المستلمة',
   'Both accounts must hold the same currency': 'يجب أن يكون الحسابان بنفس العملة',
+  'The VAT entered does not match the rates on the lines': 'الضريبة المُدخلة لا تطابق النسب على البنود',
+  'This VAT cannot be deducted': 'لا يمكن خصم هذه الضريبة',
   'Choose the default VAT rate in Settings, then try again': 'اختر نسبة ضريبة القيمة المضافة الافتراضية من الإعدادات ثم أعد المحاولة',
   'Cannot return more than was delivered and not yet returned': 'لا يمكن إرجاع أكثر مما سُلّم ولم يُرجع بعد',
   'Choose an organization first': 'اختر الشركة أولًا',

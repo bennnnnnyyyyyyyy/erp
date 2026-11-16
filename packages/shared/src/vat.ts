@@ -20,6 +20,8 @@ export function vatLine(qty: number, unitPriceMinor: number, ratePercent: number
 export type VatSettings = {
   vatRegistered: boolean;
   defaultVatRateId: string | null;
+  /** The first day VAT applies (sql/087): set when VAT is first switched on. Optional while an older API answers. */
+  vatFrom?: string | null;
   rates: { id: string; subType: string; rate: number; label: string; isDefault: boolean }[];
 };
 
