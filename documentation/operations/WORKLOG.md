@@ -19,7 +19,9 @@ and agents.md (EGP). Ben: "existing companies keep everything", "yes write 090".
 **Actions Completed.** `sql/090_core_default_currency_egp.sql`: sets the column default back to `EGP`. No existing company is changed.
 Its final check shows the default and the companies per currency (information only).
 
-**Database / System Result.** None on live yet.
+**Database / System Result.** Dry run on live (rolled back): default `'EGP'::bpchar`. Applied to live by Ben via CLI: default now
+`'EGP'::bpchar`; companies by currency EGP 12, USD 1. The USD one (read-only check) is the early "Test Organization" (27 Oct) with no
+invoices, bills, expenses or stock moves; left as is (its owner can switch it in Settings).
 
 **Safety Status.** Local run (PGlite, all 88 migrations): 84 of 84 SQL tests pass. A dry-run file (rolled back) is ready. Companies that
 already use USD by mistake, if any, are a separate per-company decision (changing the currency of a company with documents is not safe).
