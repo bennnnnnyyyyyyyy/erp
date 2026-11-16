@@ -33,7 +33,8 @@ review's points: a bill's VAT as printed, capital assets identified, a way to re
   the bill and expense pages show the VAT, whether it is deducted, the reference and the kind; Arabic machine drafts.
 - Plan: "Part 2 as built". The second review message arrived cut off (3 of 5 points); the other two are not known.
 
-**Database / System Result.** None on live. `sql/087` is not applied.
+**Database / System Result.** `sql/087` applied to live 16 Nov by Ben via CLI. Last verification row: `users_bill` true, `users_expense`
+true, `anon_expense` false, `users_helper` false (the first query's output was not shown). Test 083 on live: not yet run.
 
 **Safety Status.** Local SQL run (PGlite, all 85 migrations): 82 of 82 SQL tests pass. Typecheck clean (shared, API, web against this
 branch's shared package, temporary configs removed); tests: shared 81, API 569, web 144. `biome ci .`: exit 0, no errors (152 warnings
