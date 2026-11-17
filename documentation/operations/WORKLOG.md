@@ -23,7 +23,9 @@ API: `GET/POST /v1/purchasing/supplier-invoices/:id/notes`, `POST /v1/purchasing
 `creditedMinor`, `debitedMinor` and each line's `billLineId`; open items net bills of approved supplier notes. Web: notes section on the bill
 page; payments against a bill use the amount after notes. Arabic drafts.
 
-**Database / System Result.** None on live. `sql/094` is not applied.
+**Database / System Result.** Dry run on live (rolled back): `tables_with_rls` 3. Applied to live by Ben via CLI; the output was cut off, so
+a read-only check by Claude afterwards: 3 tables with RLS, `users_submit` true, `anon_submit` false, the VAT summary includes supplier
+notes. Tests 089 and 085 on live: not yet run. PR #67.
 
 **Safety Status.** Local SQL run (PGlite, all 92 migrations): 88 of 88. Typecheck clean; tests: shared 82, API 599, web 144. `biome ci .`:
 exit 0. Not verified: dry run on live, browser. Returned goods (stock out to the supplier) are not switched on.
