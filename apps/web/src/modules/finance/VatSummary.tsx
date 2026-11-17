@@ -177,14 +177,14 @@ export function VatSummaryPage() {
 
           <dl className="facts">
             <div><dt>{tr('Output VAT')}</dt><dd className="amount">{money(s.outputTaxMinor)}</dd></div>
-            <div><dt>{tr('Input VAT deducted')}</dt><dd className="amount">−{money(s.inputTaxMinor)}</dd></div>
+            <div><dt>{tr('Input VAT deducted')}</dt><dd className="amount">{s.inputTaxMinor > 0 ? '−' : ''}{money(s.inputTaxMinor)}</dd></div>
             <div>
               <dt>{s.dueMinor >= 0 ? tr('VAT due') : tr('VAT credit to carry forward')}</dt>
               <dd className="amount"><strong>{money(Math.abs(s.dueMinor))}</strong></dd>
             </div>
           </dl>
 
-          {wholeMonth && session.modules.includes('accounting') && hasPermission(session.permissions, 'accounting.ledger.view') ? (
+          {wholeMonth && s.vatRegistered && session.modules.includes('accounting') && hasPermission(session.permissions, 'accounting.ledger.view') ? (
             <VatReturnPanel key={shown.from} month={shown.from} />
           ) : null}
 
