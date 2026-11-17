@@ -99,7 +99,7 @@ export function VatSummaryPage() {
         <>
           <p className="muted small">
             {trf('{from} to {to}, in {currency}.', { from: formatDay(s.from, session.org), to: formatDay(s.to, session.org), currency: s.currency })}{' '}
-            {s.vatFrom ? trf('VAT registered from {date}.', { date: formatDay(s.vatFrom, session.org) }) : null}
+            {s.vatRegistered && s.vatFrom ? trf('VAT registered from {date}.', { date: formatDay(s.vatFrom, session.org) }) : null}
           </p>
           {s.warnings.map((w) => (
             <p key={w} className={w === 'partial_deduction' || w === 'before_vat_from' ? 'error notice' : 'notice'}>
