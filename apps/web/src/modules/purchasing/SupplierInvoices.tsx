@@ -13,6 +13,7 @@ import { RecordHistory } from '../../components/RecordHistory';
 import { Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { UnpaidBills } from './UnpaidBills';
+import { SupplierNotes } from './SupplierNotes';
 import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseVat } from '../finance/PurchaseVatFields';
 
 import { tr, trf } from '../../lib/i18n';
@@ -20,8 +21,8 @@ type Summary = { orderId:string;number:string;supplierId:string;currency:string;
 type Supplier = {id:string;name:string};
 type Item = {id:string;sku:string;name:string};
 // netMinor / taxMinor (as printed) / computedTaxMinor / grossMinor and the VAT details: sql/087. Optional while an older API answers.
-type BillLine = {orderLineId:string;qty:number;unitCostMinor:number;taxRate?:number;netMinor?:number;taxMinor?:number;vatClass?:string;costVatMinor?:number};
-type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;dueDate?:string;currency:string;createdAt:string;totalMinor:number;netMinor?:number;taxMinor?:number;computedTaxMinor?:number;grossMinor?:number;vatDeductible?:boolean;vatClass?:string;vatDocumentRef?:string|null;supplierTaxNumber?:string|null;lines:BillLine[]};
+type BillLine = {billLineId?:string;orderLineId:string;qty:number;unitCostMinor:number;taxRate?:number;netMinor?:number;taxMinor?:number;vatClass?:string;costVatMinor?:number};
+type Invoice = {id:string;number:string;supplierId:string;orderId:string;invoiceDate:string;dueDate?:string;currency:string;createdAt:string;totalMinor:number;netMinor?:number;taxMinor?:number;computedTaxMinor?:number;grossMinor?:number;vatDeductible?:boolean;vatClass?:string;vatDocumentRef?:string|null;supplierTaxNumber?:string|null;creditedMinor?:number;debitedMinor?:number;lines:BillLine[]};
 const money=(amountMinor:number,currency:string)=>formatMoney({amountMinor,currency});
 
 export function SupplierInvoices(){
@@ -91,6 +92,10 @@ export function SupplierInvoicePage() {
   const order = { number: inv.orderNumber };
   // VAT (sql/087): shown only when the bill carries any, so bills without VAT look as before.
   const hasVat = (inv.taxMinor ?? 0) > 0 || inv.lines.some((l) => (l.taxRate ?? 0) > 0);
+  // Approved supplier notes change what is owed (sql/094); the bill itself is never edited.
+  const credited = inv.creditedMinor ?? 0;
+  const debited = inv.debitedMinor ?? 0;
+  const due = inv.totalMinor - credited + debited;
   const supplier = suppliers.data.find((s) => s.id === inv.supplierId)?.name ?? '—';
   const itemOf = (orderLineId: string) => {
     const itemId = inv.lines.find((l) => l.orderLineId === orderLineId)?.itemId;
@@ -112,6 +117,9 @@ export function SupplierInvoicePage() {
         {hasVat ? <div><dt>{inv.vatDeductible ? tr('VAT (deducted)') : tr('VAT (added to the cost of the goods)')}</dt><dd className="amount">{money(inv.taxMinor ?? 0, inv.currency)}</dd></div> : null}
         {hasVat && inv.computedTaxMinor !== undefined && inv.computedTaxMinor !== inv.taxMinor ? <div><dt>{tr('VAT worked out from the lines')}</dt><dd className="amount">{money(inv.computedTaxMinor, inv.currency)}</dd></div> : null}
         <div><dt>{hasVat ? tr('Total with VAT') : tr('Total')}</dt><dd className="amount">{money(inv.totalMinor, inv.currency)}</dd></div>
+        {credited > 0 ? <div><dt>{tr('Credited')}</dt><dd className="amount">−{money(credited, inv.currency)}</dd></div> : null}
+        {debited > 0 ? <div><dt>{tr('Debited')}</dt><dd className="amount">+{money(debited, inv.currency)}</dd></div> : null}
+        {credited > 0 || debited > 0 ? <div><dt>{tr('Amount owed after notes')}</dt><dd className="amount">{money(due, inv.currency)}</dd></div> : null}
         {inv.vatDocumentRef ? <div><dt>{inv.vatClass === 'import' ? tr('Customs declaration number') : tr('Supplier\'s e-invoice number')}</dt><dd><code>{inv.vatDocumentRef}</code></dd></div> : null}
         {inv.supplierTaxNumber ? <div><dt>{tr('Supplier\'s tax number')}</dt><dd><code>{inv.supplierTaxNumber}</code></dd></div> : null}
         {inv.vatClass && inv.vatClass !== 'local' ? <div><dt>{tr('Kind of purchase')}</dt><dd>{inv.vatClass === 'import' ? tr('Import (customs)') : inv.vatClass === 'mixed' ? tr('Mixed (each line has its own)') : tr('Capital asset (equipment, machinery)')}</dd></div> : null}
@@ -127,7 +135,8 @@ export function SupplierInvoicePage() {
           <tr><td colSpan={hasVat ? 5 : 3} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
         </tbody>
       </table></div>
-      <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={inv.totalMinor} currency={inv.currency} />
+      <SupplierNotes billId={inv.id} currency={inv.currency} lines={inv.lines} itemOf={itemOf} onChanged={invoice.reload} />
+      <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={due} currency={inv.currency} />
       <RecordHistory key={inv.id} id={inv.id} />
     </section>
   );

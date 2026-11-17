@@ -453,6 +453,7 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
     createdAt: i.created_at,
     lines,
     ...billTotals(i, lines),
+    ...(await supplierNoteTotals(c, i.id)),
   });
 });
 
@@ -558,3 +559,145 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
     201,
   );
 });
+
+// ---- supplier credit and debit notes (sql/094). The limits, approval rules and posting live in the database functions.
+type PurNoteRow = Record<string, unknown> & {
+  id: string;
+  number: string;
+  kind: string;
+  status: string;
+  currency: string;
+  requester_id: string;
+};
+purchasingRoutes.get('/supplier-invoices/:id/notes', requirePermission('purchasing.notes.read'), async (c) => {
+  const id = idParam(c);
+  const db = userDb(c);
+  const { data, error } = await db
+    .from('pur_notes')
+    .select('*')
+    .eq('org_id', orgOf(c))
+    .eq('bill_id', id)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const notes = (data ?? []) as PurNoteRow[];
+  const lines = new Map<string, unknown[]>();
+  if (notes.length) {
+    const { data: ls, error: le } = await db
+      .from('pur_note_lines')
+      .select('*')
+      .eq('org_id', orgOf(c))
+      .in(
+        'note_id',
+        notes.map((n) => n.id),
+      );
+    if (le) throw le;
+    for (const l of (ls ?? []) as Record<string, unknown>[]) {
+      const k = String(l.note_id);
+      lines.set(k, [
+        ...(lines.get(k) ?? []),
+        {
+          billLineId: l.bill_line_id,
+          qty: Number(l.qty),
+          unitCostMinor: Number(l.unit_cost_minor),
+          taxRate: Number(l.tax_rate),
+          netMinor: Number(l.net_minor),
+          taxMinor: Number(l.tax_minor),
+        },
+      ]);
+    }
+  }
+  return ok(
+    c,
+    notes.map((n) => ({
+      id: n.id,
+      number: n.number,
+      kind: n.kind,
+      status: n.status,
+      currency: n.currency,
+      reason: n.reason,
+      supplierRef: n.supplier_ref ?? null,
+      vatDocumentRef: n.vat_document_ref ?? null,
+      netMinor: Number(n.net_minor),
+      taxMinor: Number(n.tax_minor),
+      grossMinor: Number(n.gross_minor),
+      vatDeductible: n.vat_deductible === true,
+      requesterId: n.requester_id,
+      decidedBy: n.decided_by ?? null,
+      decidedAt: n.decided_at ?? null,
+      selfDecided: n.self_decided === true,
+      createdAt: n.created_at,
+      lines: lines.get(n.id) ?? [],
+    })),
+  );
+});
+purchasingRoutes.post('/supplier-invoices/:id/notes', requirePermission('purchasing.notes.create'), async (c) => {
+  const id = idParam(c);
+  const b = await jsonBody(c);
+  const kind = text(b.kind);
+  if (kind !== 'credit' && kind !== 'debit') invalid('kind must be credit or debit');
+  const reason = text(b.reason);
+  if (!reason || reason.length > 500) invalid('A reason of up to 500 characters is required');
+  const lines = (Array.isArray(b.lines) ? b.lines : []).map((v) => {
+    const l = v as Record<string, unknown>;
+    const cost = l.unitCostMinor === undefined || l.unitCostMinor === null ? undefined : Number(l.unitCostMinor);
+    return { billLineId: text(l.billLineId), qty: Number(l.qty), ...(cost === undefined ? {} : { unitCostMinor: cost }) };
+  });
+  if (
+    !lines.length ||
+    lines.some(
+      (l) =>
+        !UUID_RE.test(l.billLineId) ||
+        !Number.isFinite(l.qty) ||
+        l.qty <= 0 ||
+        (l.unitCostMinor !== undefined && (!Number.isInteger(l.unitCostMinor) || l.unitCostMinor < 0)),
+    )
+  )
+    invalid('Each line needs a bill line, a quantity above zero and, if given, a whole unit cost');
+  const vat = parsePurchaseVat(b.vat);
+  const made = await callRpc<unknown>(userDb(c), 'pur_submit_note', {
+    p_bill_id: id,
+    p_kind: kind,
+    p_reason: reason,
+    p_supplier_ref: text(b.supplierRef) || null,
+    p_lines: lines,
+    p_vat: vat ? { taxMinor: vat.taxMinor, documentRef: vat.documentRef } : null,
+  });
+  return ok(c, made, 201);
+});
+for (const [action, decision] of [
+  ['approve', 'approved'],
+  ['reject', 'rejected'],
+] as const) {
+  purchasingRoutes.post(`/notes/:id/${action}`, requirePermission('purchasing.notes.approve'), async (c) => {
+    const id = idParam(c);
+    const comment = text((await jsonBody(c)).comment) || null;
+    await callRpc<void>(userDb(c), 'pur_decide_note', { p_note_id: id, p_decision: decision, p_comment: comment });
+    return ok(c, { id, status: decision });
+  });
+}
+purchasingRoutes.post('/notes/:id/cancel', requirePermission('purchasing.notes.create'), async (c) => {
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'pur_cancel_note', { p_note_id: id });
+  return ok(c, { id, status: 'cancelled' });
+});
+
+// Approved supplier notes on a bill (sql/094): what was credited and debited. Before that migration: none.
+async function supplierNoteTotals(c: Context<AppEnv>, billId: string) {
+  const { data, error } = await userDb(c)
+    .from('pur_notes')
+    .select('kind, gross_minor')
+    .eq('org_id', orgOf(c))
+    .eq('bill_id', billId)
+    .eq('status', 'approved');
+  if (error) {
+    if (isMissingSchema(error)) return { creditedMinor: 0, debitedMinor: 0 };
+    throw error;
+  }
+  let creditedMinor = 0;
+  let debitedMinor = 0;
+  for (const n of (data ?? []) as { kind: string; gross_minor: number }[]) {
+    if (n.kind === 'credit') creditedMinor += Number(n.gross_minor);
+    else debitedMinor += Number(n.gross_minor);
+  }
+  return { creditedMinor, debitedMinor };
+}

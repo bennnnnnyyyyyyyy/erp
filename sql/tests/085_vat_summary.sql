@@ -108,8 +108,9 @@ begin
   if (j ->> 'outputTaxMinor')::bigint <> 1360 or (j ->> 'inputTaxMinor')::bigint <> 1441 or (j ->> 'dueMinor')::bigint <> -81 then
     raise exception 'FAIL S1c: totals % / % / %, expected 1360 / 1441 / -81', j ->> 'outputTaxMinor', j ->> 'inputTaxMinor', j ->> 'dueMinor';
   end if;
-  -- warnings: partial deduction (taxable and exempt sales), another currency (1), always the supplier credit note label; not before VAT
-  if not (j -> 'warnings' ? 'partial_deduction' and j -> 'warnings' ? 'other_currency' and j -> 'warnings' ? 'excludes_supplier_credit_notes')
+  -- warnings: partial deduction (taxable and exempt sales), another currency (1); not before VAT
+  -- (sql/094: supplier notes are included, so the 'excludes_supplier_credit_notes' warning no longer appears)
+  if not (j -> 'warnings' ? 'partial_deduction' and j -> 'warnings' ? 'other_currency') or j -> 'warnings' ? 'excludes_supplier_credit_notes'
      or j -> 'warnings' ? 'before_vat_from' or j -> 'warnings' ? 'not_registered' or (j ->> 'otherCurrencyDocuments')::int <> 1 then
     raise exception 'FAIL S1d: warnings %', j -> 'warnings';
   end if;

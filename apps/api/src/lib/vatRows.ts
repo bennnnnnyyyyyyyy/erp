@@ -91,6 +91,7 @@ export type BillRow = {
   supplier_tax_number?: string | null;
 };
 export type BillLineRow = {
+  id?: string;
   invoice_id: string;
   order_line_id: string;
   qty: number | string;
@@ -104,6 +105,8 @@ export type BillLineRow = {
   cost_vat_to?: string | null;
 };
 export type BillLineOut = {
+  /** The bill line's own id (sql/094: supplier notes refer to it). */
+  billLineId?: string;
   orderLineId: string;
   qty: number;
   unitCostMinor: number;
@@ -122,6 +125,7 @@ export function billLineOut(l: BillLineRow): BillLineOut {
   const qty = Number(l.qty);
   const unitCostMinor = Number(l.unit_cost_minor);
   return {
+    ...(l.id ? { billLineId: l.id } : {}),
     orderLineId: l.order_line_id,
     qty,
     unitCostMinor,

@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-17 — Supplier credit and debit notes (`sql/094`)
+
+**Objective.** VAT plan section 16 (Ben: "go"; long term: data model ready for returned goods, money first). Removes the VAT summary's
+"excludes supplier credit notes" gap.
+
+**Actions Completed.** `sql/094_pur_supplier_notes.sql` (tables, request / decide / cancel functions with the D1/D1c self-approval rule,
+posting on approval, `pur__bill_due`; payment check, owner insights and VAT summary recreated from their latest versions, checked identical
+by script). `sql/tests/089_pur_supplier_notes.sql` (new); `085` updated. Permissions `purchasing.notes.read|create|approve` (members create).
+API: `GET/POST /v1/purchasing/supplier-invoices/:id/notes`, `POST /v1/purchasing/notes/:id/approve|reject|cancel`; bill detail returns
+`creditedMinor`, `debitedMinor` and each line's `billLineId`; open items net bills of approved supplier notes. Web: notes section on the bill
+page; payments against a bill use the amount after notes. Arabic drafts.
+
+**Database / System Result.** None on live. `sql/094` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 92 migrations): 88 of 88. Typecheck clean; tests: shared 82, API 599, web 144. `biome ci .`:
+exit 0. Not verified: dry run on live, browser. Returned goods (stock out to the supplier) are not switched on.
 ## 2026-11-17 — Browser test of the VAT screens on live (write-through, Test 2)
 
 **Objective.** Ben: "you do testing". Check the VAT screens on live with real saves, then put the company back as it was.

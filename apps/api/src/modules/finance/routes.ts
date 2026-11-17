@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { HttpError } from '../../lib/errors';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
 import { parsePurchaseVat } from '../../lib/vatRows';
@@ -410,6 +410,17 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
         total.set(l.invoice_id, (total.get(l.invoice_id) ?? 0) + Math.round(Number(l.qty) * Number(l.unit_cost_minor)));
     } else {
       for (const i of invoices) total.set(i.id, Number(i.gross_minor));
+    }
+    // Approved supplier credit notes lower what is owed on a bill, debit notes raise it (sql/094). Before that migration: no table, no notes.
+    const supplierNotes = await fetchAll<{ bill_id: string; kind: string; gross_minor: number }>((from, to) =>
+      db().from('pur_notes').select('bill_id, kind, gross_minor').eq('org_id', org).eq('status', 'approved').order('id').range(from, to),
+    ).catch((e: unknown) => {
+      if (isMissingSchema(e)) return [] as { bill_id: string; kind: string; gross_minor: number }[];
+      throw e;
+    });
+    for (const sn of supplierNotes) {
+      if (!total.has(sn.bill_id)) continue;
+      total.set(sn.bill_id, (total.get(sn.bill_id) ?? 0) + (sn.kind === 'credit' ? -1 : 1) * Number(sn.gross_minor));
     }
     for (const i of invoices) push('supplier_invoice', 's', i.id, i.number, i.supplier_id, i.currency, total.get(i.id) ?? 0, i.due_date);
     const expenses = await fetchAll<{

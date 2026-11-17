@@ -122,8 +122,12 @@ export const MODULES: readonly ModuleManifest[] = [
       'purchasing.orders.approve', // sql/069: owners and admins; never one's own order unless the only one
       'purchasing.invoices.read',
       'purchasing.invoices.record',
+      // supplier credit and debit notes (sql/094): members request, owners and admins decide (never their own unless the only one)
+      'purchasing.notes.read',
+      'purchasing.notes.create',
+      'purchasing.notes.approve',
     ],
-    memberGrants: ['purchasing.orders.receive'],
+    memberGrants: ['purchasing.orders.receive', 'purchasing.notes.create'],
     suite: 'Sales & Purchasing',
   },
   {
