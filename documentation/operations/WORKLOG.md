@@ -29,7 +29,7 @@ deadline, refund rule) can be changed later; the closing entries are ordinary jo
 
 **Database / System Result.** Dry run on live (rolled back): `tables_with_rls` 2, `charts_missing_settlement` 0. Applied to live by
 Ben via CLI: 2, 0, `users_close` true, `anon_close` false. Test 086 on live: ALL TESTS PASSED (everything rolled back). Test 040 on
-live (new chart counts): not yet run.
+live (new chart counts): ALL TESTS PASSED (everything rolled back).
 
 **Safety Status.** Local SQL run (PGlite, all 89 migrations): 85 of 85 SQL tests pass. Typecheck clean (shared, API, web); tests:
 shared 81, API 585, web 144. `biome ci .`: exit 0. Not verified: dry run on live, the screens in a browser, the Arabic, the
