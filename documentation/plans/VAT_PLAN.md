@@ -308,3 +308,37 @@ Warnings: not registered, period before "VAT from", partial deduction (taxable a
 and always "excludes supplier credit notes". Each line opens its documents; CSV and print. Section names are ours until the accountant gives
 the Form 10 headings. Voided invoices are left out whatever month they were voided in (a void in a later, already-filed month would
 need a correction: to confirm with the accountant).
+
+## 15. Part 4 design: settlement and carry-forward (draft, 16 Nov; not built, waiting for Ben and the accountant)
+
+**Goal.** At the end of each tax month the company closes its VAT: output VAT and deductible input VAT are set against each other in the
+books, what is due is recorded as owed to the tax authority (or a credit is carried forward), the payment is recorded, and the app shows
+the deadline and when a refund can be asked for. Needs accounting switched on (without it, the summary of part 3 is all there is).
+
+**Design (proposed):**
+1. **Settlement account.** New role `vat_settlement`, seeded as **2872 VAT settlement (due to or from the tax authority)**, a liability
+   under 28, added to every chart like 2871/1811 were (the reviewer: keep 2871 and 1811, add one settlement account).
+2. **Close a month** (Finance → VAT summary, a whole calendar month, owner or head accountant): the app reads the **ledger** balances
+   of 2871 and 1811 for the month (the books are the truth, including manual corrections) and shows them next to the part 3 summary;
+   a difference is shown, never hidden. It then creates a **manual journal draft** with the existing approval (`acc_save_journal`,
+   someone else approves, or the owner posts directly): Dr output VAT, Cr input VAT, and the difference to 2872 (Cr when VAT is due,
+   Dr when it is a credit). One close per month, kept in a new table `acc_vat_periods` (month, journal, output, input, due, status);
+   a month can be reopened only by reversing its journal. Suggest setting the lock date to the month's end after the return is filed.
+3. **Pay.** "Record the payment" on a closed month that is due: a manual journal Dr 2872 / Cr the bank or cash account chosen (the
+   treasury account's ledger account), same approval.
+4. **Opening balance.** For a company that already files: one opening journal at the "VAT from" date, Dr 2872 for a credit brought
+   forward (or Cr for VAT still owed), against the opening-balance account.
+5. **Carry-forward and refunds.** A credit month leaves a debit on 2872, netted at the next close. The screen counts consecutive credit
+   months and says when a refund can be asked for: more than 4 consecutive periods; more than 3 months for a small enterprise under Law
+   6/2025 (turnover up to EGP 20 million). "Small enterprise" becomes a company setting (owner). Rules to confirm.
+6. **Deadline.** A company setting "return due N days after the month ends" (default: end of the following month, editable, never
+   hard-coded); the summary shows "return for October due by 30 November" and an optional alert rule reminds the owner.
+
+**Data and tests (proposed):** `sql/091` (role and account, `acc_vat_periods`, close/pay functions built on manual journals,
+settings), `sql/tests/086`. API on `/v1/finance/vat-periods`. No new posting path: every entry is a manual journal with its approval.
+
+**Questions before building:**
+- **Ben:** build part 4 now on these assumptions, or wait for the accountant?
+- **Accountant:** account 2872 (or another code / two accounts, due and refundable)? Close on ledger balances (proposed) or on the
+  document summary? The refund rule (4 periods / 3 months for small enterprises) and what proof is needed. The return deadline. How a
+  late credit note or void in an already-filed month is corrected (next month's return, or an amended return).
