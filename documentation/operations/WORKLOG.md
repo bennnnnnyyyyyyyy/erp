@@ -25,7 +25,7 @@ page; payments against a bill use the amount after notes. Arabic drafts.
 
 **Database / System Result.** Dry run on live (rolled back): `tables_with_rls` 3. Applied to live by Ben via CLI; the output was cut off, so
 a read-only check by Claude afterwards: 3 tables with RLS, `users_submit` true, `anon_submit` false, the VAT summary includes supplier
-notes. Tests 089 and 085 on live: not yet run. PR #67.
+notes. Tests 089 and 085 on live: ALL TESTS PASSED (everything rolled back). PR #67.
 
 **Safety Status.** Local SQL run (PGlite, all 92 migrations): 88 of 88. Typecheck clean; tests: shared 82, API 599, web 144. `biome ci .`:
 exit 0. Not verified: dry run on live, browser. Returned goods (stock out to the supplier) are not switched on.
