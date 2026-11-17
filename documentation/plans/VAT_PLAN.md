@@ -1,7 +1,7 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
 **Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built and live 16 Nov. Part 4 (settlement, `sql/091`) built 17 Nov, not applied. Part 5 not built: 3 VAT summary in the return's layout,
+(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built and live 16 Nov. Part 4 (settlement, `sql/091`) built 17 Nov, not applied. Part 5 (prices that include VAT, `sql/093`) built 17 Nov, not applied: 3 VAT summary in the return's layout,
 4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
@@ -344,3 +344,10 @@ settings and the opening balance in Settings → General → VAT (owner). Tests:
 - **Accountant:** account 2872 (or another code / two accounts, due and refundable)? Close on ledger balances (proposed) or on the
   document summary? The refund rule (4 periods / 3 months for small enterprises) and what proof is needed. The return deadline. How a
   late credit note or void in an already-filed month is corrected (next month's return, or an amended return).
+
+**Part 5 as built (17 Nov, `sql/093`).** Owner setting "Sales prices include VAT" (Settings → General → VAT). With it on, each new sales
+invoice line records that its price includes VAT and is split per line: gross = round(qty × price), net = round(gross × 100 / (100 + rate)),
+VAT = gross − net (to confirm with the accountant and against ETA). Notes on such a line are split the same way. Bills stay before VAT.
+Shopify: allowed with VAT only when prices include VAT; the setting cannot be switched off while VAT and Shopify are both on. Test:
+`sql/tests/088_vat_prices_include.sql`. Not yet: per price list (all sales prices of a company follow the one setting); ETA document lines
+for inclusive prices (the e-invoice is built from the stored net and VAT).

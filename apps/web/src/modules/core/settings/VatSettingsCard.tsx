@@ -100,6 +100,35 @@ export function VatSettingsCard() {
         </li>
       </ul>
       {!isOwner ? <p className="muted small">{tr('Only an owner can switch VAT on or off and choose the default rate.')}</p> : null}
+      {isOwner && v.vatRegistered ? (
+        <ul className="option-list">
+          <li className="option-row">
+            <div>
+              <strong>{tr('Sales prices include VAT')}</strong>
+              <p className="muted small">
+                {tr('On: the price on a sales order is the price the customer pays, and each invoice line is split into the amount before VAT and the VAT (needed for Shopify). New invoices only.')}
+              </p>
+            </div>
+            <label className="option-switch">
+              <input
+                type="checkbox"
+                role="switch"
+                aria-checked={v.pricesIncludeVat === true}
+                checked={v.pricesIncludeVat === true}
+                disabled={busy}
+                aria-label={tr('Sales prices include VAT')}
+                onChange={() =>
+                  run(async () => {
+                    await api('/v1/core/org/vat/prices-include', { method: 'PUT', body: JSON.stringify({ on: v.pricesIncludeVat !== true }) });
+                    return null;
+                  })
+                }
+              />
+              <span>{v.pricesIncludeVat ? tr('On') : tr('Off')}</span>
+            </label>
+          </li>
+        </ul>
+      ) : null}
 
       {isOwner && v.rates.length > 0 ? (
         <div className="form-row">

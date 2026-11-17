@@ -1322,6 +1322,11 @@ export const SCREENS_AR: Record<string, string> = {
   "Mixed (each line has its own)": "مختلط (لكل بند نوعه)",
   "VAT (added to the cost of the goods)": "الضريبة (مضافة إلى تكلفة البضاعة)",
   "This VAT will not be deducted: it is added to the cost. A deduction needs the supplier's e-invoice number and 9-digit tax number.": "لن تُخصم هذه الضريبة: ستُضاف إلى التكلفة. الخصم يتطلب رقم الفاتورة الإلكترونية للمورد ورقمه الضريبي المكوّن من 9 أرقام.",
+  // Prices include VAT (sql/093)
+  "Sales prices include VAT": "أسعار البيع شاملة الضريبة",
+  "On: the price on a sales order is the price the customer pays, and each invoice line is split into the amount before VAT and the VAT (needed for Shopify). New invoices only.": "مفعّل: السعر في أمر البيع هو ما يدفعه العميل، ويُقسم كل بند في الفاتورة إلى المبلغ قبل الضريبة والضريبة (مطلوب لـ Shopify). للفواتير الجديدة فقط.",
+  "Unit price (with VAT)": "سعر الوحدة (شامل الضريبة)",
+  "Prices include VAT: each line is split into the amount before VAT and the VAT when the invoice is created, and never changes afterwards.": "الأسعار شاملة الضريبة: يُقسم كل بند إلى المبلغ قبل الضريبة والضريبة عند إنشاء الفاتورة، ولا يتغير بعد ذلك.",
   // Item VAT rate (sql/092)
   "Used on new invoices and bills for this item. Documents already issued keep their rate.": "تُستخدم في الفواتير الجديدة لهذا الصنف. المستندات الصادرة تحتفظ بنسبتها.",
   // VAT settlement (sql/091)

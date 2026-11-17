@@ -157,6 +157,7 @@ orgRoutes.get('/vat', requirePermission('core.org.read'), async (c) => {
     returnDueDays: typeof org.settings?.vat_return_days === 'number' ? org.settings.vat_return_days : null,
     smallEnterprise: org.settings?.vat_small_enterprise === true,
     openingEntered: typeof org.settings?.vat_opening_journal_id === 'string',
+    pricesIncludeVat: org.settings?.prices_include_vat === true,
     rates: ((rates.data ?? []) as { id: string; sub_type: string; rate: number | string; label: string; is_default: boolean }[]).map(
       (r) => ({
         id: r.id,
@@ -202,6 +203,14 @@ orgRoutes.put('/vat/return', requirePermission('core.org.manage'), async (c) => 
   if (typeof b.smallEnterprise !== 'boolean') invalid('smallEnterprise must be true or false');
   return ok(c, await callRpc<unknown>(userDb(c), 'core_set_vat_return', { p_due_days: days, p_small_enterprise: b.smallEnterprise }));
 });
+// Sales prices include VAT (sql/093). Owner only in the database; refused off while VAT and Shopify are both on. New invoices only.
+orgRoutes.put('/vat/prices-include', requirePermission('core.org.manage'), async (c) => {
+  const on = (await jsonBody(c)).on;
+  if (typeof on !== 'boolean') invalid('on must be true or false');
+  await callRpc<boolean>(userDb(c), 'core_set_prices_include_vat', { p_on: on });
+  return ok(c, { pricesIncludeVat: on });
+});
+
 // VAT rates (sql/088): owners and admins add, change and remove the company's VAT rates without the e-invoicing module. The database
 // checks the ETA VAT sub-type, keeps names unique, refuses to remove a rate that items use or that is the default, and audits.
 function vatRateBody(b: Record<string, unknown>) {

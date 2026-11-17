@@ -18,6 +18,7 @@ describe('VAT routes', () => {
     ['PUT', '/v1/core/org/vat'],
     ['POST', '/v1/core/org/vat/rates'],
     ['PUT', '/v1/core/org/vat/return'],
+    ['PUT', '/v1/core/org/vat/prices-include'],
     ['PUT', '/v1/inventory/items/11111111-1111-4111-8111-111111111111/vat-rate'],
     ['GET', '/v1/accounting/vat-months/2026-10'],
     ['POST', '/v1/accounting/vat-months/2026-10/close'],
@@ -71,6 +72,7 @@ describe('stored VAT figures', () => {
       netMinor: 999,
       taxMinor: 140,
       grossMinor: 1139,
+      priceIncludesVat: false,
     });
   });
   it('computes a line the old way before sql/086 (no VAT)', () => {

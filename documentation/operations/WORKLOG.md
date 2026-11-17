@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-17 — VAT part 5: sales prices that include VAT (`sql/093`)
+
+**Objective.** Part 5 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (Ben: "do 5"): prices with VAT included, which also lifts the block on
+Shopify with VAT (Shopify prices include VAT).
+
+**Actions Completed.** `sql/093_vat_prices_include.sql`: owner setting `prices_include_vat` (`core_set_prices_include_vat`, audited);
+invoice and note lines record `price_includes_vat`; the line trigger splits such prices per line; `sal_create_invoice`,
+`sal_submit_note`, `core_set_vat` recreated from their latest versions with only these changes (copied and checked identical by script).
+`sql/tests/088_vat_prices_include.sql` (new). Shared `vatLineInclusive` (+ known-answer test). API: lines return `priceIncludesVat`;
+`PUT /v1/core/org/vat/prices-include`; `GET /core/org/vat` returns the setting. Web: the switch in Settings → VAT (owner), the note
+preview and invoice price labels follow it. Arabic drafts.
+
+**Database / System Result.** None on live. `sql/093` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 91 migrations): 87 of 87. Typecheck clean; tests: shared 82, API 589, web 144.
+`biome ci .`: exit 0. Not verified: dry run on live, browser; the rounding rule for inclusive prices is ours (to confirm).
 ## 2026-11-17 — An item's VAT rate without e-invoicing (`sql/092`)
 
 **Objective.** First item of the VAT next steps (Ben: "start"): an item's own VAT rate (5%, exempt, export…) could only be set through

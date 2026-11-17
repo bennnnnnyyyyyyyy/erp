@@ -15,6 +15,7 @@ export type LineRow = {
   tax_minor?: number | string | null;
   tax_rate?: number | string | null;
   tax_rate_id?: string | null;
+  price_includes_vat?: boolean | null;
 };
 
 export type DocTotals = { netMinor: number; taxMinor: number; grossMinor: number };
@@ -28,6 +29,8 @@ export type LineOut = {
   netMinor: number;
   taxMinor: number;
   grossMinor: number;
+  /** sql/093: the price was typed with VAT. */
+  priceIncludesVat: boolean;
 };
 
 const num = (v: unknown): number | null => (v === null || v === undefined || v === '' ? null : Number(v));
@@ -45,6 +48,7 @@ export function lineOut(l: LineRow): LineOut {
     netMinor,
     taxMinor,
     grossMinor: netMinor + taxMinor,
+    priceIncludesVat: l.price_includes_vat === true,
   };
 }
 
