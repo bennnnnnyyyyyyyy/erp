@@ -24,6 +24,7 @@ const CountsList = lazyNamed(() => import('./inventory/Counts'), 'CountsList');
 const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
 const ReceiveGoods = lazyNamed(() => import('./inventory/ReceiveGoods'), 'ReceiveGoods');
 const CountStock = lazyNamed(() => import('./inventory/CountStock'), 'CountStock');
+const ItemGroupsPage = lazyNamed(() => import('./inventory/ItemGroups'), 'ItemGroupsPage');
 const ItemPage = lazyNamed(() => import('./inventory/ItemPage'), 'ItemPage');
 const InventoryOverview = lazyNamed(() => import('./inventory/Overview'), 'InventoryOverview');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
@@ -150,6 +151,8 @@ const INVENTORY_APP: AppDef = {
         ]),
     { path: '/adjustments', label: 'Adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
+    // Item groups and codes (sql/095): real API only; the sample-data build has no groups.
+    ...(demoMode ? [] : [{ path: '/item-groups', label: 'Item groups', permission: READ, component: ItemGroupsPage }]),
     ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/ledger', label: 'Stock ledger', permission: READ, component: LedgerPage },

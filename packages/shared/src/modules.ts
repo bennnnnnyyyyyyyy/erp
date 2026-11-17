@@ -55,6 +55,8 @@ export const MODULES: readonly ModuleManifest[] = [
     permissions: [
       'inventory.items.read',
       'inventory.items.manage',
+      // Item groups and the item code rule (sql/095): owners and admins.
+      'inventory.groups.manage',
       'inventory.warehouses.manage',
       'inventory.reorder.manage',
       'inventory.approval_policies.manage',
