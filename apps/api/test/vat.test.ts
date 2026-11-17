@@ -19,6 +19,11 @@ describe('VAT routes', () => {
     ['POST', '/v1/core/org/vat/rates'],
     ['PUT', '/v1/core/org/vat/return'],
     ['PUT', '/v1/core/org/vat/prices-include'],
+    ['GET', '/v1/purchasing/supplier-invoices/11111111-1111-4111-8111-111111111111/notes'],
+    ['POST', '/v1/purchasing/supplier-invoices/11111111-1111-4111-8111-111111111111/notes'],
+    ['POST', '/v1/purchasing/notes/11111111-1111-4111-8111-111111111111/approve'],
+    ['POST', '/v1/purchasing/notes/11111111-1111-4111-8111-111111111111/reject'],
+    ['POST', '/v1/purchasing/notes/11111111-1111-4111-8111-111111111111/cancel'],
     ['PUT', '/v1/inventory/items/11111111-1111-4111-8111-111111111111/vat-rate'],
     ['GET', '/v1/accounting/vat-months/2026-10'],
     ['POST', '/v1/accounting/vat-months/2026-10/close'],
@@ -156,5 +161,14 @@ describe('purchase VAT (sql/087)', () => {
     });
     for (const bad of [{ taxMinor: -1 }, { taxMinor: 1.5 }, { vatClass: 'rent' }, { deductible: 'yes' }, { taxRateId: 'x' }, []])
       expect(() => parsePurchaseVat(bad)).toThrow();
+  });
+});
+
+describe('supplier notes (sql/094) permissions', () => {
+  it('members may request, only owners and admins may decide', async () => {
+    const { defaultPermissionsFor } = await import('@erp/shared');
+    expect(defaultPermissionsFor('member')).toContain('purchasing.notes.create');
+    expect(defaultPermissionsFor('member')).not.toContain('purchasing.notes.approve');
+    expect(defaultPermissionsFor('admin')).toEqual(expect.arrayContaining(['purchasing.notes.read', 'purchasing.notes.approve']));
   });
 });

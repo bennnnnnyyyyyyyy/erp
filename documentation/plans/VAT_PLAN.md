@@ -352,7 +352,7 @@ Shopify: allowed with VAT only when prices include VAT; the setting cannot be sw
 `sql/tests/088_vat_prices_include.sql`. Not yet: per price list (all sales prices of a company follow the one setting); ETA document lines
 for inclusive prices (the e-invoice is built from the stored net and VAT).
 
-## 16. Supplier credit notes (draft, 17 Nov; not built: waiting for Ben's approval)
+## 16. Supplier credit notes (built 17 Nov, `sql/094`: money first; returned goods ready in the data model, not switched on)
 
 **Goal.** Record a supplier's credit note (goods returned to the supplier, a discount or a price correction after the bill) with its
 VAT, so what is owed to the supplier, the books and the VAT summary are right; and remove the summary's "excludes supplier credit notes"
@@ -388,3 +388,9 @@ Same steps as before: dry run on live, apply, tests, CI green, merge.
 
 **Questions for the accountant:** are the return of goods and the supplier's credit note always one document? In which month does a
 supplier credit note reduce input VAT: the note's date or the approval day (proposed: approval day, as customer notes)?
+
+**As built (17 Nov, `sql/094`).** Ben: "go", long term: the data model ready for returned goods (`pur_note_returns`, no function writes it
+yet), money first. Credit notes post Dr suppliers / Cr purchase price differences (net and non-deductible VAT) / Cr input VAT; debit notes the
+reverse. Permissions `purchasing.notes.read` / `.create` (members too) / `.approve`. Bill page: notes, approve / reject / cancel,
+credited and debited, amount owed after notes. Test: `sql/tests/089_pur_supplier_notes.sql`. The VAT summary's "excludes supplier credit
+notes" warning is gone.
