@@ -31,7 +31,9 @@ old columns and item creation sends `p_group_id` only with a group, so both keep
 the SKU stays not editable (sql/062), which is what keeps codes fixed; no separate "used on documents" check was needed.
 
 **Database / System Result.** Dry run on live by Claude via CLI (rolled back): `groups_rls_on` true, `create_item_versions` 1,
-`items_with_group` 0. Not applied yet. Next: apply 095, then test 090 on live.
+`items_with_group` 0. **Applied to live 17 Nov by Ben via CLI:** `groups_rls_on` true, `users_can_insert_groups` false,
+`users_can_truncate_groups` false, `users_create_items` true, `anon_creates_groups` false, `create_item_versions` 1. Test 090 on live:
+ALL TESTS PASSED (everything rolled back). Slice C waits for Ben's approval of A on live.
 
 **Safety Status.** Local SQL run (PGlite, all 93 migrations, 095 applied a second time to prove rerun-safety): 89 of 89 pass, including
 090 (tree, `10-03-007`, group required, code kept on move and re-code, no cycles, in-use delete refused, roles, audit counts, isolation,

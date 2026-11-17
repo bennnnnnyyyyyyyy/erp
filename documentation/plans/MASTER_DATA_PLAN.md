@@ -2,7 +2,7 @@
 
 **Module key:** `inventory` (items, groups, units), `purchasing` and `sales` (party item codes, prices); no new module
 **Status:** `[✅ Approved]`: approved by Ben on 17 Nov 2026 (build order A → C → B → D; groups optional, required only under the
-"group codes" rule). Slice A (item groups and codes, `sql/095`) built 17 Nov, not applied; C waits for A on live.
+"group codes" rule). Slice A (item groups and codes, `sql/095`) built and applied to live 17 Nov (test 090 passed on live); C waits for Ben's approval of A.
 **Owner:** Ben · **Reviewers:** Ben, the accountant
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md) phase 4. Ben's notes there: "item, sub-item and sub-sub-item,
 each with coding", "auto SKU or our own (best for the Egyptian Tax Authority)", "SKU as the supplier knows it differs from the SKU the
