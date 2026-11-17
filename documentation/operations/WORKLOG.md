@@ -23,7 +23,8 @@ invoice and note lines record `price_includes_vat`; the line trigger splits such
 `PUT /v1/core/org/vat/prices-include`; `GET /core/org/vat` returns the setting. Web: the switch in Settings → VAT (owner), the note
 preview and invoice price labels follow it. Arabic drafts.
 
-**Database / System Result.** None on live. `sql/093` is not applied.
+**Database / System Result.** Dry run on live (rolled back): `invoice_lines` true, `users_can_set` true. Applied to live by Ben via CLI:
+`invoice_lines` true, `note_lines` true, `users_can_set` true, `anon_can_set` false. Test 088 on live: ALL TESTS PASSED (everything rolled back).
 
 **Safety Status.** Local SQL run (PGlite, all 91 migrations): 87 of 87. Typecheck clean; tests: shared 82, API 589, web 144.
 `biome ci .`: exit 0. Not verified: dry run on live, browser; the rounding rule for inclusive prices is ours (to confirm).
