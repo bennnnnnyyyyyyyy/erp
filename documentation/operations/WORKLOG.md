@@ -11,6 +11,32 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-17 — Item groups and item codes, master data slice A (`sql/095`)
+
+**Objective.** Slice A of the [master data plan](../plans/MASTER_DATA_PLAN.md), approved by Ben on 17 Nov (order A → C → B → D; groups
+optional, required only under the "group codes" rule; codes never change once used; a moved item keeps its code).
+
+**Actions Completed.** `sql/095_inv_item_groups.sql`: `inv_item_groups` (tree, code unique among live siblings, no cycles, soft delete
+refused while in use, RLS member read, writes revoked); `inv_items.group_id`; the company rule `item_code_rule` in organization settings
+(typed / prefix / group, separator `-` `.` `/`, digits; with no rule saved a company with a sql/075 format keeps "prefix", others "typed",
+so nothing changes for existing companies); functions to create, change, move and delete groups and to set the rule (owners and admins),
+put an item in a group (members too, code kept), read the rule and the next code; `inv_next_sku()` keeps its signature;
+`inv_create_item` gains `p_group_id` (last, optional) and fills a blank code under the prefix or group rule. Every change is audited in
+the same transaction. `sql/tests/090_inv_item_groups.sql` (new). Permission `inventory.groups.manage` (owners and admins). API
+(`apps/api/src/modules/inventory/groups.ts`): `GET/POST /v1/inventory/item-groups`, `PUT/DELETE /item-groups/:id`,
+`PUT /item-groups/:id/parent`, `PUT /items/:id/group`, `GET/PUT /item-code-rule`; items carry `groupId`. The item list falls back to its
+old columns and item creation sends `p_group_id` only with a group, so both keep working before 095 is applied; the new routes answer 503
+`not_set_up` until then. Web: Inventory → Item groups (tree, add, sub-group, edit, move, remove, the code rule); group picker on Add item
+(fills the next group code) and Edit item. Arabic machine drafts in `apps/web/src/lib/i18nMasterData.ts` (for Ben's review). Assumption:
+the SKU stays not editable (sql/062), which is what keeps codes fixed; no separate "used on documents" check was needed.
+
+**Database / System Result.** None. Not applied to live. Next: dry run on live in a rolled-back transaction, apply, then test 090 on live.
+
+**Safety Status.** Local SQL run (PGlite, all 93 migrations, 095 applied a second time to prove rerun-safety): 89 of 89 pass, including
+090 (tree, `10-03-007`, group required, code kept on move and re-code, no cycles, in-use delete refused, roles, audit counts, isolation,
+no direct writes, prefix rule unchanged). Typecheck clean; tests: shared 82, API 617 (new `inventory_groups.test.ts`), web 146 (new
+`i18nMasterData.test.ts`). `biome ci .`: 0 errors. Not viewed in a browser.
+
 ## 2026-11-17 — Supplier credit and debit notes (`sql/094`)
 
 **Objective.** VAT plan section 16 (Ben: "go"; long term: data model ready for returned goods, money first). Removes the VAT summary's

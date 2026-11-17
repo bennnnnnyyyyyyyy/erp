@@ -1,7 +1,8 @@
 # Master data and coding Plan (accounting roadmap phase 4)
 
 **Module key:** `inventory` (items, groups, units), `purchasing` and `sales` (party item codes, prices); no new module
-**Status:** `[📝 Draft / RFC]`: written 17 Nov 2026, waiting for Ben's approval. Not built.
+**Status:** `[✅ Approved]`: approved by Ben on 17 Nov 2026 (build order A → C → B → D; groups optional, required only under the
+"group codes" rule). Slice A (item groups and codes, `sql/095`) built 17 Nov, not applied; C waits for A on live.
 **Owner:** Ben · **Reviewers:** Ben, the accountant
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md) phase 4. Ben's notes there: "item, sub-item and sub-sub-item,
 each with coding", "auto SKU or our own (best for the Egyptian Tax Authority)", "SKU as the supplier knows it differs from the SKU the
@@ -98,9 +99,11 @@ a migration note for existing lines (they become unit = base, factor 1).
 
 ## 11. Open questions
 
-1. **Ben:** approve this plan and the order A → B → C → D? (Alternative: C first, if retyping prices hurts most.)
+1. **Ben:** approve this plan and the order A → B → C → D? (Alternative: C first, if retyping prices hurts most.) **Answered 17 Nov:
+   approved, order A → C → B → D.**
 2. **Ben (roadmap Q6):** a new purchase price **updates** the item price or only **suggests** it? (Recommended: suggest, with a
    company setting.)
 3. **Ben:** do items need a group always (required) or optionally? (Recommended: optional, required only under the "group codes" rule.)
+   **Answered 17 Nov: optional, required only under the group rule; codes never change once used; a moved item keeps its code.**
 4. **Ben:** price lists by **customer group** (recommended) or per customer?
 5. **Accountant:** does the ETA item code (EGS/GS1) need to follow our coding, or is it independent? (We assume independent.)
