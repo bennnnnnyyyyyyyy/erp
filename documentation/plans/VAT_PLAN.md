@@ -1,7 +1,7 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
 **Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built 16 Nov, not applied. Parts 4-5 not built: 3 VAT summary in the return's layout,
+(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built and live 16 Nov. Part 4 (settlement, `sql/091`) built 17 Nov, not applied. Part 5 not built: 3 VAT summary in the return's layout,
 4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
@@ -309,7 +309,7 @@ and always "excludes supplier credit notes". Each line opens its documents; CSV 
 the Form 10 headings. Voided invoices are left out whatever month they were voided in (a void in a later, already-filed month would
 need a correction: to confirm with the accountant).
 
-## 15. Part 4 design: settlement and carry-forward (draft, 16 Nov; not built, waiting for Ben and the accountant)
+## 15. Part 4: settlement and carry-forward (built 17 Nov, `sql/091`, on these assumptions; Ben: "build it now", each changeable later)
 
 **Goal.** At the end of each tax month the company closes its VAT: output VAT and deductible input VAT are set against each other in the
 books, what is due is recorded as owed to the tax authority (or a credit is carried forward), the payment is recorded, and the app shows
@@ -337,8 +337,10 @@ the deadline and when a refund can be asked for. Needs accounting switched on (w
 **Data and tests (proposed):** `sql/091` (role and account, `acc_vat_periods`, close/pay functions built on manual journals,
 settings), `sql/tests/086`. API on `/v1/finance/vat-periods`. No new posting path: every entry is a manual journal with its approval.
 
-**Questions before building:**
-- **Ben:** build part 4 now on these assumptions, or wait for the accountant?
+**As built (17 Nov):** exactly the design above. Close and payment from Finance → VAT summary (a whole month, accounting on); return
+settings and the opening balance in Settings → General → VAT (owner). Tests: `sql/tests/086_vat_settlement.sql`.
+
+**Questions for the accountant (answers become adjustments, not a rebuild):**
 - **Accountant:** account 2872 (or another code / two accounts, due and refundable)? Close on ledger balances (proposed) or on the
   document summary? The refund rule (4 periods / 3 months for small enterprises) and what proof is needed. The return deadline. How a
   late credit note or void in an already-filed month is corrected (next month's return, or an amended return).

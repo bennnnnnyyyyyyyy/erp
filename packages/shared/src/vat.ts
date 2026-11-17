@@ -25,6 +25,10 @@ export type VatSettings = {
   rates: { id: string; subType: string; rate: number; label: string; isDefault: boolean }[];
   /** The ETA VAT sub-types a rate can carry (V001 export, V003 exempt, V009 general, …). Optional while an older API answers. */
   subTypes?: { code: string; description: string }[];
+  /** sql/091 (optional while an older API answers). */
+  returnDueDays?: number | null;
+  smallEnterprise?: boolean;
+  openingEntered?: boolean;
 };
 
 /** A document's totals: the sums of its lines. */
@@ -78,4 +82,33 @@ export type VatSummary = {
     taxMinor: number;
     nonDeductibleTaxMinor: number;
   }[];
+};
+
+/** GET /v1/accounting/vat-months/:month (sql/091): a VAT month from the ledger, its close and payments, refunds and the deadline. */
+export type VatMonth = {
+  month: string;
+  end: string;
+  currency: string;
+  ended: boolean;
+  ledgerOutputMinor: number;
+  ledgerInputMinor: number;
+  ledgerDueMinor: number;
+  /** From the document summary (part 3); null when the reader may not see it. */
+  summaryDueMinor: number | null;
+  differenceMinor: number | null;
+  period: {
+    id: string;
+    journalId: string;
+    journalStatus: 'draft' | 'posted' | 'rejected' | 'cancelled';
+    outputMinor: number;
+    inputMinor: number;
+    dueMinor: number;
+    paidMinor: number;
+    leftMinor: number;
+  } | null;
+  creditStreak: number;
+  smallEnterprise: boolean;
+  refundAvailable: boolean;
+  returnDueOn: string;
+  returnDueDays: number | null;
 };

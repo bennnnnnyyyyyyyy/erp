@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-17 — VAT part 4: settlement and carry-forward (`sql/091`)
+
+**Objective.** Part 4 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (section 15). Ben, 17 Nov: "build it now": every assumption (account code,
+deadline, refund rule) can be changed later; the closing entries are ordinary journals.
+
+**Actions Completed.**
+- `sql/091_vat_settlement.sql`: role `vat_settlement` and account 2872 added to every chart and new charts (audited);
+  `acc_vat_periods` and `acc_vat_payments` (RLS, member read, append-only, no direct writes); `acc_vat_month`; `acc_vat_close_month`,
+  `acc_vat_record_payment`, `acc_vat_opening`, each creating a manual journal through `acc_save_journal` (approval by someone else, or
+  posted directly by the owner / head accountant); `core_set_vat_return` (owner).
+- `sql/tests/086_vat_settlement.sql` (new, 12 groups); `sql/tests/040` expects 41 accounts and 22 roles.
+- API: `GET /v1/accounting/vat-months/:month`, `POST .../close`, `POST /v1/accounting/vat-periods/:id/payments`,
+  `POST /v1/accounting/vat-opening`, `PUT /v1/core/org/vat/return`; `GET /core/org/vat` returns the return settings.
+- Web: "Close the VAT month" panel on Finance → VAT summary (whole months, accounting on); return settings and opening balance in
+  Settings → General → VAT (owner); role label; Arabic machine drafts.
+
+**Database / System Result.** Dry run on live (rolled back): `tables_with_rls` 2, `charts_missing_settlement` 0. Applied to live by
+Ben via CLI: 2, 0, `users_close` true, `anon_close` false. Test 086 on live: ALL TESTS PASSED (everything rolled back). Test 040 on
+live (new chart counts): ALL TESTS PASSED (everything rolled back).
+
+**Safety Status.** Local SQL run (PGlite, all 89 migrations): 85 of 85 SQL tests pass. Typecheck clean (shared, API, web); tests:
+shared 81, API 585, web 144. `biome ci .`: exit 0. Not verified: dry run on live, the screens in a browser, the Arabic, the
+accountant's answers (section 15).
 ## 2026-11-16 — New companies default to EGP again (`sql/090`)
 
 **Objective.** Live's `organizations.default_currency` defaulted to `USD` (found while running test 085 on live), against `sql/001`
