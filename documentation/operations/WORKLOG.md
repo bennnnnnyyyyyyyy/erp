@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-17 — An item's VAT rate without e-invoicing (`sql/092`)
+
+**Objective.** First item of the VAT next steps (Ben: "start"): an item's own VAT rate (5%, exempt, export…) could only be set through
+the e-invoicing item codes, so without that module every line took the company default.
+
+**Actions Completed.** `sql/092_inv_item_vat_rate.sql`: `inv_set_item_vat_rate` (owner/admin, the company's live VAT rates only, null =
+company default, audited once per change). `sql/tests/087_item_vat_rate.sql` (new). API: items return `vatRateId`;
+`PUT /v1/inventory/items/:id/vat-rate`. Web: "VAT rate" in Edit item (shown when the company has VAT rates). Arabic draft.
+
+**Database / System Result.** Dry run on live (rolled back): `users_can_set` true. Applied to live by Ben via CLI (its output was cut off;
+a read-only check by Claude afterwards: the function exists, `anon_can_set` false). Test 087 on live: ALL TESTS PASSED (everything rolled back).
+
+**Safety Status.** Local SQL run (PGlite, all 90 migrations): 86 of 86. Typecheck clean; tests: shared 81, API 587, web 144.
+`biome ci .`: exit 0. Not verified: dry run on live, browser.
 ## 2026-11-17 — VAT part 4: settlement and carry-forward (`sql/091`)
 
 **Objective.** Part 4 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (section 15). Ben, 17 Nov: "build it now": every assumption (account code,

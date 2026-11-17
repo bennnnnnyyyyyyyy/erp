@@ -3,9 +3,10 @@ import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
 import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
 import { UnitSelect } from '../../components/UnitSelect';
-import { hasPermission } from '@erp/shared';
+import { hasPermission, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
+import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import { tr, trf } from '../../lib/i18n';
@@ -94,6 +95,9 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
 // names are kept in the history.
 export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({ name: item.name, nameAr: item.nameAr ?? '' });
+  // The item's own VAT rate (sql/092): only shown when the company has VAT rates; empty = the company default.
+  const vat = useLoad(() => (demoMode ? Promise.resolve(null) : api<VatSettings>('/v1/core/org/vat').catch(() => null)));
+  const [rateId, setRateId] = useState(item.vatRateId ?? '');
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -102,6 +106,7 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
     setError(null);
     try {
       await api(`/v1/inventory/items/${item.id}`, { method: 'PUT', body: JSON.stringify(form) });
+      if (rateId !== (item.vatRateId ?? '')) await api(`/v1/inventory/items/${item.id}/vat-rate`, { method: 'PUT', body: JSON.stringify({ rateId: rateId || null }) });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -117,6 +122,16 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
         </p>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        {vat.data?.rates.length ? (
+          <label>
+            {tr('VAT rate')}
+            <select value={rateId} onChange={(e) => setRateId(e.target.value)}>
+              <option value="">{tr('Company default')}</option>
+              {vat.data.rates.map((r) => <option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}
+            </select>
+            <span className="hint muted">{tr('Used on new invoices and bills for this item. Documents already issued keep their rate.')}</span>
+          </label>
+        ) : null}
         {error && <p className="error">{error}</p>}
         <div className="form-actions"><Button type="submit">{tr('Save changes')}</Button></div>
       </form>
