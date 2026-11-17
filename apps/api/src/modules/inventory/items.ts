@@ -17,6 +17,7 @@ type ItemRow = {
   reorder_level: number | null;
   tracks_batches?: boolean;
   storage_condition_id?: string | null;
+  default_tax_rate_id?: string | null;
 };
 const toItem = (r: ItemRow) => ({
   id: r.id,
@@ -27,13 +28,15 @@ const toItem = (r: ItemRow) => ({
   reorderLevel: r.reorder_level === null ? null : Number(r.reorder_level),
   tracksBatches: Boolean(r.tracks_batches),
   storageConditionId: r.storage_condition_id ?? null,
+  /** The item's own VAT rate (null = the company default); sql/036 column, set without e-invoicing since sql/092. */
+  vatRateId: r.default_tax_rate_id ?? null,
 });
 
 export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
     const { data, error } = await userDb(c)
       .from('inv_items')
-      .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id')
+      .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id, default_tax_rate_id')
       .eq('org_id', orgOf(c))
       .is('deleted_at', null)
       .order('sku');
@@ -194,6 +197,15 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     return ok(c, { id, name, nameAr: text(body.nameAr) || null });
   });
 
+  // An item's own VAT rate (sql/092; null = the company default). Owners and admins in the database; no e-invoicing module needed.
+  inventoryRoutes.put('/items/:id/vat-rate', requirePermission('inventory.items.manage'), async (c) => {
+    const id = idParam(c);
+    const raw = (await jsonBody(c)).rateId;
+    const rateId = raw === null || raw === undefined || raw === '' ? null : raw;
+    if (rateId !== null && (typeof rateId !== 'string' || !UUID_RE.test(rateId))) invalid('rateId must be a VAT rate id or null');
+    await callRpc<void>(userDb(c), 'inv_set_item_vat_rate', { p_item_id: id, p_rate_id: rateId });
+    return ok(c, { id, vatRateId: rateId });
+  });
   // Set an item's average cost by hand (sql/023 `inv_set_item_cost`: owners and admins only, audited, logged in inv_cost_log). The route
   // check is the early rejection; the database allows only owners and admins. Used by Settings-free flows such as the setup wizard.
   inventoryRoutes.put('/items/:id/cost', requirePermission('inventory.items.manage'), async (c) => {
@@ -213,7 +225,7 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     await callRpc<void>(userDb(c), 'inv_set_reorder_level', { p_item_id: id, p_level: level });
     const { data, error } = await userDb(c)
       .from('inv_items')
-      .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id')
+      .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id, default_tax_rate_id')
       .eq('org_id', orgOf(c))
       .eq('id', id)
       .maybeSingle();

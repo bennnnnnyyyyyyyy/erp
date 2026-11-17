@@ -16,7 +16,7 @@ export class DemoRuleError extends Error {
 }
 
 export type DemoWarehouse = { id: string; name: string };
-export type DemoItem = { id: string; sku: string; name: string; nameAr: string; uom: string; reorderLevel: number | null };
+export type DemoItem = { id: string; sku: string; name: string; nameAr: string; uom: string; reorderLevel: number | null; /** sql/092: the item's own VAT rate, null = company default. */ vatRateId?: string | null };
 export type StockRow = { itemId: string; warehouseId: string; onHand: number; reserved: number; available: number };
 export type RequestStatus = 'submitted' | 'approved' | 'rejected' | 'issued' | 'cancelled';
 export type DemoRequest = {

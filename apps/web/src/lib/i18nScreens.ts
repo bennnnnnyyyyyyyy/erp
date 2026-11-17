@@ -1322,6 +1322,8 @@ export const SCREENS_AR: Record<string, string> = {
   "Mixed (each line has its own)": "مختلط (لكل بند نوعه)",
   "VAT (added to the cost of the goods)": "الضريبة (مضافة إلى تكلفة البضاعة)",
   "This VAT will not be deducted: it is added to the cost. A deduction needs the supplier's e-invoice number and 9-digit tax number.": "لن تُخصم هذه الضريبة: ستُضاف إلى التكلفة. الخصم يتطلب رقم الفاتورة الإلكترونية للمورد ورقمه الضريبي المكوّن من 9 أرقام.",
+  // Item VAT rate (sql/092)
+  "Used on new invoices and bills for this item. Documents already issued keep their rate.": "تُستخدم في الفواتير الجديدة لهذا الصنف. المستندات الصادرة تحتفظ بنسبتها.",
   // VAT settlement (sql/091)
   "Close the VAT month": "إقفال شهر ضريبة القيمة المضافة",
   "Output VAT in the books": "ضريبة المخرجات في الدفاتر",
