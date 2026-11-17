@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-17 — Browser test of the VAT screens on live (write-through, Test 2)
+
+**Objective.** Ben: "you do testing". Check the VAT screens on live with real saves, then put the company back as it was.
+
+**Actions Completed.** In company "Test 2" (Ben's session; the organization switcher offered no other company): added a VAT rate
+(14%, V009, default); switched VAT on (start defaulted to 1 Nov); recorded expense EXP-0003 (114.00 with 14.00 VAT, e-invoice number
+and a 9-digit tax number: deductible); checked the expense page (VAT deducted, reference, audit line), the VAT summary (credit 14.00)
+and the close panel (books 14.00 = documents: the posting to 1811 works on live). Then voided EXP-0003, switched VAT off and removed the
+rate. Found and fixed: the summary said "VAT registered from" after VAT was switched off (the start date is kept for the next switch-on).
+Confirmed live: no "−EGP 0.00", no close panel when VAT is off; part 5's switch is deployed.
+
+**Database / System Result.** Test 2 is back to VAT off with no rates; left behind by design: EXP-0003 (void, with its reversing entry),
+the audit rows, and `settings.vat_from` = 2026-11-01 (used if VAT is switched on again).
+
+**Safety Status.** Not tested in the browser: invoices and bills with VAT (Test 2 has no delivered order or received purchase order left
+to bill), notes, closing a month (November has not ended). These are covered by SQL tests 082-088 on live.
 ## 2026-11-17 — VAT part 5: sales prices that include VAT (`sql/093`)
 
 **Objective.** Part 5 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (Ben: "do 5"): prices with VAT included, which also lifts the block on
