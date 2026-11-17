@@ -1,7 +1,7 @@
 # Master data and coding Plan (accounting roadmap phase 4)
 
 **Module key:** `inventory` (items, groups, units), `purchasing` and `sales` (party item codes, prices); no new module
-**Status:** `[📝 Draft / RFC]`: written 17 Nov 2026, waiting for Ben's approval. Not built.
+**Status:** Approved by Ben 17 Nov 2026 (section 11). Build order A → C → B → D. Not built.
 **Owner:** Ben · **Reviewers:** Ben, the accountant
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md) phase 4. Ben's notes there: "item, sub-item and sub-sub-item,
 each with coding", "auto SKU or our own (best for the Egyptian Tax Authority)", "SKU as the supplier knows it differs from the SKU the
@@ -31,7 +31,8 @@ money to rounding.
 - **A. Item groups and codes.** Groups in a tree (any depth; the screens show three levels comfortably), each with a code and a name in
   English and Arabic. An item belongs to one group. Item code rule per company: *typed* (as today), *prefix and sequence* (as today), or
   *group codes and a sequence* (`10-03-007` = group 10, sub-group 03, item 7; separator and digits are settings). Codes never change once
-  documents use the item (a renamed group keeps old codes). The ETA code stays a separate field, shown next to the item code.
+  documents use the item: a renamed group keeps old codes, and an item moved to another group keeps its code (only new items take
+  codes from the new group). The ETA code stays a separate field, shown next to the item code.
 - **B. Supplier and customer item codes.** A table of the item's code (and optional name) as each supplier or customer knows it. Order,
   bill and invoice lines find items by those codes too, and print the party's code beside ours.
 - **C. Prices.** Last purchase price per supplier and item, recorded automatically from bills (and purchase orders when no bill yet). A
@@ -53,16 +54,27 @@ money to rounding.
 | `inv_items` (+) | `group_id` | optional; required when the company's code rule is "group codes" |
 | `inv_party_item_codes` | `org_id`, `item_id`, `party_type` (supplier/customer), `party_id`, `code`, `name` | one code per item and party; a code is unique per party |
 | `pur_supplier_prices` | `org_id`, `supplier_id`, `item_id`, `unit`, `last_cost_minor`, `currency`, `source_doc`, `updated_at` | one row per supplier, item, unit; written only by bill/order functions |
-| `sal_price_lists` + `sal_price_list_items` | name, customer group, valid from/to, currency; item, unit, price, includes VAT | one active list per customer group per date |
-| `sal_customers` (+) | `price_list_id` or `customer_group` | |
+| `sal_price_lists` + `sal_price_list_items` | name, `customer_group_id`, valid from/to, currency, `prices_include_vat`; item, unit, price | one active list per customer group per date |
+| `sal_customer_groups` | `org_id`, `code`, `name`, `name_ar`, `active`, `deleted_at` | code unique per company; cannot delete while customers or price lists use it |
+| `sal_customers` (+) | `customer_group_id` | optional; a customer without a group uses the item's sales price |
 | order / request / bill / invoice / note lines (+) | `unit`, `unit_factor`, `qty_in_unit` | base quantity = typed quantity × factor, kept as today in `qty` |
+
+**VAT and prices.** A price list says whether its prices include VAT. When it fills an order line, the line records the price and that
+flag as `sql/093` does today (`price_includes_vat` on the line), so the line decides; the company setting is only the default for lines
+typed by hand.
+
+**Units and VAT (slice D; fixed in its ADR before it is built).** A line's net, VAT and gross are computed on the quantity and price
+**as typed in the line's unit** (3 boxes × 120.00), never on the base quantity (36 × 10.00), so the `sql/086` line trigger and the
+amount owed cannot drift by rounding; prices that include VAT (`sql/093`) are split the same way; the ETA document uses the line's unit
+with its ETA unit code.
 
 All company data: RLS, member read, writes through audited functions, isolation tests. Migrations `sql/095…` (one per slice).
 
 ## 5. Permissions
 
-No new modules. New keys: `inventory.groups.manage` (owner, admin), `purchasing.prices.read` / `sales.prices.read` (members),
-`sales.prices.manage` (owner, admin). Party item codes use the existing items/parties manage keys.
+No new modules. New keys: `inventory.groups.manage` (owner, admin), `sales.prices.read` (members: selling prices), `purchasing.prices.read` (owner,
+admin: **supplier costs reveal margins, so members do not get it by default**), `sales.prices.manage` (owner, admin; also customer
+groups). Party item codes use the existing items/parties manage keys.
 
 ## 6. Screens
 
@@ -93,14 +105,17 @@ date, unit maths with known answers), isolation for every new table, API auth te
 
 ## 10. Rollout
 
-Four PRs (A, B, C, D), each: dry run on live, apply, tests on live, CI green, merge. D touches every document line, so it gets an ADR and
+Four PRs in the order **A → C → B → D** (Ben, 17 Nov), each: dry run on live, apply, tests on live, CI green, merge. D touches every document line, so it gets an ADR and
 a migration note for existing lines (they become unit = base, factor 1).
 
-## 11. Open questions
+## 11. Decisions (Ben, 17 Nov 2026)
 
-1. **Ben:** approve this plan and the order A → B → C → D? (Alternative: C first, if retyping prices hurts most.)
-2. **Ben (roadmap Q6):** a new purchase price **updates** the item price or only **suggests** it? (Recommended: suggest, with a
-   company setting.)
-3. **Ben:** do items need a group always (required) or optionally? (Recommended: optional, required only under the "group codes" rule.)
-4. **Ben:** price lists by **customer group** (recommended) or per customer?
-5. **Accountant:** does the ETA item code (EGS/GS1) need to follow our coding, or is it independent? (We assume independent.)
+1. **Order:** A → C → B → D (groups, prices, party codes; units last as the riskiest).
+2. **A new purchase price suggests** the item's new cost and selling price; nothing changes until someone decides. A company setting can
+   switch to "update" (roadmap Q6).
+3. **Item groups are optional**, required only under the "group codes" rule.
+4. **Price lists per customer group** (`sal_customer_groups`); a per-customer override can come later if needed.
+5. **Still for the accountant:** whether the ETA item code (EGS/GS1) must follow our coding (assumed independent).
+
+Review fixes (master chat, 17 Nov): customer groups table added; units and VAT rule stated for slice D; the line's "includes VAT" flag
+decides; supplier costs not visible to members by default; moved items keep their code.
