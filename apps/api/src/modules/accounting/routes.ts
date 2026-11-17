@@ -1,6 +1,7 @@
 import { Hono, type Context } from 'hono';
 import {
   ACCOUNT_KINDS,
+  type VatMonth,
   ACCOUNT_ROLES,
   hasPermission,
   journalProblem,
@@ -892,4 +893,48 @@ accountingRoutes.get('/trial-balance', requirePermission('accounting.ledger.view
       minorToText(r.closingMinor, r.currency),
     ]),
   );
+});
+
+// ---- VAT settlement (sql/091, VAT plan part 4). Every entry is a manual journal with the usual approval; the database checks again.
+const MONTH_RE = /^\d{4}-\d{2}(-01)?$/;
+const monthParam = (c: Ctx) => {
+  const m = c.req.param('month') ?? '';
+  if (!MONTH_RE.test(m)) invalid('month must be YYYY-MM');
+  return m.length === 7 ? `${m}-01` : m;
+};
+accountingRoutes.get('/vat-months/:month', requirePermission('accounting.ledger.view'), async (c) =>
+  ok(c, await callRpc<VatMonth>(userDb(c), 'acc_vat_month', { p_month: monthParam(c) })),
+);
+accountingRoutes.post('/vat-months/:month/close', requirePermission('accounting.journal.create'), async (c) => {
+  const b = await jsonBody(c);
+  if (b.post !== undefined && typeof b.post !== 'boolean') invalid('post must be true or false');
+  return ok(c, await callRpc<unknown>(userDb(c), 'acc_vat_close_month', { p_month: monthParam(c), p_post: b.post === true }), 201);
+});
+accountingRoutes.post('/vat-periods/:id/payments', requirePermission('accounting.journal.create'), async (c) => {
+  const id = c.req.param('id') ?? '';
+  if (!UUID_RE.test(id)) throw new HttpError(404, 'Not found', 'not_found');
+  const b = await jsonBody(c);
+  const accountId = typeof b.accountId === 'string' ? b.accountId : '';
+  const paidOn = typeof b.paidOn === 'string' ? b.paidOn : '';
+  if (!UUID_RE.test(accountId)) invalid('accountId must be the account the money leaves from');
+  if (typeof b.amountMinor !== 'number' || !Number.isInteger(b.amountMinor) || b.amountMinor <= 0)
+    invalid('amountMinor must be a whole number above zero');
+  if (!DATE_RE.test(paidOn)) invalid('paidOn must be YYYY-MM-DD');
+  return ok(
+    c,
+    await callRpc<unknown>(userDb(c), 'acc_vat_record_payment', {
+      p_period_id: id,
+      p_account_id: accountId,
+      p_amount_minor: b.amountMinor,
+      p_paid_on: paidOn,
+      p_post: b.post === true,
+    }),
+    201,
+  );
+});
+accountingRoutes.post('/vat-opening', requirePermission('accounting.journal.create'), async (c) => {
+  const b = await jsonBody(c);
+  if (typeof b.amountMinor !== 'number' || !Number.isInteger(b.amountMinor) || b.amountMinor === 0)
+    invalid('amountMinor: above zero for a credit brought forward, below zero for VAT still owed');
+  return ok(c, await callRpc<unknown>(userDb(c), 'acc_vat_opening', { p_amount_minor: b.amountMinor, p_post: b.post === true }), 201);
 });

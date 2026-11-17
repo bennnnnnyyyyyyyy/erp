@@ -24,6 +24,8 @@ export const ACCOUNT_ROLES = [
   // VAT (sql/086): seeded as 2871 and 1811, not needed for switch-on (a posting needs them only when a document carries VAT).
   'output_vat',
   'input_vat',
+  // VAT settlement (sql/091): seeded as 2872.
+  'vat_settlement',
 ] as const;
 export type AccountRole = (typeof ACCOUNT_ROLES)[number];
 

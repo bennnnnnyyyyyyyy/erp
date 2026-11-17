@@ -9,6 +9,8 @@ import { tr, trf } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { hasPermission } from '@erp/shared';
+import { VatReturnPanel } from './VatReturnPanel';
 
 // VAT summary (sql/089, documentation/plans/VAT_PLAN.md part 3): output VAT on sales (by rate, zero-rated exports, exempt; net of
 // approved credit and debit notes), deductible input VAT on purchases (local, capital assets, imports), and the VAT due or the credit
@@ -52,6 +54,8 @@ export function VatSummaryPage() {
   const key = (side: string, kind: string, rate: number) => `${side}:${kind}:${side === 'sales' && kind === 'taxable' ? rate : 0}`;
   const docs = (s?.documents ?? []).filter((d) => !section || key(d.side, d.kind, d.rate) === section);
   const pick = (k: string) => setSection(section === k ? null : k);
+  // closing (part 4) works on whole calendar months only
+  const wholeMonth = shown.from.endsWith('-01') && monthOf(shown.from).to === shown.to;
 
   return (
     <section className="page wide">
@@ -179,6 +183,10 @@ export function VatSummaryPage() {
               <dd className="amount"><strong>{money(Math.abs(s.dueMinor))}</strong></dd>
             </div>
           </dl>
+
+          {wholeMonth && session.modules.includes('accounting') && hasPermission(session.permissions, 'accounting.ledger.view') ? (
+            <VatReturnPanel key={shown.from} month={shown.from} />
+          ) : null}
 
           <div className="section-head">
             <h2 className="related">

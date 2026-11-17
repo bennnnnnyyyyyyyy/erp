@@ -152,6 +152,11 @@ orgRoutes.get('/vat', requirePermission('core.org.read'), async (c) => {
     defaultVatRateId: s.defaultVatRateId ?? null,
     /** The first day VAT applies (sql/087, sql/088), or null. */
     vatFrom: typeof org.settings?.vat_from === 'string' ? org.settings.vat_from : null,
+    /** sql/091: days after the month that the return is due (null = end of the following month), the small-enterprise flag, and
+     *  whether an opening VAT balance was entered. */
+    returnDueDays: typeof org.settings?.vat_return_days === 'number' ? org.settings.vat_return_days : null,
+    smallEnterprise: org.settings?.vat_small_enterprise === true,
+    openingEntered: typeof org.settings?.vat_opening_journal_id === 'string',
     rates: ((rates.data ?? []) as { id: string; sub_type: string; rate: number | string; label: string; is_default: boolean }[]).map(
       (r) => ({
         id: r.id,
@@ -187,6 +192,16 @@ orgRoutes.put('/vat', requirePermission('core.org.manage'), async (c) => {
   return ok(c, saved);
 });
 
+// VAT return settings (sql/091): the return's due date (days after the month; null = end of the following month) and the small-enterprise
+// flag (refunds after more than 3 months). Owner only in the database.
+orgRoutes.put('/vat/return', requirePermission('core.org.manage'), async (c) => {
+  const b = await jsonBody(c);
+  const days = b.dueDays === null || b.dueDays === undefined || b.dueDays === '' ? null : b.dueDays;
+  if (days !== null && (typeof days !== 'number' || !Number.isInteger(days) || days < 1 || days > 120))
+    invalid('dueDays must be 1-120 or empty');
+  if (typeof b.smallEnterprise !== 'boolean') invalid('smallEnterprise must be true or false');
+  return ok(c, await callRpc<unknown>(userDb(c), 'core_set_vat_return', { p_due_days: days, p_small_enterprise: b.smallEnterprise }));
+});
 // VAT rates (sql/088): owners and admins add, change and remove the company's VAT rates without the e-invoicing module. The database
 // checks the ETA VAT sub-type, keeps names unique, refuses to remove a rate that items use or that is the default, and audits.
 function vatRateBody(b: Record<string, unknown>) {

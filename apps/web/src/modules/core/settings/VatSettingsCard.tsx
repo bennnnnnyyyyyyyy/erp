@@ -23,6 +23,9 @@ export function VatSettingsCard() {
   const [notice, setNotice] = useState<string | null>(null);
   const [from, setFrom] = useState<string | null>(null);
   const [form, setForm] = useState<RateForm | null>(null);
+  const [dueDays, setDueDays] = useState<string | null>(null);
+  const [small, setSmall] = useState<boolean | null>(null);
+  const [opening, setOpening] = useState('');
 
   if (vat.error || !vat.data) return null; // an older API without the route: nothing to show
   const v = vat.data;
@@ -210,6 +213,58 @@ export function VatSettingsCard() {
         </Button>
       )}
 
+      {isOwner ? (
+        <>
+          <h3>{tr('VAT return')}</h3>
+          <div className="form-row">
+            <label>
+              {tr('Return due (days after the month ends)')}
+              <input inputMode="numeric" value={dueDays ?? (v.returnDueDays === null || v.returnDueDays === undefined ? '' : String(v.returnDueDays))} placeholder={tr('End of the following month')} onChange={(e) => setDueDays(e.target.value)} />
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={small ?? v.smallEnterprise === true} onChange={(e) => setSmall(e.target.checked)} />
+              {tr('Small enterprise (Law 6/2025): refunds after more than 3 months')}
+            </label>
+            <Button
+              variant="outline"
+              disabled={busy || (dueDays === null && small === null)}
+              onClick={() =>
+                run(async () => {
+                  const d = (dueDays ?? (v.returnDueDays == null ? '' : String(v.returnDueDays))).trim();
+                  await api('/v1/core/org/vat/return', { method: 'PUT', body: JSON.stringify({ dueDays: d === '' ? null : Number(d), smallEnterprise: small ?? v.smallEnterprise === true }) });
+                  setDueDays(null);
+                  setSmall(null);
+                  return tr('Saved.');
+                })
+              }
+            >
+              {tr('Save')}
+            </Button>
+          </div>
+          {session.modules.includes('accounting') && v.vatRegistered && !v.openingEntered ? (
+            <div className="form-row">
+              <label>
+                {tr('Opening VAT balance at the start date')}
+                <input inputMode="decimal" value={opening} placeholder="0.00" onChange={(e) => setOpening(e.target.value)} />
+                <span className="hint muted">{tr('Only if the company already filed VAT returns: a credit brought forward is positive, VAT still owed is negative.')}</span>
+              </label>
+              <Button
+                variant="outline"
+                disabled={busy || !opening.trim() || !Number(opening)}
+                onClick={() =>
+                  run(async () => {
+                    await api('/v1/accounting/vat-opening', { method: 'POST', body: JSON.stringify({ amountMinor: Math.round(Number(opening) * 100), post: true }) });
+                    setOpening('');
+                    return tr('Opening VAT balance entered.');
+                  })
+                }
+              >
+                {tr('Enter the opening balance')}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : null}
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error">{error}</p>}
     </div>
