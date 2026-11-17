@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calcLine } from './modules/einvoicing/calc';
 import { fmtDec, fromMinor2, toMinor2 } from './modules/einvoicing/decimal';
-import { invoiceDueMinor, vatLine, vatTotals } from './vat';
+import { invoiceDueMinor, vatLine, vatLineInclusive, vatTotals } from './vat';
 
 describe('vatLine', () => {
   it('rounds the tax per line, half away from zero (the sql/086 known answers)', () => {
@@ -42,5 +42,13 @@ describe('vatLine', () => {
       expect(ours.taxMinor).toBe(Number(toMinor2(eta.taxes[0]?.amount ?? 0n)));
       expect(ours.grossMinor).toBe(Number(toMinor2(eta.total)));
     }
+  });
+});
+
+describe('vatLineInclusive (sql/093 known answers)', () => {
+  it('splits a price with VAT into net and VAT per line', () => {
+    expect(vatLineInclusive(1, 1140, 14)).toEqual({ netMinor: 1000, taxMinor: 140, grossMinor: 1140 });
+    expect(vatLineInclusive(3, 333, 5)).toEqual({ netMinor: 951, taxMinor: 48, grossMinor: 999 });
+    expect(vatLineInclusive(2, 500, 0)).toEqual({ netMinor: 1000, taxMinor: 0, grossMinor: 1000 });
   });
 });

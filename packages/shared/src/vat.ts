@@ -29,7 +29,16 @@ export type VatSettings = {
   returnDueDays?: number | null;
   smallEnterprise?: boolean;
   openingEntered?: boolean;
+  /** sql/093: sales prices include VAT. */
+  pricesIncludeVat?: boolean;
 };
+
+/** One line whose price includes VAT (sql/093): gross = round(qty x price); net = round(gross x 100 / (100 + rate)); tax = gross - net. */
+export function vatLineInclusive(qty: number, unitPriceMinor: number, ratePercent: number): VatLine {
+  const grossMinor = roundHalfAway(Math.round(qty * 1000 * unitPriceMinor) / 1000);
+  const netMinor = roundHalfAway(Math.round((grossMinor * 100 * 100000) / (100 + ratePercent)) / 100000);
+  return { netMinor, taxMinor: grossMinor - netMinor, grossMinor };
+}
 
 /** A document's totals: the sums of its lines. */
 export function vatTotals(lines: readonly VatLine[]): VatLine {

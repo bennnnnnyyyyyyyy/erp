@@ -24,7 +24,7 @@ import { tr, trf } from '../../lib/i18n';
 type OrderLine = { id: string; itemId: string; qty: number; unitPriceMinor: number };
 type Order = { id: string; number: string; customerId: string; status: string; currency: string; requestStatus: string | null; lines: OrderLine[] };
 // netMinor / taxMinor / grossMinor: stored by the database (sql/086); totalMinor is the gross. Optional while an older API answers.
-type InvoiceLine = { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; netMinor?: number; taxMinor?: number; grossMinor?: number };
+type InvoiceLine = { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; netMinor?: number; taxMinor?: number; grossMinor?: number; priceIncludesVat?: boolean };
 type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; netMinor?: number; taxMinor?: number; grossMinor?: number; createdAt: string; creditedMinor?: number; debitedMinor?: number; lines: InvoiceLine[] };
 type Customer = { id: string; name: string };
 type Item = { id: string; sku: string; name: string };
@@ -140,7 +140,7 @@ export function CustomerInvoices() {
                   </tr>
                 ))}
               </tbody></table></div>
-              {vatOn ? <p className="muted small">{tr('Prices are before VAT. The VAT is worked out on each line when the invoice is created and never changes afterwards.')}</p> : null}
+              {vatOn ? <p className="muted small">{vat.data?.pricesIncludeVat ? tr('Prices include VAT: each line is split into the amount before VAT and the VAT when the invoice is created, and never changes afterwards.') : tr('Prices are before VAT. The VAT is worked out on each line when the invoice is created and never changes afterwards.')}</p> : null}
               {!chosen.billing.some((b) => qtyFor(b) > 0) ? <p className="muted small">{tr('Nothing is left to invoice on this order.')}</p> : null}
               <Button disabled={busy || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
             </>
@@ -240,7 +240,7 @@ export function CustomerInvoicePage() {
       </dl>
 
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit price')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
+        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{inv.lines.some((l) => l.priceIncludesVat) ? tr('Unit price (with VAT)') : tr('Unit price')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
           {hasVat ? <><th scope="col" className="right">{tr('VAT rate')}</th><th scope="col" className="right">{tr('VAT')}</th></> : null}</tr></thead>
         <tbody>
           {inv.lines.map((l) => (

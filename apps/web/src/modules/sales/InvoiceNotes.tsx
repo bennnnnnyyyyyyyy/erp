@@ -22,7 +22,7 @@ export type NoteInvoice = {
   id: string;
   currency: string;
   status: 'issued' | 'void';
-  lines: { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number }[];
+  lines: { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; priceIncludesVat?: boolean }[];
 };
 type Note = NoteForMath & {
   id: string;
@@ -147,7 +147,7 @@ function NoteForm({ kind, invoice, notes, itemOf, onClose, onError, onDone }: {
   const returning = returnGoods ? chosen.filter((l) => backOf(l) > 0) : [];
   const needsWarehouse = returning.length > 0 && !warehouseId;
   // Each note line keeps its invoice line's VAT rate (sql/086); the price typed here is before VAT.
-  const totals = noteVatTotals(chosen.map((l) => ({ qty: qtyOf(l), unitPriceMinor: priceOf(l), taxRate: l.taxRate })));
+  const totals = noteVatTotals(chosen.map((l) => ({ qty: qtyOf(l), unitPriceMinor: priceOf(l), taxRate: l.taxRate, priceIncludesVat: l.priceIncludesVat })));
   const total = totals.grossMinor;
   const ready = chosen.length > 0 && reason.trim() !== '' && !overQty && !overPrice && !badBack && !needsWarehouse;
 

@@ -1,7 +1,7 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
 **Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built and live 16 Nov. Part 4 (settlement, `sql/091`) built 17 Nov, not applied. Part 5 not built: 3 VAT summary in the return's layout,
+(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built and live 16 Nov. Part 4 (settlement, `sql/091`) built 17 Nov, not applied. Part 5 (prices that include VAT, `sql/093`) built 17 Nov, not applied: 3 VAT summary in the return's layout,
 4 settlement, 5 prices that include VAT.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
@@ -344,3 +344,47 @@ settings and the opening balance in Settings → General → VAT (owner). Tests:
 - **Accountant:** account 2872 (or another code / two accounts, due and refundable)? Close on ledger balances (proposed) or on the
   document summary? The refund rule (4 periods / 3 months for small enterprises) and what proof is needed. The return deadline. How a
   late credit note or void in an already-filed month is corrected (next month's return, or an amended return).
+
+**Part 5 as built (17 Nov, `sql/093`).** Owner setting "Sales prices include VAT" (Settings → General → VAT). With it on, each new sales
+invoice line records that its price includes VAT and is split per line: gross = round(qty × price), net = round(gross × 100 / (100 + rate)),
+VAT = gross − net (to confirm with the accountant and against ETA). Notes on such a line are split the same way. Bills stay before VAT.
+Shopify: allowed with VAT only when prices include VAT; the setting cannot be switched off while VAT and Shopify are both on. Test:
+`sql/tests/088_vat_prices_include.sql`. Not yet: per price list (all sales prices of a company follow the one setting); ETA document lines
+for inclusive prices (the e-invoice is built from the stored net and VAT).
+
+## 16. Supplier credit notes (draft, 17 Nov; not built: waiting for Ben's approval)
+
+**Goal.** Record a supplier's credit note (goods returned to the supplier, a discount or a price correction after the bill) with its
+VAT, so what is owed to the supplier, the books and the VAT summary are right; and remove the summary's "excludes supplier credit notes"
+warning. Supplier debit notes (a supplier adding to a bill) go in the same document as `kind = 'debit'`.
+
+**Design (proposed; it mirrors our customer notes, sql/037, and bills, sql/087-088):**
+1. **Tables** `pur_notes` and `pur_note_lines` (company data: RLS, member read, writes through functions, append-only lines, isolation
+   tests). A note refers to one recorded bill and only that bill's lines: quantity and unit cost before VAT, and the bill line's VAT
+   rate (copied). The supplier's own note number and its e-invoice number (`vat_document_ref`), like a bill.
+2. **Limits, in the database:** a credit note never credits more than was billed per line (quantity, cumulative over open and approved
+   notes; unit cost not above the bill's). VAT as printed on the supplier's note, within the same tolerance as bills (larger of 1 per
+   line and 5). Deductible follows the bill: a note on a deductible bill reduces input VAT; on a non-deductible bill it reduces the cost.
+3. **Approval:** requested by one person, approved by another owner or admin (as customer notes; D1/D1b sole-owner self-approval and
+   D1c owner self-approval apply). Nothing posts or counts until approved.
+4. **Posting (approved credit note):** Dr suppliers gross / Cr GRNI-or-price differences net / Cr input VAT (deductible VAT), or the
+   VAT back out of the cost (non-deductible, the same lines the bill used: stock or cost of goods sold). Debit note: the reverse.
+   **Goods physically returned** to the supplier: stock out at the cost they came in, through the existing stock approval, as an
+   option on the note (like customer returns, sql/043). To confirm with the accountant whether the return and the note are always one.
+5. **Owed:** what is owed on a bill = gross − approved credit notes + approved debit notes − payments (the payment check, open items,
+   owner insights), as for customer invoices.
+6. **VAT summary (part 3):** approved notes enter purchases by their approval day, negative for credit; the "excludes supplier credit
+   notes" warning goes.
+7. **Screens:** on the bill page, "Supplier credit note" / "Supplier debit note" (lines from the bill, quantity and price, VAT as
+   printed, the supplier's references), the list of notes with approve / reject, and the amounts on the bill.
+
+**Rollout:** `sql/094` (tables, functions, posting, owed, summary), `sql/tests/089`; API under `/v1/purchasing`; web on the bill page.
+Same steps as before: dry run on live, apply, tests, CI green, merge.
+
+**Questions for Ben:**
+1. Build it as above?
+2. Returned goods: include "goods go back to the supplier" (stock out) in the first version, or money only first (recommended: money
+   only first; returns second)?
+
+**Questions for the accountant:** are the return of goods and the supplier's credit note always one document? In which month does a
+supplier credit note reduce input VAT: the note's date or the approval day (proposed: approval day, as customer notes)?
