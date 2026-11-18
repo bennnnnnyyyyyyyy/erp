@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "sync:main": "node scripts/sync-main.mjs",
+    "preview:build": "node scripts/preview-build.mjs",
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
     "build:demo": "npm run build:demo -w apps/web",
