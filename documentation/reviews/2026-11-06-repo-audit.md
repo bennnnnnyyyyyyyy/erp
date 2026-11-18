@@ -123,7 +123,7 @@ The agent instructions say not to use automated browser testing ([agents.md:55](
 
 #### 15. Production build defaults a demo autofill action to one account-specific email
 
-The production workflow defaults DEMO_AUTOFILL_EMAILS to chris.johnson.wiz@gmail.com when no repository variable is set ([ci-deploy.yml:93](../../.github/workflows/ci-deploy.yml:93)). This is account-specific access behavior embedded in deployment configuration. The repo rules say customer-specific settings belong in organization/configuration data, not hardcoded defaults.
+The production workflow defaults DEMO_AUTOFILL_EMAILS to [email redacted] when no repository variable is set ([ci-deploy.yml:93](../../.github/workflows/ci-deploy.yml:93)). This is account-specific access behavior embedded in deployment configuration. The repo rules say customer-specific settings belong in organization/configuration data, not hardcoded defaults.
 
 **Impact:** The production build silently grants the sample-data autofill action to one named account unless deployment configuration overrides it.
 

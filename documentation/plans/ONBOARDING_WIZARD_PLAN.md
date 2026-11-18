@@ -1,6 +1,6 @@
 # First-run setup wizard ("welcome me into the app")
 
-**Status:** Built on branch `worktree-onboarding-wizard` (2026-11-04), **not merged, not deployed**; awaiting Ben's review after the demo.
+**Status:** Built on a worktree on 4 Nov and later merged into main (confirmed in Git history). The checklist lists onboarding as built; the worklog does not record a live first-run verification. Treat live status as unverified until that evidence is added.
 **Owner:** Ben · **Author:** Claude (Opus 5.5)
 **Requested by Ben (2026-11-04):** "it needs to welcome me into the app, ask me the language, name of company, and stuff". The sample companies keep their data; Ben will create a new company to use it.
 

@@ -1,6 +1,6 @@
 # ADR-0003: Business mutations go through database functions called with the user's own JWT
 
-**Status:** Accepted and implemented (confirmed 11 Nov 2026; exceptions under "Master-key exceptions" in agents.md)
+**Status:** Accepted and implemented (confirmed 18 Nov 2026; exceptions under "Master-key exceptions" in agents.md)
 **Date:** 2026-10-28
 **Deciders:** Ben
 

@@ -1,8 +1,7 @@
 # Master data and coding Plan (accounting roadmap phase 4)
 
 **Module key:** `inventory` (items, groups, units), `purchasing` and `sales` (party item codes, prices); no new module
-**Status:** `[✅ Approved]`: approved by Ben on 17 Nov 2026 (build order A → C → B → D; groups optional, required only under the
-"group codes" rule). Slice A (item groups and codes, `sql/095`) built and applied to live 17 Nov (test 090 passed on live); C waits for Ben's approval of A.
+**Status:** Approved by Ben on 17 Nov 2026 (build order A → C → B → D). Slice A (item groups and codes, sql/095) and its read-grant fix (sql/096) are applied to live. Slice C (prices and price lists, sql/097) was started at Ben’s request and built on 18 Nov; it is not applied to live yet. See sql/README.md and the dated worklog for current rollout evidence.
 **Owner:** Ben · **Reviewers:** Ben, the accountant
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md) phase 4. Ben's notes there: "item, sub-item and sub-sub-item,
 each with coding", "auto SKU or our own (best for the Egyptian Tax Authority)", "SKU as the supplier knows it differs from the SKU the

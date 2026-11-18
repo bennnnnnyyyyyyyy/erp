@@ -1,6 +1,6 @@
 # Feature set and tech stack
 
-**Status:** `[📝 Draft / RFC]` for Ben's review, 2026-10-29. Replaces the ad-hoc feature lists in `neworder.md` section 4 and `PRODUCT_BRIEF.md` for planning; those stay as the short versions.
+**Status:** Historical draft/RFC (29 Oct 2026), not an approved build plan. Its source `neworder.md` is no longer in the repository; use `PRODUCT_BRIEF.md`, the approved module plans, and the current checklist for active direction. Treat feature assumptions below as unapproved until adopted by a current plan.
 **Rule for this document:** nothing is described as working unless it was run and tested. Every claim about an outside service is labelled with how sure we are. No dates, no costs: costing comes after the trials and interviews.
 
 ## 0. How to read the labels
@@ -30,7 +30,7 @@
 
 ## 2. Feature set
 
-Phases follow `neworder.md`: **P1** = the star feature and what it needs to be real, **P2** = the fuller ERP, **P3** = later. Effort is rough: **S** days, **M** a couple of weeks, **L** a month or more of focused work, with no promise.
+The historical phases below were copied from the now-removed `neworder.md`: **P1** = the star feature and what it needs to be real, **P2** = the fuller ERP, **P3** = later. They are not current priorities or approved scope. Effort labels are retained as historical notes only.
 
 ### 2.1 Star feature: outbound approvals and tasks over WhatsApp and voice
 
@@ -114,7 +114,7 @@ All confirmed in the repository.
 | Database | Supabase Postgres | row level security, security-definer functions, triggers; migrations in `sql/`, applied with the Supabase CLI |
 | Auth | Supabase Auth, password sign-in | tokens verified at the Worker; organization chosen by `X-Org-Id`, checked in the database |
 | Background work | Cloudflare Cron Trigger every 5 minutes plus a transactional outbox | no separate queue yet |
-| Hosting | Cloudflare Pages (web), Workers (API) | account `meetings.dmedeskai@gmail.com` |
+| Hosting | Cloudflare Pages (web), Workers (API) | account `[email redacted]` |
 | Tests | Vitest, SQL tests (`sql/tests/`), real-login script | no automated browser tests (project rule): manual click-through |
 
 ## 4. Tech stack, needed (and what we know)

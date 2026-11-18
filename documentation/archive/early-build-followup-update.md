@@ -1,3 +1,5 @@
+> Historical early-build follow-up. Exact date was not recorded; superseded by the dated worklog and current checklist.
+
 Subject: ERP update 2: alerts, forecast, sign-up and tutorial built
 
 Follow-up to this afternoon's update. Since then:

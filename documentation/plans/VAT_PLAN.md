@@ -1,8 +1,6 @@
 # VAT Plan (tax on sales and purchase lines, posting, VAT return)
 
-**Status:** Approved by Ben 16 Nov 2026 (prices typed before VAT; invoices issued before VAT keep zero tax). Part 1 built and live
-(`sql/086`, 16 Nov). Part 2 built and live 16 Nov (`sql/087`); its review fixes and Ben's decisions of 16 Nov in `sql/088` (section 14, not applied). Part 3 (VAT summary, `sql/089`) built and live 16 Nov. Part 4 (settlement, `sql/091`) built 17 Nov, not applied. Part 5 (prices that include VAT, `sql/093`) built 17 Nov, not applied: 3 VAT summary in the return's layout,
-4 settlement, 5 prices that include VAT.
+**Status:** Approved by Ben on 16 Nov 2026. VAT parts 1–5 (sql/086–093) and supplier credit/debit notes (sql/094) are recorded as applied to live; see the migration register and worklog for exact dates and test results. Remaining plan work includes the VAT return layout and accountant-confirmed rules.
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md), phase 3 ("Taxes"), first part: VAT only. Withholding (خصم وإضافة),
 table tax and stamp duty come later, after the accountant session (roadmap Q4).
 **Decision record:** [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) (from section 12, accepted 16 Nov).
@@ -309,7 +307,7 @@ and always "excludes supplier credit notes". Each line opens its documents; CSV 
 the Form 10 headings. Voided invoices are left out whatever month they were voided in (a void in a later, already-filed month would
 need a correction: to confirm with the accountant).
 
-## 15. Part 4: settlement and carry-forward (built 17 Nov, `sql/091`, on these assumptions; Ben: "build it now", each changeable later)
+## 15. Part 4: settlement and carry-forward (built and applied live 17 Nov, sql/091; see sql/README.md for run evidence)
 
 **Goal.** At the end of each tax month the company closes its VAT: output VAT and deductible input VAT are set against each other in the
 books, what is due is recorded as owed to the tax authority (or a credit is carried forward), the payment is recorded, and the app shows
@@ -334,7 +332,7 @@ the deadline and when a refund can be asked for. Needs accounting switched on (w
 6. **Deadline.** A company setting "return due N days after the month ends" (default: end of the following month, editable, never
    hard-coded); the summary shows "return for October due by 30 November" and an optional alert rule reminds the owner.
 
-**Data and tests (proposed):** `sql/091` (role and account, `acc_vat_periods`, close/pay functions built on manual journals,
+**Data and tests (as built):** sql/091 (role and account, acc_vat_periods, close/pay functions and settings), sql/tests/086. API under /v1/finance/vat-periods. No new posting path: every entry is a manual journal with its approval.
 settings), `sql/tests/086`. API on `/v1/finance/vat-periods`. No new posting path: every entry is a manual journal with its approval.
 
 **As built (17 Nov):** exactly the design above. Close and payment from Finance → VAT summary (a whole month, accounting on); return
@@ -345,14 +343,14 @@ settings and the opening balance in Settings → General → VAT (owner). Tests:
   document summary? The refund rule (4 periods / 3 months for small enterprises) and what proof is needed. The return deadline. How a
   late credit note or void in an already-filed month is corrected (next month's return, or an amended return).
 
-**Part 5 as built (17 Nov, `sql/093`).** Owner setting "Sales prices include VAT" (Settings → General → VAT). With it on, each new sales
+**Part 5 as built and applied live 17 Nov (sql/093).** Owner setting Sales prices include VAT (Settings → General → VAT). With it on, each new sales invoice line records that its price includes VAT and is split per line: gross = round(qty × price), net = round(gross × 100 / (100 + rate)), VAT = gross − net. Notes on such a line are split the same way. Bills stay before VAT. Shopify is allowed with VAT only when prices include VAT; the setting cannot be switched off while VAT and Shopify are both on. Test: sql/tests/088_vat_prices_include.sql. Migration 097 adds per-item and price-list prices with the includes-VAT meaning copied when each price is saved. ETA document lines for inclusive prices remain unbuilt; the e-invoice should use the stored net and VAT.
 invoice line records that its price includes VAT and is split per line: gross = round(qty × price), net = round(gross × 100 / (100 + rate)),
 VAT = gross − net (to confirm with the accountant and against ETA). Notes on such a line are split the same way. Bills stay before VAT.
 Shopify: allowed with VAT only when prices include VAT; the setting cannot be switched off while VAT and Shopify are both on. Test:
 `sql/tests/088_vat_prices_include.sql`. Not yet: per price list (all sales prices of a company follow the one setting); ETA document lines
 for inclusive prices (the e-invoice is built from the stored net and VAT).
 
-## 16. Supplier credit notes (built 17 Nov, `sql/094`: money first; returned goods ready in the data model, not switched on)
+## 16. Supplier credit notes (built and applied live 17 Nov, `sql/094`: money first; returned goods ready in the data model, not switched on)
 
 **Goal.** Record a supplier's credit note (goods returned to the supplier, a discount or a price correction after the bill) with its
 VAT, so what is owed to the supplier, the books and the VAT summary are right; and remove the summary's "excludes supplier credit notes"
@@ -378,7 +376,7 @@ warning. Supplier debit notes (a supplier adding to a bill) go in the same docum
 7. **Screens:** on the bill page, "Supplier credit note" / "Supplier debit note" (lines from the bill, quantity and price, VAT as
    printed, the supplier's references), the list of notes with approve / reject, and the amounts on the bill.
 
-**Rollout:** `sql/094` (tables, functions, posting, owed, summary), `sql/tests/089`; API under `/v1/purchasing`; web on the bill page.
+**Rollout:** sql/094 and test 089 are recorded as applied/passed on live in sql/README.md and the worklog. The API and bill-page workflow are built.
 Same steps as before: dry run on live, apply, tests, CI green, merge.
 
 **Questions for Ben:**
