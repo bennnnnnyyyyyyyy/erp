@@ -21,7 +21,7 @@ run or deployed.
 - C1: item group form opens under its row; main groups bold, indented tree; "Add main group". C2: Inventory settings page for the item code rule, linked from Item groups. C3/C4: the item group picker offers only groups without sub-groups, under their main group; `sql/098` enforces it (items only in leaf groups; no sub-groups under a group holding items), tests 094 and 090 (SQL reused from the dropped slice branch after review).
 - D1: statement section headings, subtotals and totals styled; aligned digits. E1: inventory action cards get a symbol and colour per kind.
 
-**Database / System Result.** None yet: `sql/098` is applied to live after merge (Claude, CLI).
+**Database / System Result.** `sql/098` applied to live 18 Nov by Claude (CLI) after PR #76 merged: anon_creates_groups false, create_item_versions 1, items_in_heading_groups 0, users_set_group true; tests 094 and 090 passed on live (rolled back).
 
 **Safety Status.** Local: typecheck clean; tests shared 82, API 647, web 146; PGlite 96 migrations with tests 090-094 passing; biome ci 0 errors; migration check OK. Not checked in a browser.
 
