@@ -16,6 +16,7 @@ import { useSession } from '../../session';
 import { EditItemModal, MOVE_KIND_LABEL, useCatalog } from './Inventory';
 import { ItemBatchSwitch } from './ItemBatchSwitch';
 import { ItemPrices } from '../sales/ItemPrices';
+import { ItemPartyCodes } from './PartyCodes';
 
 // One page per item (inventory redesign Q1, Ben 10 Nov 2026). Everything the app knows about one item, which used to be spread over
 // six screens: totals, stock per warehouse, its movements, batches, units, average cost and its history. Read-only apart from Edit;
@@ -94,6 +95,8 @@ export function ItemPage() {
       )}
       {/* Sales price, supplier costs and a suggested price (sql/097). */}
       {!demoMode && can('sales.prices.read') && <ItemPrices itemId={item.id} canManage={can('sales.prices.manage')} />}
+      {/* Supplier and customer codes (sql/099). */}
+      {!demoMode && <ItemPartyCodes itemId={item.id} canManage={can('inventory.party_codes.manage')} />}
 
       <div className="stats">
         <div className="stat" style={{ '--i': 0 } as CSSProperties}><div className="stat-label">{tr('On hand')}</div><div className="stat-value">{qty(onHand)}</div><div className="stat-note">{item.uom}</div></div>

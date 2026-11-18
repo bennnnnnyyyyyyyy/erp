@@ -82,4 +82,16 @@ export const MASTER_DATA_AR: Record<string, string> = {
   "Add main group": "إضافة مجموعة رئيسية",
   "How new items get their code. Codes never change once given, even if an item moves to another group.": "كيف تحصل الأصناف الجديدة على أكوادها. لا يتغير الكود بعد إعطائه، حتى لو انتقل الصنف إلى مجموعة أخرى.",
   "Only an owner or admin can change the item code rule.": "المالك أو المدير فقط يستطيع تغيير قاعدة أكواد الأصناف.",
+  // Slice B: supplier and customer item codes (sql/099)
+  "Their code": "كودهم",
+  "Supplier: {name}": "المورد: {name}",
+  "Customer: {name}": "العميل: {name}",
+  "Supplier and customer codes": "أكواد الموردين والعملاء",
+  "The code each supplier or customer uses for this item. It is shown beside ours on their orders, bills and invoices.": "الكود الذي يستخدمه كل مورد أو عميل لهذا الصنف. يظهر بجانب كودنا في أوامرهم وفواتيرهم.",
+  "No supplier or customer codes yet.": "لا توجد أكواد موردين أو عملاء بعد.",
+  "Supplier or customer": "المورد أو العميل",
+  "Their name": "اسمهم للصنف",
+  "Add a code": "إضافة كود",
+  "Their name (optional)": "اسمهم للصنف (اختياري)",
+  "Save code": "حفظ الكود",
 };

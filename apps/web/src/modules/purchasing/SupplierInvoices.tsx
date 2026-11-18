@@ -16,6 +16,7 @@ import { UnpaidBills } from './UnpaidBills';
 import { SupplierNotes } from './SupplierNotes';
 import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseVat } from '../finance/PurchaseVatFields';
 
+import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
 import { tr, trf } from '../../lib/i18n';
 type Summary = { orderId:string;number:string;supplierId:string;currency:string;lines:{orderLineId:string;itemId:string;receivedQty:number;billedQty:number;unitCostMinor:number}[] };
 type Supplier = {id:string;name:string};
@@ -85,6 +86,8 @@ export function SupplierInvoicePage() {
   const invoice = useLoad(() => api<Omit<Invoice, 'lines'> & { orderNumber: string | null; lines: (BillLine & { itemId: string | null })[] }>(`/v1/purchasing/supplier-invoices/${id}`));
   const suppliers = useLoad(() => api<Supplier[]>('/v1/purchasing/suppliers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
+  // The supplier's own codes for these items (sql/099), as a "Their code" column when a line has one.
+  const theirCodes = codesFor(usePartyCodes('supplier', invoice.data?.supplierId), (invoice.data?.lines ?? []).map((l) => l.itemId ?? undefined));
 
   if (invoice.error) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><Loading error={invoice.error} /></section>;
   if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
@@ -125,14 +128,14 @@ export function SupplierInvoicePage() {
         {inv.vatClass && inv.vatClass !== 'local' ? <div><dt>{tr('Kind of purchase')}</dt><dd>{inv.vatClass === 'import' ? tr('Import (customs)') : inv.vatClass === 'mixed' ? tr('Mixed (each line has its own)') : tr('Capital asset (equipment, machinery)')}</dd></div> : null}
       </dl>
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
+        <thead><tr><th scope="col">{tr('Item')}</th><TheirCodeHeader codes={theirCodes} /><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
           {hasVat ? <><th scope="col" className="right">{tr('VAT rate')}</th><th scope="col" className="right">{tr('VAT')}</th></> : null}</tr></thead>
         <tbody>
           {inv.lines.map((l) => (
-            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.netMinor ?? Math.round(l.qty * l.unitCostMinor), inv.currency)}</td>
+            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><TheirCodeCell codes={theirCodes} itemId={l.itemId ?? undefined} /><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.netMinor ?? Math.round(l.qty * l.unitCostMinor), inv.currency)}</td>
               {hasVat ? <><td className="right">{(l.taxRate ?? 0) > 0 ? `${l.taxRate}%` : tr('None')}</td><td className="right">{money(l.taxMinor ?? 0, inv.currency)}</td></> : null}</tr>
           ))}
-          <tr><td colSpan={hasVat ? 5 : 3} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
+          <tr><td colSpan={(hasVat ? 5 : 3) + (theirCodes.size ? 1 : 0)} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
         </tbody>
       </table></div>
       <SupplierNotes billId={inv.id} currency={inv.currency} lines={inv.lines} itemOf={itemOf} onChanged={invoice.reload} />

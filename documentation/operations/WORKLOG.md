@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-18 — Supplier and customer item codes, master data slice B (`sql/099`)
+
+**Objective.** Slice B of the [master data plan](../plans/MASTER_DATA_PLAN.md), assigned by Ben through the master chat (18 Nov). Decisions:
+only owners and admins add, change or remove a code; one code per item per supplier or customer; "Their code" on purchase orders, bills
+and invoices when a line has one.
+
+**Actions Completed.** `sql/099_inv_party_item_codes.sql`: `inv_party_item_codes` and the set / remove / find functions (audited, owners
+and admins write, members read). `sql/tests/096_inv_party_item_codes.sql` (new). Permission `inventory.party_codes.manage` (owners and
+admins). API (`apps/api/src/modules/inventory/partyCodes.ts`): `GET /v1/inventory/party-item-codes` (by item or by party),
+`GET /party-item-codes/find`, `PUT /items/:id/party-codes`, `DELETE /items/:id/party-codes/:partyType/:partyId`. Web: "Supplier and
+customer codes" on the item page; new purchase and sales orders search items by the chosen party's codes and show them beside ours; a
+"Their code" column on the purchase order, bill and invoice pages (also when they are printed from the browser), only when a line has a
+code. Arabic machine drafts in `i18nMasterData.ts`. Not done: there are no separate supplier or customer pages yet, so the codes are not
+listed from the party's side; the bill and invoice forms pick order lines, not items, so they only show the codes.
+
+**Database / System Result.** None. Not applied to live; the master chat applies it after the merge.
+
+**Safety Status.** Local SQL run (PGlite, all 97 migrations, 099 applied a second time): 94 of 94, including 096 (one code per item and
+party, unique per party case-insensitively, same code at another party allowed, lookup, remove frees the code, wrong or foreign party
+refused, members read but cannot write, audit count, isolation, no direct writes) and guard 092. Typecheck clean; tests: shared 82, API
+655 (new `party_item_codes.test.ts`), web 148 (new `PartyCodes.test.ts`). `biome ci .`: 0 errors. Not viewed in a browser.
+
 ## 2026-11-18 — Walkthrough fixes A1-E1 (Ben decided the plan; `sql/098`)
 
 **Objective.** Ben's walkthrough notes of 18 Nov, fixed as he decided them in .temp/fix-plan-18nov.md (B1, B2 chosen; A, C, D, E from his notes; A1 after confirming that Egypt's standard is prices before VAT).
