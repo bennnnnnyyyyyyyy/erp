@@ -1,11 +1,35 @@
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
 import { useLoad } from '../../lib/useLoad';
+import { Link } from '../../lib/router';
 import { useSession } from '../../session';
+
+/** Inventory → Settings and planning → Inventory settings (walkthrough 18 Nov, fix C2: the code rule was hard to find on Item groups). */
+export function InventorySettingsPage() {
+  const role = useSession().role;
+  const canManage = !demoMode && (role === 'owner' || role === 'admin');
+  const rule = useLoad(() => (demoMode ? Promise.resolve(null) : api<CodeRule>('/v1/inventory/item-code-rule')));
+  const [notice, setNotice] = useState<string | null>(null);
+  return (
+    <section className="page">
+      <h1>{tr('Inventory settings')}</h1>
+      <p className="muted">{tr('How new items get their code. Codes never change once given, even if an item moves to another group.')}</p>
+      {notice ? <p className="notice" role="status">{notice}</p> : null}
+      {!rule.data ? (
+        <Loading error={rule.error} />
+      ) : canManage ? (
+        <CodeRuleForm rule={rule.data} onSaved={() => { rule.reload(); setNotice(tr('Item code rule saved.')); }} />
+      ) : (
+        <p>{tr('Only an owner or admin can change the item code rule.')}</p>
+      )}
+      <p className="muted small"><Link to="/inventory/item-groups">{tr('Item groups')}</Link></p>
+    </section>
+  );
+}
 
 // Item groups and the item code rule (sql/095, documentation/plans/MASTER_DATA_PLAN.md slice A). Groups form a tree of any depth, each
 // with a code; under the "group codes" rule a new item's code is its groups' codes and a number (10-03-007). Codes never change once
@@ -37,10 +61,36 @@ export function flattenGroups(groups: ItemGroup[], separator = '-'): (ItemGroup 
 export const groupName = (g: ItemGroup, lang: string) => (lang === 'ar' && g.nameAr ? g.nameAr : g.name);
 
 /** A select of live groups, indented by level. */
-export function GroupSelect({ groups, value, onChange, separator, emptyLabel, activeOnly = true, exclude }: {
+export function GroupSelect({ groups, value, onChange, separator, emptyLabel, activeOnly = true, exclude, leafOnly = false }: {
   groups: ItemGroup[]; value: string; onChange: (id: string) => void; separator?: string; emptyLabel: string; activeOnly?: boolean; exclude?: Set<string>;
+  /** For items (Ben's walkthrough 18 Nov; the database enforces it, sql/098): only groups without sub-groups can be chosen. Each main
+   *  group with sub-groups is a heading, its sub-groups listed under it; a main group without sub-groups is a choice of its own. */
+  leafOnly?: boolean;
 }) {
   const lang = currentLanguage();
+  if (leafOnly) {
+    const live = flattenGroups(groups, separator).filter((g) => !activeOnly || g.active);
+    const hasChildren = new Set(live.filter((g) => g.parentId).map((g) => g.parentId as string));
+    const label = (g: (typeof live)[number]) => `${g.fullCode} · ${groupName(g, lang)}`;
+    const tops = live.filter((g) => !g.parentId);
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{emptyLabel}</option>
+        {tops.map((t) =>
+          hasChildren.has(t.id) ? (
+            <optgroup key={t.id} label={label(t)}>
+              {[...descendants(live, t.id)]
+                .map((id) => live.find((g) => g.id === id)!)
+                .filter((g) => g.id !== t.id && !hasChildren.has(g.id))
+                .map((g) => <option key={g.id} value={g.id}>{label(g)}</option>)}
+            </optgroup>
+          ) : (
+            <option key={t.id} value={t.id}>{label(t)}</option>
+          ),
+        )}
+      </select>
+    );
+  }
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{emptyLabel}</option>
@@ -109,49 +159,62 @@ export function ItemGroupsPage() {
     }, tr('Group saved. Items already coded keep their codes.'));
   }
 
+  // Walkthrough 18 Nov, fix C1: the form opens under the row it belongs to (add a sub-group, edit), or at the top for a main group.
+  const draftForm = draft ? (
+      <form className="form-card stack" onSubmit={save} aria-label={draft.id ? tr('Edit group') : tr('Add group')}>
+        <div className="form-row">
+          <label>
+            {tr('Under')}
+            <GroupSelect groups={list} value={draft.parentId} separator={separator} emptyLabel={tr('Top level')} activeOnly={false}
+              exclude={draft.id ? descendants(list, draft.id) : undefined} onChange={(parentId) => setDraft({ ...draft, parentId })} />
+          </label>
+          <label>
+            {tr('Code')}
+            <input required maxLength={10} pattern="[A-Za-z0-9]{1,10}" placeholder="10" value={draft.code}
+              onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} />
+          </label>
+        </div>
+        <div className="form-row">
+          <label>{tr('Name')}<input required maxLength={120} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+          <label>{tr('Name in Arabic (optional)')}<input dir="rtl" maxLength={120} value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} /></label>
+        </div>
+        {draft.id ? (
+          <label className="option-switch">
+            <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
+            <span>{tr('New items can be added to this group')}</span>
+          </label>
+        ) : null}
+        <p className="muted small">{tr('Letters and digits, up to 10. Changing a code or moving a group changes the codes of new items only.')}</p>
+        <div className="form-actions">
+          <Button type="submit">{draft.id ? tr('Save changes') : tr('Add group')}</Button>
+          <Button type="button" variant="ghost" onClick={() => setDraft(null)}>{tr('Cancel')}</Button>
+        </div>
+      </form>
+  ) : null;
+  const formAfter = (g: { id: string }) => draft !== null && (draft.id === g.id || (draft.id === null && draft.parentId === g.id));
+
   return (
     <section className="page">
       <h1>{tr('Item groups')}</h1>
       <p className="muted">{tr('Groups and sub-groups organise your items, each with its own code. Under the group code rule a new item gets its groups’ codes and a number, for example 10-03-007.')}</p>
-      {canManage && rule.data ? <CodeRuleForm rule={rule.data} onSaved={() => { rule.reload(); setNotice(tr('Item code rule saved.')); }} /> : null}
+      {rule.data ? (
+        <p className="muted small">
+          {rule.data.rule === 'group'
+            ? tr('Item codes: built from the groups, for example 10-03-007.')
+            : rule.data.rule === 'prefix'
+              ? tr('Item codes: a prefix and a number.')
+              : tr('Item codes: typed by hand.')}{' '}
+          <Link to="/inventory/settings">{tr('Change in Inventory settings')}</Link>
+        </p>
+      ) : null}
       {notice ? <p className="notice" role="status">{notice}</p> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
       {canManage && !draft ? (
         <div className="form-actions">
-          <Button type="button" onClick={() => setDraft({ id: null, parentId: '', code: '', name: '', nameAr: '', active: true })}>{tr('Add group')}</Button>
+          <Button type="button" onClick={() => setDraft({ id: null, parentId: '', code: '', name: '', nameAr: '', active: true })}>{tr('Add main group')}</Button>
         </div>
       ) : null}
-      {draft ? (
-        <form className="form-card stack" onSubmit={save} aria-label={draft.id ? tr('Edit group') : tr('Add group')}>
-          <div className="form-row">
-            <label>
-              {tr('Under')}
-              <GroupSelect groups={list} value={draft.parentId} separator={separator} emptyLabel={tr('Top level')} activeOnly={false}
-                exclude={draft.id ? descendants(list, draft.id) : undefined} onChange={(parentId) => setDraft({ ...draft, parentId })} />
-            </label>
-            <label>
-              {tr('Code')}
-              <input required maxLength={10} pattern="[A-Za-z0-9]{1,10}" placeholder="10" value={draft.code}
-                onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} />
-            </label>
-          </div>
-          <div className="form-row">
-            <label>{tr('Name')}<input required maxLength={120} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-            <label>{tr('Name in Arabic (optional)')}<input dir="rtl" maxLength={120} value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} /></label>
-          </div>
-          {draft.id ? (
-            <label className="option-switch">
-              <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
-              <span>{tr('New items can be added to this group')}</span>
-            </label>
-          ) : null}
-          <p className="muted small">{tr('Letters and digits, up to 10. Changing a code or moving a group changes the codes of new items only.')}</p>
-          <div className="form-actions">
-            <Button type="submit">{draft.id ? tr('Save changes') : tr('Add group')}</Button>
-            <Button type="button" variant="ghost" onClick={() => setDraft(null)}>{tr('Cancel')}</Button>
-          </div>
-        </form>
-      ) : null}
+      {draft && draft.id === null && draft.parentId === '' ? draftForm : null}
       {rows.length === 0 ? (
         <p className="muted">{tr('No item groups yet.')}</p>
       ) : (
@@ -166,9 +229,10 @@ export function ItemGroupsPage() {
           </thead>
           <tbody>
             {rows.map((g) => (
-              <tr key={g.id}>
+              <Fragment key={g.id}>
+              <tr>
                 <td><code style={{ paddingInlineStart: `${g.depth * 1.25}rem` }}>{g.fullCode}</code></td>
-                <td>{groupName(g, lang)}</td>
+                <td style={{ paddingInlineStart: `${g.depth * 1.25}rem` }}>{g.depth === 0 ? <strong>{groupName(g, lang)}</strong> : groupName(g, lang)}</td>
                 <td>{g.active ? tr('Active') : tr('Closed to new items')}</td>
                 {canManage ? (
                   <td className="actions">
@@ -178,6 +242,8 @@ export function ItemGroupsPage() {
                   </td>
                 ) : null}
               </tr>
+              {formAfter(g) ? <tr><td colSpan={canManage ? 4 : 3}>{draftForm}</td></tr> : null}
+              </Fragment>
             ))}
           </tbody>
         </table>

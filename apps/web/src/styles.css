@@ -605,3 +605,41 @@ td input { margin-top: 0; }
   [dir='rtl'] .table-wrap th.col-sticky-end, [dir='rtl'] .table-wrap td.col-sticky-end { box-shadow: 1px 0 0 var(--border); }
 }
 .empty-action { margin-block-start: 0.75rem; }
+
+/* Financial statements (Statements.tsx; walkthrough 18 Nov, fix D1: section headings and totals looked like ordinary rows) */
+th.statement-section {
+  padding-block-start: 1.1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground, #555);
+  border-block-end: 1px solid var(--border, #ddd);
+}
+tr.statement-total th,
+tr.statement-total td {
+  font-weight: 700;
+  border-block-start: 2px solid var(--foreground, #111);
+  background: var(--muted, #f4f4f5);
+}
+.page table td.right,
+.page table th.right {
+  font-variant-numeric: tabular-nums;
+}
+tr.statement-subtotal th,
+tr.statement-subtotal td {
+  font-weight: 600;
+  border-block-start: 1px solid var(--border, #ddd);
+}
+
+/* Inventory actions (walkthrough 18 Nov, fix E1): a symbol and a colour per kind of action. */
+.action-icon {
+  display: inline-grid; place-items: center; inline-size: 2.1rem; block-size: 2.1rem; border-radius: 999px;
+  font-size: 1.15rem; font-weight: 700; color: #fff; background: var(--action-color, var(--primary));
+}
+.action-card[data-kind] { border-inline-start: 4px solid var(--action-color, var(--border)); }
+.action-card[data-kind='receive'] { --action-color: #15803d; }
+.action-card[data-kind='send'] { --action-color: #c2410c; }
+.action-card[data-kind='move'] { --action-color: #1d4ed8; }
+.action-card[data-kind='count'] { --action-color: #7c3aed; }
+.action-card[data-kind='correct'] { --action-color: #b45309; }

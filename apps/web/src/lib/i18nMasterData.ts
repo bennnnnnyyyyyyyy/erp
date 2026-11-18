@@ -73,4 +73,13 @@ export const MASTER_DATA_AR: Record<string, string> = {
   "No purchase prices recorded yet. They are recorded from bills and purchase orders.": "لم تُسجَّل أسعار شراء بعد. تُسجَّل من فواتير الموردين وأوامر الشراء.",
   "{name}: {price} ({from} to {to})": "{name}: {price} (من {from} إلى {to})",
   "Suggested price; you can change it.": "سعر مقترح؛ يمكنك تغييره.",
+  // Walkthrough 18 Nov, fix C2 (machine draft)
+  "Item codes: built from the groups, for example 10-03-007.": "أكواد الأصناف: تُبنى من المجموعات، مثل 10-03-007.",
+  "Item codes: a prefix and a number.": "أكواد الأصناف: بادئة ورقم.",
+  "Item codes: typed by hand.": "أكواد الأصناف: تُكتب يدويًا.",
+  "Change in Inventory settings": "التغيير من إعدادات المخزون",
+  "Inventory settings": "إعدادات المخزون",
+  "Add main group": "إضافة مجموعة رئيسية",
+  "How new items get their code. Codes never change once given, even if an item moves to another group.": "كيف تحصل الأصناف الجديدة على أكوادها. لا يتغير الكود بعد إعطائه، حتى لو انتقل الصنف إلى مجموعة أخرى.",
+  "Only an owner or admin can change the item code rule.": "المالك أو المدير فقط يستطيع تغيير قاعدة أكواد الأصناف.",
 };

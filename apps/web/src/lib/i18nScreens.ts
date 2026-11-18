@@ -1428,4 +1428,19 @@ export const SCREENS_AR: Record<string, string> = {
   "VAT (part of the cost)": "الضريبة (جزء من التكلفة)",
   "VAT on this purchase": "ضريبة القيمة المضافة على هذه المشتريات",
   "Import (customs)": "استيراد (جمارك)",
+  // Walkthrough 18 Nov, fix A1: the VAT basis of a typed sales price (machine draft for the review sheet)
+  "{label} including VAT": "{label} شاملًا الضريبة",
+  "{label} before VAT": "{label} قبل الضريبة",
+  "Before VAT {net} · VAT {rate}% {tax} · Total {gross}": "قبل الضريبة {net} · الضريبة {rate}% {tax} · الإجمالي {gross}",
+  "Leave this off unless you run a shop or online store that shows prices with VAT. Off (the usual way, and how e-invoices work): a price of 100.00 means 100.00 + 14.00 VAT = 114.00. On: 100.00 already includes the VAT, so it becomes 87.72 + 12.28 VAT = 100.00. New invoices only.": "اترك هذا الخيار مغلقًا إلا إذا كان لديك متجر أو متجر إلكتروني يعرض الأسعار شاملة الضريبة. مغلق (الطريقة المعتادة، وهي طريقة الفاتورة الإلكترونية): سعر 100.00 يعني 100.00 + 14.00 ضريبة = 114.00. مفتوح: 100.00 تشمل الضريبة بالفعل، فتصبح 87.72 + 12.28 ضريبة = 100.00. للفواتير الجديدة فقط.",
+  "Every sales price typed from now on will be read as already including VAT. Are you sure?": "سيُعتبر كل سعر بيع يُكتب من الآن شاملًا الضريبة بالفعل. هل أنت متأكد؟",
+  "Yes, prices include VAT": "نعم، الأسعار شاملة الضريبة",
+  // fix B1
+  "Default rate for new items and invoice lines": "السعر الافتراضي للأصناف الجديدة وبنود الفواتير",
+  "An item with no VAT rate of its own, and any line typed by hand, uses the default rate. Only one rate can be the default.": "الصنف الذي ليس له سعر ضريبة خاص به، وأي بند يُكتب يدويًا، يستخدم السعر الافتراضي. سعر واحد فقط يمكن أن يكون افتراضيًا.",
+  "Default rate": "السعر الافتراضي",
+  // fix B2: rate names the setup wizard creates
+  "VAT 14%": "ضريبة 14%",
+  "Export 0%": "تصدير 0%",
+  "Exempt": "معفى",
 };

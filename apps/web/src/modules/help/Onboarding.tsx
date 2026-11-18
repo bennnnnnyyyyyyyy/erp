@@ -39,7 +39,7 @@ import {
   type Report,
 } from './sampleFill';
 import { EXPLORE_ROUTES } from './onboardingShared';
-import { WelcomeStep, BusinessStep, CompanyStep, StorageStep, WarehouseStep } from './OnboardingStepsEarly';
+import { WelcomeStep, BusinessStep, CompanyStep, VatStep, StorageStep, WarehouseStep } from './OnboardingStepsEarly';
 import { ItemsStep, PartyStep, TeamStep, ApprovalStep, DoneStep } from './OnboardingStepsLate';
 
 // First-run setup wizard (documentation/plans/ONBOARDING_WIZARD_PLAN.md). Welcome, language, company, storage conditions, warehouses,
@@ -103,6 +103,7 @@ export function OnboardingPage() {
             )}
             {key === 'business' && <BusinessStep c={c} value={business} onChoose={choose} />}
             {key === 'company' && <CompanyStep c={c} onDone={next} />}
+            {key === 'vat' && <VatStep c={c} onDone={next} />}
             {key === 'storage' && <StorageStep c={c} onDone={next} />}
             {key === 'warehouse' && <WarehouseStep c={c} onDone={next} />}
             {key === 'items' && <ItemsStep c={c} business={business} onDone={next} />}

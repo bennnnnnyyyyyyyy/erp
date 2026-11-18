@@ -75,9 +75,17 @@ const customerPrices = (customerId: string, itemIds: string[]) =>
     Object.fromEntries(rows.map((r) => [r.itemId, r.priceMinor])),
   );
 
+type VatBasis = { vatRegistered: boolean; pricesIncludeVat: boolean; defaultVatRateId: string | null; rates: { id: string; rate: number }[] };
+
 export function NewSalesOrder() {
+  // The company's VAT basis for the price label and the line preview; without it (sample build, no access) the form shows no VAT.
+  const vat = useLoad(() => (demoMode ? Promise.resolve(null) : api<VatBasis>('/v1/core/org/vat').catch(() => null)));
+  const basis = vat.data
+    ? { registered: vat.data.vatRegistered, pricesIncludeVat: vat.data.pricesIncludeVat, defaultVatRateId: vat.data.defaultVatRateId, rates: vat.data.rates }
+    : null;
   return (
     <NewOrderForm
+      vat={basis}
       title={tr('New sales order')}
       intro={tr('Stock is reserved only when a stock request is raised for the order.')}
       partyLabel="Customer"

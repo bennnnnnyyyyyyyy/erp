@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-18 — Walkthrough fixes A1-E1 (Ben decided the plan; `sql/098`)
+
+**Objective.** Ben's walkthrough notes of 18 Nov, fixed as he decided them in .temp/fix-plan-18nov.md (B1, B2 chosen; A, C, D, E from his notes; A1 after confirming that Egypt's standard is prices before VAT).
+
+**Actions Completed.**
+- A1: sales order price label says before or including VAT; each line shows before-VAT, VAT and total as typed (shared `vatLine` maths); "Sales prices include VAT" explained with a worked example and confirmed before it is switched on.
+- B1: "Default rate for new items and invoice lines" label, explanation and a Default badge. B2: a VAT step in the setup wizard (owners): creates 14% (default), 0% export and Exempt, switches VAT on from a date, through the existing routes.
+- C1: item group form opens under its row; main groups bold, indented tree; "Add main group". C2: Inventory settings page for the item code rule, linked from Item groups. C3/C4: the item group picker offers only groups without sub-groups, under their main group; `sql/098` enforces it (items only in leaf groups; no sub-groups under a group holding items), tests 094 and 090 (SQL reused from the dropped slice branch after review).
+- D1: statement section headings, subtotals and totals styled; aligned digits. E1: inventory action cards get a symbol and colour per kind.
+
+**Database / System Result.** None yet: `sql/098` is applied to live after merge (Claude, CLI).
+
+**Safety Status.** Local: typecheck clean; tests shared 82, API 647, web 146; PGlite 96 migrations with tests 090-094 passing; biome ci 0 errors; migration check OK. Not checked in a browser.
+
 ## 2026-11-18 — Prices, master data slice C (`sql/097`)
 
 **Objective.** Slice C of the [master data plan](../plans/MASTER_DATA_PLAN.md), started after Ben approved slice A on live (18 Nov). Decisions:
