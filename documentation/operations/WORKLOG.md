@@ -23,7 +23,7 @@ run or deployed.
 - 11: `ci-deploy.yml` skips the screen smoke test on documentation-only pull requests (pushes to main run everything).
 - 12: README and checklist status (001-099 live, 100 pending); duplicate root `AUDIT_FINDINGS.md` removed (the linked copy stays in documentation/planning).
 
-**Database / System Result.** None yet: `sql/100` is applied to live by Claude (CLI) after the merge.
+**Database / System Result.** `sql/100` applied to live 18 Nov by Claude (CLI) after the merge: takes_key_lock true, users_can_call false; tests 097 and 093 passed on live (rolled back).
 
 **Safety Status.** Local PGlite, 98 migrations: 95 of 95 SQL tests. Typecheck clean; API 658, web 151 tests pass; biome ci 0 errors; migration and link checks OK.
 
