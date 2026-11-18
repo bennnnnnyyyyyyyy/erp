@@ -128,8 +128,8 @@ export const MODULES: readonly ModuleManifest[] = [
       'purchasing.notes.read',
       'purchasing.notes.create',
       'purchasing.notes.approve',
-      // Each supplier's last cost (sql/097); members read it.
-      'purchasing.prices.read',
+      // Each supplier's last cost (sql/097): owners and admins (not ".read", so members do not get it; costs reveal margins).
+      'purchasing.prices.view',
     ],
     memberGrants: ['purchasing.orders.receive', 'purchasing.notes.create'],
     suite: 'Sales & Purchasing',

@@ -76,7 +76,7 @@ describe('prices API', () => {
     expect(permissions).toContain("'sales.prices.read'");
     expect(permissions).toContain("'sales.prices.manage'");
     expect(memberGrants).not.toContain("'sales.prices.manage'");
-    expect(manifest).toContain("'purchasing.prices.read'");
+    expect(manifest).toContain("'purchasing.prices.view'");
   });
 
   it('keeps the customer list working before sql/097 (falls back without customer_group_id)', () => {

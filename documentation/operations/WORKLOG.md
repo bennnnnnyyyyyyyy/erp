@@ -23,7 +23,9 @@ changes a sales price); `sal_customer_groups` and `sal_customers.customer_group_
 overlapping lists for a group) and `sal_price_list_items`; functions for groups, assigning a customer, item and list prices and the optional
 markup (owners and admins), `sal_prices_for` (list price for the group on the date, else the item price) and `sal_item_price_info` (sales
 price, list prices, supplier costs, suggestion = latest cost plus markup). `sql/tests/093_sal_prices.sql` (new). Permissions
-`sales.prices.read`, `purchasing.prices.read` (everyone), `sales.prices.manage` (owners and admins). API: `apps/api/src/modules/sales/prices.ts`
+`sales.prices.read` (everyone), `sales.prices.manage` and `purchasing.prices.view` (owners and admins). Review fix (master chat, 18 Nov):
+supplier costs reveal margins, so `pur_supplier_prices` is readable by owners and admins only (its own policy) and `sal_item_price_info`
+returns costs and the cost-based suggestion only to them; members and viewers still see sales and list prices. API: `apps/api/src/modules/sales/prices.ts`
 (customer groups, `PUT /customers/:id/group`, item price and price info, price lists and their items, `PUT /price-settings`,
 `GET /prices`), `GET /v1/purchasing/supplier-prices`; the customer list carries `customerGroupId` and falls back before 097. Web: Sales →
 Prices (groups, customer group, price lists and their items, markup); a Prices box on the item page (sales price, supplier costs, "Use
@@ -36,7 +38,7 @@ machine drafts in `i18nMasterData.ts`. Not done (plan items left for later): pri
 
 **Safety Status.** Local SQL run (PGlite, all 95 migrations, 097 applied a second time): 91 of 91, including 093 (order then bill price,
 order never replaces a bill price, suggest only with markup 20% on 105.00 = 126.00, list choice by group and date, fallback to the item
-price, no overlapping lists, in-use group delete refused, roles, audit counts, isolation, no direct writes, includes-VAT copied). The guard
+price, no overlapping lists, in-use group delete refused, roles, members and viewers see no costs, audit counts, isolation, no direct writes, includes-VAT copied). The guard
 test `092_column_grants.sql` from `ci/guards` also passes with 097 (run locally, not committed here). Typecheck clean; tests: shared 82,
 API 647 (new `sales_prices.test.ts`), web 146. `biome ci .`: 0 errors. Not viewed in a browser.
 

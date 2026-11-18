@@ -212,7 +212,7 @@ async function oneOrder(c: Context<AppEnv>, id: string) {
 
 // Each supplier's last cost per item (sql/097): recorded by the database from bills, and from orders while there is no bill price yet.
 // ?itemId= or ?supplierId= narrows it. Read-only; nothing here changes a sales price.
-purchasingRoutes.get('/supplier-prices', requirePermission('purchasing.prices.read'), async (c) => {
+purchasingRoutes.get('/supplier-prices', requirePermission('purchasing.prices.view'), async (c) => {
   const itemId = c.req.query('itemId');
   const supplierId = c.req.query('supplierId');
   if ((itemId && !UUID_RE.test(itemId)) || (supplierId && !UUID_RE.test(supplierId))) invalid('itemId and supplierId must be ids');

@@ -10,8 +10,9 @@
 --     (from, optional to); never two lists for one group and currency on the same date; sal_price_list_items: a price per item.
 --   * sal_prices_for(customer, items, date): the price list's price for the customer's group on that date, else the item's price, else
 --     nothing. Order lines take it as a suggestion; the price on the line stays editable (sal_create_order is unchanged).
---   * sal_item_price_info(item): the sales price, list prices, each supplier's last cost and a suggested price (the highest recent cost
---     plus the company's optional markup, settings.default_markup_percent).
+--   * sal_item_price_info(item): the sales price and list prices for everyone; each supplier's last cost and a suggested price (the most
+--     recent cost plus the company's optional markup, settings.default_markup_percent) for owners and admins only.
+--   * Supplier costs reveal margins: pur_supplier_prices is readable by owners and admins only (like average cost, sql/023).
 -- Every change writes its audit row in the same transaction. Tables: RLS, member read, writes only through functions.
 -- sal_customers is read through a table grant, so its new column needs no column grant (checked at the end).
 -- Depends on sql/001-096. Rerun-safe. Then run sql/tests/093_sal_prices.sql.
@@ -113,9 +114,16 @@ do $$ declare t text; begin
     execute format('revoke all on public.%I from anon, authenticated', t);
     execute format('grant select on public.%I to authenticated', t);
     execute format('drop policy if exists %1$s_member_read on public.%1$s', t);
-    execute format('create policy %1$s_member_read on public.%1$s for select to authenticated using (public.is_org_member(org_id))', t);
+    if t <> 'pur_supplier_prices' then
+      execute format('create policy %1$s_member_read on public.%1$s for select to authenticated using (public.is_org_member(org_id))', t);
+    end if;
   end loop;
 end $$;
+-- Supplier costs reveal margins: owners and admins only, like average cost (sql/023) and expenses (sql/024).
+drop policy if exists pur_supplier_prices_admin_read on public.pur_supplier_prices;
+create policy pur_supplier_prices_admin_read on public.pur_supplier_prices for select to authenticated
+  using (exists (select 1 from public.memberships m where m.org_id = pur_supplier_prices.org_id and m.user_id = (select auth.uid())
+                 and m.disabled_at is null and m.role in ('owner', 'admin')));
 
 -- ---------------------------------------------------------------- supplier prices, recorded from bills and orders
 
@@ -400,7 +408,10 @@ end $$;
 create or replace function public.sal_item_price_info(p_item_id uuid) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare v_org uuid := public.sal__guard(array['owner', 'admin', 'member', 'viewer']); v_cur text; v_markup numeric; v_cost bigint;
-  v_price jsonb; v_lists jsonb; v_costs jsonb;
+  v_price jsonb; v_lists jsonb; v_costs jsonb := '[]'::jsonb;
+  -- supplier costs and the cost-based suggestion reveal margins: owners and admins only (members and viewers get none)
+  v_admin boolean := exists (select 1 from public.memberships m where m.org_id = v_org and m.user_id = auth.uid()
+                             and m.disabled_at is null and m.role in ('owner', 'admin'));
 begin
   if not exists (select 1 from public.inv_items i where i.org_id = v_org and i.id = p_item_id) then raise exception 'NOT_FOUND'; end if;
   select o.default_currency, (o.settings ->> 'default_markup_percent')::numeric into v_cur, v_markup from public.organizations o where o.id = v_org;
@@ -411,6 +422,7 @@ begin
            order by l.valid_from desc), '[]'::jsonb)
     into v_lists from public.sal_price_list_items li join public.sal_price_lists l on l.id = li.price_list_id and l.deleted_at is null
    where li.org_id = v_org and li.item_id = p_item_id;
+  if v_admin then
   select coalesce(jsonb_agg(jsonb_build_object('supplierId', sp.supplier_id, 'supplierName', s.name, 'lastCostMinor', sp.last_cost_minor,
            'currency', sp.currency, 'source', sp.source_kind, 'sourceNumber', sp.source_number, 'recordedAt', sp.recorded_at)
            order by sp.recorded_at desc), '[]'::jsonb)
@@ -419,6 +431,7 @@ begin
   -- the most recent cost in the company currency; with a markup the suggestion is that cost plus the markup, rounded to whole minor units
   select sp.last_cost_minor into v_cost from public.pur_supplier_prices sp
    where sp.org_id = v_org and sp.item_id = p_item_id and sp.currency = v_cur order by sp.recorded_at desc limit 1;
+  end if;
   return jsonb_build_object('currency', v_cur, 'salesPrice', v_price, 'priceLists', v_lists, 'supplierCosts', v_costs,
     'markupPercent', v_markup, 'latestCostMinor', v_cost,
     'suggestedPriceMinor', case when v_cost is null then null else round(v_cost * (1 + coalesce(v_markup, 0) / 100))::bigint end);
@@ -441,4 +454,6 @@ select (select count(*) from pg_class where relname in ('sal_customer_groups', '
        has_table_privilege('authenticated', 'public.pur_supplier_prices', 'insert') as users_insert_prices,
        has_column_privilege('authenticated', 'public.sal_customers', 'customer_group_id', 'select') as users_read_customer_group,
        has_function_privilege('anon', 'public.sal_prices_for(uuid, uuid[], date)', 'execute') as anon_reads_prices,
-       (select count(*) from pg_trigger where tgname in ('pur_supplier_invoice_lines_price', 'pur_order_lines_price')) as price_triggers;
+       (select count(*) from pg_trigger where tgname in ('pur_supplier_invoice_lines_price', 'pur_order_lines_price')) as price_triggers,
+       (select count(*) from pg_policies where tablename = 'pur_supplier_prices' and policyname = 'pur_supplier_prices_admin_read') as costs_admin_only,
+       (select count(*) from pg_policies where tablename = 'pur_supplier_prices' and policyname = 'pur_supplier_prices_member_read') as costs_member_policy;

@@ -8,17 +8,18 @@
 
 do $$
 declare
-  u uuid := gen_random_uuid(); a uuid := gen_random_uuid(); m uuid := gen_random_uuid(); x uuid := gen_random_uuid();
+  u uuid := gen_random_uuid(); a uuid := gen_random_uuid(); m uuid := gen_random_uuid(); x uuid := gen_random_uuid(); vw uuid := gen_random_uuid();
   o uuid; ob uuid; w uuid; i1 uuid; i2 uuid; sup uuid; po1 uuid; po2 uuid; pl uuid; c1 uuid; c2 uuid; gr uuid; gw uuid;
   lst uuid; lst2 uuid; info jsonb; r record; n bigint; ok boolean; v_today date;
 begin
   insert into auth.users (id, aud, role, email) values
     (u, 'authenticated', 'authenticated', 'spr-o@tests.invalid'), (a, 'authenticated', 'authenticated', 'spr-a@tests.invalid'),
-    (m, 'authenticated', 'authenticated', 'spr-m@tests.invalid'), (x, 'authenticated', 'authenticated', 'spr-x@tests.invalid');
+    (m, 'authenticated', 'authenticated', 'spr-m@tests.invalid'), (x, 'authenticated', 'authenticated', 'spr-x@tests.invalid'),
+    (vw, 'authenticated', 'authenticated', 'spr-v@tests.invalid');
   o := public.bootstrap_organization('Prices A', 'prices-a', 'spr-o@tests.invalid');
   ob := public.bootstrap_organization('Prices B', 'prices-b', 'spr-x@tests.invalid');
   update public.organizations set default_currency = 'EGP' where id in (o, ob);
-  insert into public.memberships (org_id, user_id, role) values (o, a, 'admin'), (o, m, 'member');
+  insert into public.memberships (org_id, user_id, role) values (o, a, 'admin'), (o, m, 'member'), (o, vw, 'viewer');
   perform public.core_enable_all_modules(o); perform public.core_enable_all_modules(ob);
   v_today := public.acc__local_date(o, now());
 
@@ -101,8 +102,23 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
   select count(*) into n from public.sal_prices_for(c1, array[i1]) p where p.price_minor = 14000;
   if n <> 1 then raise exception 'FAIL P8a: a member cannot look up prices'; end if;
+  -- supplier costs reveal margins: members and viewers see none, by table or through the item's price info
   select count(*) into n from public.pur_supplier_prices where org_id = o;
-  if n <> 1 then raise exception 'FAIL P8b: a member sees % supplier prices', n; end if;
+  if n <> 0 then raise exception 'FAIL P8b: a member sees % supplier prices', n; end if;
+  info := public.sal_item_price_info(i1);
+  if jsonb_array_length(info -> 'supplierCosts') <> 0 or info ->> 'latestCostMinor' is not null or info ->> 'suggestedPriceMinor' is not null then
+    raise exception 'FAIL P8g: a member got costs from the price info: %', info;
+  end if;
+  if (info -> 'salesPrice' ->> 'priceMinor')::bigint <> 15000 then raise exception 'FAIL P8h: a member cannot see the sales price'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', vw, 'role', 'authenticated')::text, true);
+  select count(*) into n from public.pur_supplier_prices where org_id = o;
+  if n <> 0 then raise exception 'FAIL P8i: a viewer sees % supplier prices', n; end if;
+  info := public.sal_item_price_info(i1);
+  if jsonb_array_length(info -> 'supplierCosts') <> 0 or info ->> 'suggestedPriceMinor' is not null then raise exception 'FAIL P8j: a viewer got costs'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
+  select count(*) into n from public.pur_supplier_prices where org_id = o;
+  if n <> 1 then raise exception 'FAIL P8k: the owner sees % supplier prices, expected 1', n; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
   select count(*) into n from public.sal_customers where org_id = o and customer_group_id = gr;
   if n <> 1 then raise exception 'FAIL P8c: a member cannot read the customer''s group'; end if;
   ok := false; begin perform public.sal_set_item_price(i1, 1); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;

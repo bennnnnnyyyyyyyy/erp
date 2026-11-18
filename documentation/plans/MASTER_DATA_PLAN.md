@@ -62,8 +62,9 @@ All company data: RLS, member read, writes through audited functions, isolation 
 
 ## 5. Permissions
 
-No new modules. New keys: `inventory.groups.manage` (owner, admin), `purchasing.prices.read` / `sales.prices.read` (members),
-`sales.prices.manage` (owner, admin). Party item codes use the existing items/parties manage keys.
+No new modules. New keys: `inventory.groups.manage` (owner, admin), `sales.prices.read` (members), `sales.prices.manage` (owner, admin),
+`purchasing.prices.view` (owner, admin; changed in review 18 Nov: supplier costs reveal margins, like average cost, so members and
+viewers do not see them, in the database too). Party item codes use the existing items/parties manage keys.
 
 ## 6. Screens
 
