@@ -5,7 +5,31 @@ import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
 import { useLoad } from '../../lib/useLoad';
+import { Link } from '../../lib/router';
 import { useSession } from '../../session';
+
+/** Inventory → Settings and planning → Inventory settings (walkthrough 18 Nov, fix C2: the code rule was hard to find on Item groups). */
+export function InventorySettingsPage() {
+  const role = useSession().role;
+  const canManage = !demoMode && (role === 'owner' || role === 'admin');
+  const rule = useLoad(() => (demoMode ? Promise.resolve(null) : api<CodeRule>('/v1/inventory/item-code-rule')));
+  const [notice, setNotice] = useState<string | null>(null);
+  return (
+    <section className="page">
+      <h1>{tr('Inventory settings')}</h1>
+      <p className="muted">{tr('How new items get their code. Codes never change once given, even if an item moves to another group.')}</p>
+      {notice ? <p className="notice" role="status">{notice}</p> : null}
+      {!rule.data ? (
+        <Loading error={rule.error} />
+      ) : canManage ? (
+        <CodeRuleForm rule={rule.data} onSaved={() => { rule.reload(); setNotice(tr('Item code rule saved.')); }} />
+      ) : (
+        <p>{tr('Only an owner or admin can change the item code rule.')}</p>
+      )}
+      <p className="muted small"><Link to="/inventory/item-groups">{tr('Item groups')}</Link></p>
+    </section>
+  );
+}
 
 // Item groups and the item code rule (sql/095, documentation/plans/MASTER_DATA_PLAN.md slice A). Groups form a tree of any depth, each
 // with a code; under the "group codes" rule a new item's code is its groups' codes and a number (10-03-007). Codes never change once
@@ -37,10 +61,36 @@ export function flattenGroups(groups: ItemGroup[], separator = '-'): (ItemGroup 
 export const groupName = (g: ItemGroup, lang: string) => (lang === 'ar' && g.nameAr ? g.nameAr : g.name);
 
 /** A select of live groups, indented by level. */
-export function GroupSelect({ groups, value, onChange, separator, emptyLabel, activeOnly = true, exclude }: {
+export function GroupSelect({ groups, value, onChange, separator, emptyLabel, activeOnly = true, exclude, leafOnly = false }: {
   groups: ItemGroup[]; value: string; onChange: (id: string) => void; separator?: string; emptyLabel: string; activeOnly?: boolean; exclude?: Set<string>;
+  /** For items (Ben's walkthrough 18 Nov; the database enforces it, sql/098): only groups without sub-groups can be chosen. Each main
+   *  group with sub-groups is a heading, its sub-groups listed under it; a main group without sub-groups is a choice of its own. */
+  leafOnly?: boolean;
 }) {
   const lang = currentLanguage();
+  if (leafOnly) {
+    const live = flattenGroups(groups, separator).filter((g) => !activeOnly || g.active);
+    const hasChildren = new Set(live.filter((g) => g.parentId).map((g) => g.parentId as string));
+    const label = (g: (typeof live)[number]) => `${g.fullCode} · ${groupName(g, lang)}`;
+    const tops = live.filter((g) => !g.parentId);
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{emptyLabel}</option>
+        {tops.map((t) =>
+          hasChildren.has(t.id) ? (
+            <optgroup key={t.id} label={label(t)}>
+              {[...descendants(live, t.id)]
+                .map((id) => live.find((g) => g.id === id)!)
+                .filter((g) => g.id !== t.id && !hasChildren.has(g.id))
+                .map((g) => <option key={g.id} value={g.id}>{label(g)}</option>)}
+            </optgroup>
+          ) : (
+            <option key={t.id} value={t.id}>{label(t)}</option>
+          ),
+        )}
+      </select>
+    );
+  }
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{emptyLabel}</option>
@@ -113,7 +163,16 @@ export function ItemGroupsPage() {
     <section className="page">
       <h1>{tr('Item groups')}</h1>
       <p className="muted">{tr('Groups and sub-groups organise your items, each with its own code. Under the group code rule a new item gets its groups’ codes and a number, for example 10-03-007.')}</p>
-      {canManage && rule.data ? <CodeRuleForm rule={rule.data} onSaved={() => { rule.reload(); setNotice(tr('Item code rule saved.')); }} /> : null}
+      {rule.data ? (
+        <p className="muted small">
+          {rule.data.rule === 'group'
+            ? tr('Item codes: built from the groups, for example 10-03-007.')
+            : rule.data.rule === 'prefix'
+              ? tr('Item codes: a prefix and a number.')
+              : tr('Item codes: typed by hand.')}{' '}
+          <Link to="/inventory/settings">{tr('Change in Inventory settings')}</Link>
+        </p>
+      ) : null}
       {notice ? <p className="notice" role="status">{notice}</p> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
       {canManage && !draft ? (

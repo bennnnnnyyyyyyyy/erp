@@ -39,6 +39,7 @@ export const NAV_AR: Record<string, string> = {
   'Stock on hand': 'المخزون الحالي',
   'Reorder levels': 'حدود إعادة الطلب',
   'Item groups': 'مجموعات الأصناف',
+  'Inventory settings': 'إعدادات المخزون',
   Prices: 'الأسعار',
   'Stock forecast': 'توقعات المخزون',
   'Batches and expiry': 'الدفعات وتواريخ الانتهاء',

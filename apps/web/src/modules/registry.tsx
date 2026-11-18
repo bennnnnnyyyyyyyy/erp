@@ -25,6 +25,7 @@ const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
 const ReceiveGoods = lazyNamed(() => import('./inventory/ReceiveGoods'), 'ReceiveGoods');
 const CountStock = lazyNamed(() => import('./inventory/CountStock'), 'CountStock');
 const ItemGroupsPage = lazyNamed(() => import('./inventory/ItemGroups'), 'ItemGroupsPage');
+const InventorySettingsPage = lazyNamed(() => import('./inventory/ItemGroups'), 'InventorySettingsPage');
 const ItemPage = lazyNamed(() => import('./inventory/ItemPage'), 'ItemPage');
 const InventoryOverview = lazyNamed(() => import('./inventory/Overview'), 'InventoryOverview');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
@@ -154,6 +155,7 @@ const INVENTORY_APP: AppDef = {
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
     // Item groups and codes (sql/095): real API only; the sample-data build has no groups.
     ...(demoMode ? [] : [{ path: '/item-groups', label: 'Item groups', permission: READ, component: ItemGroupsPage }]),
+    ...(demoMode ? [] : [{ path: '/settings', label: 'Inventory settings', permission: READ, component: InventorySettingsPage }]),
     ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/ledger', label: 'Stock ledger', permission: READ, component: LedgerPage },
@@ -358,6 +360,7 @@ export const MENU_GROUPS: Record<string, Record<string, string>> = {
     '/stock': 'Stock', '/batches': 'Stock',
     '/requests': 'History', '/transfers': 'History', '/counts': 'History', '/adjustments': 'History', '/ledger': 'History',
     '/reorder-levels': 'Settings and planning', '/forecast': 'Settings and planning', '/approval-policies': 'Settings and planning',
+    '/item-groups': 'Settings and planning', '/settings': 'Settings and planning',
   },
   // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
   settings: {

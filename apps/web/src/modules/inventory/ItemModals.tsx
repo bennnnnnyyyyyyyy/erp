@@ -80,7 +80,7 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
         {groups.data?.length || byGroup ? (
           <label>
             {tr('Item group')}
-            <GroupSelect groups={groups.data ?? []} value={groupId} separator={codeRule.data?.separator} emptyLabel={byGroup ? tr('Choose a group') : tr('No group')} onChange={setGroupId} />
+            <GroupSelect leafOnly groups={groups.data ?? []} value={groupId} separator={codeRule.data?.separator} emptyLabel={byGroup ? tr('Choose a group') : tr('No group')} onChange={setGroupId} />
             {byGroup ? <span className="hint muted">{tr('The code is built from the group. Items keep their code if they move later.')}</span> : null}
           </label>
         ) : null}
@@ -154,7 +154,7 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
         {groups.data?.length ? (
           <label>
             {tr('Item group')}
-            <GroupSelect groups={groups.data} value={groupId} emptyLabel={tr('No group')} onChange={setGroupId} />
+            <GroupSelect leafOnly groups={groups.data} value={groupId} emptyLabel={tr('No group')} onChange={setGroupId} />
             <span className="hint muted">{tr('Moving an item to another group keeps its code.')}</span>
           </label>
         ) : null}

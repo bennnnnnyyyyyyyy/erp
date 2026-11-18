@@ -9,7 +9,7 @@
 do $$
 declare
   u uuid := gen_random_uuid(); a uuid := gen_random_uuid(); m uuid := gen_random_uuid(); x uuid := gen_random_uuid();
-  o uuid; ob uuid; g10 uuid; g03 uuid; g04 uuid; g20 uuid; gx uuid; i1 uuid; i2 uuid; i3 uuid; i4 uuid; ib uuid;
+  o uuid; ob uuid; g10 uuid; g03 uuid; g04 uuid; g20 uuid; gx uuid; g99 uuid; i1 uuid; i2 uuid; i3 uuid; i4 uuid; ib uuid;
   v text; n bigint; ok boolean;
 begin
   insert into auth.users (id, aud, role, email) values
@@ -87,7 +87,7 @@ begin
   if not ok then raise exception 'FAIL G6b: a group with sub-groups was deleted'; end if;
   gx := public.inv_create_item_group(null, '99', 'Empty');
   perform public.inv_delete_item_group(gx);
-  perform public.inv_create_item_group(null, '99', 'Empty again');   -- a deleted group's code is free again
+  g99 := public.inv_create_item_group(null, '99', 'Empty again');   -- a deleted group's code is free again
   perform public.inv_update_item_group(g04, '04', 'Water', null, false);
   ok := false; begin perform public.inv_create_item('', 'Still water', null, 'piece', 0, null, null, g04); exception when others then ok := (sqlerrm = 'NOT_FOUND'); end;
   if not ok then raise exception 'FAIL G6c: an item created in an inactive group'; end if;
@@ -98,7 +98,7 @@ begin
   select count(*) into n from public.inv_item_groups where org_id = o and deleted_at is null;
   if n <> 6 then raise exception 'FAIL G7a: a member sees % live groups, expected 6', n; end if;
   i2 := public.inv_create_item('', 'Sparkling water', null, 'piece', 0, null, null, g04);   -- members create items in a group
-  perform public.inv_set_item_group(i2, g10);
+  perform public.inv_set_item_group(i2, g99);   -- sql/098: only a group without sub-groups
   ok := false; begin perform public.inv_create_item_group(null, '50', 'Member group'); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL G7b: a member created a group'; end if;
   ok := false; begin perform public.inv_update_item_group(g10, '10', 'Renamed'); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
@@ -154,7 +154,7 @@ begin
   if n <> 2 then raise exception 'FAIL G8b: % item group changes audited, expected 2', n; end if;
   select count(*) into n from public.audit_log where org_id = o and action = 'organization.item_code_rule_changed';
   if n <> 1 then raise exception 'FAIL G8c: % rule changes audited, expected 1', n; end if;
-  select count(*) into n from public.inv_items where org_id = o and group_id = g10 and id = i2;
+  select count(*) into n from public.inv_items where org_id = o and group_id = g99 and id = i2;
   if n <> 1 then raise exception 'FAIL G8d: the member''s move did not stick'; end if;
 
   raise exception 'ALL TESTS PASSED (everything rolled back)';
