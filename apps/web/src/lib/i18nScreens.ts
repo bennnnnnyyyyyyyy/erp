@@ -1439,4 +1439,8 @@ export const SCREENS_AR: Record<string, string> = {
   "Default rate for new items and invoice lines": "السعر الافتراضي للأصناف الجديدة وبنود الفواتير",
   "An item with no VAT rate of its own, and any line typed by hand, uses the default rate. Only one rate can be the default.": "الصنف الذي ليس له سعر ضريبة خاص به، وأي بند يُكتب يدويًا، يستخدم السعر الافتراضي. سعر واحد فقط يمكن أن يكون افتراضيًا.",
   "Default rate": "السعر الافتراضي",
+  // fix B2: rate names the setup wizard creates
+  "VAT 14%": "ضريبة 14%",
+  "Export 0%": "تصدير 0%",
+  "Exempt": "معفى",
 };

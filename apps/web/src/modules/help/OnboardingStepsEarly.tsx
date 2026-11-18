@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
 import { tr } from '../../lib/i18n';
@@ -199,6 +199,68 @@ export function CompanyStep({ c, onDone }: { c: OnboardingContent; onDone: () =>
         </div>
       </form>
     </>
+  );
+}
+
+type VatState = { vatRegistered: boolean; rates: { id: string; subType: string; rate: number; isDefault: boolean }[] };
+
+/** Walkthrough 18 Nov, fix B2: VAT is set up with the company. "Yes" creates 14% general (default), 0% export and Exempt (whichever are
+ *  missing) and switches VAT on from the chosen date, through the same routes as Settings: VAT. Owners only, as there. */
+export function VatStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
+  const session = useSession();
+  const isOwner = session.role === 'owner';
+  const [state, setState] = useState<VatState | null>(null);
+  const [registered, setRegistered] = useState(true);
+  const now = new Date();
+  const [from, setFrom] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
+  const { busy, error, run } = useSave(onDone);
+  useEffect(() => {
+    if (!isOwner) return;
+    api<VatState>('/v1/core/org/vat').then(setState).catch(() => setState({ vatRegistered: false, rates: [] }));
+  }, [isOwner]);
+  if (!isOwner) return <p className="m-0 text-sm text-muted-foreground">{c.vat.ownerOnly}</p>;
+  if (!state) return <p className="m-0 text-sm text-muted-foreground">{c.saving}</p>;
+  if (state.vatRegistered) return (
+    <>
+      <p className="m-0 text-sm">{c.vat.already}</p>
+      <div className="mt-4"><Button type="button" onClick={onDone}>{c.next}</Button></div>
+    </>
+  );
+  const ensure = async (subType: string, rate: number, label: string, isDefault: boolean): Promise<string> => {
+    const found = state.rates.find((r) => r.subType === subType && r.rate === rate);
+    if (found) return found.id;
+    const res = await api<{ id: string }>('/v1/core/org/vat/rates', { method: 'POST', body: JSON.stringify({ subType, rate, label, isDefault }) });
+    return res.id;
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    run(async () => {
+      if (!registered) return;
+      const general = await ensure('V009', 14, tr('VAT 14%'), true);
+      await ensure('V001', 0, tr('Export 0%'), false);
+      await ensure('V003', 0, tr('Exempt'), false);
+      await api('/v1/core/org/vat', { method: 'PUT', body: JSON.stringify({ registered: true, defaultRateId: general, vatFrom: from }) });
+    });
+  };
+  return (
+    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="sm:col-span-2 m-0 border-0 p-0">
+        <legend className="mb-2 text-sm font-medium">{c.vat.question}</legend>
+        <label className="flex items-center gap-2"><input type="radio" name="vat" checked={registered} onChange={() => setRegistered(true)} />{c.vat.yes}</label>
+        <label className="flex items-center gap-2"><input type="radio" name="vat" checked={!registered} onChange={() => setRegistered(false)} />{c.vat.no}</label>
+      </fieldset>
+      {registered ? (
+        <>
+          <p className="m-0 text-sm text-muted-foreground sm:col-span-2">{c.vat.creates}</p>
+          <Field label={c.vat.from} hint={c.vat.fromHint}>
+            <input className={inputClass} type="date" required value={from} onChange={(e) => setFrom(e.target.value)} />
+          </Field>
+        </>
+      ) : null}
+      <div className="sm:col-span-2">
+        <Saver c={c} busy={busy} error={error} />
+      </div>
+    </form>
   );
 }
 

@@ -42,6 +42,7 @@ export const EXPLORE_ROUTES: Record<(typeof STEP_KEYS)[number], string> = {
   welcome: '/guide',
   business: '/guide',
   company: '/settings',
+  vat: '/settings',
   storage: '/inventory/batches',
   warehouse: '/inventory/stock',
   items: '/inventory/stock',
