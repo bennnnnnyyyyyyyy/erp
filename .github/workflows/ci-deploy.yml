@@ -50,6 +50,10 @@ jobs:
       - name: Check documentation links
         run: node scripts/check-doc-links.mjs
 
+      # Parallel chats write migrations: no two may share a number, and each needs its row in sql/README.md.
+      - name: Check migration numbers
+        run: node scripts/check-migrations.mjs
+
       # Browser smoke test of every screen in the sample build (apps/web/e2e, no secrets, no database). A broken screen stops the deploy.
       # 11 Nov 2026: Ubuntu's package mirror did not resolve on GitHub's runners ("Temporary failure resolving
       # azure.archive.ubuntu.com"), so --with-deps failed on the font packages and three deploys never ran (#41, #42 twice). The runner
