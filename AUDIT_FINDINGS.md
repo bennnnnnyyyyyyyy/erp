@@ -1,95 +1,129 @@
-# ERP App and Design Lab Audit
 
-**Date:** 18 November 2026  
-**Scope:** Read-only review of the main checkout and local `.claude/worktrees/ui-warm` Design Lab worktree.  
-**Changes:** This report is the only file created for this audit. No application code was changed.
+# ERP Deep Audit Findings
 
-## What the Git author list means
+**Review date:** 18 November 2026  
+**Scope:** Read-only review of the main checkout and local .claude/worktrees/ui-warm Design Lab worktree: API/auth/tenancy, migration 097 and its test, web account and invitation flows, Design Lab, CI/deploy workflows, and current project records.  
+**Changes:** This report is the only file changed. No application source was edited. No tests, browser sessions, production checks, or automated scanners were run.
 
-You confirmed that you are the only engineer. The four strings returned by Git are author-name aliases used in your commits during the last 90 days:
+## Executive summary
 
-- `ben arthur @ waz/ggo`
-- `bennnnnnyyyyyyyy`
-- `meetingsdmedeskai-cmyk`
-- `prodbyabdo`
+The review found two database correctness issues in the new supplier-price recorder, two user-facing invitation/authentication issues, a migration/release readiness gap, an API route-permission policy gap, and Design Lab and CI hardening issues. I found no confirmed cross-tenant data exposure in the API and SQL paths reviewed.
 
-They are not four separate contributors. Git history still cannot tell us CI success, production deploy frequency, incidents, or recovery time.
+The team count is one engineer, as Ben clarified. The four Git author labels are aliases used by Ben.
 
-The local Design Lab worktree was clean, with 3 local commits ahead of and 7 behind its remote branch at review time. The pasted CI changes are on the separate `ci/guards` branch, not in the main checkout reviewed here.
+The CI guard changes are now merged into main (PR #73, commit 74558f3). The migration-number check and column-grant test are present. The docs-only browser-test skip is partial: another required workflow still runs the screen smoke test on documentation-only pull requests.
 
-## Findings
+## Findings and suggested fixes
 
-### P2 — Design Lab selections are not announced to assistive technology
+### P2 — Concurrent supplier order and bill writes can let an order replace the actual bill cost
 
-The selected option state is shown with a visual `.on` class, but controls do not expose selected state through `aria-pressed`, `aria-checked`, or equivalent semantics. Some text inputs rely on placeholders instead of explicit labels.
+The migration intends a purchase order to suggest a cost only until a supplier bill records the actual cost. The recorder first selects the current row FOR UPDATE, then performs an unconditional upsert. If no row exists, concurrent transactions can both see no row. A bill can insert first, then the order transaction can win the unique-key conflict and overwrite the bill source and cost.
 
-**Suggested improvement:** Add appropriate selection semantics and labels, then verify with keyboard and screen reader use.
+The SQL test covers order then bill sequentially, not this race.
 
-Evidence: [DesignLab.tsx](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx)
+**Suggested fix:** Serialize record creation by the supplier/item/currency key before reading, or make the conflict update preserve an existing bill when the incoming source is an order. Add a concurrent regression test that races the two trigger paths and asserts the final source is the bill.
 
-### P2 — The contrast panel can imply broader WCAG coverage than it provides
+Evidence: [097_sal_prices.sql, recorder and upsert](sql/097_sal_prices.sql#L130-L145) · [093_sal_prices.sql, sequential precedence test](sql/tests/093_sal_prices.sql#L37-L57)
 
-The panel is titled “Contrast check (WCAG)” but checks five token pairs. It does not cover every rendered component/state, including status colors, chips, selected controls, and gradients.
+### P2 — Supplier-price provenance can change without an audit event
 
-**Suggested improvement:** Either expand checks to actual UI pairs and states, or describe the result as a five-pair token sample.
+The upsert can change source kind, source ID, source number, and recorded time. The audit condition only checks whether the row exists and whether the cost amount changed. A bill can replace an order as the source at the same cost, updating persisted provenance without an audit row.
 
-Evidence: [DesignLab.tsx](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx), [designLab.ts](.claude/worktrees/ui-warm/apps/web/src/lib/designLab.ts)
+**Suggested fix:** Compare every persisted field that can change and write an audit event whenever any value changes. Include before/after source number and source ID in the audit payload; test the same-cost, different-source case.
 
-### P2 — The Design Lab launcher can cover content on phones
+Evidence: [097_sal_prices.sql, upsert fields](sql/097_sal_prices.sql#L141-L145) · [097_sal_prices.sql, audit condition](sql/097_sal_prices.sql#L146-L152)
 
-The launcher is fixed near the viewport edge without a safe-area offset. The rollout notes also record that it overlaps content on phone layouts.
+### P2 — Prices UI can be present before its database migration is applied
 
-**Suggested improvement:** Account for safe areas and provide a way to reposition or dismiss the launcher.
+Migration 097 is marked **Not applied** in the migration register and worklog. The Sales → Prices page and API routes are already in main. The API deliberately returns 503 not_set_up until the migration exists, preventing undefined SQL behavior, but anyone reaching the page before the manual migration will see an unavailable feature. The production workflow deploys app code on pushes to main and does not wait for manual SQL migration status.
 
-Evidence: [design-lab.css](.claude/worktrees/ui-warm/apps/web/src/design-lab.css), [rollout plan](documentation/planning/2026-11-12-new-look-rollout-plan.md)
+**Suggested fix:** Treat the SQL apply as a release prerequisite for exposing the UI. Apply and verify 097 before enabling/deploying the price page, or gate the menu/page behind an explicit readiness flag until the migration is applied. Keep the 503 guard as a last line of defense.
 
-### P2 — Three core API routes do not show the project-required route permission check
+Evidence: [WORKLOG.md, 097 marked not applied](documentation/operations/WORKLOG.md#L14) · [sql/README.md, 097 marked not applied](sql/README.md#L109) · [prices.ts, missing-schema behavior](apps/api/src/modules/sales/prices.ts#L10-L13) · [registry.tsx, Prices route](apps/web/src/modules/registry.tsx#L201-L210) · [ci-deploy.yml, deploy follows main push](.github/workflows/ci-deploy.yml#L76-L80)
 
-`/session`, `/me/language`, and `/people` do not call `requirePermission`. The inspected handlers appear limited by caller identity or active organization membership; I found no confirmed cross-tenant data exposure. This is a defense-in-depth and project-policy gap.
+### P2 — Invitation lookup failure is treated as “no invitations”
 
-**Suggested improvement:** Add suitable permission checks or document and test explicit exceptions.
+When the invitation RPC fails, OrgPicker replaces the error with an empty invitation list. For an account with no current memberships, the component then opens the create-company flow. A person whose invitation lookup failed can be led to create a duplicate company instead of seeing or accepting the invitation.
 
-Evidence: [core/routes.ts](apps/api/src/modules/core/routes.ts)
+The membership-query failure is handled separately; this finding concerns the invitation-query failure path.
 
-### P2 — Project status documents lag the migration register
+**Suggested fix:** Keep organizations available, but represent invitation status as loading, loaded, or failed. On failure, show a localized retry message and do not infer that no invitation exists or auto-open company creation until the lookup succeeds.
 
-The root README and checklist describe older migration state. The worklog's latest entries predate migrations that [sql/README.md](sql/README.md) records as applied on 17 and 18 November. This makes the operational record difficult to use as a current status source.
+Evidence: [OrgPicker.tsx, error becomes empty list](apps/web/src/components/OrgPicker.tsx#L22-L40) · [OrgPicker.tsx, create-company decision](apps/web/src/components/OrgPicker.tsx#L57-L63)
 
-**Suggested improvement:** Bring the status summaries and worklog up to date with the latest verified state.
+### P2 — Supabase authentication errors bypass the app’s Arabic error mapping
 
-Evidence: [README.md](README.md), [checklist.md](documentation/plans/checklist.md), [WORKLOG.md](documentation/operations/WORKLOG.md), [sql/README.md](sql/README.md)
+Errors from the app API pass through translateServerError, but sign-in, sign-up, password reset, password update, and organization-picker RPC failures render Supabase’s raw error.message. These messages can be English or provider-specific, even when the rest of the screen is Arabic.
 
-### Verify — SQL workflows are required checks
+**Suggested fix:** Map stable Supabase error codes to app-owned localized messages. Use a localized generic message for unknown codes, and log only a sanitized code if diagnostics are needed. Avoid translating arbitrary provider message text.
 
-SQL tests and workflow tests run in separate workflows from the deploy workflow. I could not inspect branch-protection settings, so I cannot confirm whether they block merge/deploy. The CI improvements in the pasted transcript may change this after review and merge.
+Evidence: [SignIn.tsx](apps/web/src/components/SignIn.tsx#L26-L57) · [SetPassword.tsx](apps/web/src/components/SetPassword.tsx#L21-L24) · [OrgPicker.tsx](apps/web/src/components/OrgPicker.tsx#L27-L30) · [API error localization](apps/web/src/lib/api.ts#L79-L95)
 
-**Suggested improvement:** Confirm the SQL and workflow checks are marked required for the relevant branches.
+### P2 — Core API permission exceptions are implicit, and read-route coverage is missing
 
-## Resolved issue checked during review
+The core /session, /me/language, and /people routes do not declare requirePermission, despite the repository rule requiring every API route to check a permission. The handlers appear intentionally limited to session bootstrap, the caller’s own language, and organization member names; I found no confirmed cross-tenant exposure. However, the automated permission inventory focuses on write routes and would not catch a new unguarded read route.
 
-The SQL history records that migration 095 added `inv_items.group_id` without the needed column read grant, causing item screens to remain loading. Migration 096 adds the grant and the SQL test covers the regression. I treated this as fixed, not as an open finding. A focused review of migrations 094–096 found no additional confirmed SQL isolation or grant issue.
+**Suggested fix:** Preserve bootstrap and self-service behavior with explicit, documented exceptions. Add a route-inventory test that requires every route to either use a permission or be on an allowlist with a reason and test. Add read-route checks for organization scoping and viewer/member role boundaries.
 
-## Provisional Design Lab scorecard
+Evidence: [core/routes.ts](apps/api/src/modules/core/routes.ts#L54-L94) · [agents.md, route rule](agents.md#L33-L39) · [new_routes_auth.test.ts](apps/api/test/new_routes_auth.test.ts)
 
-These scores are source-based and provisional; no fresh browser, keyboard, or assistive-technology pass was run.
+### P2 — Workflow action tags are mutable in the deployment path
 
-| Area | Score (0–4) | Basis |
-|---|---:|---|
-| Accessibility | 2 | Selection semantics and some explicit labels are missing. |
-| Performance | 3 | Lab is loaded only for development/preview; no fresh device performance run. |
-| Theming | 2 | Token system exists, but the contrast panel covers a narrow sample. |
-| Responsive behavior | 2 | Phone launcher overlap is documented and visible in the CSS positioning. |
-| Visual conventions | 3 | A deliberate design-token system exists; score needs a fresh visual review. |
+The production workflow uses major-version action tags such as actions/checkout@v4, actions/setup-node@v4, and cloudflare/wrangler-action@v3. The Cloudflare action runs in the job that receives the production API token. If a referenced tag moves to compromised code, it could access deployment credentials.
 
-Prior project notes report contrast and layout checks on selected screens. Those historical checks are not a fresh verification of the current worktree.
+**Suggested fix:** Pin third-party actions to reviewed full commit SHAs, with version comments, and configure automated update PRs for those pins. Keep least-privilege job permissions and production environment protections.
 
-## Metrics still needed
+Evidence: [ci-deploy.yml action references](.github/workflows/ci-deploy.yml#L27-L37) · [production deploy action and token](.github/workflows/ci-deploy.yml#L108-L121)
 
-Since you are the only engineer, the engineer count is one; the four Git names are aliases. To calculate the remaining operational measures, use:
+### P2 — Design Lab option buttons do not announce which option is selected
 
-- **CI success and duration:** GitHub Actions workflow runs and job durations.
-- **Deployment frequency and lead time:** production deployment records linked to commit timestamps.
-- **Change failure rate, incident age, and MTTR:** incident/postmortem records linked to releases.
-- **Test split, coverage, skipped tests, and feature-flag age:** test and flag inventories; Git alone is insufficient.
+The Lab marks selected options and filters with a CSS class, but does not expose selection state through aria-pressed or radio-group semantics. Screen-reader users can activate options without being told which value is active.
 
-No tests, browser checks, production probes, or automated security scanners were run for this review. The SQL review was limited to migrations 094–096; findings elsewhere are static code/documentation observations.
+**Suggested fix:** Use radio-group semantics for mutually exclusive choices and aria-pressed for independent toggles. Give search/import/preset fields explicit labels, then check the Lab with keyboard and screen-reader navigation.
+
+Evidence: [DesignLab.tsx, option controls](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L107-L122) · [DesignLab.tsx, filters and text fields](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L279-L292)
+
+### P2 — The Design Lab contrast panel overstates its coverage
+
+The panel is titled “Contrast check (WCAG)” but computes five selected token pairs, not all color pairs and states used by the application. Status indicators, chips, selected controls, gradients, and other combinations can remain unchecked while the panel appears to certify contrast.
+
+**Suggested fix:** Expand the checks to actual component foreground/background pairs and interaction states, including both themes, or rename the panel to say it reports a limited token sample. Do not present a partial check as a WCAG pass.
+
+Evidence: [DesignLab.tsx, panel label and output](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L351-L355) · [designLab.ts, contrast calculation](.claude/worktrees/ui-warm/apps/web/src/lib/designLab.ts#L330-L358)
+
+### P2 — The Design Lab launcher can obscure phone content and panel placement reverses in RTL
+
+The floating launcher sits 16px from the viewport edge and has no safe-area offset; the rollout notes also report phone overlap. Separately, the panel’s “start” and “end” positions use physical left and right, so they do not follow the document’s RTL direction.
+
+**Suggested fix:** Add safe-area-aware offsets and test against the app’s fixed mobile actions. Use logical inset-inline-start/end for panel placement and margin-inline-end for the color dots. Keep the Lab internal, but make its preview behavior reliable in both directions.
+
+Evidence: [DesignLab.tsx, panel positioning](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L21-L24) · [DesignLab.tsx, physical margin](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L55) · [rollout plan, phone overlap](documentation/planning/2026-11-12-new-look-rollout-plan.md#L45)
+
+### P3 — Documentation-only pull requests still run the other browser smoke test
+
+The workflow-tests job skips its full real-app workflow tests on docs-only pull requests. However, ci-deploy.yml still installs Chromium and runs the sample-build screen smoke test unconditionally for every pull request. Documentation-only changes therefore do not skip all browser work as described in the CI handoff.
+
+**Suggested fix:** Add a docs-only change detector to the smoke-test steps in ci-deploy.yml, while keeping those tests enabled on pushes to main and manual runs. Ensure required-check status remains green when steps are intentionally skipped.
+
+Evidence: [ci-deploy.yml, smoke test runs unconditionally](.github/workflows/ci-deploy.yml#L57-L68) · [workflow-tests.yml, docs-only skip](.github/workflows/workflow-tests.yml#L37-L51)
+
+### P3 — Root README status is stale; checklist content is newer than its date
+
+The README still identifies status as 11 November and lists migration range 001–078 and 081–083. The checklist body records work through 097, including 097 as built but not applied, but its header still says it was updated on 11 November. The worklog itself is current through 18 November, so the earlier report’s claim that the worklog was stale was wrong.
+
+**Suggested fix:** Refresh the README status date and migration summary, and update the checklist date. Preserve the checklist’s distinction between built and applied.
+
+Evidence: [README.md, stale status line](README.md#L5) · [checklist.md, stale header and current 097 status](documentation/plans/checklist.md#L3-L12) · [WORKLOG.md, current 097 entry](documentation/operations/WORKLOG.md#L14-L42)
+
+## Checked and not reported as findings
+
+- The 18 November CI guard PR is merged into main. The migration-number check verifies unique numbers within migration and test directories and that migrations are recorded in sql/README.md; the column-grant guard is present as SQL test 092.
+- The previous missing read grant for inv_items.group_id was fixed in migration 096; it is not still open.
+- A focused review of auth, tenant/module middleware, caller-JWT data access, service-role allowlists, signed webhook paths, and migrations 094–096 found no confirmed authorization bypass or cross-tenant data exposure. The database findings above are from 097.
+- I suspected company language could carry from one organization to another, then withdrew that concern after tracing tenant middleware: it normalizes the language value to English or Arabic before the web shell receives it.
+
+## Review limits and next verification
+
+This is a source and documentation review, not a runtime certification. I did not run tests or inspect GitHub run results, branch-protection settings, production data, or the live app. The Design Lab worktree is clean but diverged from its remote by 3 local commits and 7 remote commits; its findings apply to the local snapshot reviewed.
+
+For the next pass, verify the two SQL fixes with concurrency and audit regression cases, run the existing SQL/API/web checks, confirm required-check settings, and inspect the deployed workflow result and 097 migration status before treating the Prices page as live.
