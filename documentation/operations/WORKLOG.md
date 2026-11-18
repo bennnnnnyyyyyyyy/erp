@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-18 — Codex audit fixes 1, 2, 4, 5, 6, 11, 12 (`sql/100`)
+
+**Objective.** Ben decided (18 Nov) to fix these findings of documentation/planning/2026-11-18-codex-audit-findings.md, after slice B. Findings 8-10 (Design Lab) are with the UI chat; 7 (pinning GitHub Actions) waits for the deployment chat; 3 was already closed (097 live).
+
+**Actions Completed.**
+- 1+2: `sql/100` redefines `pur__record_supplier_price`: a transaction lock on the supplier + item + currency key before reading; the conflict update refuses an order replacing a bill; a history row whenever cost, source kind, number or id changes. Test `sql/tests/097`; `093` P9a now expects the order-to-bill change at the same cost to be audited.
+- 4: `OrgPicker.tsx`: a failed invitations lookup shows "try again" and never sends a new person to create a company (no auto-open either).
+- 5: `lib/authErrors.ts` maps the sign-in service error codes to our own Arabic/English messages (general message otherwise); used in SignIn, SetPassword and OrgPicker; three plain English messages translated. Tested.
+- 6: `requirePermission` marks itself; `apps/api/test/route_permissions.test.ts` proves every /v1 route checks a permission or is one of three documented exceptions (also in agents.md).
+- 11: `ci-deploy.yml` skips the screen smoke test on documentation-only pull requests (pushes to main run everything).
+- 12: README and checklist status (001-099 live, 100 pending); duplicate root `AUDIT_FINDINGS.md` removed (the linked copy stays in documentation/planning).
+
+**Database / System Result.** None yet: `sql/100` is applied to live by Claude (CLI) after the merge.
+
+**Safety Status.** Local PGlite, 98 migrations: 95 of 95 SQL tests. Typecheck clean; API 658, web 151 tests pass; biome ci 0 errors; migration and link checks OK.
+
 ## 2026-11-18 — Supplier and customer item codes, master data slice B (`sql/099`)
 
 **Objective.** Slice B of the [master data plan](../plans/MASTER_DATA_PLAN.md), assigned by Ben through the master chat (18 Nov). Decisions:
