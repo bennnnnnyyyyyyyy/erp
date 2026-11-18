@@ -11,15 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-18 — Documentation status and archive cleanup
+## 2026-11-18 — Walkthrough fixes A1-E1 (Ben decided the plan; `sql/098`)
 
-**Objective.** Bring current documentation in line with the migration register, worklog and repository folder rules; make obsolete standalone status notes clearly historical.
+**Objective.** Ben's walkthrough notes of 18 Nov, fixed as he decided them in .temp/fix-plan-18nov.md (B1, B2 chosen; A, C, D, E from his notes; A1 after confirming that Egypt's standard is prices before VAT).
 
-**Actions Completed.** Refreshed status blocks and dates in `README.md`, `documentation/plans/checklist.md`, architecture and ADR records, and the master data, VAT, invoices, onboarding and integrations plans. Expanded `sql/tests/README.md` through test 093. Updated the tour and feature-set plan headers to identify historical snapshots and removed planning references. Moved four superseded planning/operations notes into `documentation/archive/` with historical labels and updated the planning index. Updated `AUDIT_FINDINGS.md` to identify the documentation drift as corrected and removed non-portable links into the local UI worktree. Redacted email-address strings from maintained Markdown.
+**Actions Completed.**
+- A1: sales order price label says before or including VAT; each line shows before-VAT, VAT and total as typed (shared `vatLine` maths); "Sales prices include VAT" explained with a worked example and confirmed before it is switched on.
+- B1: "Default rate for new items and invoice lines" label, explanation and a Default badge. B2: a VAT step in the setup wizard (owners): creates 14% (default), 0% export and Exempt, switches VAT on from a date, through the existing routes.
+- C1: item group form opens under its row; main groups bold, indented tree; "Add main group". C2: Inventory settings page for the item code rule, linked from Item groups. C3/C4: the item group picker offers only groups without sub-groups, under their main group; `sql/098` enforces it (items only in leaf groups; no sub-groups under a group holding items), tests 094 and 090 (SQL reused from the dropped slice branch after review).
+- D1: statement section headings, subtotals and totals styled; aligned digits. E1: inventory action cards get a symbol and colour per kind.
 
-**Database / System Result.** None. Documentation only; no source code, database, deployment or Git history changes.
+**Database / System Result.** `sql/098` applied to live 18 Nov by Claude (CLI) after PR #76 merged: anon_creates_groups false, create_item_versions 1, items_in_heading_groups 0, users_set_group true; tests 094 and 090 passed on live (rolled back).
 
-**Safety Status.** A read-only link and email-candidate scan covered 115 maintained Markdown files: no broken relative links (excluding the intentional `<system-slug>` template placeholder) and no email candidates. No tests were run. Ignored root scratch files and local `.temp/` / `temp/` content were left untouched because the repository marks them as private local drafts.
+**Safety Status.** Local: typecheck clean; tests shared 82, API 647, web 146; PGlite 96 migrations with tests 090-094 passing; biome ci 0 errors; migration check OK. Not checked in a browser.
 
 ## 2026-11-18 — Prices, master data slice C (`sql/097`)
 
@@ -2142,7 +2146,7 @@ The live app and the live database now match: both are at migration 044.
 
 **Actions Completed.**
 - Read-only listing on ggoerp found four companies with that name. Three were already soft-deleted: the two in the entry below, and `8e2692a8-…` (Chris, deleted 17:00:27 UTC; that one had no worklog entry until now).
-- Exactly one was active: `c9e42af1-…` (owner [email redacted], made 17:00:42 UTC, 105 audit rows).
+- Exactly one was active: `c9e42af1-…` (owner chris.johnson.wiz@gmail.com, made 17:00:42 UTC, 105 audit rows).
 - Soft-deleted it by id **and** name in one transaction (`deleted_at = now()`), with an `organization.deleted` audit row. A guard aborted the transaction unless exactly one row changed.
 
 **Database / System Result.**
@@ -2207,8 +2211,8 @@ The live app and the live database now match: both are at migration 044.
 **Actions Completed.**
 - A first script refused because it found **two** active companies with that name; nothing changed.
 - A read-only listing on ggoerp showed both were made today with no items:
-  - `fa4fbf01-…` (owner [email redacted], 1 warehouse, 10 audit rows);
-  - `874a8b52-…` (owner [email redacted], 5 warehouses, 21 audit rows).
+  - `fa4fbf01-…` (owner ben@prime-ad.com, 1 warehouse, 10 audit rows);
+  - `874a8b52-…` (owner chris.johnson.wiz@gmail.com, 5 warehouses, 21 audit rows).
 - Ben then said "run it yourself". Both were soft-deleted by id in one transaction (`organizations.deleted_at = now()`), each with an audit row `organization.deleted`.
 
 **Database / System Result.**
@@ -2329,7 +2333,7 @@ The live app and the live database now match: both are at migration 044.
 
 **Objective.** Audit finding 8: people showed as email prefixes (`grant.holden.wiz`). Ben gave the names: "chris johnson, joseph brown, grant holden, ben arthur".
 
-**Actions Completed.** Read-only check first on ggoerp (`supabase db query --linked`): exactly four accounts matched (`chris.johnson.wiz@`, `joseph.brown.wiz@`, `grant.holden.wiz@`, `[email redacted]`), none had a `full_name`. Then one transaction updated those four rows of `auth.users`, matched by id **and** email, adding `full_name` to `raw_user_meta_data` (other keys kept): Chris Johnson, Joseph Brown, Grant Holden, Ben Arthur.
+**Actions Completed.** Read-only check first on ggoerp (`supabase db query --linked`): exactly four accounts matched (`chris.johnson.wiz@`, `joseph.brown.wiz@`, `grant.holden.wiz@`, `ben.arthur.wiz@gmail.com`), none had a `full_name`. Then one transaction updated those four rows of `auth.users`, matched by id **and** email, adding `full_name` to `raw_user_meta_data` (other keys kept): Chris Johnson, Joseph Brown, Grant Holden, Ben Arthur.
 
 **Database / System Result.** 4 rows changed in `auth.users` (user metadata only; no business table, no membership, no role). `core_org_people` (sql/016, sql/025) now returns the names. Seen on the live site: Stock requests "Requested by" shows Grant Holden.
 
@@ -2545,7 +2549,7 @@ The live app and the live database now match: both are at migration 044.
 
 **Objective.** Ben: the demo runs on the live (cosmetics) company, so the tutorial belongs in the empty company, not there.
 
-**Actions Completed.** Tutorial switched OFF for Demo Cosmetics Factory and ON for Test Organization (0 warehouses, 0 items, Ben is owner), each through the audited function `core_set_tutorial` as [email redacted], 14:31 UTC; both audit rows verified. The company name was NOT touched: Ben confirmed he renamed it himself (`organization.updated` by chris's login, 14:23 UTC, removed "(sample data)").
+**Actions Completed.** Tutorial switched OFF for Demo Cosmetics Factory and ON for Test Organization (0 warehouses, 0 items, Ben is owner), each through the audited function `core_set_tutorial` as ben@prime-ad.com, 14:31 UTC; both audit rows verified. The company name was NOT touched: Ben confirmed he renamed it himself (`organization.updated` by chris's login, 14:23 UTC, removed "(sample data)").
 
 **Verification findings recorded the same evening (read-only).** Ten SQL tests (001, 002, 013, 016, 018, 022, 029, 030, 031, 032) passed rolled back on the live project. The sign-in scripts (real-login-check, concurrency-check) were not run: no credentials in the environment, and the concurrency check writes data. Ben's pushes today deployed Worker `e1cb6fc6-ee48-41a4-bf14-8add5bc29b5d` and Pages `36072048` (commit c5dc432, 14:21 UTC); yesterday's last deploy was Worker `d529d2d7-9df7-4bb1-ae7e-bfd3cf35a1d5` / Pages `118a85a7` (7b9fff5). The ETA module is on for 0 companies.
 
@@ -2568,7 +2572,7 @@ The live app and the live database now match: both are at migration 044.
 **Actions Completed.**
 - `sql/038_user_language.sql` + `sql/tests/032_user_language.sql`: table `user_preferences` (one row per person, no org_id on purpose because a person's language is the same in every company they belong to; own-row read only; no direct writes) and function `core_set_my_language(text)` (null clears). Dry run: ALL TESTS PASSED; weakening the read policy made the test fail. **Then applied by CLI the same evening on Ben's instruction ("run sql via cli"):** verification rls_on true, users_can_set true, anon_can_set false; test 032 passed on the live project; table empty, one policy.
 - API: `/v1/core/session` returns `userLanguage` (tolerates the table not existing yet, so deploying before the migration cannot break sign-in); `POST /v1/core/me/language`. Web: the i18n provider saves every change to the account, applies the account language on sign-in (the account wins), and saves a browser-only choice once (`planAccountSync`, unit tested). Demo build unaffected.
-- **Production data change, Ben's explicit request:** the tutorial was switched ON for "Demo Cosmetics Factory (sample data)" (id d16359e1-c8f1-408d-9ae2-1db8244ab9d4) by calling the audited function `core_set_tutorial(true)` as [email redacted] (admin there). Verified: `show_tutorial` is true and the audit log has "Getting-started tutorial shown" by that user. Nothing else changed. Until the new web build is deployed, that company shows the old English tutorial.
+- **Production data change, Ben's explicit request:** the tutorial was switched ON for "Demo Cosmetics Factory (sample data)" (id d16359e1-c8f1-408d-9ae2-1db8244ab9d4) by calling the audited function `core_set_tutorial(true)` as ben@prime-ad.com (admin there). Verified: `show_tutorial` is true and the audit log has "Getting-started tutorial shown" by that user. Nothing else changed. Until the new web build is deployed, that company shows the old English tutorial.
 - Chrome check (local demo build with a temporary patch to show the tutorial, reverted and diff-checked): the chooser appears first in both languages; choosing Arabic gives right-to-left layout, Arabic text, left-pointing arrows, a right-to-left progress bar; the Guide follows; the choice survives a reload; English switches back to left-to-right; a 390px-wide frame in Arabic has no sideways overflow. Two defects found and fixed: the active language in the switch was not distinguishable in dark mode (now a check mark, bold and a ring); a Latin company name scrambled the Arabic intro (now isolated). The window-resize tool did not narrow the viewport, so the phone check used a 390px frame.
 
 **Database / System Result.** Production: one setting changed (tutorial on for the cosmetics company), audited. No migration applied. Typecheck clean; tests: shared 31, API 114 + 7 skipped, web 16.
@@ -2668,10 +2672,10 @@ remove it before deleting the worktree (it is not tracked).
 
 ## 2026-11-02 — Cosmetics-org browser check (Ben's account added to the sample organization)
 
-**Objective.** Ben: give his account access to the cosmetics organization, redo the browser check there, and recheck the "what I need" checklist. The Chrome session is signed in as `[email redacted]`, who was owner of Test Organization only.
+**Objective.** Ben: give his account access to the cosmetics organization, redo the browser check there, and recheck the "what I need" checklist. The Chrome session is signed in as `ben@prime-ad.com`, who was owner of Test Organization only.
 
 **Actions Completed.**
-- Added `[email redacted]` to `demo-cosmetics` as **admin**, directly in the database (insert into `memberships`, inviter Chris), with a `member.added` audit entry stating it was done by Claude Code at Ben's request. Reversible by disabling that membership.
+- Added `ben@prime-ad.com` to `demo-cosmetics` as **admin**, directly in the database (insert into `memberships`, inviter Chris), with a `member.added` audit entry stating it was done by Claude Code at Ben's request. Reversible by disabling that membership.
 - Browser check (Claude, with Ben's approval, in his signed-in Chrome, cosmetics org, as admin): owner home, Profit overview, Stock forecast, Stock ledger, Stock requests, Customer invoices, Supplier invoices, Purchase orders, Expenses, Audit log, Alerts, Batches and expiry, Stock transfers and the Guide all loaded with real data, no error messages, every API call 200 in under a second. Then one action cycle: created request OUT-0372 (1 x Lip balm, Finished goods), tried to approve it as its creator (refused: "You cannot approve your own request"), cancelled it (reserved stock released; history shows submitted and cancelled). That request stays in the sample data as a cancelled record; no stock moved.
 - Worker log: the tail captured the whole session (1,264 events): 1,263 ok, 1 canceled (a `GET /v1/core/session` aborted at 193 ms by a page navigation), 0 exceptions, no server errors (the only 4xx were my own unauthenticated tests, the expected 403 self-approval refusal, and root 404s). The tail was then stopped.
 - `documentation/operations/WHAT_I_NEED_FROM_YOU.md` rechecked and updated (owner-home check done; failed-to-fetch still not reproduced with the new evidence; October loss and 70 percent overdue noted; two UI notes; membership and test request noted; tail stopped).
@@ -2832,11 +2836,11 @@ remove it before deleting the worktree (it is not tracked).
 **Safety Status.** The button removal is NOT deployed and not seen in a browser. `scripts/concurrency-check.mjs` edit is uncommitted.
 ## 2026-10-30 — Memberships moved to the cosmetics demo organization (Ben's instruction)
 
-**Objective.** Ben could not see the dummy data: his accounts were only in the (empty) Test Organization. Instruction: `ben.arthur.wiz` at the same level as grant, `[email redacted]` stays owner of the empty org, the four gmail accounts move to the filled demo organization.
+**Objective.** Ben could not see the dummy data: his accounts were only in the (empty) Test Organization. Instruction: `ben.arthur.wiz` at the same level as grant, `ben@prime-ad.com` stays owner of the empty org, the four gmail accounts move to the filled demo organization.
 
-**Actions Completed.** Added `[email redacted]` to "Demo Cosmetics Factory (sample data)" as member. Disabled (not deleted, reversible by clearing `disabled_at`) the Test Organization memberships of chris, joseph, grant and ben.arthur.wiz. `[email redacted]` unchanged: owner of Test Organization only. chris, joseph and grant also still belong to "Demo Trading Co." (the older demo), which I left alone because it was not mentioned.
+**Actions Completed.** Added `ben.arthur.wiz@gmail.com` to "Demo Cosmetics Factory (sample data)" as member. Disabled (not deleted, reversible by clearing `disabled_at`) the Test Organization memberships of chris, joseph, grant and ben.arthur.wiz. `ben@prime-ad.com` unchanged: owner of Test Organization only. chris, joseph and grant also still belong to "Demo Trading Co." (the older demo), which I left alone because it was not mentioned.
 
-**Database / System Result.** Verified by query, one line per membership: ben.arthur.wiz: cosmetics member ENABLED, Test disabled; [email redacted]: Test owner ENABLED; chris: cosmetics owner + Demo Trading owner ENABLED, Test disabled; grant: cosmetics member + Demo Trading member ENABLED, Test disabled; joseph: cosmetics admin + Demo Trading admin ENABLED, Test disabled. Audit chain of the cosmetics organization: 0 broken.
+**Database / System Result.** Verified by query, one line per membership: ben.arthur.wiz: cosmetics member ENABLED, Test disabled; ben@prime-ad.com: Test owner ENABLED; chris: cosmetics owner + Demo Trading owner ENABLED, Test disabled; grant: cosmetics member + Demo Trading member ENABLED, Test disabled; joseph: cosmetics admin + Demo Trading admin ENABLED, Test disabled. Audit chain of the cosmetics organization: 0 broken.
 
 **Safety Status.** No rows deleted. Nothing deployed (data only). Not checked in a browser.
 ## 2026-10-30 — Audit branch merged into main, deployed with wrangler
@@ -3016,7 +3020,7 @@ remove it before deleting the worktree (it is not tracked).
 
 **Objective.** During testing, make every existing Supabase Auth account available in the single Test Organization.
 
-**Actions Completed.** Read the live Auth users and memberships, preserved the existing `[email redacted]` owner and `[email redacted]` member, and added the other six Auth accounts to Test Organization as regular members. Added matching `member.added` audit entries in the same transaction. No roles in the other organizations were changed.
+**Actions Completed.** Read the live Auth users and memberships, preserved the existing `ben@prime-ad.com` owner and `ben.arthur.wiz@gmail.com` member, and added the other six Auth accounts to Test Organization as regular members. Added matching `member.added` audit entries in the same transaction. No roles in the other organizations were changed.
 
 **Database / System Result.** Test Organization now has 8 active memberships: 1 owner and 7 members. The added accounts are the three demo users and three concurrency-test users.
 
@@ -3202,7 +3206,7 @@ remove it before deleting the worktree (it is not tracked).
 **Objective.** Put the real inventory slice (real sign-in, real database) behind a URL Ben and management can click through.
 
 **Actions Completed.**
-- Cloudflare account `[email redacted]` (login still active). Created Pages project `erp-live` (`wrangler pages project create ... --force`) and deployed the real web build: `https://erp-live.pages.dev` (deployment `3f93bfc5`). Built with `npx vite build` in `apps/web` (the `build` script's `&&` fails in this shell) with `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (public by design) and `VITE_API_BASE_URL` set for the build only. Demo mode is off in this build; the demo code is still bundled (checklist item open).
+- Cloudflare account `meetings.dmedeskai@gmail.com` (login still active). Created Pages project `erp-live` (`wrangler pages project create ... --force`) and deployed the real web build: `https://erp-live.pages.dev` (deployment `3f93bfc5`). Built with `npx vite build` in `apps/web` (the `build` script's `&&` fails in this shell) with `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (public by design) and `VITE_API_BASE_URL` set for the build only. Demo mode is off in this build; the demo code is still bundled (checklist item open).
 - Deployed Worker `erp-api` from `apps/api`: `https://erp-api.meetings-dmedeskai.workers.dev` (version `31028900`). `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` passed at deploy time with `--var` (not stored in the repo); `ALLOWED_ORIGINS` set in `apps/api/wrangler.toml` to `https://erp-live.pages.dev,http://localhost:5173` after a first deploy with the value passed via `--var` produced no CORS header at all (cause not investigated; the toml value works).
 - **`SUPABASE_SECRET_KEY` is not set on the Worker yet** (Ben sets it with `wrangler secret put`; I must not see it). Without it, only the routes that use the admin client fail with 503: Settings → Users (invite, role changes) and member audit events. The inventory flow does not need it.
 
@@ -3215,7 +3219,7 @@ remove it before deleting the worktree (it is not tracked).
 **Objective.** Put real data and real sign-in behind the inventory slice, per `neworder.md` (slice 1) and "run the Supabase stuff using the CLI".
 
 **Actions Completed.**
-- Created three Supabase Auth users by SQL through the CLI (`auth.users` plus `auth.identities`, bcrypt via `extensions.crypt`, email pre-confirmed; no email sent): `[email redacted]`, `[email redacted]`, `[email redacted]`. Passwords were generated randomly and saved only to `.temp/demo-credentials.txt` (git-ignored); they were not printed or committed. The temporary SQL file that held them was blanked.
+- Created three Supabase Auth users by SQL through the CLI (`auth.users` plus `auth.identities`, bcrypt via `extensions.crypt`, email pre-confirmed; no email sent): `chris.johnson.wiz@gmail.com`, `joseph.brown.wiz@gmail.com`, `grant.holden.wiz@gmail.com`. Passwords were generated randomly and saved only to `.temp/demo-credentials.txt` (git-ignored); they were not printed or committed. The temporary SQL file that held them was blanked.
 - Ran `sql/seed/001_demo_organization.sql` via CLI. Result: organization "Demo Trading Co." (EGP, Africa/Cairo), 3 members (chris owner, joseph admin, grant member), module `inventory` on, 2 warehouses, 5 items, 2 requests (one issued, one waiting for approval), 21 audit rows, `audit_verify` 0 problems. Stock read back: cartons 460 (500 − 40 issued), tape 54 (60 − 6), gloves 120 on hand with 30 reserved for the waiting request.
 - `scripts/real-login-check.mjs` extended with inventory checks (items readable, direct ledger insert refused, direct balance change refused with a permission error, issue of an unapproved request refused, member cannot approve) and a clearer sign-in error message.
 
@@ -3228,7 +3232,7 @@ remove it before deleting the worktree (it is not tracked).
 **Objective.** Connect the inventory database layer (`sql/006`) to the API and the web screens, and prepare the demo organization.
 
 **Actions Completed.**
-- Roles for the demo users (from Ben): `[email redacted]` owner, `[email redacted]` manager (admin), `[email redacted]` requester (member). **These three users do not exist in Supabase Auth yet** (checked via CLI: only `[email redacted]` and `[email redacted]`).
+- Roles for the demo users (from Ben): `chris.johnson.wiz@gmail.com` owner, `joseph.brown.wiz@gmail.com` manager (admin), `grant.holden.wiz@gmail.com` requester (member). **These three users do not exist in Supabase Auth yet** (checked via CLI: only `ben@prime-ad.com` and `ben.arthur.wiz@gmail.com`).
 - `packages/shared/src/modules.ts`: inventory permissions (`inventory.items.read`, `.items.manage`, `.warehouses.manage`, `.request.create`, `.request.approve`, `.stock.issue`) and member grants.
 - `apps/api/src/modules/inventory/routes.ts`: reads (warehouses, items, stock, ledger, requests) filtered by the caller's organization, and changes through the seven `sql/006` functions; response shapes match the existing screens. No admin client used.
 - Web: `modules/inventory/InventoryDemo.tsx` renamed `Inventory.tsx` and now registered in every build (sales and purchasing stay demo-only); new `lib/people.ts` resolves user ids to names from the members list (fixed names in demo mode); the warehouse default no longer assumes a demo id.
@@ -3258,7 +3262,7 @@ remove it before deleting the worktree (it is not tracked).
 
 **Objective.** Prove over the real path (sign-in, then Supabase REST calls with `X-Org-Id`) what the SQL tests could only simulate.
 
-**Actions Completed.** `scripts/real-login-check.mjs`: signs in with `TEST_EMAIL`/`TEST_PASSWORD`, then checks that the user sees only their organizations and audit rows, that `current_org_id` accepts their own organization header and refuses a random organization (`NOT_A_MEMBER`) and a missing header (`ORG_REQUIRED`), that direct update of `organizations`, delete from and insert into `audit_log` are refused, that `audit_append_admin` and `audit_verify` are not callable, and, for a plain member, that `core_update_org` is `FORBIDDEN` (skipped for owners and admins because it would change data). Never prints the password or token. Reads settings from environment variables or the repo-root `.env`. Supabase Auth currently has two users (from a screenshot): `[email redacted]` (signed in) and `[email redacted]` (invited 28 Oct, not yet accepted).
+**Actions Completed.** `scripts/real-login-check.mjs`: signs in with `TEST_EMAIL`/`TEST_PASSWORD`, then checks that the user sees only their organizations and audit rows, that `current_org_id` accepts their own organization header and refuses a random organization (`NOT_A_MEMBER`) and a missing header (`ORG_REQUIRED`), that direct update of `organizations`, delete from and insert into `audit_log` are refused, that `audit_append_admin` and `audit_verify` are not callable, and, for a plain member, that `core_update_org` is `FORBIDDEN` (skipped for owners and admins because it would change data). Never prints the password or token. Reads settings from environment variables or the repo-root `.env`. Supabase Auth currently has two users (from a screenshot): `ben@prime-ad.com` (signed in) and `ben.arthur.wiz@gmail.com` (invited 28 Oct, not yet accepted).
 
 **Database / System Result.** None yet; the script has not been run against Supabase.
 
@@ -3340,7 +3344,7 @@ remove it before deleting the worktree (it is not tracked).
 
 **Actions Completed.** Added `npm run build:demo` (Vite `demo` mode; ignores any `.env`, so no Supabase values can reach the bundle) and `apps/web/public/_headers` (`X-Robots-Tag: noindex, nofollow`, `nosniff`, no referrer). Built `apps/web/dist`, checked the bundle contains no project address or key. Logged in with `wrangler login`, created the Pages project `erp-demo` (needed `--force`: wrangler 4.154 otherwise delegates Pages to Workers and fails in a workspace root), and deployed with `wrangler pages deploy apps/web/dist --project-name erp-demo --branch main`.
 
-**Database / System Result.** Cloudflare account "[email redacted]'s Account": Pages project `erp-demo`, production URL **https://erp-demo-bas.pages.dev**, first deployment `d7820af9` (47 files). No Supabase project, API or database involved; sample data only, no sign-in. Public: anyone with the link can open it.
+**Database / System Result.** Cloudflare account "Meetings.dmedeskai@gmail.com's Account": Pages project `erp-demo`, production URL **https://erp-demo-bas.pages.dev**, first deployment `d7820af9` (47 files). No Supabase project, API or database involved; sample data only, no sign-in. Public: anyone with the link can open it.
 
 **Safety Status.** Root URL and the deep link `/inventory/requests` answer 200 and the `noindex` header is present. Not opened in a browser by me. Updates are manual: rebuild with `npm run build:demo`, then run the deploy command again (no `--force`). The per-deployment URL `d7820af9.erp-demo-bas.pages.dev` did not resolve from here at the time of checking. Not done: access restriction (Cloudflare Access), GitHub-connected automatic deploys, a custom domain.
 
