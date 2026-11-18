@@ -37,7 +37,10 @@ describe('every /v1 route checks a permission or is an explained exception', () 
     for (const key of Object.keys(EXCEPTIONS)) {
       const entries = byRoute.get(key);
       expect(entries, `${key} no longer exists: remove it from EXCEPTIONS`).toBeDefined();
-      expect(entries?.some((e) => typeof e.handler.requiredPermission === 'string'), `${key} now checks a permission: remove it from EXCEPTIONS`).toBe(false);
+      expect(
+        entries?.some((e) => typeof e.handler.requiredPermission === 'string'),
+        `${key} now checks a permission: remove it from EXCEPTIONS`,
+      ).toBe(false);
     }
   });
 });
