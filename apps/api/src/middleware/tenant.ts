@@ -68,12 +68,15 @@ export const requireTenant = createMiddleware<AppEnv>(async (c, next) => {
 });
 
 export function requirePermission(permission: string) {
-  return createMiddleware<AppEnv>(async (c, next) => {
+  const mw = createMiddleware<AppEnv>(async (c, next) => {
     if (!hasPermission(c.var.tenant.permissions, permission)) {
       throw new HttpError(403, "You don't have permission to do that", 'forbidden');
     }
     await next();
   });
+  // Marked so test/route_permissions.test.ts can prove every route checks a permission (Codex audit 18 Nov, finding 6).
+  Object.defineProperty(mw, 'requiredPermission', { value: permission });
+  return mw;
 }
 
 /**
