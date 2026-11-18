@@ -17,6 +17,7 @@ import { useSession } from '../../session';
 import { formatMoney, hasPermission, vatLine, vatLineInclusive } from '@erp/shared';
 
 import { tr, trf } from '../../lib/i18n';
+import { usePartyCodes } from '../inventory/PartyCodes';
 // DEMO ONLY: shared pieces for the sample purchasing and sales screens (lib/demoTrade.ts).
 
 export function useCatalog() {
@@ -308,6 +309,8 @@ export function NewOrderForm(props: {
     if (warehouses?.length && !warehouses.some((w) => w.id === warehouseId)) setWarehouseId(warehouses[0]?.id ?? '');
   }, [warehouses, warehouseId]);
   const currency = session.org?.defaultCurrency ?? 'EGP';
+  // The chosen party's own codes for our items (sql/099): searchable and shown beside ours.
+  const partyCodes = usePartyCodes(props.partyField === 'customerId' ? 'customer' : 'supplier', partyId);
   const vatOn = props.vat?.registered === true;
 
   // Fill empty (or still suggested) prices once a party and items are chosen; a typed price is never replaced.
@@ -397,7 +400,10 @@ export function NewOrderForm(props: {
                 onChange={(v) => setLine(i, { itemId: v })}
                 label={tr('Item')}
                 placeholder={tr('Choose an item…')}
-                options={(cat.items.data ?? []).map((it) => ({ value: it.id, label: `${it.sku} · ${it.name}`, keywords: it.nameAr ?? '' }))}
+                options={(cat.items.data ?? []).map((it) => {
+                  const theirs = partyCodes.get(it.id);
+                  return { value: it.id, label: theirs ? `${it.sku} · ${it.name} · (${theirs})` : `${it.sku} · ${it.name}`, keywords: `${it.nameAr ?? ''} ${theirs ?? ''}` };
+                })}
               />
             </label>
             <label>{tr('Quantity')}<input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
