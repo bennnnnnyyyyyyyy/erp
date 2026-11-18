@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
@@ -159,6 +159,40 @@ export function ItemGroupsPage() {
     }, tr('Group saved. Items already coded keep their codes.'));
   }
 
+  // Walkthrough 18 Nov, fix C1: the form opens under the row it belongs to (add a sub-group, edit), or at the top for a main group.
+  const draftForm = draft ? (
+      <form className="form-card stack" onSubmit={save} aria-label={draft.id ? tr('Edit group') : tr('Add group')}>
+        <div className="form-row">
+          <label>
+            {tr('Under')}
+            <GroupSelect groups={list} value={draft.parentId} separator={separator} emptyLabel={tr('Top level')} activeOnly={false}
+              exclude={draft.id ? descendants(list, draft.id) : undefined} onChange={(parentId) => setDraft({ ...draft, parentId })} />
+          </label>
+          <label>
+            {tr('Code')}
+            <input required maxLength={10} pattern="[A-Za-z0-9]{1,10}" placeholder="10" value={draft.code}
+              onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} />
+          </label>
+        </div>
+        <div className="form-row">
+          <label>{tr('Name')}<input required maxLength={120} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+          <label>{tr('Name in Arabic (optional)')}<input dir="rtl" maxLength={120} value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} /></label>
+        </div>
+        {draft.id ? (
+          <label className="option-switch">
+            <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
+            <span>{tr('New items can be added to this group')}</span>
+          </label>
+        ) : null}
+        <p className="muted small">{tr('Letters and digits, up to 10. Changing a code or moving a group changes the codes of new items only.')}</p>
+        <div className="form-actions">
+          <Button type="submit">{draft.id ? tr('Save changes') : tr('Add group')}</Button>
+          <Button type="button" variant="ghost" onClick={() => setDraft(null)}>{tr('Cancel')}</Button>
+        </div>
+      </form>
+  ) : null;
+  const formAfter = (g: { id: string }) => draft !== null && (draft.id === g.id || (draft.id === null && draft.parentId === g.id));
+
   return (
     <section className="page">
       <h1>{tr('Item groups')}</h1>
@@ -177,40 +211,10 @@ export function ItemGroupsPage() {
       {error ? <p className="error" role="alert">{error}</p> : null}
       {canManage && !draft ? (
         <div className="form-actions">
-          <Button type="button" onClick={() => setDraft({ id: null, parentId: '', code: '', name: '', nameAr: '', active: true })}>{tr('Add group')}</Button>
+          <Button type="button" onClick={() => setDraft({ id: null, parentId: '', code: '', name: '', nameAr: '', active: true })}>{tr('Add main group')}</Button>
         </div>
       ) : null}
-      {draft ? (
-        <form className="form-card stack" onSubmit={save} aria-label={draft.id ? tr('Edit group') : tr('Add group')}>
-          <div className="form-row">
-            <label>
-              {tr('Under')}
-              <GroupSelect groups={list} value={draft.parentId} separator={separator} emptyLabel={tr('Top level')} activeOnly={false}
-                exclude={draft.id ? descendants(list, draft.id) : undefined} onChange={(parentId) => setDraft({ ...draft, parentId })} />
-            </label>
-            <label>
-              {tr('Code')}
-              <input required maxLength={10} pattern="[A-Za-z0-9]{1,10}" placeholder="10" value={draft.code}
-                onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} />
-            </label>
-          </div>
-          <div className="form-row">
-            <label>{tr('Name')}<input required maxLength={120} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-            <label>{tr('Name in Arabic (optional)')}<input dir="rtl" maxLength={120} value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} /></label>
-          </div>
-          {draft.id ? (
-            <label className="option-switch">
-              <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
-              <span>{tr('New items can be added to this group')}</span>
-            </label>
-          ) : null}
-          <p className="muted small">{tr('Letters and digits, up to 10. Changing a code or moving a group changes the codes of new items only.')}</p>
-          <div className="form-actions">
-            <Button type="submit">{draft.id ? tr('Save changes') : tr('Add group')}</Button>
-            <Button type="button" variant="ghost" onClick={() => setDraft(null)}>{tr('Cancel')}</Button>
-          </div>
-        </form>
-      ) : null}
+      {draft && draft.id === null && draft.parentId === '' ? draftForm : null}
       {rows.length === 0 ? (
         <p className="muted">{tr('No item groups yet.')}</p>
       ) : (
@@ -225,9 +229,10 @@ export function ItemGroupsPage() {
           </thead>
           <tbody>
             {rows.map((g) => (
-              <tr key={g.id}>
+              <Fragment key={g.id}>
+              <tr>
                 <td><code style={{ paddingInlineStart: `${g.depth * 1.25}rem` }}>{g.fullCode}</code></td>
-                <td>{groupName(g, lang)}</td>
+                <td style={{ paddingInlineStart: `${g.depth * 1.25}rem` }}>{g.depth === 0 ? <strong>{groupName(g, lang)}</strong> : groupName(g, lang)}</td>
                 <td>{g.active ? tr('Active') : tr('Closed to new items')}</td>
                 {canManage ? (
                   <td className="actions">
@@ -237,6 +242,8 @@ export function ItemGroupsPage() {
                   </td>
                 ) : null}
               </tr>
+              {formAfter(g) ? <tr><td colSpan={canManage ? 4 : 3}>{draftForm}</td></tr> : null}
+              </Fragment>
             ))}
           </tbody>
         </table>

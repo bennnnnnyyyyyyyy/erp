@@ -79,6 +79,7 @@ export const MASTER_DATA_AR: Record<string, string> = {
   "Item codes: typed by hand.": "أكواد الأصناف: تُكتب يدويًا.",
   "Change in Inventory settings": "التغيير من إعدادات المخزون",
   "Inventory settings": "إعدادات المخزون",
+  "Add main group": "إضافة مجموعة رئيسية",
   "How new items get their code. Codes never change once given, even if an item moves to another group.": "كيف تحصل الأصناف الجديدة على أكوادها. لا يتغير الكود بعد إعطائه، حتى لو انتقل الصنف إلى مجموعة أخرى.",
   "Only an owner or admin can change the item code rule.": "المالك أو المدير فقط يستطيع تغيير قاعدة أكواد الأصناف.",
 };
