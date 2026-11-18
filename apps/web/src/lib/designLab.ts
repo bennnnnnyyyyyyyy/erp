@@ -327,34 +327,144 @@ export function summary(s: State, touched: Touched = {}, log: Entry[] = []): str
   ].join('\n');
 }
 
-/* ---------- contrast (WCAG) ---------- */
+/* ---------- accessibility helpers (pure, unit-tested in designLab.test.ts) ---------- */
+export type RGB = [number, number, number];
+export type RGBA = [number, number, number, number];
+
+/** WCAG relative luminance of an sRGB colour (0-255 channels). */
+export function luminance([r, g, b]: RGB): number {
+  const f = (v: number) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+/** WCAG contrast ratio between two opaque colours (1 to 21). */
+export function contrastRatio(a: RGB, b: RGB): number {
+  const [hi, lo] = [Math.max(luminance(a), luminance(b)), Math.min(luminance(a), luminance(b))];
+  return (hi + 0.05) / (lo + 0.05);
+}
+/** A colour with alpha drawn over an opaque one. */
+export function compositeOver([r, g, b, a]: RGBA, [br, bg, bb]: RGB): RGB {
+  return [Math.round(r * a + br * (1 - a)), Math.round(g * a + bg * (1 - a)), Math.round(b * a + bb * (1 - a))];
+}
+/** WCAG AA: 3 : 1 for large text (24px, or 18.66px and bold), otherwise 4.5 : 1. */
+export function requiredRatio(fontPx: number, weight: number): number {
+  return fontPx >= 24 || (fontPx >= 18.66 && weight >= 700) ? 3 : 4.5;
+}
+/** Which radio gets focus (and is selected) after a key: arrows move, Home and End jump. In right-to-left the left arrow goes forward. */
+export function nextRadioIndex(index: number, key: string, count: number, rtl: boolean): number | null {
+  if (count < 1) return null;
+  const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+  const back = rtl ? 'ArrowRight' : 'ArrowLeft';
+  if (key === 'ArrowDown' || key === forward) return (index + 1) % count;
+  if (key === 'ArrowUp' || key === back) return (index - 1 + count) % count;
+  if (key === 'Home') return 0;
+  if (key === 'End') return count - 1;
+  return null;
+}
+
+/* ---------- contrast of the real components on the current page (WCAG AA), light and dark ---------- */
+// Measures what is actually drawn: for each kind of component the text colour against the real background behind it (several layers
+// and gradients included, a gradient is tested against its worst colour), in both themes. It does NOT cover hover, focus and
+// disabled states, other pages, images, or text drawn over images: the panel says so. It is a check of this page, not a WCAG audit.
 let canvas: CanvasRenderingContext2D | null = null;
-function rgbOf(cssColor: string): [number, number, number] | null {
+function parseColor(css: string): RGBA | null {
+  if (!css || css === 'transparent') return null;
   canvas ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   if (!canvas) return null;
   canvas.clearRect(0, 0, 1, 1);
-  canvas.fillStyle = '#000'; canvas.fillStyle = cssColor; canvas.fillRect(0, 0, 1, 1);
+  canvas.fillStyle = '#000'; canvas.fillStyle = css; canvas.fillRect(0, 0, 1, 1);
   const d = canvas.getImageData(0, 0, 1, 1).data;
-  return [d[0]!, d[1]!, d[2]!];
+  return [d[0]!, d[1]!, d[2]!, d[3]! / 255];
 }
-function resolve(expr: string): string {
-  const el = document.createElement('span'); el.style.color = expr; document.body.appendChild(el);
-  const col = getComputedStyle(el).color; el.remove(); return col;
+const COLOR_FN = /(?:oklch|oklab|lch|lab|rgba?|hsla?|color)\([^()]*\)/g;
+/** The opaque colour(s) a component sits on: one, or the stops of a gradient (each drawn over what is under it). */
+function backgroundsBehind(el: Element): RGB[] {
+  const solids: RGBA[] = [];
+  let stops: RGBA[] | null = null;
+  for (let e: Element | null = el; e; e = e.parentElement) {
+    const cs = getComputedStyle(e);
+    if (!stops && cs.backgroundImage.includes('gradient')) {
+      const parsed = (cs.backgroundImage.match(COLOR_FN) ?? []).map(parseColor).filter((c): c is RGBA => !!c);
+      if (parsed.length) stops = parsed;
+    }
+    const c = parseColor(cs.backgroundColor);
+    if (c && c[3] > 0) { solids.push(c); if (c[3] >= 1) break; }
+  }
+  let base: RGB = [255, 255, 255];
+  for (let i = solids.length - 1; i >= 0; i--) base = compositeOver(solids[i]!, base);
+  return stops ? stops.map((s) => compositeOver(s, base)) : [base];
 }
-const lum = ([r, g, b]: [number, number, number]) => { const f = (v: number) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
-export type Contrast = { label: string; ratio: number | null };
-const PAIRS: [string, string, string][] = [
-  ['Body text on page', '--foreground', '--background'],
-  ['Muted text on page', '--muted-foreground', '--background'],
-  ['Text on primary button', '--primary-foreground', '--primary'],
-  ['Primary colour on page (links)', '--primary', '--background'],
-  ['Sidebar text on sidebar', '--sidebar-foreground', '--sidebar'],
+
+export type ComponentProbe = { name: string; selector: string; placeholder?: boolean };
+export const PROBES: ComponentProbe[] = [
+  { name: 'Body text', selector: '.content p:not(.muted):not(.small), .content td, .content li, .content dd' },
+  { name: 'Muted and small text', selector: '.content .muted, .content .small, .content .help, .content .hint' },
+  { name: 'Headings', selector: '.content h1, .content h2, .content h3' },
+  { name: 'Links', selector: '.content a:not(.tile):not(.nav-item)' },
+  { name: 'Buttons', selector: '.content button:not(:disabled), .modal button:not(:disabled)' },
+  { name: 'Form fields', selector: '.content input:not([type=checkbox]):not([type=radio]):not([type=range]), .content select, .content textarea' },
+  { name: 'Form placeholders', selector: '.content input[placeholder], .content textarea[placeholder]', placeholder: true },
+  { name: 'Table headers', selector: '.content thead th' },
+  { name: 'Status chips and badges', selector: '.content .pill, .content .status, .content .badge' },
+  { name: 'Stat cards', selector: '.content .stat-value, .content .stat-label, .content .stat-note' },
+  { name: 'Home tiles', selector: '.content .tile-name, .content .tile-desc' },
+  { name: 'Home banner', selector: '.home-hero h1, .home-hero p, .home-hero button' },
+  { name: 'Sidebar menu', selector: '.sidebar .nav-item, .sidebar .nav-group-heading, .sidebar-app-name, .sidebar-brand' },
+  { name: 'Top bar', selector: '.topbar a, .topbar span, .topbar button' },
 ];
-export function contrastReport(): Contrast[] {
-  return PAIRS.map(([name, fg, bg]) => {
-    const a = rgbOf(resolve(`var(${fg})`)); const b = rgbOf(resolve(`var(${bg})`));
-    if (!a || !b) return { label: name, ratio: null };
-    const [hi, lo] = [Math.max(lum(a), lum(b)), Math.min(lum(a), lum(b))];
-    return { label: name, ratio: (hi + 0.05) / (lo + 0.05) };
+export type ProbeResult = { name: string; samples: number; worst: number | null; required: number; failing: { text: string; ratio: number; required: number }[] };
+export type ComponentContrast = { path: string; light: ProbeResult[]; dark: ProbeResult[]; elements: number };
+
+function measureProbes(): { results: ProbeResult[]; elements: number } {
+  let elements = 0;
+  const results = PROBES.map((probe): ProbeResult => {
+    const seen = new Set<string>();
+    let worst: number | null = null; let worstReq = 4.5; const failing: ProbeResult['failing'] = [];
+    let scanned = 0;
+    for (const el of document.querySelectorAll(probe.selector)) {
+      if (++scanned > 400) break;
+      if (el.closest('#design-lab-root')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      const cs = probe.placeholder ? getComputedStyle(el, '::placeholder') : getComputedStyle(el);
+      const own = getComputedStyle(el);
+      if (own.visibility === 'hidden' || own.display === 'none') continue;
+      // Only the text the element draws itself: a link around a card has its own colour, but the words inside are drawn by inner elements.
+      const direct = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent ?? '').join('').trim();
+      const text = probe.placeholder ? (el.getAttribute('placeholder') ?? '')
+        : el instanceof HTMLSelectElement ? (el.selectedOptions[0]?.text ?? '')
+        : el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.value
+        : direct;
+      if (!text) continue;
+      const fg = parseColor(cs.color); if (!fg) continue;
+      const fontPx = parseFloat(own.fontSize); const weight = parseInt(own.fontWeight, 10) || 400;
+      const bgs = backgroundsBehind(el);
+      const ratio = Math.min(...bgs.map((bg) => contrastRatio(compositeOver(fg, bg), bg)));
+      const req = requiredRatio(fontPx, weight);
+      const key = `${own.color}|${own.backgroundImage}|${bgs.map((b) => b.join(',')).join(';')}|${fontPx}|${weight}`;
+      if (seen.has(key)) continue; seen.add(key);
+      elements++;
+      if (worst === null || ratio - req < worst - worstReq) { worst = ratio; worstReq = req; }
+      if (ratio < req && failing.length < 3) failing.push({ text: text.slice(0, 28), ratio, required: req });
+      if (seen.size >= 14) break;
+    }
+    return { name: probe.name, samples: seen.size, worst, required: worstReq, failing };
   });
+  return { results, elements };
+}
+
+/** Measures the page in light and dark and puts the theme back. Transitions are switched off meanwhile so colours are final values. */
+export function componentContrast(): ComponentContrast {
+  const root = document.documentElement;
+  const wasDark = root.classList.contains('dark');
+  const freeze = document.createElement('style');
+  freeze.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}';
+  document.head.appendChild(freeze);
+  try {
+    root.classList.remove('dark'); const light = measureProbes();
+    root.classList.add('dark'); const dark = measureProbes();
+    return { path: location.pathname, light: light.results, dark: dark.results, elements: light.elements + dark.elements };
+  } finally {
+    root.classList.toggle('dark', wasDark);
+    freeze.remove();
+  }
 }

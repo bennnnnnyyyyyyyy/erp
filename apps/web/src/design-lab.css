@@ -380,3 +380,7 @@ html.dark[data-d-btn='gradient'] button:not([class]), html.dark[data-d-btn='grad
 
 /* The light and "same as page" sidebars need the normal (dark) focus ring again. */
 html[data-d-sidebar='light'] .sidebar :focus-visible, html[data-d-sidebar='paper'] .sidebar :focus-visible { outline-color: var(--primary); }
+
+/* Phones: leave room under the content for the Lab launcher (44px + 16px), so the last row and its buttons can scroll clear of it.
+   This file only loads together with the Lab, so it never reaches production. */
+@media (max-width: 720px) { .content { padding-block-end: 5rem; } }

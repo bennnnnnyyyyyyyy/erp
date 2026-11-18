@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../design-lab.css';
 import { navigate } from '../lib/router';
 import {
-  GROUPS, PRESETS, SRC_LABEL, apply, backfill, contrastReport, defaults, describeEntry, diffEntries, isChanged, load, loadLog, loadSaved, loadTouched, loadUi,
-  parseImport, save, saveLog, saveTouched, saveUi, shareLink, stampOf, storeSaved, summary,
-  type Contrast, type Entry, type Group, type Saved, type Source, type State, type Touched, type Ui,
+  GROUPS, PRESETS, SRC_LABEL, apply, backfill, componentContrast, defaults, describeEntry, diffEntries, isChanged, load, loadLog, loadSaved, loadTouched, loadUi,
+  nextRadioIndex, parseImport, save, saveLog, saveTouched, saveUi, shareLink, stampOf, storeSaved, summary,
+  type ComponentContrast, type Entry, type Group, type Saved, type Source, type State, type Touched, type Ui,
 } from '../lib/designLab';
 
 // Design Lab panel (dev server only; mounted from main.tsx behind import.meta.env.DEV). It lives in a shadow root, so the app's own
@@ -18,13 +18,21 @@ import {
 const PANEL_CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; }
-.fab { position: fixed; inset-block-end: 16px; inset-inline-end: 16px; z-index: 2147483000; padding: 10px 16px; border-radius: 999px; border: 1px solid #ffffff55; background: #14181c; color: #fff; font: 600 13px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 8px 24px #0008; }
+.lab { display: contents; }
+/* Launcher: logical placement (follows the page direction), dockable to either side from the panel, safe-area offsets (they are 0 unless the
+   page sets viewport-fit=cover), and a 44px round icon on phones so it covers as little as possible. */
+.fab { position: fixed; inset-block-end: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 2147483000; min-block-size: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 16px; border-radius: 999px; border: 1px solid #ffffff55; background: #14181c; color: #fff; font: 600 13px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 8px 24px #0008; }
+.fab.end { inset-inline-end: calc(16px + env(safe-area-inset-right, 0px)); }
+.fab.start { inset-inline-start: calc(16px + env(safe-area-inset-left, 0px)); }
+.lab[dir='rtl'] .fab.end { inset-inline-end: calc(16px + env(safe-area-inset-left, 0px)); }
+.lab[dir='rtl'] .fab.start { inset-inline-start: calc(16px + env(safe-area-inset-right, 0px)); }
+@media (max-width: 720px) { .fab { inline-size: 44px; padding: 0; font-size: 18px; opacity: 0.9; } .fab-text { display: none; } }
 .fab:hover { background: #1d242b; }
-.panel { position: fixed; inset-block: 0; z-index: 2147483001; width: min(420px, 100vw); background: #14181c; color: #e8ecef; font: 13px/1.4 system-ui, sans-serif; display: flex; flex-direction: column; box-shadow: 0 0 40px #000a; direction: ltr; }
-.panel.end { right: 0; } .panel.start { left: 0; }
-.head { padding: 12px 14px; border-bottom: 1px solid #ffffff1f; display: flex; align-items: center; gap: 6px; }
+.panel { position: fixed; inset-block: 0; z-index: 2147483001; width: min(420px, 100%); /* % of the visible viewport: 100vw also counts the scrollbar and clipped the panel by its width */ background: #14181c; color: #e8ecef; font: 13px/1.4 system-ui, sans-serif; display: flex; flex-direction: column; box-shadow: 0 0 40px #000a; }
+.panel.end { inset-inline-end: 0; } .panel.start { inset-inline-start: 0; }
+.head { padding: calc(12px + env(safe-area-inset-top, 0px)) 14px 12px; border-bottom: 1px solid #ffffff1f; display: flex; align-items: center; gap: 6px; }
 .head h2 { margin: 0; font-size: 15px; flex: 1; color: #fff; }
-.body { overflow-y: auto; padding: 4px 14px 96px; flex: 1; scrollbar-width: thin; }
+.body { overflow-y: auto; padding: 4px 14px calc(96px + env(safe-area-inset-bottom, 0px)); flex: 1; scrollbar-width: thin; }
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid #ffffff2b; background: #1d242b; color: #e8ecef; padding: 6px 10px; }
 button:hover:not(:disabled) { background: #28323b; }
 button:disabled { opacity: 0.4; cursor: default; }
@@ -34,7 +42,7 @@ button.mini { padding: 2px 7px; font-size: 11px; }
 .tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
 .note { color: #9aa6b0; font-size: 12px; margin: 8px 0 0; }
 .sec { margin: 16px 0 6px; display: flex; align-items: center; gap: 8px; user-select: none; }
-.sechead { flex: 1; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; color: inherit; text-align: left; cursor: pointer; }
+.sechead { flex: 1; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; color: inherit; text-align: start; cursor: pointer; }
 .sechead:hover:not(:disabled) { background: transparent; }
 .sec b { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #e9b949; flex: 1; }
 .sec .count { background: #e9b949; color: #1a1400; border-radius: 999px; padding: 0 7px; font-size: 11px; font-weight: 700; }
@@ -51,22 +59,24 @@ button.mini { padding: 2px 7px; font-size: 11px; }
 .help { color: #9aa6b0; font-size: 12px; margin: -2px 0 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sw { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.sw button { padding: 8px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
-.dots { display: flex; } .dots i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #14181c; margin-right: -6px; display: block; }
+.sw button { padding: 8px; text-align: start; display: flex; flex-direction: column; gap: 6px; }
+.dots { display: flex; } .dots i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #14181c; margin-inline-end: -6px; display: block; }
 select, input[type=text], textarea { width: 100%; padding: 7px; border-radius: 8px; background: #1d242b; color: #e8ecef; border: 1px solid #ffffff2b; font: inherit; }
 textarea { min-height: 80px; resize: vertical; }
 .range { display: flex; align-items: center; gap: 8px; }
 .range input[type=range] { flex: 1; accent-color: #e9b949; }
-.range .val { min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; color: #fff; }
+.range .val { min-width: 62px; text-align: end; font-variant-numeric: tabular-nums; color: #fff; }
 .list { display: grid; gap: 6px; margin-top: 8px; }
-.list button { text-align: left; }
+.list button { text-align: start; }
 .list small { display: block; color: #9aa6b0; }
 .row { display: flex; gap: 6px; align-items: center; }
 .row > * { flex: 1; } .row > button { flex: none; }
-.foot { position: absolute; inset-inline: 0; inset-block-end: 0; padding: 12px 14px; background: #14181c; border-top: 1px solid #ffffff1f; display: flex; gap: 8px; }
+.foot { position: absolute; inset-inline: 0; inset-block-end: 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); background: #14181c; border-top: 1px solid #ffffff1f; display: flex; gap: 8px; }
 .foot button { flex: 1; }
-.contrast { display: grid; gap: 4px; margin-top: 6px; }
-.contrast div { display: flex; justify-content: space-between; gap: 8px; }
+.contrast { display: grid; gap: 3px; margin-top: 8px; }
+.contrast .crow { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline; }
+.contrast .crow small { color: #9aa6b0; grid-column: 1 / -1; margin-block-start: -2px; }
+.contrast .head2 { color: #9aa6b0; font-size: 11px; }
 .ok { color: #6ee7a8; } .mid { color: #f5d06a; } .bad { color: #ff8b8b; }
 .badge { background: #ffffff1a; border-radius: 6px; padding: 1px 6px; font-size: 11px; }
 .toast { position: absolute; inset-inline: 14px; inset-block-end: 64px; background: #e9b949; color: #1a1400; padding: 8px 10px; border-radius: 8px; font-weight: 650; }
@@ -85,14 +95,53 @@ const JUMPS: [string, string][] = [['Home', '/'], ['Inventory', '/inventory'], [
 type Filter = 'all' | 'untouched' | 'user' | 'preset' | 'changed';
 const FILTERS: [Filter, string][] = [['all', 'All'], ['untouched', 'Not touched'], ['user', 'Chosen by me'], ['preset', 'Via preset'], ['changed', 'Differs from default']];
 
-function Control({ g, value, onPick }: { g: Group; value: string; onPick: (v: string) => void }) {
+/** The page's reading direction, kept live: the panel placement and the arrow keys follow it (Arabic is right-to-left). */
+function useDocDir(): 'ltr' | 'rtl' {
+  const read = () => (document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr');
+  const [dir, setDir] = useState<'ltr' | 'rtl'>(read);
+  useEffect(() => {
+    const mo = new MutationObserver(() => setDir(read()));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['dir'] });
+    return () => mo.disconnect();
+  }, []);
+  return dir;
+}
+
+/** A pick-one choice as a real radio group: the group is named, each option says whether it is checked, one option is in the tab
+ *  order, and arrow keys (reversed in right-to-left) move and select, as in the ARIA radio group pattern. */
+function RadioGroup<T extends string>({ label, options, value, onPick, className, rtl, render }: {
+  label: string; options: { value: T; label: string }[]; value: T; onPick: (v: T) => void; className?: string; rtl: boolean; render?: (o: { value: T; label: string }) => ReactNode;
+}) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const checked = options.findIndex((o) => o.value === value);
+  const tabbable = checked >= 0 ? checked : 0;
+  const onKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
+    const next = nextRadioIndex(i, e.key, options.length, rtl);
+    if (next === null) return;
+    e.preventDefault();
+    onPick(options[next]!.value);
+    refs.current[next]?.focus();
+  };
+  return (
+    <div role="radiogroup" aria-label={label} className={className}>
+      {options.map((o, i) => (
+        <button key={o.value} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={i === checked} tabIndex={i === tabbable ? 0 : -1}
+          className={i === checked ? 'on' : ''} onClick={() => onPick(o.value)} onKeyDown={(e) => onKey(e, i)}>
+          {render ? render(o) : o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Control({ g, value, onPick, rtl }: { g: Group; value: string; onPick: (v: string) => void; rtl: boolean }) {
   if (g.kind === 'range') {
     const on = value !== '';
     const mid = String(((g.min ?? 0) + (g.max ?? 100)) / 2);
     return (
       <div className="range">
-        <input type="range" min={g.min} max={g.max} step={g.step} value={on ? value : mid} onChange={(e) => onPick(e.target.value)} aria-label={g.label} />
-        <span className="val">{on ? `${value}${g.unit ?? ''}` : 'off'}</span>
+        <input type="range" min={g.min} max={g.max} step={g.step} value={on ? value : mid} onChange={(e) => onPick(e.target.value)} aria-label={g.label} aria-valuetext={on ? `${value}${g.unit ?? ''}` : 'off'} />
+        <span className="val" aria-hidden="true">{on ? `${value}${g.unit ?? ''}` : 'off'}</span>
         <button className="mini" disabled={!on} onClick={() => onPick('')}>Off</button>
       </div>
     );
@@ -106,20 +155,12 @@ function Control({ g, value, onPick }: { g: Group; value: string; onPick: (v: st
   }
   if (g.kind === 'swatches') {
     return (
-      <div className="sw">
-        {g.options.map((o) => (
-          <button key={o.value} className={o.value === value ? 'on' : ''} onClick={() => onPick(o.value)}>
-            <span className="dots">{o.swatch?.map((col, i) => <i key={i} style={{ background: col }} />)}</span>
-            {o.label}
-          </button>
-        ))}
-      </div>
+      <RadioGroup label={g.label} options={g.options} value={value} onPick={onPick} className="sw" rtl={rtl}
+        render={(o) => (<><span className="dots" aria-hidden="true">{g.options.find((x) => x.value === o.value)?.swatch?.map((col, i) => <i key={i} style={{ background: col }} />)}</span>{o.label}</>)} />
     );
   }
   return (
-    <div className="chips">
-      {g.options.map((o) => <button key={o.value} className={o.value === value ? 'on' : ''} onClick={() => onPick(o.value)}>{o.label}</button>)}
-    </div>
+    <RadioGroup label={g.label} options={g.options} value={value} onPick={onPick} className="chips" rtl={rtl} />
   );
 }
 
@@ -137,7 +178,10 @@ function Panel() {
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [presetName, setPresetName] = useState('');
-  const [report, setReport] = useState<Contrast[]>([]);
+  const [contrast, setContrast] = useState<ComponentContrast | null>(null);
+  const [measuring, setMeasuring] = useState(false);
+  const dir = useDocDir();
+  const rtl = dir === 'rtl';
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
   const hist = useRef<{ past: State[]; future: State[]; lastKey: string; at: number }>({ past: [], future: [], lastKey: '', at: 0 });
   const lastLog = useRef<{ key: string; at: number }>({ key: '', at: 0 });
@@ -149,8 +193,8 @@ function Panel() {
   useEffect(() => { saveUi(ui); }, [ui]);
   useEffect(() => { saveLog(log); }, [log]);
   useEffect(() => { saveTouched(touched); }, [touched]);
-  // Contrast is measured on the live page, so re-measure after every change (and when dark mode flips).
-  useEffect(() => { const t = setTimeout(() => setReport(contrastReport()), 120); return () => clearTimeout(t); }, [state, dark]);
+  // Contrast is measured on request (it briefly switches the page to light and to dark and back), not after every change.
+  const measure = () => { setMeasuring(true); setTimeout(() => { setContrast(componentContrast()); setDark(document.documentElement.classList.contains('dark')); setMeasuring(false); }, 30); };
 
   const say = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); }, []);
 
@@ -256,32 +300,37 @@ function Panel() {
   const ab = slots.a && slots.b ? (JSON.stringify(state) === JSON.stringify(slots.a) ? 'A' : JSON.stringify(state) === JSON.stringify(slots.b) ? 'B' : '') : '';
 
   if (!ui.open) {
-    return ui.hidden ? null : <button className="fab" onClick={() => setUi({ ...ui, open: true })} aria-label="Open the Design Lab">🎨 Design Lab{nUser ? ` · ${nUser}/${GROUPS.length} decided` : ''}</button>;
+    return ui.hidden ? null : (
+      <div className="lab" dir={dir}>
+        <button className={`fab ${ui.side}`} onClick={() => setUi({ ...ui, open: true })} aria-label={`Open the Design Lab, ${nUser} of ${GROUPS.length} options decided`}>
+          <span aria-hidden="true">🎨</span><span className="fab-text" aria-hidden="true">Design Lab{nUser ? ` · ${nUser}/${GROUPS.length} decided` : ''}</span>
+        </button>
+      </div>
+    );
   }
 
   const h = hist.current;
   return (
+    <div className="lab" dir={dir}>
     <aside className={`panel ${ui.side}`} aria-label="Design Lab">
       <div className="head">
         <h2>🎨 Design Lab</h2>
-        <button className="ghost" onClick={undo} disabled={!h.past.length} title="Undo">↶</button>
-        <button className="ghost" onClick={redo} disabled={!h.future.length} title="Redo">↷</button>
-        <button className="ghost" onClick={() => setUi({ ...ui, side: ui.side === 'end' ? 'start' : 'end' })} title="Move the panel to the other side">⇄</button>
+        <button className="ghost" onClick={undo} disabled={!h.past.length} title="Undo" aria-label="Undo">↶</button>
+        <button className="ghost" onClick={redo} disabled={!h.future.length} title="Redo" aria-label="Redo">↷</button>
+        <button className="ghost" onClick={() => setUi({ ...ui, side: ui.side === 'end' ? 'start' : 'end' })} title="Move the panel and the launcher to the other side" aria-label="Move the panel and the launcher to the other side">⇄</button>
         <button className="ghost" onClick={() => setUi({ ...ui, open: false })} aria-label="Close">✕</button>
       </div>
       <div className="body">
-        <div className="stats" aria-label="Progress">
+        <div className="stats" role="group" aria-label="Progress">
           <div><b>{nUser}</b><span>chosen by you</span></div>
           <div><b>{nPreset}</b><span>via preset / surprise</span></div>
           <div><b>{nNone}</b><span>not touched</span></div>
         </div>
-        <div className="filters">
-          {FILTERS.map(([f, name]) => <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>{name}</button>)}
-        </div>
+        <RadioGroup label="Show which options" className="filters" rtl={rtl} value={filter} onPick={setFilter} options={FILTERS.map(([value, label]) => ({ value, label }))} />
         <p className="note">Everything is remembered: which options you chose yourself, which came from a preset, which you never touched, plus a time-stamped log. {changedCount} differ from the baked-in look. Shortcut: Ctrl+Shift+D.</p>
 
         <div className="tools">
-          <button onClick={toggleDark}>{dark ? '☀ Light mode' : '☾ Dark mode'}</button>
+          <button onClick={toggleDark} aria-pressed={dark}>☾ Dark mode</button>
           <button onClick={() => { if (window.confirm('Reset every option to the baked-in look and forget which ones you chose? (The log is kept.)')) change(defaults(), '', 'reset'); }}>Reset all</button>
           <button onClick={() => copy(shareLink(state), 'Share link copied')}>Copy link</button>
           <button onClick={() => setShowImport((v) => !v)}>Import…</button>
@@ -289,7 +338,7 @@ function Panel() {
         </div>
         {showImport && (
           <div className="group">
-            <textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder="Paste the JSON line from “Copy my choices”, or a share link" />
+            <textarea value={importText} onChange={(e) => setImportText(e.target.value)} aria-label="Paste saved choices or a share link to import" placeholder="Paste the JSON line from “Copy my choices”, or a share link" />
             <div className="tools"><button className="on" onClick={applyImport}>Apply</button><button onClick={() => setShowImport(false)}>Cancel</button></div>
           </div>
         )}
@@ -344,20 +393,33 @@ function Panel() {
           </>
         )}
         <div className="row" style={{ marginTop: 8 }}>
-          <input type="text" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Save current look as…" onKeyDown={(e) => e.key === 'Enter' && savePreset()} />
+          <input type="text" value={presetName} onChange={(e) => setPresetName(e.target.value)} aria-label="Name for this look, to save it as a preset" placeholder="Save current look as…" onKeyDown={(e) => e.key === 'Enter' && savePreset()} />
           <button onClick={savePreset} disabled={!presetName.trim()}>Save</button>
         </div>
 
-        <div className="sec" style={{ cursor: 'default' }}><b>Contrast check (WCAG)</b></div>
-        <div className="contrast">
-          {report.map((r) => {
-            const cls = r.ratio === null ? '' : r.ratio >= 4.5 ? 'ok' : r.ratio >= 3 ? 'mid' : 'bad';
-            return <div key={r.label}><span>{r.label}</span><span className={cls}>{r.ratio === null ? '?' : `${r.ratio.toFixed(1)} : 1 ${r.ratio >= 4.5 ? '✓' : r.ratio >= 3 ? '(large text only)' : '✕ too low'}`}</span></div>;
-          })}
-        </div>
+        <div className="sec" style={{ cursor: 'default' }}><b>Contrast: components on this page</b></div>
+        <p className="note">Measures the text colour of real components (buttons, fields, chips, tables, menus, banner) against what is drawn behind them, in light and dark. It is a check of the page you are on, not a full WCAG audit: hover, focus and disabled states, other pages and images are not covered. It briefly flips the page to light and dark and back.</p>
+        <div className="tools"><button className="on" onClick={measure} disabled={measuring}>{measuring ? 'Measuring…' : 'Measure this page'}</button></div>
+        {contrast && (
+          <div className="contrast" role="table" aria-label={`Contrast of components on ${contrast.path}`}>
+            <div className="crow head2" role="row"><span role="columnheader">{contrast.path} · {contrast.elements} samples</span><span role="columnheader">Light</span><span role="columnheader">Dark</span></div>
+            {contrast.light.map((lr, i) => {
+              const dr = contrast.dark[i]!;
+              if (!lr.samples && !dr.samples) return null;
+              const cell = (r: typeof lr) => (r.worst === null ? <span>–</span> : <span className={r.worst >= r.required ? 'ok' : r.worst >= 3 ? 'mid' : 'bad'}>{r.worst.toFixed(1)} {r.worst >= r.required ? '✓' : `✕ needs ${r.required}`}</span>);
+              const fails = [...lr.failing.map((f) => `light "${f.text}" ${f.ratio.toFixed(1)}`), ...dr.failing.map((f) => `dark "${f.text}" ${f.ratio.toFixed(1)}`)];
+              return (
+                <div className="crow" role="row" key={lr.name}>
+                  <span role="rowheader">{lr.name}</span>{cell(lr)}{cell(dr)}
+                  {fails.length > 0 && <small>{fails.slice(0, 3).join(' · ')}</small>}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="sec" style={{ cursor: 'default' }}><b>Find an option ({GROUPS.length})</b></div>
-        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search: table, font, radius…" />
+        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search the options" placeholder="Search: table, font, radius…" />
 
         {sections.map((sec) => {
           const all = GROUPS.filter((g) => g.section === sec);
@@ -386,7 +448,7 @@ function Panel() {
                       {isChanged(g, state) && <button className="mini" onClick={() => set(g.key, g.default)} title="Back to the baked-in value (counts as your decision)">↺ reset</button>}
                     </div>
                     {g.help && <div className="help">{g.help}</div>}
-                    <Control g={g} value={state[g.key] ?? g.default} onPick={(v) => set(g.key, v)} />
+                    <Control g={g} value={state[g.key] ?? g.default} onPick={(v) => set(g.key, v)} rtl={rtl} />
                   </div>
                 );
               })}
@@ -400,6 +462,7 @@ function Panel() {
         <button onClick={download}>Download</button>
       </div>
     </aside>
+    </div>
   );
 }
 
