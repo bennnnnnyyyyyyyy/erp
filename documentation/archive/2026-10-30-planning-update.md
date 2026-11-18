@@ -1,3 +1,5 @@
+> Historical snapshot dated 30 October 2026. Superseded by the current checklist and worklog; retained for context.
+
 # Update (paste this into the chat)
 
 Last updated: 2026-10-30, end of day. Full report: `documentation/operations/DAY_REPORT_2026-10-30.md`. Standing brief: `neworder.md`.
@@ -53,9 +55,9 @@ Last updated: 2026-10-30 (morning). Standing brief: `neworder.md`.
 
 ## Slice 2 click path on https://erp-live.pages.dev (passwords: `.temp\demo-credentials.txt`)
 (The first delivery pass already ran during my test; later reminders fire once their times pass and a pass runs, either the 5-minute cron or the button below.)
-1. Sign in as **joseph.brown.wiz@gmail.com** (manager). Open Inventory, Stock requests: **OUT-0003 "Gloves for the day shift"** and OUT-0002 are waiting.
-2. Sign in as **chris.johnson.wiz@gmail.com** (owner): Messages, "Message outbox": sent messages (approval requests, reminders, an escalation, a task). Click **"Run delivery and reminders now"**. About 1 minute after the seed a pass queues reminders for OUT-0003; after 3 minutes it adds an escalation and the overdue-task reminder. The notice shows the counts; the bell shows new unread messages.
-3. Sign in as **grant.holden.wiz@gmail.com** (staff): the bell shows "New task: Count aisle 4". Open Tasks: the task is "To do", due about 3 minutes after the seed. Click **Start**, then **Done**.
+1. Sign in as **[email redacted]** (manager). Open Inventory, Stock requests: **OUT-0003 "Gloves for the day shift"** and OUT-0002 are waiting.
+2. Sign in as **[email redacted]** (owner): Messages, "Message outbox": sent messages (approval requests, reminders, an escalation, a task). Click **"Run delivery and reminders now"**. About 1 minute after the seed a pass queues reminders for OUT-0003; after 3 minutes it adds an escalation and the overdue-task reminder. The notice shows the counts; the bell shows new unread messages.
+3. Sign in as **[email redacted]** (staff): the bell shows "New task: Count aisle 4". Open Tasks: the task is "To do", due about 3 minutes after the seed. Click **Start**, then **Done**.
 4. As **joseph** after a pass (chris's button): the bell shows "Task done: Count aisle 4".
 5. As **joseph**, open OUT-0003 and **Approve**; as **grant**, **Issue stock**. After a pass grant gets the decision and issued notices. Settings, Audit log (chris): messaging entries sit next to inventory and task entries.
 6. As **joseph**, Tasks, **New task**, to create more.

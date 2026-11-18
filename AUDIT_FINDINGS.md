@@ -81,7 +81,7 @@ The Lab marks selected options and filters with a CSS class, but does not expose
 
 **Suggested fix:** Use radio-group semantics for mutually exclusive choices and aria-pressed for independent toggles. Give search/import/preset fields explicit labels, then check the Lab with keyboard and screen-reader navigation.
 
-Evidence: [DesignLab.tsx, option controls](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L107-L122) · [DesignLab.tsx, filters and text fields](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L279-L292)
+Evidence: `DesignLab.tsx` option controls and filters in the local `ui-warm` worktree reviewed for this audit (the worktree is local and these source files are not part of this checkout).
 
 ### P2 — The Design Lab contrast panel overstates its coverage
 
@@ -89,7 +89,7 @@ The panel is titled “Contrast check (WCAG)” but computes five selected token
 
 **Suggested fix:** Expand the checks to actual component foreground/background pairs and interaction states, including both themes, or rename the panel to say it reports a limited token sample. Do not present a partial check as a WCAG pass.
 
-Evidence: [DesignLab.tsx, panel label and output](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L351-L355) · [designLab.ts, contrast calculation](.claude/worktrees/ui-warm/apps/web/src/lib/designLab.ts#L330-L358)
+Evidence: `DesignLab.tsx` contrast panel and `designLab.ts` calculation in the local `ui-warm` worktree reviewed for this audit (the worktree is local and these source files are not part of this checkout).
 
 ### P2 — The Design Lab launcher can obscure phone content and panel placement reverses in RTL
 
@@ -97,7 +97,7 @@ The floating launcher sits 16px from the viewport edge and has no safe-area offs
 
 **Suggested fix:** Add safe-area-aware offsets and test against the app’s fixed mobile actions. Use logical inset-inline-start/end for panel placement and margin-inline-end for the color dots. Keep the Lab internal, but make its preview behavior reliable in both directions.
 
-Evidence: [DesignLab.tsx, panel positioning](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L21-L24) · [DesignLab.tsx, physical margin](.claude/worktrees/ui-warm/apps/web/src/components/DesignLab.tsx#L55) · [rollout plan, phone overlap](documentation/planning/2026-11-12-new-look-rollout-plan.md#L45)
+Evidence: DesignLab.tsx panel positioning and physical margin in the local ui-warm worktree; the rollout plan is present only in that local worktree, not main.
 
 ### P3 — Documentation-only pull requests still run the other browser smoke test
 
@@ -107,13 +107,13 @@ The workflow-tests job skips its full real-app workflow tests on docs-only pull 
 
 Evidence: [ci-deploy.yml, smoke test runs unconditionally](.github/workflows/ci-deploy.yml#L57-L68) · [workflow-tests.yml, docs-only skip](.github/workflows/workflow-tests.yml#L37-L51)
 
-### P3 — Root README status is stale; checklist content is newer than its date
+### P3 — Documentation status drift (corrected during this audit)
 
-The README still identifies status as 11 November and lists migration range 001–078 and 081–083. The checklist body records work through 097, including 097 as built but not applied, but its header still says it was updated on 11 November. The worklog itself is current through 18 November, so the earlier report’s claim that the worklog was stale was wrong.
+The initial pass found stale README and checklist dates, out-of-date VAT/master-data rollout notes, an old planning status page treated as current, and an incomplete SQL test index. This audit refreshed those status summaries, moved superseded operational notes into the archive with historical labels, and expanded the SQL test index through test 093. Some plan documents still describe future work; their status blocks now direct readers to the checklist, migration register, or worklog for current rollout evidence.
 
-**Suggested fix:** Refresh the README status date and migration summary, and update the checklist date. Preserve the checklist’s distinction between built and applied.
+**Follow-up:** Keep `documentation/plans/checklist.md`, `sql/README.md`, and `documentation/operations/WORKLOG.md` as the current status sources. Review plan status blocks when a migration is built or applied.
 
-Evidence: [README.md, stale status line](README.md#L5) · [checklist.md, stale header and current 097 status](documentation/plans/checklist.md#L3-L12) · [WORKLOG.md, current 097 entry](documentation/operations/WORKLOG.md#L14-L42)
+Evidence: [README.md](README.md#L5) · [checklist.md](documentation/plans/checklist.md#L3-L12) · [SQL test index](sql/tests/README.md#L75-L121) · [WORKLOG.md](documentation/operations/WORKLOG.md#L14-L42)
 
 ## Checked and not reported as findings
 

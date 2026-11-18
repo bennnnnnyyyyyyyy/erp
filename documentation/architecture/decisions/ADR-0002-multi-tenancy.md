@@ -2,7 +2,7 @@
 
 # ADR-0002: Multi-tenancy model
 
-**Status:** Accepted, as amended by ADR-0003 (confirmed against the code 11 Nov 2026)
+**Status:** Accepted, as amended by ADR-0003 (confirmed against the code 18 Nov 2026)
 **Date:** 2026-10-28
 **Deciders:** Ben
 

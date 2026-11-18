@@ -1,3 +1,5 @@
+> Historical early-build update. Exact date was not recorded; superseded by the dated worklog and current checklist.
+
 Subject: ERP update: owner home page and sample data live
 
 WHAT I DID TODAY

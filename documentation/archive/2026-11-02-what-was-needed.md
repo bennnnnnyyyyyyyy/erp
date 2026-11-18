@@ -1,3 +1,5 @@
+> Historical request list from 2 November 2026. Its open items are from that date; consult the current checklist and worklog for present status.
+
 # What Claude Code needs from you (written 2 Nov 2026 evening; rechecked after the cosmetics browser check at 22:10)
 
 Everything I am waiting on, grouped by what it blocks. Tick items as you go. "Blocks" says what stays stuck until you do it. Nothing here asks you to paste a secret into chat or a file (see section 7).
@@ -51,7 +53,7 @@ Everything I am waiting on, grouped by what it blocks. Tick items as you go. "Bl
 - [ ] **Commit and push.** I never commit. Uncommitted right now: the three code fixes (`GeneralSettings.tsx`, `Guide.tsx`, `Messaging.tsx`), `sql/seed/006_cosmetics_topup.sql`, the ETA plan, the ETA offline folder (see the licence note), the cosmetics walkthrough, the audit report, this file, the worklog, and your own edits to `agents.md` and `sss.md`.
 - [ ] **Decide whether to add a line to `agents.md`** saying the "no automated browser testing" rule is for Antigravity and Codex, and that Claude may use the browser after asking. I saved this as a memory but have not edited the file., yes do that
 - [x] **Worker log tail: stopped** (it had captured the whole session; I can restart it when you are ready to reproduce the error).
-- [ ] **Know that `ben@prime-ad.com` is now an admin of the cosmetics organization** (added on 2 Nov, shortly before 22:00, by Claude Code, at your request, directly in the database, with a `member.added` audit entry). To undo it, disable that membership in Settings > Users as Chris, or tell me. Also: my browser test left one cancelled request, OUT-0372 ("Browser check by Claude"), in the sample data; it moved no stock.
+- [ ] **Know that `[email redacted]` is now an admin of the cosmetics organization** (added on 2 Nov, shortly before 22:00, by Claude Code, at your request, directly in the database, with a `member.added` audit entry). To undo it, disable that membership in Settings > Users as Chris, or tell me. Also: my browser test left one cancelled request, OUT-0372 ("Browser check by Claude"), in the sample data; it moved no stock.
 - [ ] **Tell me the day you want the top-up seed rerun.** It adds only the months that are missing; run it again later and it will add the new month (it is rerun-safe).
 
 ## 7. How to give me secrets (never in chat, source, logs, plans or worklogs)
