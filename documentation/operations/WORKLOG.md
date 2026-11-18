@@ -293,7 +293,7 @@ both item reads also fall back on `42501`, so a missing column grant can never a
 `sql/tests/091_inv_item_group_read.sql` (a signed-in member reads `group_id`; another company still sees nothing); the slice A source
 test updated for the new fallback line.
 
-**Database / System Result.** None yet. Ben: apply `sql/096` on live as soon as possible.
+**Database / System Result.** `sql/096` applied to live 18 Nov by Claude via the CLI at Ben's request (linked project `plhuuhcpvlytozyedamt`): `users_read_group_id` true, `anon_read_group_id` false.
 
 **Safety Status.** Local PGlite (94 migrations): tests 090 and 091 pass. API typecheck clean, API tests 617 pass, `biome ci .` 0 errors.
 Process: a red workflow check must block a merge; branch protection would have stopped this one.
