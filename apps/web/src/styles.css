@@ -631,3 +631,15 @@ tr.statement-subtotal td {
   font-weight: 600;
   border-block-start: 1px solid var(--border, #ddd);
 }
+
+/* Inventory actions (walkthrough 18 Nov, fix E1): a symbol and a colour per kind of action. */
+.action-icon {
+  display: inline-grid; place-items: center; inline-size: 2.1rem; block-size: 2.1rem; border-radius: 999px;
+  font-size: 1.15rem; font-weight: 700; color: #fff; background: var(--action-color, var(--primary));
+}
+.action-card[data-kind] { border-inline-start: 4px solid var(--action-color, var(--border)); }
+.action-card[data-kind='receive'] { --action-color: #15803d; }
+.action-card[data-kind='send'] { --action-color: #c2410c; }
+.action-card[data-kind='move'] { --action-color: #1d4ed8; }
+.action-card[data-kind='count'] { --action-color: #7c3aed; }
+.action-card[data-kind='correct'] { --action-color: #b45309; }
