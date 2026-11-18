@@ -200,7 +200,7 @@ export function VatSettingsCard() {
                   <code>{r.subType}</code>
                 </td>
                 <td className="right">{r.rate}%</td>
-                <td>{r.isDefault ? tr('Yes') : ''}</td>
+                <td>{r.isDefault ? <span className="badge">{tr('Default rate')}</span> : ''}</td>
                 <td>
                   <Button variant="ghost" size="sm" disabled={busy} onClick={() => setForm({ id: r.id, subType: r.subType, rate: String(r.rate), label: r.label, isDefault: r.isDefault })}>
                     {tr('Edit')}
@@ -245,8 +245,9 @@ export function VatSettingsCard() {
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={form.isDefault} onChange={(e) => setForm({ ...form, isDefault: e.target.checked })} />
-              {tr('Default')}
+              {tr('Default rate for new items and invoice lines')}
             </label>
+            <p className="muted small">{tr('An item with no VAT rate of its own, and any line typed by hand, uses the default rate. Only one rate can be the default.')}</p>
           </div>
           <div className="form-actions">
             <Button disabled={busy || !form.label.trim() || !Number.isFinite(Number(form.rate)) || form.rate.trim() === ''} onClick={() => saveRate(form)}>
