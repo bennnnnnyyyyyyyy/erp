@@ -245,7 +245,8 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
 
 // ------------------------------------------------------------------ new order form (purchase and sales)
 
-type Line = { itemId: string; qty: string; price: string };
+/** `suggested`: the price was filled in from the price lookup and not typed (it is replaced when the party or item changes). */
+type Line = { itemId: string; qty: string; price: string; suggested?: boolean };
 
 export function NewOrderForm(props: {
   title: string;
@@ -261,6 +262,8 @@ export function NewOrderForm(props: {
   submitLabel: string;
   /** Who may add a new customer or supplier from inside the order (decision D5). Omit to hide the quick-add. */
   partyAddPermission?: string;
+  /** sql/097: the price to suggest per item for the chosen party (customer price or supplier's last cost), in minor units. Editable. */
+  priceLookup?: (partyId: string, itemIds: string[]) => Promise<Record<string, number | null>>;
 }) {
   const session = useSession();
   const cat = useCatalog();
@@ -279,6 +282,29 @@ export function NewOrderForm(props: {
     if (warehouses?.length && !warehouses.some((w) => w.id === warehouseId)) setWarehouseId(warehouses[0]?.id ?? '');
   }, [warehouses, warehouseId]);
   const currency = session.org?.defaultCurrency ?? 'EGP';
+
+  // Fill empty (or still suggested) prices once a party and items are chosen; a typed price is never replaced.
+  const { priceLookup } = props;
+  const itemKey = lines.map((l) => l.itemId).filter(Boolean).join(',');
+  useEffect(() => {
+    if (!priceLookup || !partyId || !itemKey) return;
+    let live = true;
+    priceLookup(partyId, [...new Set(itemKey.split(','))])
+      .then((prices) => {
+        if (!live) return;
+        setLines((ls) =>
+          ls.map((l) => {
+            if (!l.itemId || (l.price !== '' && !l.suggested)) return l;
+            const minor = prices[l.itemId];
+            return minor === null || minor === undefined ? (l.suggested ? { ...l, price: '', suggested: false } : l) : { ...l, price: (minor / 100).toFixed(2), suggested: true };
+          }),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [priceLookup, partyId, itemKey]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -348,7 +374,7 @@ export function NewOrderForm(props: {
               />
             </label>
             <label>{tr('Quantity')}<input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
-            <label>{props.priceLabel} ({currency})<input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
+            <label>{props.priceLabel} ({currency})<input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value, suggested: false })} />{l.suggested ? <span className="hint muted">{tr('Suggested price; you can change it.')}</span> : null}</label>
           </div>
         ))}
         <div className="form-actions">

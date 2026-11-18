@@ -210,6 +210,43 @@ async function oneOrder(c: Context<AppEnv>, id: string) {
   return { ...order, deliveryNotes };
 }
 
+// Each supplier's last cost per item (sql/097): recorded by the database from bills, and from orders while there is no bill price yet.
+// ?itemId= or ?supplierId= narrows it. Read-only; nothing here changes a sales price.
+purchasingRoutes.get('/supplier-prices', requirePermission('purchasing.prices.read'), async (c) => {
+  const itemId = c.req.query('itemId');
+  const supplierId = c.req.query('supplierId');
+  if ((itemId && !UUID_RE.test(itemId)) || (supplierId && !UUID_RE.test(supplierId))) invalid('itemId and supplierId must be ids');
+  let query = userDb(c)
+    .from('pur_supplier_prices')
+    .select('supplier_id, item_id, currency, last_cost_minor, source_kind, source_number, recorded_at')
+    .eq('org_id', orgOf(c));
+  if (itemId) query = query.eq('item_id', itemId);
+  if (supplierId) query = query.eq('supplier_id', supplierId);
+  const { data, error } = await query.order('recorded_at', { ascending: false }).limit(500);
+  if (error) throw error;
+  type Row = {
+    supplier_id: string;
+    item_id: string;
+    currency: string;
+    last_cost_minor: number;
+    source_kind: string;
+    source_number: string | null;
+    recorded_at: string;
+  };
+  return ok(
+    c,
+    ((data ?? []) as Row[]).map((r) => ({
+      supplierId: r.supplier_id,
+      itemId: r.item_id,
+      currency: r.currency,
+      lastCostMinor: Number(r.last_cost_minor),
+      source: r.source_kind,
+      sourceNumber: r.source_number,
+      recordedAt: r.recorded_at,
+    })),
+  );
+});
+
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
   const read = (columns: string) =>
     userDb(c).from('pur_suppliers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');

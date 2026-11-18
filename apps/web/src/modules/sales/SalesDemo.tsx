@@ -5,6 +5,7 @@ import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
+import { demoMode } from '../../lib/demo';
 import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
@@ -68,6 +69,12 @@ export function SalesOrders() {
   );
 }
 
+/** The price each item has for this customer (price list for its group, else the item's price; sql/097). */
+const customerPrices = (customerId: string, itemIds: string[]) =>
+  api<{ itemId: string; priceMinor: number | null }[]>(`/v1/sales/prices?customerId=${customerId}&itemIds=${itemIds.join(',')}`).then((rows) =>
+    Object.fromEntries(rows.map((r) => [r.itemId, r.priceMinor])),
+  );
+
 export function NewSalesOrder() {
   return (
     <NewOrderForm
@@ -83,6 +90,7 @@ export function NewSalesOrder() {
       backLabel={tr('Sales orders')}
       submitLabel={tr('Save order')}
       partyAddPermission="sales.customers.manage"
+      priceLookup={demoMode ? undefined : customerPrices}
     />
   );
 }

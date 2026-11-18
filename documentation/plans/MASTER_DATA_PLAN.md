@@ -102,8 +102,9 @@ a migration note for existing lines (they become unit = base, factor 1).
 1. **Ben:** approve this plan and the order A → B → C → D? (Alternative: C first, if retyping prices hurts most.) **Answered 17 Nov:
    approved, order A → C → B → D.**
 2. **Ben (roadmap Q6):** a new purchase price **updates** the item price or only **suggests** it? (Recommended: suggest, with a
-   company setting.)
+   company setting.) **Answered 18 Nov: only suggests** (no update setting; the supplier's last cost is still recorded).
 3. **Ben:** do items need a group always (required) or optionally? (Recommended: optional, required only under the "group codes" rule.)
    **Answered 17 Nov: optional, required only under the group rule; codes never change once used; a moved item keeps its code.**
-4. **Ben:** price lists by **customer group** (recommended) or per customer?
+4. **Ben:** price lists by **customer group** (recommended) or per customer? **Answered 18 Nov: per customer group, with a customer groups
+   table.**
 5. **Accountant:** does the ETA item code (EGS/GS1) need to follow our coding, or is it independent? (We assume independent.)

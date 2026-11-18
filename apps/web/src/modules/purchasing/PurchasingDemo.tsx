@@ -6,6 +6,7 @@ import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
+import { demoMode } from '../../lib/demo';
 import type { Party, PurchaseOrder } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { todayIn } from '../../lib/dates';
@@ -80,6 +81,12 @@ export function PurchaseOrders() {
   );
 }
 
+/** Each item's last cost from this supplier (sql/097), suggested on a new order. */
+const supplierCosts = (supplierId: string, itemIds: string[]) =>
+  api<{ itemId: string; lastCostMinor: number }[]>(`/v1/purchasing/supplier-prices?supplierId=${supplierId}`).then((rows) =>
+    Object.fromEntries(rows.filter((r) => itemIds.includes(r.itemId)).map((r) => [r.itemId, r.lastCostMinor])),
+  );
+
 export function NewPurchaseOrder() {
   return (
     <NewOrderForm
@@ -95,6 +102,7 @@ export function NewPurchaseOrder() {
       backLabel={tr('Purchase orders')}
       submitLabel={tr('Place order')}
       partyAddPermission="purchasing.suppliers.manage"
+      priceLookup={demoMode ? undefined : supplierCosts}
     />
   );
 }
