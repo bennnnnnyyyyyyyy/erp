@@ -284,6 +284,26 @@ API and web, and tests pass: shared 81, API 566, web 144. These ran in a git wor
 run on live inside a rolled-back transaction (do it before applying), the screens in a browser, and the Arabic (add to the review
 sheet). To apply: dry run, then `supabase db query --linked -f sql/086_tax_on_documents.sql`, then `sql/tests/082` and `040` on live.
 
+## 2026-11-18 — CI guards: column grants, migration numbers, docs-only PRs
+
+**Objective.** After the 17-18 Nov item-list outage (a column added without its read grant, merged with a red check): catch that class of
+mistake on the pull request, stop number clashes between parallel chats, and keep documentation PRs fast now that branch protection (set
+up 18 Nov: 3 required checks, no bypass, auto-merge on) requires every check.
+
+**Actions Completed.**
+- `sql/tests/092_column_grants.sql`: on tables read column by column, every column must be readable by signed-in users unless listed
+  with its reason. Lists today's 14: 7 hidden on purpose (costs, codes, secrets) and 7 not granted yet because no screen reads them
+  (`inv_stock_moves.transfer_id/count_id/note_id/purchase_order_id`, `msg_identities.updated_at`,
+  `core_integrations.last_check_started_at`, `msg_outbox.delivered_via`): grant them in the migration that first reads them.
+- `scripts/check-migrations.mjs` (run in `ci-deploy.yml`): no two migrations or SQL tests share a number; every migration has its row
+  in `sql/README.md`.
+- `workflow-tests.yml`: a pull request that changes only `documentation/` or `*.md` skips the browser tests and passes at once.
+
+**Database / System Result.** None.
+
+**Safety Status.** Local PGlite (94 migrations): test 092 passes, and it would have failed on sql/095 without sql/096. Migration check:
+94 migrations, 91 SQL tests, OK. The workflow change runs on GitHub only.
+
 ## 2026-11-18 — Fix: item screens stuck on "Loading…" after slice A (`sql/096`)
 
 **Objective.** The daily check found the workflow tests red on `main` since the first slice A commit (`2f33366`); PR #70 was merged with
