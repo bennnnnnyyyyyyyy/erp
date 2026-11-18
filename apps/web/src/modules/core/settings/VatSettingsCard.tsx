@@ -26,6 +26,8 @@ export function VatSettingsCard() {
   const [dueDays, setDueDays] = useState<string | null>(null);
   const [small, setSmall] = useState<boolean | null>(null);
   const [opening, setOpening] = useState('');
+  // Walkthrough 18 Nov: switching "prices include VAT" on silently turned a typed 100.00 into 87.72 + 12.28 VAT. It now asks first.
+  const [confirmInclusive, setConfirmInclusive] = useState(false);
 
   if (vat.error || !vat.data) return null; // an older API without the route: nothing to show
   const v = vat.data;
@@ -106,8 +108,24 @@ export function VatSettingsCard() {
             <div>
               <strong>{tr('Sales prices include VAT')}</strong>
               <p className="muted small">
-                {tr('On: the price on a sales order is the price the customer pays, and each invoice line is split into the amount before VAT and the VAT (needed for Shopify). New invoices only.')}
+                {tr('Leave this off unless you run a shop or online store that shows prices with VAT. Off (the usual way, and how e-invoices work): a price of 100.00 means 100.00 + 14.00 VAT = 114.00. On: 100.00 already includes the VAT, so it becomes 87.72 + 12.28 VAT = 100.00. New invoices only.')}
               </p>
+              {confirmInclusive ? (
+                <div className="notice stack" role="alert">
+                  <p>{tr('Every sales price typed from now on will be read as already including VAT. Are you sure?')}</p>
+                  <div className="form-actions">
+                    <Button variant="destructive" size="sm" disabled={busy}
+                      onClick={() => run(async () => {
+                        await api('/v1/core/org/vat/prices-include', { method: 'PUT', body: JSON.stringify({ on: true }) });
+                        setConfirmInclusive(false);
+                        return null;
+                      })}>
+                      {tr('Yes, prices include VAT')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmInclusive(false)}>{tr('Cancel')}</Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <label className="option-switch">
               <input
@@ -118,10 +136,13 @@ export function VatSettingsCard() {
                 disabled={busy}
                 aria-label={tr('Sales prices include VAT')}
                 onChange={() =>
-                  run(async () => {
-                    await api('/v1/core/org/vat/prices-include', { method: 'PUT', body: JSON.stringify({ on: v.pricesIncludeVat !== true }) });
-                    return null;
-                  })
+                  // switching on asks first (above); switching off is the safe direction and happens at once
+                  v.pricesIncludeVat === true
+                    ? run(async () => {
+                        await api('/v1/core/org/vat/prices-include', { method: 'PUT', body: JSON.stringify({ on: false }) });
+                        return null;
+                      })
+                    : setConfirmInclusive(true)
                 }
               />
               <span>{v.pricesIncludeVat ? tr('On') : tr('Off')}</span>
