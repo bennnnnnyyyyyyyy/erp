@@ -66,7 +66,7 @@ function SectionRows({ current, compare, currency, linkRange }: {
 function TotalRow({ label, now, prior, currency, strong }: { label: string; now: number; prior: number | null; currency: string; strong?: boolean }) {
   const cell = (v: number) => (strong ? <strong>{money(v, currency)}</strong> : money(v, currency));
   return (
-    <tr className={strong ? 'statement-total' : undefined}>
+    <tr className={strong ? 'statement-total' : 'statement-subtotal'}>
       <th scope="row" colSpan={2}>{label}</th>
       <td className="right">{cell(now)}</td>
       {prior !== null ? <td className="right muted">{cell(prior)}</td> : null}
