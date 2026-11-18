@@ -11,6 +11,37 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-18 — Prices, master data slice C (`sql/097`)
+
+**Objective.** Slice C of the [master data plan](../plans/MASTER_DATA_PLAN.md), started after Ben approved slice A on live (18 Nov). Decisions:
+a new purchase price only suggests; price lists per customer group, with a customer groups table.
+
+**Actions Completed.** `sql/097_sal_prices.sql`: `pur_supplier_prices` (last cost per supplier, item and currency; written by triggers on new
+bill lines, and on purchase order lines while that supplier and item have no bill price yet; audited when the cost changes; a purchase never
+changes a sales price); `sal_customer_groups` and `sal_customers.customer_group_id`; `sal_item_prices` (one sales price per item and currency;
+"includes VAT" copied from the company setting when saved); `sal_price_lists` per customer group and currency with from/to dates (never two
+overlapping lists for a group) and `sal_price_list_items`; functions for groups, assigning a customer, item and list prices and the optional
+markup (owners and admins), `sal_prices_for` (list price for the group on the date, else the item price) and `sal_item_price_info` (sales
+price, list prices, supplier costs, suggestion = latest cost plus markup). `sql/tests/093_sal_prices.sql` (new). Permissions
+`sales.prices.read` (everyone), `sales.prices.manage` and `purchasing.prices.view` (owners and admins). Review fix (master chat, 18 Nov):
+supplier costs reveal margins, so `pur_supplier_prices` is readable by owners and admins only (its own policy) and `sal_item_price_info`
+returns costs and the cost-based suggestion only to them; members and viewers still see sales and list prices. API: `apps/api/src/modules/sales/prices.ts`
+(customer groups, `PUT /customers/:id/group`, item price and price info, price lists and their items, `PUT /price-settings`,
+`GET /prices`), `GET /v1/purchasing/supplier-prices`; the customer list carries `customerGroupId` and falls back before 097. Web: Sales →
+Prices (groups, customer group, price lists and their items, markup); a Prices box on the item page (sales price, supplier costs, "Use
+suggestion"); new sales and purchase orders fill empty prices with the customer's price or the supplier's last cost, still editable. Arabic
+machine drafts in `i18nMasterData.ts`. Not done (plan items left for later): prices per unit (slice D), no change to `sal_create_order`
+(the typed price is saved as before), and a price saved before the company switched "prices include VAT" keeps its old meaning (shown as
+"includes VAT" or not) instead of being converted.
+
+**Database / System Result.** None. Not applied to live. The master chat applies it (dry run first).
+
+**Safety Status.** Local SQL run (PGlite, all 95 migrations, 097 applied a second time): 91 of 91, including 093 (order then bill price,
+order never replaces a bill price, suggest only with markup 20% on 105.00 = 126.00, list choice by group and date, fallback to the item
+price, no overlapping lists, in-use group delete refused, roles, members and viewers see no costs, audit counts, isolation, no direct writes, includes-VAT copied). The guard
+test `092_column_grants.sql` from `ci/guards` also passes with 097 (run locally, not committed here). Typecheck clean; tests: shared 82,
+API 647 (new `sales_prices.test.ts`), web 146. `biome ci .`: 0 errors. Not viewed in a browser.
+
 ## 2026-11-17 — Item groups and item codes, master data slice A (`sql/095`)
 
 **Objective.** Slice A of the [master data plan](../plans/MASTER_DATA_PLAN.md), approved by Ben on 17 Nov (order A → C → B → D; groups

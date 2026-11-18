@@ -53,6 +53,7 @@ const SalesOrders = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrders');
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
 const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
 const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
+const PricesPage = lazyNamed(() => import('./sales/Prices'), 'PricesPage');
 const ExpensesPage = lazyNamed(() => import('./finance/Finance'), 'ExpensesPage');
 const PaymentsPage = lazyNamed(() => import('./finance/Finance'), 'PaymentsPage');
 const ExpensePage = lazyNamed(() => import('./finance/FinanceRecords'), 'ExpensePage');
@@ -204,6 +205,8 @@ const SALES_APP: AppDef = {
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
+    // Customer groups, price lists and the markup (sql/097).
+    { path: '/prices', label: 'Prices', permission: 'sales.prices.read', component: PricesPage },
     // Moved from Settings (Ben, 9 Nov 2026): Settings connects an integration, the apps use it. Same permission as its API route.
     { path: '/online-orders', label: 'Online orders', permission: 'core.integrations.view', component: OnlineOrders },
     { path: '/invoices', label: 'Sales invoices', permission: 'sales.invoices.read', component: CustomerInvoices },

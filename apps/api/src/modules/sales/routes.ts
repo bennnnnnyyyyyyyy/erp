@@ -9,6 +9,7 @@ import { requirePermission } from '../../middleware/tenant';
 import { createBostaDelivery, type ShipmentInfo } from '../../lib/shipping/bosta';
 import { billingFor } from './billing';
 import { registerNoteRoutes } from './notes';
+import { registerPriceRoutes } from './prices';
 import { docTotals, lineOut, noteTotals, type LineOut, type LineRow } from '../../lib/vatRows';
 
 export const salesRoutes = new Hono<AppEnv>();
@@ -146,13 +147,17 @@ type CustomerRow = {
   bank_account?: string | null;
   default_currency?: string | null;
   notes?: string | null;
+  customer_group_id?: string | null;
 };
 
 salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (c) => {
   const read = (columns: string) =>
     userDb(c).from('sal_customers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
   // Until sql/081 is applied the new columns do not exist: read the old ones so the list still works.
-  let { data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS}`);
+  // sql/097 adds the customer group; before it is applied the list reads without it.
+  let { data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS},customer_group_id`);
+  if (error && isMissingSchema(error))
+    ({ data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS}`));
   if (error && isMissingSchema(error)) ({ data, error } = await read('id,code,name,contact,city,phone,payment_terms_days'));
   if (error) throw error;
   return ok(
@@ -176,6 +181,8 @@ salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (
       bankAccount: x.bank_account ?? '',
       defaultCurrency: x.default_currency ?? '',
       notes: x.notes ?? '',
+      /** sql/097: the customer's group (price lists), or null. */
+      customerGroupId: x.customer_group_id ?? null,
     })),
   );
 });
@@ -418,6 +425,7 @@ salesRoutes.post('/orders/:id/cancel', requirePermission('sales.orders.manage'),
 });
 // ---- credit and debit notes with approval (sql/037); see ./notes.ts
 registerNoteRoutes(salesRoutes);
+registerPriceRoutes(salesRoutes);
 
 // ---- Bosta shipments (sql/058). A courier update never changes stock or money; cash on delivery is settled in finance.
 const SHIP_COLS =
