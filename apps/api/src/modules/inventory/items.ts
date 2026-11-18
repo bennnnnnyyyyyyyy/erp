@@ -44,7 +44,9 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     const list = (columns: string) =>
       userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
     let { data, error } = await list(ITEM_COLUMNS_WITH_GROUP);
-    if (error && isMissingSchema(error)) ({ data, error } = await list(ITEM_COLUMNS));
+    // Also on "permission denied" (42501): inv_items is read through column grants, and a new column without its grant must not
+    // block every screen that lists items (sql/095 shipped without one; fixed by sql/096).
+    if (error && (isMissingSchema(error) || (error as { code?: string }).code === '42501')) ({ data, error } = await list(ITEM_COLUMNS));
     if (error) throw error;
     return ok(c, ((data ?? []) as unknown as ItemRow[]).map(toItem));
   });
@@ -252,7 +254,7 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     await callRpc<void>(userDb(c), 'inv_set_reorder_level', { p_item_id: id, p_level: level });
     const one = (columns: string) => userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
     let { data, error } = await one(ITEM_COLUMNS_WITH_GROUP);
-    if (error && isMissingSchema(error)) ({ data, error } = await one(ITEM_COLUMNS));
+    if (error && (isMissingSchema(error) || (error as { code?: string }).code === '42501')) ({ data, error } = await one(ITEM_COLUMNS));
     if (error) throw error;
     if (!data) throw new HttpError(404, 'Item not found', 'not_found');
     return ok(c, toItem(data as unknown as ItemRow));

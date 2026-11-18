@@ -281,6 +281,23 @@ API and web, and tests pass: shared 81, API 566, web 144. These ran in a git wor
 run on live inside a rolled-back transaction (do it before applying), the screens in a browser, and the Arabic (add to the review
 sheet). To apply: dry run, then `supabase db query --linked -f sql/086_tax_on_documents.sql`, then `sql/tests/082` and `040` on live.
 
+## 2026-11-18 — Fix: item screens stuck on "Loading…" after slice A (`sql/096`)
+
+**Objective.** The daily check found the workflow tests red on `main` since the first slice A commit (`2f33366`); PR #70 was merged with
+that check failing and deployed. `inv_items` is read through column-level grants (sql/036), and `sql/095` added `group_id` without one,
+so every item list asking for it was refused (`42501`, not a missing-column error, so the API fallback did not catch it). On live, the
+screens that load items (new purchase order, stock requests, invoices, items) stayed on "Loading…".
+
+**Actions Completed.** `sql/096_inv_item_group_read_grant.sql` grants select on the one column. `apps/api/src/modules/inventory/items.ts`:
+both item reads also fall back on `42501`, so a missing column grant can never again block every item screen. Regression test
+`sql/tests/091_inv_item_group_read.sql` (a signed-in member reads `group_id`; another company still sees nothing); the slice A source
+test updated for the new fallback line.
+
+**Database / System Result.** `sql/096` applied to live 18 Nov by Claude via the CLI at Ben's request (linked project `plhuuhcpvlytozyedamt`): `users_read_group_id` true, `anon_read_group_id` false.
+
+**Safety Status.** Local PGlite (94 migrations): tests 090 and 091 pass. API typecheck clean, API tests 617 pass, `biome ci .` 0 errors.
+Process: a red workflow check must block a merge; branch protection would have stopped this one.
+
 ## 2026-11-16 — Audit findings 9 and 13 closed: architecture records match the code
 
 **Objective.** The 11 Nov audit found ADR-0002 described the old access model (service-role client) and two ADR-0004 links were broken
