@@ -27,9 +27,7 @@ npx wrangler pages deploy apps/web/dist --project-name erp-demo --branch <branch
   production deploy (`ci-deploy.yml`) never set it. The preview workflow fails if the Lab is in a build that should not have it. Do not
   add `DESIGN_LAB` to `ci-deploy.yml`.
 - The Lab loads Google Fonts from the internet when a font other than Plex is chosen: fine for a preview, not for the product.
-- This does not touch the real app (`erp-live`), the API Worker or the database. A preview of the real app is not possible as
-  things stand: the API only accepts requests from `https://erp-live.pages.dev` (`ALLOWED_ORIGINS` in `apps/api/wrangler.toml`), and
-  it would read production data.
+- This workflow (sample data) does not touch the real app (`erp-live`), the API Worker or the database. A preview of the REAL app is possible\n  since PR #50: `ALLOWED_ORIGINS` in `apps/api/wrangler.toml` also lists `https://worktree-ui-warm.erp-live.pages.dev`. It reads and writes the\n  same database as the live app. See the section below.
 
 ## Preview of the REAL app with the Design Lab (what Ben uses)
 
