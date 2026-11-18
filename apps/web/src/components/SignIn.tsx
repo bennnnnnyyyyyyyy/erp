@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { authLinkError, googleSignInEnabled, supabase, supabaseConfigured } from '../lib/supabase';
 
 import { tr, trf } from '../lib/i18n';
+import { authErrorMessage } from '../lib/authErrors';
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
 const TITLE: Record<Mode, string> = { 'sign-in': 'Sign in', 'sign-up': 'Create your account', forgot: 'Reset your password' };
 
@@ -24,7 +25,7 @@ export function SignIn() {
   async function signInWithGoogle() {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-    if (error) setError(error.message);
+    if (error) setError(authErrorMessage(error));
   }
 
   async function submit(e: FormEvent) {
@@ -34,15 +35,15 @@ export function SignIn() {
     setNotice(null);
     if (mode === 'sign-in') {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
+      if (error) setError(authErrorMessage(error));
     } else if (mode === 'sign-up') {
-      if (password.length < 8) setError('Use at least 8 characters for the password.');
-      else if (password !== again) setError('The two passwords are not the same.');
+      if (password.length < 8) setError(tr('Use at least 8 characters for the password.'));
+      else if (password !== again) setError(tr('The two passwords are not the same.'));
       else {
         // The confirmation link brings the person back here. If the project does not require confirmation they are signed in at once
         // and go straight to setting up their company; otherwise they confirm first and then sign in.
         const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
-        if (error) setError(error.message);
+        if (error) setError(authErrorMessage(error));
         else if (!data.session) {
           // Same message whether or not the address already has an account, so the form can't be used to probe emails.
           setNotice(trf('We sent a confirmation link to {email}. Open it, then come back here and sign in to set up your company.', { email }));
@@ -54,7 +55,7 @@ export function SignIn() {
     } else {
       // The link brings the user back to this app, which then shows SetPassword.
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-      if (error) setError(error.message);
+      if (error) setError(authErrorMessage(error));
       // Same message whether or not the account exists, so the form can't be used to probe emails.
       else setNotice('If an account exists for that email, a reset link is on its way. Check your inbox.');
     }
