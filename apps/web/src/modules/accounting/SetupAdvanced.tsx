@@ -35,6 +35,9 @@ const ROLE_LABEL: Record<AccountRole, string> = {
   cogs: 'Cost of goods sold',
   sales_revenue: 'Sales revenue',
   sales_returns: 'Sales returns and allowances',
+  output_vat: 'VAT on sales (output VAT)',
+  input_vat: 'VAT on purchases (input VAT)',
+  vat_settlement: 'VAT settlement (due to or from the tax authority)',
 };
 
 type RoleRow = { role: AccountRole; accountId: string | null };

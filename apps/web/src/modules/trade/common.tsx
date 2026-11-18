@@ -14,7 +14,7 @@ import { parseAmount, toMinor } from '../../lib/numbers';
 import { SearchSelect } from '../../components/SearchSelect';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
-import { hasPermission } from '@erp/shared';
+import { formatMoney, hasPermission, vatLine, vatLineInclusive } from '@erp/shared';
 
 import { tr, trf } from '../../lib/i18n';
 // DEMO ONLY: shared pieces for the sample purchasing and sales screens (lib/demoTrade.ts).
@@ -245,7 +245,31 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
 
 // ------------------------------------------------------------------ new order form (purchase and sales)
 
-type Line = { itemId: string; qty: string; price: string };
+/** `suggested`: the price was filled in from the price lookup and not typed (it is replaced when the party or item changes). */
+type Line = { itemId: string; qty: string; price: string; suggested?: boolean };
+
+/** Under a sales order line: what the typed price means once VAT applies (walkthrough 18 Nov: a price typed with "prices include VAT"
+ *  on was silently read as including VAT). The item's own rate, else the company default; shown only when quantity and price are set. */
+function LineVatPreview({ line, vat, items, currency }: {
+  line: Line;
+  vat: NonNullable<Parameters<typeof NewOrderForm>[0]['vat']>;
+  items: DemoItem[];
+  currency: string;
+}) {
+  const qty = parseAmount(line.qty);
+  const priceMinor = toMinor(line.price);
+  if (!line.itemId || !Number.isFinite(qty) || qty <= 0 || priceMinor <= 0) return null;
+  const item = items.find((it) => it.id === line.itemId);
+  const rateId = item?.vatRateId ?? vat.defaultVatRateId;
+  const rate = vat.rates.find((r) => r.id === rateId)?.rate ?? 0;
+  const split = (vat.pricesIncludeVat ? vatLineInclusive : vatLine)(qty, priceMinor, rate);
+  const m = (minor: number) => formatMoney({ amountMinor: minor, currency });
+  return (
+    <p className="hint muted small" aria-live="polite">
+      {trf('Before VAT {net} · VAT {rate}% {tax} · Total {gross}', { net: m(split.netMinor), rate, tax: m(split.taxMinor), gross: m(split.grossMinor) })}
+    </p>
+  );
+}
 
 export function NewOrderForm(props: {
   title: string;
@@ -261,6 +285,11 @@ export function NewOrderForm(props: {
   submitLabel: string;
   /** Who may add a new customer or supplier from inside the order (decision D5). Omit to hide the quick-add. */
   partyAddPermission?: string;
+  /** sql/097: the price to suggest per item for the chosen party (customer price or supplier's last cost), in minor units. Editable. */
+  priceLookup?: (partyId: string, itemIds: string[]) => Promise<Record<string, number | null>>;
+  /** Sales only (walkthrough 18 Nov): the company's VAT basis, so the price label says "before VAT" or "including VAT" and each line
+   *  shows its before-VAT / VAT / total split as it is typed (the same maths the database uses, packages/shared/src/vat.ts). */
+  vat?: { registered: boolean; pricesIncludeVat: boolean; defaultVatRateId: string | null; rates: { id: string; rate: number }[] } | null;
 }) {
   const session = useSession();
   const cat = useCatalog();
@@ -279,6 +308,30 @@ export function NewOrderForm(props: {
     if (warehouses?.length && !warehouses.some((w) => w.id === warehouseId)) setWarehouseId(warehouses[0]?.id ?? '');
   }, [warehouses, warehouseId]);
   const currency = session.org?.defaultCurrency ?? 'EGP';
+  const vatOn = props.vat?.registered === true;
+
+  // Fill empty (or still suggested) prices once a party and items are chosen; a typed price is never replaced.
+  const { priceLookup } = props;
+  const itemKey = lines.map((l) => l.itemId).filter(Boolean).join(',');
+  useEffect(() => {
+    if (!priceLookup || !partyId || !itemKey) return;
+    let live = true;
+    priceLookup(partyId, [...new Set(itemKey.split(','))])
+      .then((prices) => {
+        if (!live) return;
+        setLines((ls) =>
+          ls.map((l) => {
+            if (!l.itemId || (l.price !== '' && !l.suggested)) return l;
+            const minor = prices[l.itemId];
+            return minor === null || minor === undefined ? (l.suggested ? { ...l, price: '', suggested: false } : l) : { ...l, price: (minor / 100).toFixed(2), suggested: true };
+          }),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [priceLookup, partyId, itemKey]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -348,7 +401,12 @@ export function NewOrderForm(props: {
               />
             </label>
             <label>{tr('Quantity')}<input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
-            <label>{props.priceLabel} ({currency})<input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} /></label>
+            <label>
+              {vatOn ? (props.vat?.pricesIncludeVat ? trf('{label} including VAT', { label: props.priceLabel }) : trf('{label} before VAT', { label: props.priceLabel })) : props.priceLabel} ({currency})
+              <input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value, suggested: false })} />
+              {l.suggested ? <span className="hint muted">{tr('Suggested price; you can change it.')}</span> : null}
+            </label>
+            {vatOn ? <LineVatPreview line={l} vat={props.vat!} items={cat.items.data ?? []} currency={currency} /> : null}
           </div>
         ))}
         <div className="form-actions">

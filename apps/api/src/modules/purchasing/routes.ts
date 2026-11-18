@@ -6,6 +6,15 @@ import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
+import {
+  VAT_CLASSES,
+  billLineOut,
+  billTotals,
+  parsePurchaseVat,
+  type BillLineOut,
+  type BillLineRow,
+  type BillRow,
+} from '../../lib/vatRows';
 
 // Orders are immutable commitments. Receipt is a single database function that posts stock and audit atomically.
 export const purchasingRoutes = new Hono<AppEnv>();
@@ -201,6 +210,43 @@ async function oneOrder(c: Context<AppEnv>, id: string) {
   return { ...order, deliveryNotes };
 }
 
+// Each supplier's last cost per item (sql/097): recorded by the database from bills, and from orders while there is no bill price yet.
+// ?itemId= or ?supplierId= narrows it. Read-only; nothing here changes a sales price.
+purchasingRoutes.get('/supplier-prices', requirePermission('purchasing.prices.view'), async (c) => {
+  const itemId = c.req.query('itemId');
+  const supplierId = c.req.query('supplierId');
+  if ((itemId && !UUID_RE.test(itemId)) || (supplierId && !UUID_RE.test(supplierId))) invalid('itemId and supplierId must be ids');
+  let query = userDb(c)
+    .from('pur_supplier_prices')
+    .select('supplier_id, item_id, currency, last_cost_minor, source_kind, source_number, recorded_at')
+    .eq('org_id', orgOf(c));
+  if (itemId) query = query.eq('item_id', itemId);
+  if (supplierId) query = query.eq('supplier_id', supplierId);
+  const { data, error } = await query.order('recorded_at', { ascending: false }).limit(500);
+  if (error) throw error;
+  type Row = {
+    supplier_id: string;
+    item_id: string;
+    currency: string;
+    last_cost_minor: number;
+    source_kind: string;
+    source_number: string | null;
+    recorded_at: string;
+  };
+  return ok(
+    c,
+    ((data ?? []) as Row[]).map((r) => ({
+      supplierId: r.supplier_id,
+      itemId: r.item_id,
+      currency: r.currency,
+      lastCostMinor: Number(r.last_cost_minor),
+      source: r.source_kind,
+      sourceNumber: r.source_number,
+      recordedAt: r.recorded_at,
+    })),
+  );
+});
+
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
   const read = (columns: string) =>
     userDb(c).from('pur_suppliers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
@@ -359,38 +405,26 @@ purchasingRoutes.put('/order-approval', requirePermission('purchasing.orders.man
   );
 });
 
+// Bills are read with '*' so the code also answers before sql/087 is applied (then: no VAT, net = Σ round(qty × cost)).
 purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoices.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
+    .select('*')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
     .limit(250);
   if (error) throw error;
-  const invoices = (data ?? []) as {
-    id: string;
-    number: string;
-    supplier_id: string;
-    order_id: string;
-    invoice_date: string;
-    due_date: string;
-    currency: string;
-    created_at: string;
-  }[];
+  const invoices = (data ?? []) as BillRow[];
   const ids = invoices.map((i) => i.id);
-  const lineMap = new Map<string, { orderLineId: string; qty: number; unitCostMinor: number }[]>();
+  const lineMap = new Map<string, BillLineOut[]>();
   if (ids.length) {
     const { data: lines, error: lineError } = await userDb(c)
       .from('pur_supplier_invoice_lines')
-      .select('invoice_id,order_line_id,qty,unit_cost_minor')
+      .select('*')
       .eq('org_id', orgOf(c))
       .in('invoice_id', ids);
     if (lineError) throw lineError;
-    for (const l of (lines ?? []) as { invoice_id: string; order_line_id: string; qty: number; unit_cost_minor: number }[])
-      lineMap.set(l.invoice_id, [
-        ...(lineMap.get(l.invoice_id) ?? []),
-        { orderLineId: l.order_line_id, qty: Number(l.qty), unitCostMinor: Number(l.unit_cost_minor) },
-      ]);
+    for (const l of (lines ?? []) as BillLineRow[]) lineMap.set(l.invoice_id, [...(lineMap.get(l.invoice_id) ?? []), billLineOut(l)]);
   }
   return ok(
     c,
@@ -406,7 +440,7 @@ purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoice
         currency: i.currency,
         createdAt: i.created_at,
         lines,
-        totalMinor: lines.reduce((n, l) => n + l.qty * l.unitCostMinor, 0),
+        ...billTotals(i, lines),
       };
     }),
   );
@@ -415,21 +449,17 @@ purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoice
 // One purchase (supplier) invoice by id, same shape as the list (which holds the newest 250 only).
 purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.invoices.read'), async (c) => {
   const id = idParam(c);
-  const { data: i, error } = await userDb(c)
-    .from('pur_supplier_invoices')
-    .select('id,number,supplier_id,order_id,invoice_date,due_date,currency,created_at')
-    .eq('org_id', orgOf(c))
-    .eq('id', id)
-    .maybeSingle();
+  const { data: bill, error } = await userDb(c).from('pur_supplier_invoices').select('*').eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
   if (error) throw error;
-  if (!i) throw new HttpError(404, 'Invoice not found', 'not_found');
+  if (!bill) throw new HttpError(404, 'Invoice not found', 'not_found');
+  const i = bill as BillRow;
   const { data: ls, error: le } = await userDb(c)
     .from('pur_supplier_invoice_lines')
-    .select('order_line_id,qty,unit_cost_minor')
+    .select('*')
     .eq('org_id', orgOf(c))
     .eq('invoice_id', id);
   if (le) throw le;
-  const raw = (ls ?? []) as { order_line_id: string; qty: number; unit_cost_minor: number }[];
+  const raw = (ls ?? []) as BillLineRow[];
   // The item on each line and the order's number, so the page needs no other (capped) list to show them.
   const [orderLines, order] = await Promise.all([
     raw.length
@@ -447,12 +477,7 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
   if (orderLines.error) throw orderLines.error;
   if (order.error) throw order.error;
   const itemOf = new Map(((orderLines.data ?? []) as { id: string; item_id: string }[]).map((l) => [l.id, l.item_id]));
-  const lines = raw.map((l) => ({
-    orderLineId: l.order_line_id,
-    itemId: itemOf.get(l.order_line_id) ?? null,
-    qty: Number(l.qty),
-    unitCostMinor: Number(l.unit_cost_minor),
-  }));
+  const lines = raw.map((l) => ({ ...billLineOut(l), itemId: itemOf.get(l.order_line_id) ?? null }));
   return ok(c, {
     id: i.id,
     number: i.number,
@@ -464,7 +489,8 @@ purchasingRoutes.get('/supplier-invoices/:id', requirePermission('purchasing.inv
     currency: i.currency,
     createdAt: i.created_at,
     lines,
-    totalMinor: lines.reduce((n, l) => n + l.qty * l.unitCostMinor, 0),
+    ...billTotals(i, lines),
+    ...(await supplierNoteTotals(c, i.id)),
   });
 });
 
@@ -522,17 +548,31 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
   const lines = (Array.isArray(body.lines) ? body.lines : [])
     .map((v) => {
       const l = v as Record<string, unknown>;
-      return { orderLineId: text(l.orderLineId), qty: Number(l.qty) };
+      // Optional VAT rate per line (sql/087): a rate id or "exempt"; omitted = the item's, else the company default.
+      const taxRateId = text(l.taxRateId);
+      if (taxRateId && taxRateId !== 'exempt' && !UUID_RE.test(taxRateId)) invalid('taxRateId must be a tax rate id or "exempt"');
+      // Kind of purchase per line (sql/088): local goods and services, capital asset or import.
+      const vatClass = text(l.vatClass);
+      if (vatClass && !(VAT_CLASSES as readonly string[]).includes(vatClass)) invalid('vatClass must be local, capital or import');
+      return {
+        orderLineId: text(l.orderLineId),
+        qty: Number(l.qty),
+        ...(taxRateId ? { taxRateId } : {}),
+        ...(vatClass ? { vatClass } : {}),
+      };
     })
     .filter((l) => UUID_RE.test(l.orderLineId) && Number.isFinite(l.qty) && l.qty > 0);
   if (!UUID_RE.test(supplierId) || !UUID_RE.test(orderId) || !number || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate) || lines.length === 0)
     invalid('Supplier, received order, invoice number, date and billed quantities are required');
+  const vat = parsePurchaseVat(body.vat);
   const id = await callRpc<string>(userDb(c), 'pur_record_supplier_invoice', {
     p_supplier_id: supplierId,
     p_order_id: orderId,
     p_number: number,
     p_invoice_date: invoiceDate,
     p_lines: lines,
+    // only sent when given, so the call also works against a database without sql/087
+    ...(vat ? { p_vat: vat } : {}),
   });
   const { data, error } = await userDb(c)
     .from('pur_supplier_invoices')
@@ -556,3 +596,145 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
     201,
   );
 });
+
+// ---- supplier credit and debit notes (sql/094). The limits, approval rules and posting live in the database functions.
+type PurNoteRow = Record<string, unknown> & {
+  id: string;
+  number: string;
+  kind: string;
+  status: string;
+  currency: string;
+  requester_id: string;
+};
+purchasingRoutes.get('/supplier-invoices/:id/notes', requirePermission('purchasing.notes.read'), async (c) => {
+  const id = idParam(c);
+  const db = userDb(c);
+  const { data, error } = await db
+    .from('pur_notes')
+    .select('*')
+    .eq('org_id', orgOf(c))
+    .eq('bill_id', id)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const notes = (data ?? []) as PurNoteRow[];
+  const lines = new Map<string, unknown[]>();
+  if (notes.length) {
+    const { data: ls, error: le } = await db
+      .from('pur_note_lines')
+      .select('*')
+      .eq('org_id', orgOf(c))
+      .in(
+        'note_id',
+        notes.map((n) => n.id),
+      );
+    if (le) throw le;
+    for (const l of (ls ?? []) as Record<string, unknown>[]) {
+      const k = String(l.note_id);
+      lines.set(k, [
+        ...(lines.get(k) ?? []),
+        {
+          billLineId: l.bill_line_id,
+          qty: Number(l.qty),
+          unitCostMinor: Number(l.unit_cost_minor),
+          taxRate: Number(l.tax_rate),
+          netMinor: Number(l.net_minor),
+          taxMinor: Number(l.tax_minor),
+        },
+      ]);
+    }
+  }
+  return ok(
+    c,
+    notes.map((n) => ({
+      id: n.id,
+      number: n.number,
+      kind: n.kind,
+      status: n.status,
+      currency: n.currency,
+      reason: n.reason,
+      supplierRef: n.supplier_ref ?? null,
+      vatDocumentRef: n.vat_document_ref ?? null,
+      netMinor: Number(n.net_minor),
+      taxMinor: Number(n.tax_minor),
+      grossMinor: Number(n.gross_minor),
+      vatDeductible: n.vat_deductible === true,
+      requesterId: n.requester_id,
+      decidedBy: n.decided_by ?? null,
+      decidedAt: n.decided_at ?? null,
+      selfDecided: n.self_decided === true,
+      createdAt: n.created_at,
+      lines: lines.get(n.id) ?? [],
+    })),
+  );
+});
+purchasingRoutes.post('/supplier-invoices/:id/notes', requirePermission('purchasing.notes.create'), async (c) => {
+  const id = idParam(c);
+  const b = await jsonBody(c);
+  const kind = text(b.kind);
+  if (kind !== 'credit' && kind !== 'debit') invalid('kind must be credit or debit');
+  const reason = text(b.reason);
+  if (!reason || reason.length > 500) invalid('A reason of up to 500 characters is required');
+  const lines = (Array.isArray(b.lines) ? b.lines : []).map((v) => {
+    const l = v as Record<string, unknown>;
+    const cost = l.unitCostMinor === undefined || l.unitCostMinor === null ? undefined : Number(l.unitCostMinor);
+    return { billLineId: text(l.billLineId), qty: Number(l.qty), ...(cost === undefined ? {} : { unitCostMinor: cost }) };
+  });
+  if (
+    !lines.length ||
+    lines.some(
+      (l) =>
+        !UUID_RE.test(l.billLineId) ||
+        !Number.isFinite(l.qty) ||
+        l.qty <= 0 ||
+        (l.unitCostMinor !== undefined && (!Number.isInteger(l.unitCostMinor) || l.unitCostMinor < 0)),
+    )
+  )
+    invalid('Each line needs a bill line, a quantity above zero and, if given, a whole unit cost');
+  const vat = parsePurchaseVat(b.vat);
+  const made = await callRpc<unknown>(userDb(c), 'pur_submit_note', {
+    p_bill_id: id,
+    p_kind: kind,
+    p_reason: reason,
+    p_supplier_ref: text(b.supplierRef) || null,
+    p_lines: lines,
+    p_vat: vat ? { taxMinor: vat.taxMinor, documentRef: vat.documentRef } : null,
+  });
+  return ok(c, made, 201);
+});
+for (const [action, decision] of [
+  ['approve', 'approved'],
+  ['reject', 'rejected'],
+] as const) {
+  purchasingRoutes.post(`/notes/:id/${action}`, requirePermission('purchasing.notes.approve'), async (c) => {
+    const id = idParam(c);
+    const comment = text((await jsonBody(c)).comment) || null;
+    await callRpc<void>(userDb(c), 'pur_decide_note', { p_note_id: id, p_decision: decision, p_comment: comment });
+    return ok(c, { id, status: decision });
+  });
+}
+purchasingRoutes.post('/notes/:id/cancel', requirePermission('purchasing.notes.create'), async (c) => {
+  const id = idParam(c);
+  await callRpc<void>(userDb(c), 'pur_cancel_note', { p_note_id: id });
+  return ok(c, { id, status: 'cancelled' });
+});
+
+// Approved supplier notes on a bill (sql/094): what was credited and debited. Before that migration: none.
+async function supplierNoteTotals(c: Context<AppEnv>, billId: string) {
+  const { data, error } = await userDb(c)
+    .from('pur_notes')
+    .select('kind, gross_minor')
+    .eq('org_id', orgOf(c))
+    .eq('bill_id', billId)
+    .eq('status', 'approved');
+  if (error) {
+    if (isMissingSchema(error)) return { creditedMinor: 0, debitedMinor: 0 };
+    throw error;
+  }
+  let creditedMinor = 0;
+  let debitedMinor = 0;
+  for (const n of (data ?? []) as { kind: string; gross_minor: number }[]) {
+    if (n.kind === 'credit') creditedMinor += Number(n.gross_minor);
+    else debitedMinor += Number(n.gross_minor);
+  }
+  return { creditedMinor, debitedMinor };
+}

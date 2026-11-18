@@ -1,14 +1,13 @@
 # ADR-0004: The general ledger: posting in the same transaction, corrections by reversal
 
-> **Draft.** Agents cannot write to `documentation/architecture/`. Ben: move this file to
-> `documentation/architecture/decisions/ADR-0004-general-ledger.md` when you approve it, and change
-> the two relative links below from `../plans/` to `../../plans/`.
+> **Draft.** Ben: rename this file to `ADR-0004-general-ledger.md` when you approve it (the links below
+> were fixed on 16 Nov 2026).
 
 **Status:** Proposed (waiting for Ben's review)
 **Date:** 2026-11-05
 **Deciders:** Ben
-**Plan:** [`ACCOUNTING_PLAN.md`](../plans/ACCOUNTING_PLAN.md) (phase 1 of
-[`ROADMAP_ACCOUNTING_SUITE.md`](../plans/ROADMAP_ACCOUNTING_SUITE.md))
+**Plan:** [`ACCOUNTING_PLAN.md`](../../plans/ACCOUNTING_PLAN.md) (phase 1 of
+[`ROADMAP_ACCOUNTING_SUITE.md`](../../plans/ROADMAP_ACCOUNTING_SUITE.md))
 
 ## Context
 

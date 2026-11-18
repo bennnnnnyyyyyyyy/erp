@@ -11,6 +11,427 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-18 — Walkthrough fixes A1-E1 (Ben decided the plan; `sql/098`)
+
+**Objective.** Ben's walkthrough notes of 18 Nov, fixed as he decided them in .temp/fix-plan-18nov.md (B1, B2 chosen; A, C, D, E from his notes; A1 after confirming that Egypt's standard is prices before VAT).
+
+**Actions Completed.**
+- A1: sales order price label says before or including VAT; each line shows before-VAT, VAT and total as typed (shared `vatLine` maths); "Sales prices include VAT" explained with a worked example and confirmed before it is switched on.
+- B1: "Default rate for new items and invoice lines" label, explanation and a Default badge. B2: a VAT step in the setup wizard (owners): creates 14% (default), 0% export and Exempt, switches VAT on from a date, through the existing routes.
+- C1: item group form opens under its row; main groups bold, indented tree; "Add main group". C2: Inventory settings page for the item code rule, linked from Item groups. C3/C4: the item group picker offers only groups without sub-groups, under their main group; `sql/098` enforces it (items only in leaf groups; no sub-groups under a group holding items), tests 094 and 090 (SQL reused from the dropped slice branch after review).
+- D1: statement section headings, subtotals and totals styled; aligned digits. E1: inventory action cards get a symbol and colour per kind.
+
+**Database / System Result.** `sql/098` applied to live 18 Nov by Claude (CLI) after PR #76 merged: anon_creates_groups false, create_item_versions 1, items_in_heading_groups 0, users_set_group true; tests 094 and 090 passed on live (rolled back).
+
+**Safety Status.** Local: typecheck clean; tests shared 82, API 647, web 146; PGlite 96 migrations with tests 090-094 passing; biome ci 0 errors; migration check OK. Not checked in a browser.
+
+## 2026-11-18 — Prices, master data slice C (`sql/097`)
+
+**Objective.** Slice C of the [master data plan](../plans/MASTER_DATA_PLAN.md), started after Ben approved slice A on live (18 Nov). Decisions:
+a new purchase price only suggests; price lists per customer group, with a customer groups table.
+
+**Actions Completed.** `sql/097_sal_prices.sql`: `pur_supplier_prices` (last cost per supplier, item and currency; written by triggers on new
+bill lines, and on purchase order lines while that supplier and item have no bill price yet; audited when the cost changes; a purchase never
+changes a sales price); `sal_customer_groups` and `sal_customers.customer_group_id`; `sal_item_prices` (one sales price per item and currency;
+"includes VAT" copied from the company setting when saved); `sal_price_lists` per customer group and currency with from/to dates (never two
+overlapping lists for a group) and `sal_price_list_items`; functions for groups, assigning a customer, item and list prices and the optional
+markup (owners and admins), `sal_prices_for` (list price for the group on the date, else the item price) and `sal_item_price_info` (sales
+price, list prices, supplier costs, suggestion = latest cost plus markup). `sql/tests/093_sal_prices.sql` (new). Permissions
+`sales.prices.read` (everyone), `sales.prices.manage` and `purchasing.prices.view` (owners and admins). Review fix (master chat, 18 Nov):
+supplier costs reveal margins, so `pur_supplier_prices` is readable by owners and admins only (its own policy) and `sal_item_price_info`
+returns costs and the cost-based suggestion only to them; members and viewers still see sales and list prices. API: `apps/api/src/modules/sales/prices.ts`
+(customer groups, `PUT /customers/:id/group`, item price and price info, price lists and their items, `PUT /price-settings`,
+`GET /prices`), `GET /v1/purchasing/supplier-prices`; the customer list carries `customerGroupId` and falls back before 097. Web: Sales →
+Prices (groups, customer group, price lists and their items, markup); a Prices box on the item page (sales price, supplier costs, "Use
+suggestion"); new sales and purchase orders fill empty prices with the customer's price or the supplier's last cost, still editable. Arabic
+machine drafts in `i18nMasterData.ts`. Not done (plan items left for later): prices per unit (slice D), no change to `sal_create_order`
+(the typed price is saved as before), and a price saved before the company switched "prices include VAT" keeps its old meaning (shown as
+"includes VAT" or not) instead of being converted.
+
+**Database / System Result.** None. Not applied to live. The master chat applies it (dry run first).
+
+**Safety Status.** Local SQL run (PGlite, all 95 migrations, 097 applied a second time): 91 of 91, including 093 (order then bill price,
+order never replaces a bill price, suggest only with markup 20% on 105.00 = 126.00, list choice by group and date, fallback to the item
+price, no overlapping lists, in-use group delete refused, roles, members and viewers see no costs, audit counts, isolation, no direct writes, includes-VAT copied). The guard
+test `092_column_grants.sql` from `ci/guards` also passes with 097 (run locally, not committed here). Typecheck clean; tests: shared 82,
+API 647 (new `sales_prices.test.ts`), web 146. `biome ci .`: 0 errors. Not viewed in a browser.
+
+## 2026-11-17 — Item groups and item codes, master data slice A (`sql/095`)
+
+**Objective.** Slice A of the [master data plan](../plans/MASTER_DATA_PLAN.md), approved by Ben on 17 Nov (order A → C → B → D; groups
+optional, required only under the "group codes" rule; codes never change once used; a moved item keeps its code).
+
+**Actions Completed.** `sql/095_inv_item_groups.sql`: `inv_item_groups` (tree, code unique among live siblings, no cycles, soft delete
+refused while in use, RLS member read, writes revoked); `inv_items.group_id`; the company rule `item_code_rule` in organization settings
+(typed / prefix / group, separator `-` `.` `/`, digits; with no rule saved a company with a sql/075 format keeps "prefix", others "typed",
+so nothing changes for existing companies); functions to create, change, move and delete groups and to set the rule (owners and admins),
+put an item in a group (members too, code kept), read the rule and the next code; `inv_next_sku()` keeps its signature;
+`inv_create_item` gains `p_group_id` (last, optional) and fills a blank code under the prefix or group rule. Every change is audited in
+the same transaction. `sql/tests/090_inv_item_groups.sql` (new). Permission `inventory.groups.manage` (owners and admins). API
+(`apps/api/src/modules/inventory/groups.ts`): `GET/POST /v1/inventory/item-groups`, `PUT/DELETE /item-groups/:id`,
+`PUT /item-groups/:id/parent`, `PUT /items/:id/group`, `GET/PUT /item-code-rule`; items carry `groupId`. The item list falls back to its
+old columns and item creation sends `p_group_id` only with a group, so both keep working before 095 is applied; the new routes answer 503
+`not_set_up` until then. Web: Inventory → Item groups (tree, add, sub-group, edit, move, remove, the code rule); group picker on Add item
+(fills the next group code) and Edit item. Arabic machine drafts in `apps/web/src/lib/i18nMasterData.ts` (for Ben's review). Assumption:
+the SKU stays not editable (sql/062), which is what keeps codes fixed; no separate "used on documents" check was needed.
+
+**Database / System Result.** Dry run on live by Claude via CLI (rolled back): `groups_rls_on` true, `create_item_versions` 1,
+`items_with_group` 0. **Applied to live 17 Nov by Ben via CLI:** `groups_rls_on` true, `users_can_insert_groups` false,
+`users_can_truncate_groups` false, `users_create_items` true, `anon_creates_groups` false, `create_item_versions` 1. Test 090 on live:
+ALL TESTS PASSED (everything rolled back). Slice C waits for Ben's approval of A on live.
+
+**Safety Status.** Local SQL run (PGlite, all 93 migrations, 095 applied a second time to prove rerun-safety): 89 of 89 pass, including
+090 (tree, `10-03-007`, group required, code kept on move and re-code, no cycles, in-use delete refused, roles, audit counts, isolation,
+no direct writes, prefix rule unchanged). Typecheck clean; tests: shared 82, API 617 (new `inventory_groups.test.ts`), web 146 (new
+`i18nMasterData.test.ts`). `biome ci .`: 0 errors. Not viewed in a browser.
+
+## 2026-11-17 — Supplier credit and debit notes (`sql/094`)
+
+**Objective.** VAT plan section 16 (Ben: "go"; long term: data model ready for returned goods, money first). Removes the VAT summary's
+"excludes supplier credit notes" gap.
+
+**Actions Completed.** `sql/094_pur_supplier_notes.sql` (tables, request / decide / cancel functions with the D1/D1c self-approval rule,
+posting on approval, `pur__bill_due`; payment check, owner insights and VAT summary recreated from their latest versions, checked identical
+by script). `sql/tests/089_pur_supplier_notes.sql` (new); `085` updated. Permissions `purchasing.notes.read|create|approve` (members create).
+API: `GET/POST /v1/purchasing/supplier-invoices/:id/notes`, `POST /v1/purchasing/notes/:id/approve|reject|cancel`; bill detail returns
+`creditedMinor`, `debitedMinor` and each line's `billLineId`; open items net bills of approved supplier notes. Web: notes section on the bill
+page; payments against a bill use the amount after notes. Arabic drafts.
+
+**Database / System Result.** Dry run on live (rolled back): `tables_with_rls` 3. Applied to live by Ben via CLI; the output was cut off, so
+a read-only check by Claude afterwards: 3 tables with RLS, `users_submit` true, `anon_submit` false, the VAT summary includes supplier
+notes. Tests 089 and 085 on live: ALL TESTS PASSED (everything rolled back). PR #67.
+
+**Safety Status.** Local SQL run (PGlite, all 92 migrations): 88 of 88. Typecheck clean; tests: shared 82, API 599, web 144. `biome ci .`:
+exit 0. Not verified: dry run on live, browser. Returned goods (stock out to the supplier) are not switched on.
+## 2026-11-17 — Browser test of the VAT screens on live (write-through, Test 2)
+
+**Objective.** Ben: "you do testing". Check the VAT screens on live with real saves, then put the company back as it was.
+
+**Actions Completed.** In company "Test 2" (Ben's session; the organization switcher offered no other company): added a VAT rate
+(14%, V009, default); switched VAT on (start defaulted to 1 Nov); recorded expense EXP-0003 (114.00 with 14.00 VAT, e-invoice number
+and a 9-digit tax number: deductible); checked the expense page (VAT deducted, reference, audit line), the VAT summary (credit 14.00)
+and the close panel (books 14.00 = documents: the posting to 1811 works on live). Then voided EXP-0003, switched VAT off and removed the
+rate. Found and fixed: the summary said "VAT registered from" after VAT was switched off (the start date is kept for the next switch-on).
+Confirmed live: no "−EGP 0.00", no close panel when VAT is off; part 5's switch is deployed.
+
+**Database / System Result.** Test 2 is back to VAT off with no rates; left behind by design: EXP-0003 (void, with its reversing entry),
+the audit rows, and `settings.vat_from` = 2026-11-01 (used if VAT is switched on again).
+
+**Safety Status.** Not tested in the browser: invoices and bills with VAT (Test 2 has no delivered order or received purchase order left
+to bill), notes, closing a month (November has not ended). These are covered by SQL tests 082-088 on live.
+## 2026-11-17 — VAT part 5: sales prices that include VAT (`sql/093`)
+
+**Objective.** Part 5 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (Ben: "do 5"): prices with VAT included, which also lifts the block on
+Shopify with VAT (Shopify prices include VAT).
+
+**Actions Completed.** `sql/093_vat_prices_include.sql`: owner setting `prices_include_vat` (`core_set_prices_include_vat`, audited);
+invoice and note lines record `price_includes_vat`; the line trigger splits such prices per line; `sal_create_invoice`,
+`sal_submit_note`, `core_set_vat` recreated from their latest versions with only these changes (copied and checked identical by script).
+`sql/tests/088_vat_prices_include.sql` (new). Shared `vatLineInclusive` (+ known-answer test). API: lines return `priceIncludesVat`;
+`PUT /v1/core/org/vat/prices-include`; `GET /core/org/vat` returns the setting. Web: the switch in Settings → VAT (owner), the note
+preview and invoice price labels follow it. Arabic drafts.
+
+**Database / System Result.** Dry run on live (rolled back): `invoice_lines` true, `users_can_set` true. Applied to live by Ben via CLI:
+`invoice_lines` true, `note_lines` true, `users_can_set` true, `anon_can_set` false. Test 088 on live: ALL TESTS PASSED (everything rolled back).
+
+**Safety Status.** Local SQL run (PGlite, all 91 migrations): 87 of 87. Typecheck clean; tests: shared 82, API 589, web 144.
+`biome ci .`: exit 0. Not verified: dry run on live, browser; the rounding rule for inclusive prices is ours (to confirm).
+## 2026-11-17 — An item's VAT rate without e-invoicing (`sql/092`)
+
+**Objective.** First item of the VAT next steps (Ben: "start"): an item's own VAT rate (5%, exempt, export…) could only be set through
+the e-invoicing item codes, so without that module every line took the company default.
+
+**Actions Completed.** `sql/092_inv_item_vat_rate.sql`: `inv_set_item_vat_rate` (owner/admin, the company's live VAT rates only, null =
+company default, audited once per change). `sql/tests/087_item_vat_rate.sql` (new). API: items return `vatRateId`;
+`PUT /v1/inventory/items/:id/vat-rate`. Web: "VAT rate" in Edit item (shown when the company has VAT rates). Arabic draft.
+
+**Database / System Result.** Dry run on live (rolled back): `users_can_set` true. Applied to live by Ben via CLI (its output was cut off;
+a read-only check by Claude afterwards: the function exists, `anon_can_set` false). Test 087 on live: ALL TESTS PASSED (everything rolled back).
+
+**Safety Status.** Local SQL run (PGlite, all 90 migrations): 86 of 86. Typecheck clean; tests: shared 81, API 587, web 144.
+`biome ci .`: exit 0. Not verified: dry run on live, browser.
+## 2026-11-17 — VAT part 4: settlement and carry-forward (`sql/091`)
+
+**Objective.** Part 4 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (section 15). Ben, 17 Nov: "build it now": every assumption (account code,
+deadline, refund rule) can be changed later; the closing entries are ordinary journals.
+
+**Actions Completed.**
+- `sql/091_vat_settlement.sql`: role `vat_settlement` and account 2872 added to every chart and new charts (audited);
+  `acc_vat_periods` and `acc_vat_payments` (RLS, member read, append-only, no direct writes); `acc_vat_month`; `acc_vat_close_month`,
+  `acc_vat_record_payment`, `acc_vat_opening`, each creating a manual journal through `acc_save_journal` (approval by someone else, or
+  posted directly by the owner / head accountant); `core_set_vat_return` (owner).
+- `sql/tests/086_vat_settlement.sql` (new, 12 groups); `sql/tests/040` expects 41 accounts and 22 roles.
+- API: `GET /v1/accounting/vat-months/:month`, `POST .../close`, `POST /v1/accounting/vat-periods/:id/payments`,
+  `POST /v1/accounting/vat-opening`, `PUT /v1/core/org/vat/return`; `GET /core/org/vat` returns the return settings.
+- Web: "Close the VAT month" panel on Finance → VAT summary (whole months, accounting on); return settings and opening balance in
+  Settings → General → VAT (owner); role label; Arabic machine drafts.
+
+**Database / System Result.** Dry run on live (rolled back): `tables_with_rls` 2, `charts_missing_settlement` 0. Applied to live by
+Ben via CLI: 2, 0, `users_close` true, `anon_close` false. Test 086 on live: ALL TESTS PASSED (everything rolled back). Test 040 on
+live (new chart counts): ALL TESTS PASSED (everything rolled back).
+
+**Safety Status.** Local SQL run (PGlite, all 89 migrations): 85 of 85 SQL tests pass. Typecheck clean (shared, API, web); tests:
+shared 81, API 585, web 144. `biome ci .`: exit 0. Not verified: dry run on live, the screens in a browser, the Arabic, the
+accountant's answers (section 15).
+## 2026-11-16 — New companies default to EGP again (`sql/090`)
+
+**Objective.** Live's `organizations.default_currency` defaulted to `USD` (found while running test 085 on live), against `sql/001`
+and agents.md (EGP). Ben: "existing companies keep everything", "yes write 090".
+
+**Actions Completed.** `sql/090_core_default_currency_egp.sql`: sets the column default back to `EGP`. No existing company is changed.
+Its final check shows the default and the companies per currency (information only).
+
+**Database / System Result.** Dry run on live (rolled back): default `'EGP'::bpchar`. Applied to live by Ben via CLI: default now
+`'EGP'::bpchar`; companies by currency EGP 12, USD 1. The USD one (read-only check) is the early "Test Organization" (27 Oct) with no
+invoices, bills, expenses or stock moves; left as is (its owner can switch it in Settings).
+
+**Safety Status.** Local run (PGlite, all 88 migrations): 84 of 84 SQL tests pass. A dry-run file (rolled back) is ready. Companies that
+already use USD by mistake, if any, are a separate per-company decision (changing the currency of a company with documents is not safe).
+## 2026-11-16 — VAT part 3: the VAT summary (`sql/089`)
+
+**Objective.** Part 3 of [VAT_PLAN.md](../plans/VAT_PLAN.md) (Ben: "do it now"), with the review's must-haves (partial-deduction warning,
+"excludes supplier credit notes").
+
+**Actions Completed.**
+- `sql/089_vat_summary.sql`: `fin_vat_summary(from, to)`, read only, owners and admins. Sales by rate, zero-rated (V001/V002) and
+  exempt, invoices plus approved credit/debit notes by approval day; purchases by kind with deductible and non-deductible VAT (bill
+  lines get their share of the printed VAT); output, input, due or credit; warnings; the documents behind each figure (up to 5000).
+  Company currency only (others counted and warned).
+- `sql/tests/085_vat_summary.sql` (new): known answer for one month (sections, totals 1360 / 1441 / credit 81, warnings, 9 documents,
+  left-out documents, roles, isolation).
+- API: `GET /v1/finance/vat-summary?from=&to=` (+ `format=csv`). Shared type `VatSummary`.
+- Web: Finance → VAT summary (period, warnings, sales and purchase sections, totals, documents filtered by section with links, CSV,
+  print); Arabic machine drafts.
+
+**Database / System Result.** Dry run of `sql/089` on live (rolled back): `users_can_read` true, `anon_can_read` false. Applied to live by
+Ben via CLI (same result). Test 085 on live first failed at S1a: the summary counted only the test's USD invoice. Cause, checked
+read-only on live: **`organizations.default_currency` defaults to `USD` on live, but `EGP` in `sql/001`** (changed outside the
+migrations; `bootstrap_organization` sets no currency). Not a fault in the summary (it counts the company currency only, by design). The
+test now sets its companies to EGP; re-run on live: ALL TESTS PASSED (everything rolled back). PR #61. **Open for Ben:** decide whether live's default goes back to EGP
+(agents.md: default currency is EGP) with a migration, or the repo records USD.
+
+**Safety Status.** Local SQL run (PGlite, all 87 migrations): 84 of 84 SQL tests pass. Typecheck clean; tests: shared 81, API 576, web
+144. `biome ci .`: exit 0. Not verified: dry run on live, the page in a browser, the Arabic, the Form 10 section names (accountant).
+
+## 2026-11-16 — VAT rate screen, owner-only switch, Shopify block and the part 2 review fixes (`sql/088`)
+
+**Objective.** Ben's decisions of 16 Nov (drop the automatic 14%, rate screen then VAT summary, keep the bill tolerance, owners only,
+block Shopify with VAT) and the accountant's review of part 2 (non-deductible VAT into the cost of goods, "VAT from" at a month start,
+kind of purchase per bill line, 9-digit tax numbers, exact tolerance wording, part 3 warnings). Ben: "go ahead, all in 088".
+
+**Actions Completed.**
+- `sql/088_vat_rates_and_owner.sql`: `core_save_vat_rate` / `core_remove_vat_rate`; `core_set_vat` owners only with `p_vat_from`, no
+  automatic rate, refused while Shopify is on; existing "VAT from" dates moved to the 1st of their month (audited); `sal_create_invoice`
+  (copied from 086 by script, one check added) refuses Shopify orders while VAT is on; bill lines carry their kind and their share of
+  non-deductible VAT, which raises the items' average cost and posts to stock (or COGS when none is on hand); `fin__purchase_vat`
+  requires a 9-digit supplier tax number for a deduction; `pur_record_supplier_invoice` and `acc__post_pur_invoice` recreated.
+- Tests: `sql/tests/084_vat_rates_and_owner.sql` (new); 082 (no automatic rate) and 083 (stock instead of 334, 9-digit numbers) updated.
+- API: `GET /core/org/vat` lists ETA VAT codes; `PUT /core/org/vat` takes `vatFrom`; `POST/PUT/DELETE /core/org/vat/rates`; bill lines
+  take and return `vatClass` (and `costVatMinor`); `VAT_SHOPIFY_NOT_SUPPORTED` answers 409.
+- Web: Settings → General → VAT lists, adds, edits and removes rates; the switch, default rate and start date for owners only, with a
+  mid-month warning; the bill form has a kind per line; Arabic machine drafts (two strings for the dropped automatic rate removed).
+- Plan: section 14.
+
+**Database / System Result.** Dry run of `sql/088` on live inside a rolled-back transaction: `bills_off` 0, `vat_from_not_first` 0,
+`users_save_rate` true, `users_set_vat` true. Then applied to live by Ben via CLI: `users_save_rate` true, `users_remove_rate` true,
+`anon_save_rate` false, `vat_with_shopify` 0. `sql/087` had already been applied and test 083 passed on live earlier the same day (entry
+below; the reviewer's question about it was answered from these records). Tests 082, 083 and 084 on live: ALL TESTS PASSED (everything rolled back). PR #59.
+
+**Safety Status.** Local SQL run (PGlite, all 86 migrations): 83 of 83 SQL tests pass. Typecheck clean (shared, API, web against this
+branch's shared package; temporary configs removed); tests: shared 81, API 575, web 144. `biome ci .`: exit 0 (152 warnings, as before).
+Not verified: dry run on live, browser, Arabic. Before applying: dry run on live in a rolled-back transaction, then apply, tests 082-084
+on live, CI green, then merge.
+
+## 2026-11-16 — VAT part 2: input VAT on supplier bills and expenses (`sql/087`)
+
+**Objective.** Build part 2 of [VAT_PLAN.md](../plans/VAT_PLAN.md) as revised after the accountant review (Ben: "A"), with the second
+review's points: a bill's VAT as printed, capital assets identified, a way to record import VAT.
+
+**Actions Completed.**
+- `sql/087_vat_on_purchases.sql`: bill lines store a copied rate, net and VAT (trigger); bills store net, computed VAT, VAT as printed
+  (tolerance 1 minor unit per line, at least 5) and gross; expenses store net and VAT as printed (amount stays the gross). Both store
+  deductible, kind of purchase (local, capital, import), document reference and supplier tax number, guarded against edits. New
+  `fin__purchase_vat` checks them (deductible needs registration, VAT and a reference). `pur_record_supplier_invoice` and
+  `fin_record_expense` take `p_vat` (old signatures dropped; sql/068's positional call still resolves). `core_set_vat` records
+  `vat_from`; companies already registered get the date of their switch-on audit row. Posting: deductible VAT to 1811, otherwise
+  into cost. Owed on a bill = gross in `fin_record_payment` and `insights_home` (copied from sql/086, checked identical by script).
+- `sql/tests/083_vat_on_purchases.sql` (new, 9 groups).
+- API: bills and expenses return net, VAT, computed VAT, gross and the VAT details (read with `*`, so they answer before the migration);
+  create accepts per-line `taxRateId` and a `vat` object (sent only when given); open items use the bill's gross; `GET /core/org/vat`
+  returns `vatFrom`; `VAT_MISMATCH`, `VAT_NOT_DEDUCTIBLE` answer 409. `vatRows.ts` moved to `apps/api/src/lib/` (shared by sales,
+  purchasing, finance). Tests in `apps/api/test/vat.test.ts`.
+- Web: a shared "VAT on this purchase" block (`finance/PurchaseVatFields.tsx`) in the bill and expense forms; VAT per line on bills;
+  the bill and expense pages show the VAT, whether it is deducted, the reference and the kind; Arabic machine drafts.
+- Plan: "Part 2 as built". The second review message arrived cut off (3 of 5 points); the other two are not known.
+
+**Database / System Result.** `sql/087` applied to live 16 Nov by Ben via CLI. Last verification row: `users_bill` true, `users_expense`
+true, `anon_expense` false, `users_helper` false (the first query's output was not shown). Test 083 on live: ALL TESTS PASSED (everything rolled back).
+
+**Safety Status.** Local SQL run (PGlite, all 85 migrations): 82 of 82 SQL tests pass. Typecheck clean (shared, API, web against this
+branch's shared package, temporary configs removed); tests: shared 81, API 569, web 144. `biome ci .`: exit 0, no errors (152 warnings
+as before). Not verified: a dry run on live, the screens in a browser, the Arabic.
+
+## 2026-11-16 — `sql/086` applied to live; accountant review of the VAT plan received
+
+**Objective.** Put VAT part 1 live after PR #55 was merged, and take in the accountant review
+([claudetheaccountantreplytoVATPLAN_MD.md](../plans/claudetheaccountantreplytoVATPLAN_MD.md)).
+
+**Actions Completed.** Ben ran `supabase db query --linked -f sql/086_tax_on_documents.sql`, then `sql/tests/082_vat_on_documents.sql`
+on live. Checked two review points in the code: no document has a discount (VAT is always on the full net); account 1811 lands on
+"other current assets" through the `sql/085` defaults (codes starting 18), not on investments. `sql/README.md` updated.
+
+**Database / System Result.** `sql/086` live. Last verification row: `users_can_set_vat` true, `anon_can_set_vat` false,
+`users_can_call_owed_helper` false (the CLI showed only the last query; the other two checks were not seen). Test 082 on live:
+ALL TESTS PASSED (everything rolled back). Test 040 on live (default chart now 40 accounts, 21 roles): ALL TESTS PASSED.
+
+**Safety Status.** No dry run on live was recorded before applying. Still to run on live: the first two verification queries of `sql/086`
+(invoices and notes match their lines; every chart has both VAT roles) Not yet verified in a
+browser. The review's eight changes are not in the plan yet: waiting for Ben.
+
+## 2026-11-16 — VAT part 1: VAT on sales invoices and notes, posting, amount owed (`sql/086`)
+
+**Objective.** Build part 1 of [VAT_PLAN.md](../plans/VAT_PLAN.md), approved by Ben on 16 Nov: prices are typed before VAT; invoices
+issued before VAT keep zero tax. A VAT-registered company issues sales invoices and credit/debit notes with VAT on each line, the tax
+posts to its own account, and every "amount owed" uses the gross net of approved notes.
+
+**Actions Completed.**
+- `sql/086_tax_on_documents.sql`: line columns (`tax_rate_id`, copied `tax_rate`, `net_minor`, `tax_minor`) on invoice and note lines
+  and document totals (`net_minor`, `tax_minor`, `gross_minor`) on invoices and notes; one BEFORE INSERT trigger applies the line rule
+  (net = round(qty × price), tax = round(net × rate / 100), half away from zero); invoice totals are rolled up from their lines and
+  guarded against edits; note `total_minor` = gross (checked). Backfill: existing lines and documents net = gross, tax 0 (note lines'
+  append-only trigger switched off only for that update, inside the transaction). `core_set_vat` (owner/admin, audited). New
+  `sal_create_invoice` (rate per line: given id, else the item's VAT default, else the company default, or `"exempt"`; refused when not
+  registered) and `sal_submit_note` (the invoice line's rate; tax recomputed on the note's quantity and price). Roles `output_vat` and
+  `input_vat`, accounts 2871 Output VAT payable and 1811 Input VAT recoverable added to every existing chart (audited per company) and
+  to new charts. Posting: invoice Dr customers gross / Cr sales net / Cr output VAT; credit note Dr returns net / Dr output VAT /
+  Cr customers gross; debit note the reverse. `sal__invoice_owed` used by the overpayment check, payment links, owner insights, the
+  overdue alert and the open-invoices report link: these four functions are copied from their latest files with only the invoice total
+  swapped (checked identical by script).
+- `sql/tests/082_vat_on_documents.sql` (new, 13 groups) and `sql/tests/040` (the default chart now has 40 accounts and 21 roles).
+- `packages/shared/src/vat.ts` (+ test against the ETA calculator), `ACCOUNT_ROLES` and `OrgSettings` extended.
+- API: invoices and notes return `netMinor`, `taxMinor`, `grossMinor` and per-line `taxRate`, `taxMinor` (`totalMinor` kept as the
+  gross); they read with `*` so the code also answers before the migration is applied (old figures, no VAT). Create invoice accepts a
+  per-line `taxRateId`. Finance open items use the stored gross and approved notes. `GET`/`PUT /v1/core/org/vat`; `VAT_RATE_MISSING`
+  answers 409. Tests: `apps/api/test/vat.test.ts`, `einvoicing.test.ts` updated.
+- Web: invoice page shows before VAT, VAT and total with VAT, and a VAT column (only when the invoice carries VAT); the create form has a
+  VAT choice per line when registered; the note form previews VAT; Settings → General → VAT card; role labels; Arabic machine drafts.
+- [ADR-0005](../architecture/decisions/ADR-0005-vat-on-documents.md) written from the plan's section 12 (accepted with the plan).
+
+**Decisions taken while building (in the plan, "Part 1 as built").** There is no tax rate screen in the app, so switching VAT on with no
+rate uses the company's default VAT rate or adds the standard 14% (V009) as a company rate, in the same audited step. Group 18 in our
+unified chart reference is "Current financial investments": the plan's 1811 is kept, flagged for the accountant.
+
+**Database / System Result.** None on live. `sql/086` is not applied.
+
+**Safety Status.** Local SQL run (PGlite, all 84 migrations): 81 of 81 SQL tests pass, including the new 082. Typecheck clean for shared,
+API and web, and tests pass: shared 81, API 566, web 144. These ran in a git worktree against this branch's `packages/shared`
+(temporary tsconfig paths and vitest alias, removed afterwards; nothing installed). Biome: no errors, no new warnings. Not verified: a dry
+run on live inside a rolled-back transaction (do it before applying), the screens in a browser, and the Arabic (add to the review
+sheet). To apply: dry run, then `supabase db query --linked -f sql/086_tax_on_documents.sql`, then `sql/tests/082` and `040` on live.
+
+## 2026-11-18 — CI guards: column grants, migration numbers, docs-only PRs
+
+**Objective.** After the 17-18 Nov item-list outage (a column added without its read grant, merged with a red check): catch that class of
+mistake on the pull request, stop number clashes between parallel chats, and keep documentation PRs fast now that branch protection (set
+up 18 Nov: 3 required checks, no bypass, auto-merge on) requires every check.
+
+**Actions Completed.**
+- `sql/tests/092_column_grants.sql`: on tables read column by column, every column must be readable by signed-in users unless listed
+  with its reason. Lists today's 14: 7 hidden on purpose (costs, codes, secrets) and 7 not granted yet because no screen reads them
+  (`inv_stock_moves.transfer_id/count_id/note_id/purchase_order_id`, `msg_identities.updated_at`,
+  `core_integrations.last_check_started_at`, `msg_outbox.delivered_via`): grant them in the migration that first reads them.
+- `scripts/check-migrations.mjs` (run in `ci-deploy.yml`): no two migrations or SQL tests share a number; every migration has its row
+  in `sql/README.md`.
+- `workflow-tests.yml`: a pull request that changes only `documentation/` or `*.md` skips the browser tests and passes at once.
+
+**Database / System Result.** None.
+
+**Safety Status.** Local PGlite (94 migrations): test 092 passes, and it would have failed on sql/095 without sql/096. Migration check:
+94 migrations, 91 SQL tests, OK. The workflow change runs on GitHub only.
+
+## 2026-11-18 — Fix: item screens stuck on "Loading…" after slice A (`sql/096`)
+
+**Objective.** The daily check found the workflow tests red on `main` since the first slice A commit (`2f33366`); PR #70 was merged with
+that check failing and deployed. `inv_items` is read through column-level grants (sql/036), and `sql/095` added `group_id` without one,
+so every item list asking for it was refused (`42501`, not a missing-column error, so the API fallback did not catch it). On live, the
+screens that load items (new purchase order, stock requests, invoices, items) stayed on "Loading…".
+
+**Actions Completed.** `sql/096_inv_item_group_read_grant.sql` grants select on the one column. `apps/api/src/modules/inventory/items.ts`:
+both item reads also fall back on `42501`, so a missing column grant can never again block every item screen. Regression test
+`sql/tests/091_inv_item_group_read.sql` (a signed-in member reads `group_id`; another company still sees nothing); the slice A source
+test updated for the new fallback line.
+
+**Database / System Result.** `sql/096` applied to live 18 Nov by Claude via the CLI at Ben's request (linked project `plhuuhcpvlytozyedamt`): `users_read_group_id` true, `anon_read_group_id` false.
+
+**Safety Status.** Local PGlite (94 migrations): tests 090 and 091 pass. API typecheck clean, API tests 617 pass, `biome ci .` 0 errors.
+Process: a red workflow check must block a merge; branch protection would have stopped this one.
+
+## 2026-11-16 — Audit findings 9 and 13 closed: architecture records match the code
+
+**Objective.** The 11 Nov audit found ADR-0002 described the old access model (service-role client) and two ADR-0004 links were broken
+and hidden by the link allowlist. Ben lifted the agent block on the ADR folder (`.claude/settings.json`) and asked Claude to make the edits.
+
+**Actions Completed.** ADR-0002: status Accepted as amended by ADR-0003, deciders Ben, the isolation bullet now says the database enforces
+isolation with the person's own JWT and names the master-key exceptions and their guard test. ADR-0003: Accepted and implemented. Draft
+ADR-0004: links fixed to `../../plans/`, note updated. `scripts/check-doc-links.known.txt`: the two ADR-0004 lines removed (list empty).
+
+**Database / System Result.** None.
+
+**Safety Status.** `node scripts/check-doc-links.mjs`: OK (108 files) with nothing skipped. Documentation only.
+
+## 2026-11-12 — Financial statements: income statement and balance sheet (`sql/085`)
+
+**Objective.** Roadmap phase 6, first item ([FINANCIAL_STATEMENTS_PLAN.md](../plans/FINANCIAL_STATEMENTS_PLAN.md)), approved by Ben on
+12 Nov ("do them asap"). Plan answers taken as recommended: the comparison defaults to the same period last year; the statements follow
+the trial balance's permission (`accounting.ledger.view`).
+
+**Actions Completed.**
+- `sql/085_acc_statement_lines.sql`: `acc_accounts.statement_line` (nullable, checked list of 14 EAS lines); `acc__default_statement_line`
+  (Egyptian chart code and kind: 11-15 non-current assets, 16 inventory, 17 receivables, 19 cash, 25-26 non-current liabilities, 34 cost
+  of sales, 37 finance costs, 38 income tax, 42 other income; 25, 26, 37 and 38 to confirm with the accountant); `acc__effective_lines`
+  (own line, else nearest ancestor's, else the default); `acc_set_statement_line` (owner or head accountant, audit row in the same
+  transaction, refuses a line from the other statement); `acc_income_statement(from, to)` and `acc_balance_sheet(at)` (owner and admin,
+  posted entries, one currency, natural signs; the balance sheet adds the year's profit to date and earlier unclosed years as equity).
+- `sql/tests/081_financial_statements.sql`: figures, net profit, the balance sheet balances, overrides and their audit, wrong-statement
+  line refused, members refused, the other company sees nothing.
+- `packages/shared/src/accounting.ts`: the EAS layout maths (`buildIncomeStatement`, `buildBalanceSheet`, `sameDateLastYear`), tested in
+  `statements.test.ts`.
+- API (`modules/accounting/routes.ts`): `GET /statements/income`, `GET /statements/balance` (both with comparison and CSV),
+  `GET /statement-lines`, `PUT /accounts/:id/statement-line`. Missing schema answers 503 `not_set_up` (global handler).
+- Web (`modules/accounting/Statements.tsx`): Accounting → Income statement (gross, operating, before-tax and net profit), Balance sheet
+  (with the balance check shown, never hidden), Statement lines (owner or head accountant can change; others see them). Each account opens
+  its entries. Print and CSV. Arabic machine draft for every new string (`i18nNav.ts`, `i18nScreens.ts`).
+- `sql/README.md`: 085 added; 084 recorded as applied to live 11 Nov (Ben's verification output).
+
+**Database / System Result.** `sql/085` applied to live 12 Nov by Ben: `has_column` true, `anon_can_read` false, `users_can_read` true,
+`users_can_set` true (the function itself admits only owners and head accountants).
+
+**Safety Status.** Local SQL run (PGlite, all 83 migrations): 80 of 80 SQL tests pass, including the new one. `npm run typecheck` clean;
+`npm test` passes (shared 78, API 555, web 142; the every-write-route test now also covers the new PUT). Biome: no errors. Doc links OK.
+Not verified: a dry run on live, the pages in a browser against real data, and the Arabic (machine draft, to add to the review sheet).
+
+## 2026-11-12 — Audit of 11 Nov: Batch 3 finished (purchase order and credit note workflows)
+
+**Objective.** Finish finding 17: the workflow suite named in the audit response (stock approval, purchase order receipt, credit
+note, company isolation). The stock workflow passed on PR #46 (merged 12 Nov, all three checks green).
+
+**Actions Completed.**
+- `apps/web/e2e-workflows/purchase-receive.e2e.ts`: the owner places an order for 10 boxes; it waits for approval (on by default,
+  `sql/069`) and cannot be received; the owner, the only owner or manager, approves it (shown as self-approved, D1b); the goods are
+  received; a fresh stock page shows 10 where there were none.
+- `apps/web/e2e-workflows/credit-note.e2e.ts`: on a seeded issued invoice, the owner raises a credit note for 2; it waits for approval
+  and changes nothing; once approved, a fresh load shows 251.00 credited and the amount owed after notes.
+- `apps/web/e2e-workflows/helpers.ts`: sign-in (with the first-sign-in language question) and the search picker, shared by all tests.
+- `scripts/e2e-seed.mjs`: adds a supplier, an item with no stock, a customer and one issued invoice (inserted directly, as
+  `sql/tests/031` does: the order and delivery flow before an invoice is covered by the SQL tests).
+
+**Database / System Result.** None on live.
+
+**Safety Status.** The seed SQL was run on a local copy with all 82 migrations (PGlite, rolled back): it passes. The test files
+typecheck and Playwright lists 5 tests in 3 files. Each selector was checked against the screen code (labels, dialog titles, the
+real-API receive button). The browser tests themselves only run on GitHub (no Docker here). The ADR edits (findings 9 and 13) were
+attempted at Ben's request and refused by the permission settings; they remain Ben's (text in the audit response).
+
 ## 2026-11-11 — Audit of 11 Nov: Batch 3 starts (workflow tests on a real local stack); permission test on every write route
 
 **Objective.** Finding 17 (browser tests only open pages) and finding 14 (the permission test covered one route per group). Also
@@ -3044,3 +3465,22 @@ the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitigno
 **Addendum (12 Nov), sign-in page review and a button fix.** Opened the preview in Chrome (not signed in; no credentials entered, nothing pressed). Found on the sign-in page: with the Design Lab "Gradient" button option the dark-mode primary button had dark text on a mid-grey gradient (about 2:1). Fixed in `design-lab.css` (light gradient with dark text in dark mode); verified on a local sample-data build: dark 11.1:1 and 6.7:1, light 5.7:1 and 10.5:1. Also noted: no logo on the sign-in page. Not checked: the real screens behind sign-in (needs Ben to sign in), a redeployed preview showing the fix.
 
 **Addendum (12 Nov), review of the real screens on the preview.** Ben signed in on the preview (fake data); the review in Chrome was read-only (navigation and screenshots only; only the display theme was toggled and restored to dark). Measured about 45 pages in 11 apps: no sideways overflow, no text under 12px except 18 small status labels on Settings > Integrations (belongs to the integrations work). Looked at Home, Sales, Accounting setup, Integrations, the Send goods out form, Batches and Stock in dark and light mode in Arabic right-to-left: layout mirrors correctly. Found and fixed: the keyboard focus ring on the dark sidebar was dark-on-dark in light mode (about 1.6:1), now a light ring (`styles.css`, with a Lab rule for the light sidebar options). Details and open items in `documentation/planning/2026-11-12-new-look-rollout-plan.md`. Not checked: pop-ups and error states, phone width on the real app, Safari and Firefox. The fixes need a preview redeploy; nothing was deployed.
+
+## 2026-11-12 — Let the branch preview of the real app call the API (so the Design Lab can be tried with real data)
+
+**Objective.** Ben wants the new look with the Design Lab on a preview link that works with real sign-in and real data, not the sample-data build. A real-app preview showed "Cannot reach the server": the API Worker only accepts requests whose `Origin` is in `ALLOWED_ORIGINS` (exact match, `apps/api/src/index.ts`), and that was only `https://erp-live.pages.dev`, so the browser blocked every call from the preview address. The Supabase change Ben made (`*.erp-live`) does not affect this: Supabase's list controls sign-in redirects, not which sites may call our API.
+
+**Actions Completed.** `apps/api/wrangler.toml`: `ALLOWED_ORIGINS` now also lists `https://worktree-ui-warm.erp-live.pages.dev` (the fixed branch address of the Pages project `erp-live`, branch `worktree-ui-warm`), with the live app kept first. Side effects checked in code: `telegram.ts` and `memberRoutes.ts` use the first entry as the default app address (unchanged); invite and password-reset links are sent to the address of the app that made the request when it is on the list, so an invite sent from the preview links to the preview. Not applied: this is a change to the production Worker and takes effect only after it is merged to main and the production deploy runs. Branch `preview-api-origin`, nothing pushed.
+
+**Database / System Result.** None (no SQL). The preview reads and writes the same database as the live app.
+
+**Safety Status.** `wrangler.toml` parses (checked with a TOML parser). Not checked: the change has not been deployed or tested against the live Worker. Remove the second entry when the preview is not needed. Sign-in from the preview address also needs it in Supabase Auth's redirect URLs only for email-link/OAuth flows; password sign-in does not.
+## 2026-11-12 — Undo the new look on production (it was merged by mistake); keep it as a preview
+
+**Objective.** Ben wanted the new look (warm/graphite theme, left menu, Home banner, Design Lab) only as a Cloudflare preview. PR #48 was merged to main (97af299) and the production deploy ran successfully, so the live app (`erp-live`) got the new look. It was my mistake: I walked Ben through a PR and merge when he had asked for a preview.
+
+**Actions Completed.** (1) Started the preview he asked for: `Preview deploy (sample-data build)` on branch `worktree-ui-warm` with the Design Lab (run 43286007482; erp-demo project preview, not production). (2) Prepared branch `undo-new-look-on-production` from `origin/main`: restored the six look files (`theme.css`, `styles.css`, `Shell.tsx`, `AppMenu.tsx`, `icons.tsx`, `Home.tsx`) to their versions before the merge (97af299^1), and removed `worktree-ui-warm` from `.github/sync-branches.txt` so the sync workflow does not merge this undo into the new-look branch. Kept on main: the preview and sync workflows, the dev-only Design Lab code and the `DESIGN_LAB` build switch (a normal build has no Lab). Nothing was pushed or merged by this session. (3) To undo what is live right now without waiting for code: Cloudflare dashboard > Workers & Pages > erp-live > Deployments > the production deployment before 18:56 UTC on 12 Nov > Rollback to this deployment.
+
+**Database / System Result.** None (no SQL). The API Worker was redeployed by the same job with identical API code.
+
+**Safety Status.** Undo branch: `biome ci` 0 errors, web `tsc` 0 errors, web tests 142 passed. Not checked: the undo has not been deployed; the Cloudflare rollback was not done by this session (needs the dashboard). The new look stays on `worktree-ui-warm` (do not merge it to main; use the preview workflow instead). If main later needs the new look, revert this undo commit.

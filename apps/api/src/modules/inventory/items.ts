@@ -17,6 +17,8 @@ type ItemRow = {
   reorder_level: number | null;
   tracks_batches?: boolean;
   storage_condition_id?: string | null;
+  default_tax_rate_id?: string | null;
+  group_id?: string | null;
 };
 const toItem = (r: ItemRow) => ({
   id: r.id,
@@ -27,18 +29,26 @@ const toItem = (r: ItemRow) => ({
   reorderLevel: r.reorder_level === null ? null : Number(r.reorder_level),
   tracksBatches: Boolean(r.tracks_batches),
   storageConditionId: r.storage_condition_id ?? null,
+  /** The item's own VAT rate (null = the company default); sql/036 column, set without e-invoicing since sql/092. */
+  vatRateId: r.default_tax_rate_id ?? null,
+  /** The item's group (sql/095), or null. */
+  groupId: r.group_id ?? null,
 });
+
+const ITEM_COLUMNS = 'id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id, default_tax_rate_id';
+// group_id comes with sql/095; before it is applied the item list falls back to the columns above, so nothing else breaks.
+const ITEM_COLUMNS_WITH_GROUP = `${ITEM_COLUMNS}, group_id`;
 
 export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
-    const { data, error } = await userDb(c)
-      .from('inv_items')
-      .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id')
-      .eq('org_id', orgOf(c))
-      .is('deleted_at', null)
-      .order('sku');
+    const list = (columns: string) =>
+      userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
+    let { data, error } = await list(ITEM_COLUMNS_WITH_GROUP);
+    // Also on "permission denied" (42501): inv_items is read through column grants, and a new column without its grant must not
+    // block every screen that lists items (sql/095 shipped without one; fixed by sql/096).
+    if (error && (isMissingSchema(error) || (error as { code?: string }).code === '42501')) ({ data, error } = await list(ITEM_COLUMNS));
     if (error) throw error;
-    return ok(c, ((data ?? []) as ItemRow[]).map(toItem));
+    return ok(c, ((data ?? []) as unknown as ItemRow[]).map(toItem));
   });
 
   inventoryRoutes.get('/stock', requirePermission('inventory.items.read'), async (c) => {
@@ -138,7 +148,11 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     const body = await jsonBody(c);
     const sku = text(body.sku);
     const name = text(body.name);
-    if (!sku || !name) invalid('SKU and name are required');
+    // A blank code is allowed: under the prefix or group rule the database gives the next one (sql/095); under "typed" it refuses.
+    if (!name) invalid('Item name is required');
+    const rawGroup = body.groupId;
+    const groupId = rawGroup === null || rawGroup === undefined || rawGroup === '' ? null : rawGroup;
+    if (groupId !== null && (typeof groupId !== 'string' || !UUID_RE.test(groupId))) invalid('groupId must be an item group id or null');
     const opening = Number(body.openingQty ?? 0);
     if (!Number.isFinite(opening) || opening < 0) invalid('Opening stock must be zero or more');
     const cost = body.unitCostMinor === undefined || body.unitCostMinor === null ? null : Number(body.unitCostMinor);
@@ -153,14 +167,32 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
       p_warehouse_id: text(body.warehouseId) || null,
       // sql/046: opening stock is a receipt, so it carries its unit cost (required once accounting is on; it also sets the average).
       p_unit_cost_minor: opening > 0 ? cost : null,
+      // Sent only with a group, so creating items keeps working before sql/095 is applied.
+      ...(groupId ? { p_group_id: groupId } : {}),
     });
     // No opening stock: the optional average cost is set by hand (efficiency audit 2026-11-04, F4), the existing audited function,
     // owners and admins only. With opening stock the receipt above already set it.
     if (opening === 0 && cost !== null && cost > 0)
       await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
+    // The code may have been given by the database: read it back.
+    const { data: saved, error: readError } = await userDb(c)
+      .from('inv_items')
+      .select('sku')
+      .eq('org_id', orgOf(c))
+      .eq('id', id)
+      .maybeSingle();
+    if (readError) throw readError;
     return ok(
       c,
-      toItem({ id, sku: sku.toUpperCase(), name, name_ar: text(body.nameAr) || null, uom: text(body.uom) || 'piece', reorder_level: null }),
+      toItem({
+        id,
+        sku: (saved as { sku: string } | null)?.sku ?? sku.toUpperCase(),
+        name,
+        name_ar: text(body.nameAr) || null,
+        uom: text(body.uom) || 'piece',
+        reorder_level: null,
+        group_id: groupId as string | null,
+      }),
       201,
     );
   });
@@ -194,6 +226,15 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     return ok(c, { id, name, nameAr: text(body.nameAr) || null });
   });
 
+  // An item's own VAT rate (sql/092; null = the company default). Owners and admins in the database; no e-invoicing module needed.
+  inventoryRoutes.put('/items/:id/vat-rate', requirePermission('inventory.items.manage'), async (c) => {
+    const id = idParam(c);
+    const raw = (await jsonBody(c)).rateId;
+    const rateId = raw === null || raw === undefined || raw === '' ? null : raw;
+    if (rateId !== null && (typeof rateId !== 'string' || !UUID_RE.test(rateId))) invalid('rateId must be a VAT rate id or null');
+    await callRpc<void>(userDb(c), 'inv_set_item_vat_rate', { p_item_id: id, p_rate_id: rateId });
+    return ok(c, { id, vatRateId: rateId });
+  });
   // Set an item's average cost by hand (sql/023 `inv_set_item_cost`: owners and admins only, audited, logged in inv_cost_log). The route
   // check is the early rejection; the database allows only owners and admins. Used by Settings-free flows such as the setup wizard.
   inventoryRoutes.put('/items/:id/cost', requirePermission('inventory.items.manage'), async (c) => {
@@ -211,15 +252,12 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     if (raw === undefined || (level !== null && (!Number.isFinite(level) || level < 0)))
       invalid('Reorder level must be zero or more, or empty');
     await callRpc<void>(userDb(c), 'inv_set_reorder_level', { p_item_id: id, p_level: level });
-    const { data, error } = await userDb(c)
-      .from('inv_items')
-      .select('id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id')
-      .eq('org_id', orgOf(c))
-      .eq('id', id)
-      .maybeSingle();
+    const one = (columns: string) => userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
+    let { data, error } = await one(ITEM_COLUMNS_WITH_GROUP);
+    if (error && (isMissingSchema(error) || (error as { code?: string }).code === '42501')) ({ data, error } = await one(ITEM_COLUMNS));
     if (error) throw error;
     if (!data) throw new HttpError(404, 'Item not found', 'not_found');
-    return ok(c, toItem(data as ItemRow));
+    return ok(c, toItem(data as unknown as ItemRow));
   });
 
   // ------------------------------------------------------------------ item units (sql/044)

@@ -4,8 +4,8 @@ import type { Lang } from '../../lib/i18n';
 // here, never in the component, and onboarding.test.ts fails if the two languages drift apart. The Arabic is a first draft awaiting
 // review by a native speaker.
 
-export type StepKey = 'welcome' | 'business' | 'company' | 'storage' | 'warehouse' | 'items' | 'suppliers' | 'customers' | 'team' | 'approval' | 'done';
-export const STEP_KEYS: StepKey[] = ['welcome', 'business', 'company', 'storage', 'warehouse', 'items', 'suppliers', 'customers', 'team', 'approval', 'done'];
+export type StepKey = 'welcome' | 'business' | 'company' | 'vat' | 'storage' | 'warehouse' | 'items' | 'suppliers' | 'customers' | 'team' | 'approval' | 'done';
+export const STEP_KEYS: StepKey[] = ['welcome', 'business', 'company', 'vat', 'storage', 'warehouse', 'items', 'suppliers', 'customers', 'team', 'approval', 'done'];
 
 // Decision D9 (Ben, 9 Nov 2026): the wizard first asks "What do you sell?" and shows only the steps that fit. The language step is gone
 // (language is already chosen at sign-up and in the first-run language chooser).
@@ -35,6 +35,8 @@ export type OnboardingContent = {
   welcome: { start: string; points: string[] };
   business: { options: Record<BusinessType, { label: string; hint: string }>; unitHint: Record<BusinessType, string> };
   company: { name: string; currency: string; timezone: string; dateFormat: string };
+  /** Walkthrough 18 Nov, fix B2: VAT is set up with the company, not found later in Settings. */
+  vat: { question: string; yes: string; no: string; creates: string; from: string; fromHint: string; ownerOnly: string; already: string; setUp: string };
   warehouse: { code: string; codeHint: string; name: string; condition: string; conditionHint: string; existing: (n: number) => string };
   items: { sku: string; name: string; nameAr: string; warehouse: string; unit: string; opening: string; cost: string; addRow: string; existing: (n: number) => string; needWarehouse: string };
   team: { email: string; fullName: string; role: string; roles: Record<'admin' | 'member' | 'viewer', string>; invite: string; invited: (email: string) => string; existing: (n: number) => string };
@@ -71,6 +73,7 @@ const EN: OnboardingContent = {
     welcome: { title: 'Welcome', body: 'This app runs your warehouse, buying and selling, with a manager approval on every outgoing stock movement and a history nobody can change. A few short steps set up your company; after this first screen you can skip any step or leave, and change everything later.' },
     business: { title: 'What do you sell?', body: 'Choose the closest. Setup then shows only the steps that fit your business; you can change your mind on this step at any time.' },
     company: { title: 'Your company', body: 'These appear on your documents and decide how money, dates and times are shown.' },
+    vat: { title: 'VAT', body: 'If the company is registered for VAT, invoices, bills and expenses carry VAT on every line and the app keeps the VAT accounts and the monthly VAT summary. Prices are typed before VAT.' },
     storage: { title: 'Storage conditions', body: 'Some goods must stay cool. A storage condition (for example a cold room at 2 to 8 °C) stops cold items being put in a warm warehouse.' },
     suppliers: { title: 'Your suppliers', body: 'The companies you buy from. Purchase orders and supplier invoices use them.' },
     customers: { title: 'Your customers', body: 'The companies you sell to. Sales orders and invoices use them.' },
@@ -103,6 +106,17 @@ const EN: OnboardingContent = {
     },
   },
   company: { name: 'Company name', currency: 'Currency', timezone: 'Time zone', dateFormat: 'Date format' },
+  vat: {
+    question: 'Is the company registered for VAT?',
+    yes: 'Yes, registered for VAT',
+    no: 'No, not registered',
+    creates: 'This sets up three rates: 14% general (the default), 0% for exports and Exempt. You can change them later in Settings: VAT.',
+    from: 'VAT applies from',
+    fromHint: 'Usually the first day of this month, or of your registration.',
+    ownerOnly: 'Only an owner can switch VAT on. You can skip this step; an owner can do it later in Settings: VAT.',
+    already: 'VAT is already on for this company.',
+    setUp: 'Set up VAT',
+  },
   warehouse: {
     code: 'Code',
     codeHint: 'Letters and numbers, e.g. MAIN',
@@ -147,6 +161,7 @@ const EN: OnboardingContent = {
       welcome: 'The user guide',
       business: 'The user guide',
       company: 'Settings: General',
+      vat: 'Settings: VAT',
       storage: 'Inventory: Batches and expiry',
       warehouse: 'Inventory: Stock on hand',
       items: 'Inventory: Stock on hand',
@@ -186,6 +201,7 @@ const AR: OnboardingContent = {
     welcome: { title: 'مرحبًا بك', body: 'يدير هذا التطبيق مستودعك ومشترياتك ومبيعاتك، مع موافقة مدير على كل حركة مخزون صادرة وسجل لا يمكن لأحد تغييره. بضع خطوات قصيرة تُعدّ شركتك؛ وبعد هذه الشاشة الأولى يمكنك تخطي أي خطوة أو المغادرة، وتغيير كل شيء لاحقًا.' },
     business: { title: 'ماذا تبيع؟', body: 'اختر الأقرب. بعدها يعرض الإعداد الخطوات التي تناسب نشاطك فقط، ويمكنك تغيير اختيارك في هذه الخطوة في أي وقت.' },
     company: { title: 'شركتك', body: 'تظهر هذه البيانات على مستنداتك وتحدد طريقة عرض المبالغ والتواريخ والأوقات.' },
+    vat: { title: 'ضريبة القيمة المضافة', body: 'إذا كانت الشركة مسجلة في ضريبة القيمة المضافة، تحمل الفواتير والمشتريات والمصروفات الضريبة على كل بند، ويحتفظ التطبيق بحسابات الضريبة والملخص الشهري. تُكتب الأسعار قبل الضريبة.' },
     storage: { title: 'ظروف التخزين', body: 'بعض البضائع يجب أن تبقى باردة. تمنع ظروف التخزين (مثل غرفة تبريد من 2 إلى 8 درجات) وضع الأصناف المبرّدة في مستودع دافئ.' },
     suppliers: { title: 'مورّدوك', body: 'الشركات التي تشتري منها. تستخدمها أوامر الشراء وفواتير المورّدين.' },
     customers: { title: 'عملاؤك', body: 'الشركات التي تبيع لها. تستخدمها أوامر البيع والفواتير.' },
@@ -219,6 +235,17 @@ const AR: OnboardingContent = {
     },
   },
   company: { name: 'اسم الشركة', currency: 'العملة', timezone: 'المنطقة الزمنية', dateFormat: 'تنسيق التاريخ' },
+  vat: {
+    question: 'هل الشركة مسجلة في ضريبة القيمة المضافة؟',
+    yes: 'نعم، مسجلة في الضريبة',
+    no: 'لا، غير مسجلة',
+    creates: 'يُنشئ هذا ثلاثة أسعار: 14% عام (الافتراضي)، و0% للتصدير، ومعفى. يمكنك تغييرها لاحقًا من الإعدادات: الضريبة.',
+    from: 'تُطبق الضريبة من',
+    fromHint: 'عادة أول يوم في هذا الشهر، أو في تاريخ تسجيلك.',
+    ownerOnly: 'المالك فقط يستطيع تفعيل الضريبة. يمكنك تخطي هذه الخطوة، ويمكن للمالك تفعيلها لاحقًا من الإعدادات: الضريبة.',
+    already: 'الضريبة مفعّلة بالفعل لهذه الشركة.',
+    setUp: 'إعداد الضريبة',
+  },
   warehouse: {
     code: 'الرمز',
     codeHint: 'حروف وأرقام، مثل MAIN',
@@ -263,6 +290,7 @@ const AR: OnboardingContent = {
       welcome: 'دليل الاستخدام',
       business: 'دليل الاستخدام',
       company: 'الإعدادات: عام',
+      vat: 'الإعدادات: الضريبة',
       storage: 'المخزون: الدفعات وتواريخ الانتهاء',
       warehouse: 'المخزون: المخزون المتاح',
       items: 'المخزون: المخزون المتاح',

@@ -1,14 +1,14 @@
 # In-app guided tour (English and Arabic)
 
-**Module:** core (help), no new module key · **Status:** `[📝 Draft / RFC]`. **Plan only.** The tour is not built. What exists today is described in section 2.
-**Owner:** Ben Arthur · **Version 1 built 3 Nov 2026** (uncommitted, not deployed); screens in section 4 are the built steps.
+**Module:** core (help), no new module key · **Status:** Historical design and build record; the tour was built in November 2026. Check the [current checklist](checklist.md) and [worklog](../operations/WORKLOG.md) for rollout evidence; this document's 3 Nov snapshot is not a current deployment record.
+**Owner:** Ben Arthur · **Version 1 built 3 Nov 2026**; later changes are recorded in the worklog.
 **Depends on:** language selection (section 3, built 3 Nov 2026), the Getting-started tutorial and the Guide.
 
 ## 1. Goal
 
 A new person is walked through the real app, one screen at a time: a short highlight on the actual button, a sentence saying what it does and why, then "next". It follows the language they chose, in the right direction. It replaces nothing: the Guide and the tutorial stay as reference pages.
 
-## 2. What exists today (3 Nov 2026)
+## 2. Original build snapshot (3 Nov 2026; some details superseded)
 
 - **Guide** (every company) and **Getting started** tutorial (companies that signed up through the app): pages that describe the app and link to the real screens. Both now read their text from `apps/web/src/modules/help/helpContent.ts`, in English and Arabic.
 - **Language selection:** the tutorial first shows a bilingual chooser (English / العربية) and shows nothing else until the person picks; the choice is saved on the person's **account** (`sql/038`, `/v1/core/me/language`; follows them to another browser) and also kept in the browser (`erp.lang`, `apps/web/src/lib/i18n.tsx`) so it applies before sign-in finishes; it can be changed with the switch on the tutorial and Guide pages or in Settings > General. Sets `lang` and `dir` on the page, so layout flips for Arabic.

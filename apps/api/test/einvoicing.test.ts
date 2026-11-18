@@ -98,7 +98,10 @@ describe('e-invoicing and credit / debit note API', () => {
     const salesSource = readFileSync(join(__dirname, '../src/modules/sales/routes.ts'), 'utf8');
     expect(salesSource).toContain('creditedMinor');
     expect(salesSource).toContain('debitedMinor');
-    expect(salesSource).toContain("'id,order_line_id,qty,unit_price_minor'");
+    // line ids, and since sql/086 each line's rate, VAT and gross (read with '*' so older databases still answer)
+    expect(salesSource).toContain("from('sal_invoice_lines').select('*').eq('org_id', orgOf(c)).eq('invoice_id', id)");
+    expect(salesSource).toContain('id: l.id');
+    expect(salesSource).toContain('...lineOut(l)');
   });
 
   it('asks for approval permission on approve and reject, never the create permission', () => {

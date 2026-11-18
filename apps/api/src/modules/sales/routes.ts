@@ -9,6 +9,8 @@ import { requirePermission } from '../../middleware/tenant';
 import { createBostaDelivery, type ShipmentInfo } from '../../lib/shipping/bosta';
 import { billingFor } from './billing';
 import { registerNoteRoutes } from './notes';
+import { registerPriceRoutes } from './prices';
+import { docTotals, lineOut, noteTotals, type LineOut, type LineRow } from '../../lib/vatRows';
 
 export const salesRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -145,13 +147,17 @@ type CustomerRow = {
   bank_account?: string | null;
   default_currency?: string | null;
   notes?: string | null;
+  customer_group_id?: string | null;
 };
 
 salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (c) => {
   const read = (columns: string) =>
     userDb(c).from('sal_customers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
   // Until sql/081 is applied the new columns do not exist: read the old ones so the list still works.
-  let { data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS}`);
+  // sql/097 adds the customer group; before it is applied the list reads without it.
+  let { data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS},customer_group_id`);
+  if (error && isMissingSchema(error))
+    ({ data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS}`));
   if (error && isMissingSchema(error)) ({ data, error } = await read('id,code,name,contact,city,phone,payment_terms_days'));
   if (error) throw error;
   return ok(
@@ -175,6 +181,8 @@ salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (
       bankAccount: x.bank_account ?? '',
       defaultCurrency: x.default_currency ?? '',
       notes: x.notes ?? '',
+      /** sql/097: the customer's group (price lists), or null. */
+      customerGroupId: x.customer_group_id ?? null,
     })),
   );
 });
@@ -264,27 +272,24 @@ type InvoiceRow = {
   status: string;
   created_at: string;
 };
+// Columns are read with '*' so that code shipped before sql/086 is applied still works (vatRows.ts computes the old figures then).
 salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c) => {
   const { data, error } = await userDb(c)
     .from('sal_invoices')
-    .select('id,number,order_id,customer_id,invoice_date,due_date,currency,status,created_at')
+    .select('*')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) throw error;
-  const rows = (data ?? []) as InvoiceRow[];
+  const rows = (data ?? []) as (InvoiceRow & Record<string, unknown>)[];
   const ids = rows.map((r) => r.id);
-  const byInvoice = new Map<string, { orderLineId: string; qty: number; unitPriceMinor: number }[]>();
+  const byInvoice = new Map<string, (LineOut & { orderLineId: string })[]>();
   if (ids.length) {
-    const { data: ls, error: le } = await userDb(c)
-      .from('sal_invoice_lines')
-      .select('invoice_id,order_line_id,qty,unit_price_minor')
-      .eq('org_id', orgOf(c))
-      .in('invoice_id', ids);
+    const { data: ls, error: le } = await userDb(c).from('sal_invoice_lines').select('*').eq('org_id', orgOf(c)).in('invoice_id', ids);
     if (le) throw le;
-    for (const l of (ls ?? []) as { invoice_id: string; order_line_id: string; qty: number; unit_price_minor: number }[]) {
+    for (const l of (ls ?? []) as (LineRow & { invoice_id: string; order_line_id: string })[]) {
       const a = byInvoice.get(l.invoice_id) ?? [];
-      a.push({ orderLineId: l.order_line_id, qty: Number(l.qty), unitPriceMinor: Number(l.unit_price_minor) });
+      a.push({ orderLineId: l.order_line_id, ...lineOut(l) });
       byInvoice.set(l.invoice_id, a);
     }
   }
@@ -292,6 +297,7 @@ salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c)
     c,
     rows.map((r) => {
       const lines = byInvoice.get(r.id) ?? [];
+      const t = docTotals(r, lines);
       return {
         id: r.id,
         number: r.number,
@@ -302,7 +308,9 @@ salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c)
         currency: r.currency,
         status: r.status,
         lines,
-        totalMinor: lines.reduce((n, l) => n + Math.round(l.qty * l.unitPriceMinor), 0),
+        ...t,
+        /** Kept as the gross for older clients (one release; VAT plan section 8). */
+        totalMinor: t.grossMinor,
         createdAt: r.created_at,
       };
     }),
@@ -311,41 +319,32 @@ salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c)
 // One invoice by id, same shape as the list (the list holds the newest 200 only, so a record page must not rely on it).
 salesRoutes.get('/invoices/:id', requirePermission('sales.invoices.read'), async (c) => {
   const id = idParam(c);
-  const { data: r, error } = await userDb(c)
-    .from('sal_invoices')
-    .select('id,number,order_id,customer_id,invoice_date,due_date,currency,status,created_at')
-    .eq('org_id', orgOf(c))
-    .eq('id', id)
-    .maybeSingle();
+  const { data: r, error } = await userDb(c).from('sal_invoices').select('*').eq('org_id', orgOf(c)).eq('id', id).maybeSingle();
   if (error) throw error;
   if (!r) throw new HttpError(404, 'Invoice not found', 'not_found');
-  const row = r as InvoiceRow;
-  const { data: ls, error: le } = await userDb(c)
-    .from('sal_invoice_lines')
-    .select('id,order_line_id,qty,unit_price_minor')
-    .eq('org_id', orgOf(c))
-    .eq('invoice_id', id);
+  const row = r as InvoiceRow & Record<string, unknown>;
+  const { data: ls, error: le } = await userDb(c).from('sal_invoice_lines').select('*').eq('org_id', orgOf(c)).eq('invoice_id', id);
   if (le) throw le;
-  // Approved credit and debit notes (sql/037): what the customer now owes is the total less credited plus debited.
+  // Approved credit and debit notes (sql/037): what the customer now owes is the gross less credited plus debited (all gross, sql/086).
   const { data: ns, error: ne } = await userDb(c)
     .from('sal_notes')
-    .select('kind,total_minor')
+    .select('*')
     .eq('org_id', orgOf(c))
     .eq('invoice_id', id)
     .eq('status', 'approved');
   if (ne) throw ne;
   let creditedMinor = 0;
   let debitedMinor = 0;
-  for (const n of (ns ?? []) as { kind: string; total_minor: number }[]) {
-    if (n.kind === 'credit') creditedMinor += Number(n.total_minor);
-    else if (n.kind === 'debit') debitedMinor += Number(n.total_minor);
+  for (const n of (ns ?? []) as Record<string, unknown>[]) {
+    if (n.kind === 'credit') creditedMinor += noteTotals(n).grossMinor;
+    else if (n.kind === 'debit') debitedMinor += noteTotals(n).grossMinor;
   }
-  const lines = ((ls ?? []) as { id: string; order_line_id: string; qty: number; unit_price_minor: number }[]).map((l) => ({
+  const lines = ((ls ?? []) as (LineRow & { id: string; order_line_id: string })[]).map((l) => ({
     id: l.id,
     orderLineId: l.order_line_id,
-    qty: Number(l.qty),
-    unitPriceMinor: Number(l.unit_price_minor),
+    ...lineOut(l),
   }));
+  const t = docTotals(row, lines);
   return ok(c, {
     id: row.id,
     number: row.number,
@@ -356,7 +355,8 @@ salesRoutes.get('/invoices/:id', requirePermission('sales.invoices.read'), async
     currency: row.currency,
     status: row.status,
     lines,
-    totalMinor: lines.reduce((n, l) => n + Math.round(l.qty * l.unitPriceMinor), 0),
+    ...t,
+    totalMinor: t.grossMinor,
     creditedMinor,
     debitedMinor,
     createdAt: row.created_at,
@@ -399,7 +399,10 @@ salesRoutes.post('/orders/:id/invoices', requirePermission('sales.invoices.manag
   const lines = (Array.isArray(b.lines) ? b.lines : [])
     .map((v) => {
       const l = v as Record<string, unknown>;
-      return { orderLineId: text(l.orderLineId), qty: Number(l.qty) };
+      // Optional VAT rate per line (sql/086): one of the company's rate ids, or "exempt". Omitted: the item's, else the company default.
+      const taxRateId = text(l.taxRateId);
+      if (taxRateId && taxRateId !== 'exempt' && !UUID_RE.test(taxRateId)) invalid('taxRateId must be a tax rate id or "exempt"');
+      return { orderLineId: text(l.orderLineId), qty: Number(l.qty), ...(taxRateId ? { taxRateId } : {}) };
     })
     .filter((l) => UUID_RE.test(l.orderLineId) && Number.isFinite(l.qty) && l.qty > 0);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !lines.length) invalid('An invoice date and at least one valid line are required');
@@ -422,6 +425,7 @@ salesRoutes.post('/orders/:id/cancel', requirePermission('sales.orders.manage'),
 });
 // ---- credit and debit notes with approval (sql/037); see ./notes.ts
 registerNoteRoutes(salesRoutes);
+registerPriceRoutes(salesRoutes);
 
 // ---- Bosta shipments (sql/058). A courier update never changes stock or money; cash on delivery is settled in finance.
 const SHIP_COLS =

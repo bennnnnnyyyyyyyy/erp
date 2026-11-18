@@ -5,6 +5,7 @@ import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
+import { demoMode } from '../../lib/demo';
 import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
@@ -68,9 +69,23 @@ export function SalesOrders() {
   );
 }
 
+/** The price each item has for this customer (price list for its group, else the item's price; sql/097). */
+const customerPrices = (customerId: string, itemIds: string[]) =>
+  api<{ itemId: string; priceMinor: number | null }[]>(`/v1/sales/prices?customerId=${customerId}&itemIds=${itemIds.join(',')}`).then((rows) =>
+    Object.fromEntries(rows.map((r) => [r.itemId, r.priceMinor])),
+  );
+
+type VatBasis = { vatRegistered: boolean; pricesIncludeVat: boolean; defaultVatRateId: string | null; rates: { id: string; rate: number }[] };
+
 export function NewSalesOrder() {
+  // The company's VAT basis for the price label and the line preview; without it (sample build, no access) the form shows no VAT.
+  const vat = useLoad(() => (demoMode ? Promise.resolve(null) : api<VatBasis>('/v1/core/org/vat').catch(() => null)));
+  const basis = vat.data
+    ? { registered: vat.data.vatRegistered, pricesIncludeVat: vat.data.pricesIncludeVat, defaultVatRateId: vat.data.defaultVatRateId, rates: vat.data.rates }
+    : null;
   return (
     <NewOrderForm
+      vat={basis}
       title={tr('New sales order')}
       intro={tr('Stock is reserved only when a stock request is raised for the order.')}
       partyLabel="Customer"
@@ -83,6 +98,7 @@ export function NewSalesOrder() {
       backLabel={tr('Sales orders')}
       submitLabel={tr('Save order')}
       partyAddPermission="sales.customers.manage"
+      priceLookup={demoMode ? undefined : customerPrices}
     />
   );
 }

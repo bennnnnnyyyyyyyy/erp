@@ -6,6 +6,7 @@ export * from './core';
 export * from './billing';
 export * from './modules/einvoicing';
 export * from './accounting';
+export * from './vat';
 export * from './treasury';
 export * from './bankStatements';
 export * from './mt940';

@@ -1,6 +1,6 @@
 # Customer Invoices Plan
 
-**Module key:** `sales` (second app inside Sales) · **Status:** Built (database, API, screen); not deployed · **Depends on:** sales, inventory
+**Module key:** sales · **Status:** Built in main. The 30 Oct worklog records the original database slice as applied and the API/screen as not yet deployed at that time. Later VAT behavior is specified in VAT_PLAN.md; consult the current checklist and worklog for present rollout status. **Depends on:** sales, inventory
 
 ## Purpose
 Record the bill to a customer for a delivered sales order and show ordered versus delivered versus invoiced per order line, flagging mismatches. Mirrors Supplier Invoices (`SUPPLIER_INVOICES_PLAN.md`).

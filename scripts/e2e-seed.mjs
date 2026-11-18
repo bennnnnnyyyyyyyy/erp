@@ -52,7 +52,7 @@ for (const email of Object.values(PEOPLE)) await createUser(email);
 // As postgres for the bootstrap, then as each owner for the setup, exactly as sql/tests do it.
 const sql = `
 do $$
-declare oa uuid; ob uuid; ua uuid; ub uuid; w uuid; m text;
+declare oa uuid; ob uuid; ua uuid; ub uuid; w uuid; m text; i uuid; cu uuid; so uuid; sol uuid; inv uuid;
 begin
   select id into ua from auth.users where email = '${PEOPLE.ownerA}';
   select id into ub from auth.users where email = '${PEOPLE.ownerB}';
@@ -69,7 +69,22 @@ begin
   set local role authenticated;
   w := public.inv_create_warehouse(p_code => 'MAIN', p_name => 'Main warehouse');
   perform public.inv_create_item(p_sku => 'GLV-001', p_name => 'Safety gloves', p_uom => 'pair', p_opening_qty => 100, p_warehouse_id => w);
+  -- Purchase order workflow: a supplier and an item with no stock yet.
+  perform public.inv_create_item(p_sku => 'BOX-001', p_name => 'Cardboard boxes', p_opening_qty => 0, p_warehouse_id => w);
+  perform public.pur_create_supplier(p_name => 'Delta Supplies');
+  -- Credit note workflow: a customer and an item; the issued invoice is inserted below, as sql/tests/031 does (the order and delivery
+  -- flow before an invoice is covered elsewhere).
+  i := public.inv_create_item(p_sku => 'FC50', p_name => 'Face cream 50ml', p_opening_qty => 0, p_warehouse_id => w);
+  cu := public.sal_create_customer(p_name => 'Buyer One', p_city => 'Cairo');
   reset role;
+  so := gen_random_uuid(); sol := gen_random_uuid(); inv := gen_random_uuid();
+  insert into public.sal_orders (id, org_id, number, customer_id, warehouse_id, status, currency, created_by)
+    values (so, oa, 'SO-E2E-1', cu, w, 'stock_requested', 'EGP', ua);
+  insert into public.sal_order_lines (id, org_id, order_id, item_id, qty, unit_price_minor) values (sol, oa, so, i, 10, 12550);
+  insert into public.sal_invoices (id, org_id, number, order_id, customer_id, invoice_date, currency, created_by)
+    values (inv, oa, 'INV-E2E-1', so, cu, current_date, 'EGP', ua);
+  insert into public.sal_invoice_lines (id, org_id, invoice_id, order_line_id, qty, unit_price_minor)
+    values (gen_random_uuid(), oa, inv, sol, 10, 12550);
 
   perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
   perform set_config('request.headers', json_build_object('x-org-id', ob)::text, true);

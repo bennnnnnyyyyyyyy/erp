@@ -1,5 +1,6 @@
 // Pure helpers for the credit and debit note form on the sales invoice page. The database is the judge (sql/037); these only let the
 // screen offer sensible quantities and show the amount still owed.
+import { vatLine, vatLineInclusive, vatTotals, type VatLine } from '@erp/shared';
 
 export type NoteForMath = { kind: string; status: string; lines: { invoiceLineId: string; qty: number }[] };
 
@@ -23,6 +24,12 @@ export function creditableLeft(invoicedQty: number, notes: NoteForMath[], invoic
 /** Money of a note from its lines, in minor units, rounded per the database (quantity times unit price). */
 export function noteTotalMinor(lines: { qty: number; unitPriceMinor: number }[]): number {
   return lines.reduce((n, l) => n + Math.round(l.qty * l.unitPriceMinor), 0);
+}
+
+/** A note's net, VAT and gross from its lines: each line keeps its invoice line's VAT rate (sql/086); the database computes the same. */
+export function noteVatTotals(lines: { qty: number; unitPriceMinor: number; taxRate?: number; priceIncludesVat?: boolean }[]): VatLine {
+  // a line typed with VAT (sql/093) is split the same way on the note
+  return vatTotals(lines.map((l) => (l.priceIncludesVat ? vatLineInclusive : vatLine)(l.qty, l.unitPriceMinor, l.taxRate ?? 0)));
 }
 
 /** What the customer owes on the invoice: its total less approved credit notes plus approved debit notes. */

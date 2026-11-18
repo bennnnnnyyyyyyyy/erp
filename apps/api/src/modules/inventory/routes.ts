@@ -4,6 +4,7 @@ import { registerAdjustmentRoutes } from './adjustments';
 import { registerBatchRoutes } from './batches';
 import { registerCountRoutes } from './counts';
 import { registerForecastRoutes } from './forecast';
+import { registerGroupRoutes } from './groups';
 import { registerItemRoutes } from './items';
 import { registerRequestRoutes } from './requests';
 import { registerTransferRoutes } from './transfers';
@@ -21,6 +22,7 @@ export const inventoryRoutes = new Hono<AppEnv>();
 
 registerWarehouseRoutes(inventoryRoutes);
 registerItemRoutes(inventoryRoutes);
+registerGroupRoutes(inventoryRoutes);
 registerRequestRoutes(inventoryRoutes);
 registerAdjustmentRoutes(inventoryRoutes);
 registerBatchRoutes(inventoryRoutes);

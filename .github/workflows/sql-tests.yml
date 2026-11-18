@@ -59,7 +59,7 @@ jobs:
         if: steps.changes.outputs.sql == 'true'
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.116.0   # pinned: "latest" asks the GitHub API each run and failed on its rate limit (16 Nov)
 
       - name: Make sure psql is available
         if: steps.changes.outputs.sql == 'true'

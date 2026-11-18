@@ -15,12 +15,11 @@ Every integration is now off or on, and on means the real provider; it can only 
 provider's own test keys or test store, not ours. The simulated Central Bank of Egypt table is gone; ETA offers PreProd (ETA's own test
 system) or production. Our tests still use fakes, so a test run never reaches a provider. Section 5's two modes are superseded.
 
-**Build status (6 Nov):**
-- Wave 1 is built on branch `integrations-wave1`: email, Slack, Teams, Telegram and exchange rates, each simulated until switched to
-  live.
-- `sql/053` is applied; `sql/054` (Telegram) is written and dry-run.
-- Not deployed. Live use needs our Resend account and domain (email) and a Telegram bot (Telegram). Slack and Teams need only each
-  company's own webhook URL.
+**Build status (18 Nov):**
+- The current checklist records integration stages A–E as built. Migration and live-check evidence is in the worklog and sql/README.md.
+- Test mode was removed in sql/082; an enabled integration uses its real provider.
+- Real provider transactions remain unverified where credentials or test transactions are missing.
+- This broader integrations plan remains a draft for future waves; its approval status does not mean every integration capability is built.
 
 ## 1. Goal
 

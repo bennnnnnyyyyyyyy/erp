@@ -9,6 +9,7 @@ import { useLoad } from '../../../lib/useLoad';
 import { useReloadSession, useSession } from '../../../session';
 import { CurrencySelect, TimeZoneSelect } from '../../../components/ZoneCurrencyFields';
 import { PeriodSettings } from './PeriodSettings';
+import { VatSettingsCard } from './VatSettingsCard';
 import { markTourSeen } from '../../help/tourAuto';
 
 function OptionRow({ title, line, on, onToggle }: { title: string; line: string; on: boolean; onToggle: () => void }) {
@@ -202,6 +203,7 @@ export function GeneralSettings() {
           </ul>
         </div>
       )}
+      {canEdit && !demoMode && session.modules.includes('sales') ? <VatSettingsCard /> : null}
       {canEdit && !demoMode && org.data ? <PeriodSettings org={org.data} onSaved={org.reload} /> : null}
     </section>
   );

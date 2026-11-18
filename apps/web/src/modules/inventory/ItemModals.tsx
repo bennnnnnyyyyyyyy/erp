@@ -3,12 +3,14 @@ import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
 import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
 import { UnitSelect } from '../../components/UnitSelect';
-import { hasPermission } from '@erp/shared';
+import { hasPermission, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
+import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import { tr, trf } from '../../lib/i18n';
+import { GroupSelect, useItemGroups, type CodeRule } from './ItemGroups';
 
 export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehouse[]; onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '' });
@@ -29,12 +31,29 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
     if (sku.info?.next && !touchedSku) setForm((f) => ({ ...f, sku: sku.info?.next ?? f.sku }));
   }, [sku.info?.next, touchedSku]);
 
+  // Item groups (sql/095): optional, required under the group code rule, where the next code comes from the chosen group (10-03-007).
+  const groups = useItemGroups();
+  const [groupId, setGroupId] = useState('');
+  const codeRule = useLoad(() => (demoMode ? Promise.resolve(null) : api<CodeRule>('/v1/inventory/item-code-rule').catch(() => null)));
+  const byGroup = codeRule.data?.rule === 'group';
+  useEffect(() => {
+    if (!byGroup || touchedSku) return;
+    if (!groupId) return setForm((f) => ({ ...f, sku: '' }));
+    let live = true;
+    api<CodeRule>(`/v1/inventory/item-code-rule?groupId=${groupId}`)
+      .then((r) => live && r.next && setForm((f) => ({ ...f, sku: r.next ?? f.sku })))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [byGroup, groupId, touchedSku]);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     let made: { id: string };
     try {
-      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null }) });
+      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, groupId: groupId || null, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null }) });
     } catch (err) {
       setError((err as Error).message);
       return;
@@ -55,11 +74,18 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
   return (
     <Modal title={tr('Add item')} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
-        {sku.info && !sku.info.format && canSetFormat && !skipFormat ? (
+        {sku.info && !sku.info.format && canSetFormat && !skipFormat && !byGroup ? (
           <SkuFormatForm initial={null} onSaved={(info) => sku.setInfo(info)} onCancel={() => setSkipFormat(true)} />
         ) : null}
+        {groups.data?.length || byGroup ? (
+          <label>
+            {tr('Item group')}
+            <GroupSelect leafOnly groups={groups.data ?? []} value={groupId} separator={codeRule.data?.separator} emptyLabel={byGroup ? tr('Choose a group') : tr('No group')} onChange={setGroupId} />
+            {byGroup ? <span className="hint muted">{tr('The code is built from the group. Items keep their code if they move later.')}</span> : null}
+          </label>
+        ) : null}
         <div className="form-row">
-          <label>SKU<input required value={form.sku} onChange={(e) => { setTouchedSku(true); set('sku')(e); }} /></label>
+          <label>SKU<input required={!byGroup} value={form.sku} onChange={(e) => { setTouchedSku(true); set('sku')(e); }} /></label>
           <label>{tr('Unit')}<UnitSelect label={tr('Unit')} value={form.uom} onChange={(uom) => setForm((f) => ({ ...f, uom }))} /></label>
         </div>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
@@ -94,6 +120,12 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
 // names are kept in the history.
 export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({ name: item.name, nameAr: item.nameAr ?? '' });
+  // The item's own VAT rate (sql/092): only shown when the company has VAT rates; empty = the company default.
+  const vat = useLoad(() => (demoMode ? Promise.resolve(null) : api<VatSettings>('/v1/core/org/vat').catch(() => null)));
+  const [rateId, setRateId] = useState(item.vatRateId ?? '');
+  // The item's group (sql/095). Moving it keeps its code.
+  const groups = useItemGroups();
+  const [groupId, setGroupId] = useState(item.groupId ?? '');
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -102,6 +134,8 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
     setError(null);
     try {
       await api(`/v1/inventory/items/${item.id}`, { method: 'PUT', body: JSON.stringify(form) });
+      if (rateId !== (item.vatRateId ?? '')) await api(`/v1/inventory/items/${item.id}/vat-rate`, { method: 'PUT', body: JSON.stringify({ rateId: rateId || null }) });
+      if (groupId !== (item.groupId ?? '')) await api(`/v1/inventory/items/${item.id}/group`, { method: 'PUT', body: JSON.stringify({ groupId: groupId || null }) });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -117,6 +151,23 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
         </p>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        {groups.data?.length ? (
+          <label>
+            {tr('Item group')}
+            <GroupSelect leafOnly groups={groups.data} value={groupId} emptyLabel={tr('No group')} onChange={setGroupId} />
+            <span className="hint muted">{tr('Moving an item to another group keeps its code.')}</span>
+          </label>
+        ) : null}
+        {vat.data?.rates.length ? (
+          <label>
+            {tr('VAT rate')}
+            <select value={rateId} onChange={(e) => setRateId(e.target.value)}>
+              <option value="">{tr('Company default')}</option>
+              {vat.data.rates.map((r) => <option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}
+            </select>
+            <span className="hint muted">{tr('Used on new invoices and bills for this item. Documents already issued keep their rate.')}</span>
+          </label>
+        ) : null}
         {error && <p className="error">{error}</p>}
         <div className="form-actions"><Button type="submit">{tr('Save changes')}</Button></div>
       </form>

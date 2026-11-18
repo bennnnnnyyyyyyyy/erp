@@ -55,6 +55,8 @@ export const MODULES: readonly ModuleManifest[] = [
     permissions: [
       'inventory.items.read',
       'inventory.items.manage',
+      // Item groups and the item code rule (sql/095): owners and admins.
+      'inventory.groups.manage',
       'inventory.warehouses.manage',
       'inventory.reorder.manage',
       'inventory.approval_policies.manage',
@@ -122,8 +124,14 @@ export const MODULES: readonly ModuleManifest[] = [
       'purchasing.orders.approve', // sql/069: owners and admins; never one's own order unless the only one
       'purchasing.invoices.read',
       'purchasing.invoices.record',
+      // supplier credit and debit notes (sql/094): members request, owners and admins decide (never their own unless the only one)
+      'purchasing.notes.read',
+      'purchasing.notes.create',
+      'purchasing.notes.approve',
+      // Each supplier's last cost (sql/097): owners and admins (not ".read", so members do not get it; costs reveal margins).
+      'purchasing.prices.view',
     ],
-    memberGrants: ['purchasing.orders.receive'],
+    memberGrants: ['purchasing.orders.receive', 'purchasing.notes.create'],
     suite: 'Sales & Purchasing',
   },
   {
@@ -144,6 +152,9 @@ export const MODULES: readonly ModuleManifest[] = [
       'sales.notes.read',
       'sales.notes.create',
       'sales.notes.approve',
+      // Sales prices and price lists (sql/097): everyone reads; owners and admins change them.
+      'sales.prices.read',
+      'sales.prices.manage',
     ],
     memberGrants: ['sales.orders.create', 'sales.orders.fulfill', 'sales.notes.create'],
     suite: 'Sales & Purchasing',

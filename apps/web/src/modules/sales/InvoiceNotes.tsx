@@ -12,7 +12,7 @@ import { usePeople } from '../../lib/people';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
-import { canCancel, canDecide, creditableLeft, noteTotalMinor, type NoteForMath } from './noteMath';
+import { canCancel, canDecide, creditableLeft, noteVatTotals, type NoteForMath } from './noteMath';
 
 // Credit and debit notes on one sales invoice (sql/037, sql/043; routes in apps/api/src/modules/sales/notes.ts). A note is a request:
 // a different owner or admin approves it (a sole owner may approve their own, sql/063, 065). The database refuses what is not allowed
@@ -22,7 +22,7 @@ export type NoteInvoice = {
   id: string;
   currency: string;
   status: 'issued' | 'void';
-  lines: { id?: string; orderLineId: string; qty: number; unitPriceMinor: number }[];
+  lines: { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; priceIncludesVat?: boolean }[];
 };
 type Note = NoteForMath & {
   id: string;
@@ -30,7 +30,10 @@ type Note = NoteForMath & {
   invoiceId: string;
   currency: string;
   reason: string;
+  /** Gross (net + VAT); netMinor and taxMinor since sql/086. */
   totalMinor: number;
+  netMinor?: number;
+  taxMinor?: number;
   requesterId: string;
   decidedBy: string | null;
   decidedAt: string | null;
@@ -86,7 +89,7 @@ export function InvoiceNotes({ invoice, itemOf, onChanged }: { invoice: NoteInvo
               <td><code>{n.number}</code></td>
               <td>{n.kind === 'credit' ? tr('Credit note') : tr('Debit note')}</td>
               <td><Pill status={PILL[n.status] ?? n.status} label={tr(STATUS_LABEL[n.status] ?? n.status)} /></td>
-              <td className="right">{money(n.totalMinor, n.currency)}</td>
+              <td className="right" title={n.taxMinor ? trf('Before VAT {net}, VAT {vat}', { net: money(n.netMinor ?? 0, n.currency), vat: money(n.taxMinor, n.currency) }) : undefined}>{money(n.totalMinor, n.currency)}</td>
               <td>{n.reason}</td>
               <td>{who(n.requesterId)}<div className="muted small">{formatDateTime(n.createdAt, session.org)}</div></td>
               <td>{n.decidedBy ? <>{who(n.decidedBy)}{n.decidedAt ? <div className="muted small">{formatDateTime(n.decidedAt, session.org)}</div> : null}{n.decisionComment ? <div className="muted small">“{n.decisionComment}”</div> : null}</> : <span className="muted">—</span>}</td>
@@ -143,7 +146,9 @@ function NoteForm({ kind, invoice, notes, itemOf, onClose, onError, onDone }: {
   const badBack = returnGoods && chosen.some((l) => backOf(l) < 0 || backOf(l) > qtyOf(l));
   const returning = returnGoods ? chosen.filter((l) => backOf(l) > 0) : [];
   const needsWarehouse = returning.length > 0 && !warehouseId;
-  const total = noteTotalMinor(chosen.map((l) => ({ qty: qtyOf(l), unitPriceMinor: priceOf(l) })));
+  // Each note line keeps its invoice line's VAT rate (sql/086); the price typed here is before VAT.
+  const totals = noteVatTotals(chosen.map((l) => ({ qty: qtyOf(l), unitPriceMinor: priceOf(l), taxRate: l.taxRate, priceIncludesVat: l.priceIncludesVat })));
+  const total = totals.grossMinor;
   const ready = chosen.length > 0 && reason.trim() !== '' && !overQty && !overPrice && !badBack && !needsWarehouse;
 
   async function submit() {
@@ -203,6 +208,9 @@ function NoteForm({ kind, invoice, notes, itemOf, onClose, onError, onDone }: {
             {returnGoods && <p className="muted small">{tr('The stock is added back only when the note is approved, at the cost it left at.')}</p>}
           </>
         )}
+        {totals.taxMinor > 0 ? (
+          <p className="muted small">{trf('Before VAT {net}, VAT {vat}', { net: money(totals.netMinor, invoice.currency), vat: money(totals.taxMinor, invoice.currency) })}</p>
+        ) : null}
         <p><strong>{tr('Note total')}: {money(total, invoice.currency)}</strong></p>
         <div className="form-actions">
           <Button disabled={busy || !ready} onClick={submit}>{busy ? tr('Submitting…') : tr('Submit for approval')}</Button>

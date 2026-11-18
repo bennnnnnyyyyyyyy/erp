@@ -38,6 +38,9 @@ export const NAV_AR: Record<string, string> = {
   // pages
   'Stock on hand': 'المخزون الحالي',
   'Reorder levels': 'حدود إعادة الطلب',
+  'Item groups': 'مجموعات الأصناف',
+  'Inventory settings': 'إعدادات المخزون',
+  Prices: 'الأسعار',
   'Stock forecast': 'توقعات المخزون',
   'Batches and expiry': 'الدفعات وتواريخ الانتهاء',
   'Approval policies': 'سياسات الموافقة',
@@ -103,6 +106,9 @@ export const NAV_AR: Record<string, string> = {
   Accounting: 'المحاسبة',
   'Chart of accounts, journal, manual entries and trial balance': 'دليل الحسابات ودفتر اليومية والقيود اليدوية وميزان المراجعة',
   'Trial balance': 'ميزان المراجعة',
+  'Income statement': 'قائمة الدخل',
+  'Balance sheet': 'قائمة المركز المالي',
+  'Statement lines': 'بنود القوائم المالية',
   Journal: 'دفتر اليومية',
   'Journal entry': 'قيد يومية',
   'Manual journals': 'القيود اليدوية',
@@ -119,6 +125,7 @@ export const NAV_AR: Record<string, string> = {
   'Treasury account': 'حساب الخزينة',
   Transfers: 'التحويلات',
   'Statement of account': 'كشف حساب',
+  'VAT summary': 'ملخص ضريبة القيمة المضافة',
   Branches: 'الفروع',
   'Import from a file': 'الاستيراد من ملف',
   // integrations (wave 1)

@@ -24,6 +24,8 @@ const CountsList = lazyNamed(() => import('./inventory/Counts'), 'CountsList');
 const CountPage = lazyNamed(() => import('./inventory/Counts'), 'CountPage');
 const ReceiveGoods = lazyNamed(() => import('./inventory/ReceiveGoods'), 'ReceiveGoods');
 const CountStock = lazyNamed(() => import('./inventory/CountStock'), 'CountStock');
+const ItemGroupsPage = lazyNamed(() => import('./inventory/ItemGroups'), 'ItemGroupsPage');
+const InventorySettingsPage = lazyNamed(() => import('./inventory/ItemGroups'), 'InventorySettingsPage');
 const ItemPage = lazyNamed(() => import('./inventory/ItemPage'), 'ItemPage');
 const InventoryOverview = lazyNamed(() => import('./inventory/Overview'), 'InventoryOverview');
 const AdjustmentsPage = lazyNamed(() => import('./inventory/Inventory'), 'AdjustmentsPage');
@@ -52,6 +54,7 @@ const SalesOrders = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrders');
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
 const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
 const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
+const PricesPage = lazyNamed(() => import('./sales/Prices'), 'PricesPage');
 const ExpensesPage = lazyNamed(() => import('./finance/Finance'), 'ExpensesPage');
 const PaymentsPage = lazyNamed(() => import('./finance/Finance'), 'PaymentsPage');
 const ExpensePage = lazyNamed(() => import('./finance/FinanceRecords'), 'ExpensePage');
@@ -66,6 +69,7 @@ const TransfersPage = lazyNamed(() => import('./treasury/Treasury'), 'TransfersP
 const BankStatementsPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementsPage');
 const BankStatementPage = lazyNamed(() => import('./treasury/Statements'), 'BankStatementPage');
 const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
+const VatSummaryPage = lazyNamed(() => import('./finance/VatSummary'), 'VatSummaryPage');
 const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
@@ -79,6 +83,9 @@ const JournalEditPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalE
 const JournalPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalPage');
 const TrialBalancePage = lazyNamed(() => import('./accounting/Ledger'), 'TrialBalancePage');
 const AccountLinesPage = lazyNamed(() => import('./accounting/Ledger'), 'AccountLinesPage');
+const IncomeStatementPage = lazyNamed(() => import('./accounting/Statements'), 'IncomeStatementPage');
+const BalanceSheetPage = lazyNamed(() => import('./accounting/Statements'), 'BalanceSheetPage');
+const StatementLinesPage = lazyNamed(() => import('./accounting/Statements'), 'StatementLinesPage');
 
 
 // Apps shown as tiles on the home screen. Each belongs to a module (packages/shared/src/modules.ts);
@@ -146,6 +153,9 @@ const INVENTORY_APP: AppDef = {
         ]),
     { path: '/adjustments', label: 'Adjustments', permission: 'inventory.adjustments.read', component: AdjustmentsPage },
     { path: '/reorder-levels', label: 'Reorder levels', permission: READ, component: ReorderLevelsPage },
+    // Item groups and codes (sql/095): real API only; the sample-data build has no groups.
+    ...(demoMode ? [] : [{ path: '/item-groups', label: 'Item groups', permission: READ, component: ItemGroupsPage }]),
+    ...(demoMode ? [] : [{ path: '/settings', label: 'Inventory settings', permission: READ, component: InventorySettingsPage }]),
     ...(demoMode ? [] : [{ path: '/forecast', label: 'Stock forecast', permission: 'inventory.forecast.read', component: ForecastPage }]),
     ...(demoMode ? [] : [{ path: '/batches', label: 'Batches and expiry', permission: 'inventory.batches.read', component: BatchesPage }]),
     { path: '/ledger', label: 'Stock ledger', permission: READ, component: LedgerPage },
@@ -197,6 +207,8 @@ const SALES_APP: AppDef = {
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
+    // Customer groups, price lists and the markup (sql/097).
+    { path: '/prices', label: 'Prices', permission: 'sales.prices.read', component: PricesPage },
     // Moved from Settings (Ben, 9 Nov 2026): Settings connects an integration, the apps use it. Same permission as its API route.
     { path: '/online-orders', label: 'Online orders', permission: 'core.integrations.view', component: OnlineOrders },
     { path: '/invoices', label: 'Sales invoices', permission: 'sales.invoices.read', component: CustomerInvoices },
@@ -247,6 +259,7 @@ export const APPS: AppDef[] = [
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
       { path: '/statements', label: 'Statement of account', permission: 'finance.statements.view', component: StatementsPage },
+      { path: '/vat', label: 'VAT summary', permission: 'finance.reports.view', component: VatSummaryPage },
     ],
   } satisfies AppDef]),
   // Accounting (documentation/plans/ACCOUNTING_PLAN.md section 6). Real API only. Owner and admin only. Set-up and the chart show
@@ -256,6 +269,9 @@ export const APPS: AppDef[] = [
     suite: 'Finance', basePath: '/accounting', pages: [
       { path: '', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage },
       { path: '/trial-balance', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage, nav: false, parent: '' },
+      { path: '/income-statement', label: 'Income statement', permission: 'accounting.ledger.view', component: IncomeStatementPage },
+      { path: '/balance-sheet', label: 'Balance sheet', permission: 'accounting.ledger.view', component: BalanceSheetPage },
+      { path: '/statement-lines', label: 'Statement lines', permission: 'accounting.ledger.view', component: StatementLinesPage, nav: false, parent: '/income-statement' },
       { path: '/entries', label: 'Journal', permission: 'accounting.ledger.view', component: EntriesPage },
       { path: '/entries/:id', label: 'Journal entry', permission: 'accounting.ledger.view', component: EntryPage, nav: false, parent: '/entries' },
       { path: '/journals', label: 'Manual journals', permission: 'accounting.ledger.view', component: JournalsPage },
@@ -344,6 +360,7 @@ export const MENU_GROUPS: Record<string, Record<string, string>> = {
     '/stock': 'Stock', '/batches': 'Stock',
     '/requests': 'History', '/transfers': 'History', '/counts': 'History', '/adjustments': 'History', '/ledger': 'History',
     '/reorder-levels': 'Settings and planning', '/forecast': 'Settings and planning', '/approval-policies': 'Settings and planning',
+    '/item-groups': 'Settings and planning', '/settings': 'Settings and planning',
   },
   // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
   settings: {

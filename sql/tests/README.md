@@ -70,6 +70,52 @@ Run the whole file at once with nothing else in the editor.
 | `054_shopify_orders.sql` | Shopify orders in: nothing created while off or in the wrong mode; a good order becomes one open sales order (SKU match, minor-unit prices, customer by phone, warehouse by code); replay creates nothing; unknown SKU, other currency, two prices, no lines hold the whole order; stock and money untouched; test order for owners and admins only; secret found by shop domain for the server only; isolation; no anonymous use (needs 059) |
 | `055_ai_state.sql` | AI state: nothing on by default; Ollama needs no consent; OpenAI shows on only while the notice is accepted (withdrawal hides it even if a row stayed on); saved keys reach the server only; users cannot call it (needs 060) |
 
+## Additional tests added after the original index
+
+The earlier table covers tests through 055. These later scripts are also part of the current suite; the migration register in [sql/README.md](../README.md) records paired migrations and live status.
+
+| File | Proves |
+|---|---|
+| 056_ai_notice_version.sql | AI notice versions and safe Ollama address rules |
+| 057_edit_records.sql | Audited edits to customer, supplier and item details |
+| 058_sole_approver.sql | Sole-owner self-approval exception for stock requests |
+| 059_partial_receipts.sql | Partial purchase-order receipts |
+| 060_sole_approver_more.sql | Sole-approver exceptions for adjustments, transfers, counts and credit notes |
+| 061_mvp_business_cycle.sql | One end-to-end business day with accounting and treasury |
+| 062_blind_counts.sql | Blind stock-count setting, roles and audit |
+| 063_bank_statements.sql | Bank statement import and reconciliation, part 1 |
+| 064_bank_statements_2.sql | Bank statement import and reconciliation, part 2 |
+| 065_po_approval.sql | Purchase-order approval and receiving gates |
+| 066_report_links.sql | Private report-link token access |
+| 067_google_chat_channel.sql | Google Chat channel URL and delivery restrictions |
+| 068_delivery_notes.sql | Supplier delivery-note number and receipt audit |
+| 069_order_confirmation.sql | Supplier confirmation and promised dates |
+| 070_update_warehouse.sql | Audited warehouse edits |
+| 071_sku_format.sql | Company item-code format and next-code generation |
+| 072_supplier_details.sql | Supplier details validation and compatibility |
+| 073_owner_self_approval.sql | Owner self-approval company setting and audit |
+| 075_customer_details.sql | Customer details validation and compatibility |
+| 076_integrations_live.sql | Integration live-only mode and defaults |
+| 077_integration_hardening.sql | Integration URL, webhook and secret hardening |
+| 078_paymob_order_binding.sql | Paymob callback binding to the original order |
+| 079_child_table_isolation.sql | Organization isolation for child business tables |
+| 080_audit_atomicity.sql | Failure-injection proof that data and audit writes are atomic |
+| 081_financial_statements.sql | Income statement and balance sheet known-answer checks |
+| 082_vat_on_documents.sql | VAT settings, calculations and sales documents |
+| 083_vat_on_purchases.sql | Supplier bills, expenses and input VAT |
+| 084_vat_rates_and_owner.sql | VAT rate administration and owner-only settings |
+| 085_vat_summary.sql | VAT summary known-answer checks |
+| 086_vat_settlement.sql | VAT month close, payment and carry-forward |
+| 087_item_vat_rate.sql | Per-item VAT-rate assignment and roles |
+| 088_vat_prices_include.sql | VAT-inclusive sales prices |
+| 089_pur_supplier_notes.sql | Supplier credit/debit notes, posting and isolation |
+| 090_inv_item_groups.sql | Item groups, codes, hierarchy and isolation |
+| 091_inv_item_group_read.sql | Regression guard for reading inv_items.group_id |
+| 092_column_grants.sql | Guard for column-level grants on signed-in reads |
+| 093_sal_prices.sql | Supplier costs, sales prices, price lists, roles and isolation |
+
 Not covered here: the real-login path through PostgREST. That is checked by [`scripts/real-login-check.mjs`](../../scripts/real-login-check.mjs) (needs a real user; see its header).
 
-Status: all files 001-012 pass via CLI (re-run 2026-10-30 after the last migration). Also `scripts/concurrency-check.mjs` (parallel actions through real logins, 12 checks, passed 2026-10-30). Run with `supabase db query --linked -f sql/tests/<file>`. Re-run after every change to `sql/`. Record each run in `documentation/operations/WORKLOG.md`.
+## Execution and current status
+
+This index describes test coverage, not recent pass status. The SQL workflow runs all numbered tests on a fresh local database when a pull request changes SQL. The migration register and dated worklog record individual live applies and test runs. Run one script with `supabase db query --linked -f sql/tests/FILE.sql` only after checking the migration register and target; each script is intended to roll back its changes. Current CI behavior is in `scripts/check-migrations.mjs`, `.github/workflows/sql-tests.yml`, and `scripts/ci-sql-tests.sh`.
