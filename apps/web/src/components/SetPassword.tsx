@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { supabase } from '../lib/supabase';
 
 import { tr } from '../lib/i18n';
+import { authErrorMessage } from '../lib/authErrors';
 // Shown after the user follows a password-reset or invite link. Supabase has already signed them in
 // with a short-lived recovery session; this sets the new password on that session.
 export function SetPassword({ invited = false, onDone }: { invited?: boolean; onDone: () => void }) {
@@ -14,14 +15,14 @@ export function SetPassword({ invited = false, onDone }: { invited?: boolean; on
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
-      setError("The passwords don't match.");
+      setError(tr("The passwords don't match."));
       return;
     }
     setBusy(true);
     setError(null);
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) setError(error.message);
+    if (error) setError(authErrorMessage(error));
     else onDone();
   }
 

@@ -31,6 +31,9 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 - Every business table has `org_id uuid not null references organizations(id)` and row level security, **and has isolation tests** (a user in another organization cannot read or change its rows). No exceptions for "internal only" tables.
 - Never hardcode a customer's name, logo, currency, time zone, tax rule or workflow. Put them in organization settings or seed data. Default currency is EGP, but it is a setting.
 - Every API route resolves the caller's organization and checks a permission (`requirePermission('module.action')`) before touching data. The route check is for early rejection; the database re-checks.
+  Three routes are deliberate exceptions (session bootstrap `GET /v1/core/session`, the caller's own `POST /v1/core/me/language`, and
+  `GET /v1/core/people`, the names of the caller's own company's members); `apps/api/test/route_permissions.test.ts` fails on any other
+  route without a permission check, so a new exception needs Ben's yes and a line there with its reason.
 - Modules are switched on per organization (`org_modules`). New features belong to a module; the core stays small.
 - Money is stored as integer minor units (`bigint`) plus an ISO 4217 currency code. Timestamps are `timestamptz` in UTC.
 - Business records are soft-deleted (`deleted_at`) and changes are written to the append-only `audit_log`.

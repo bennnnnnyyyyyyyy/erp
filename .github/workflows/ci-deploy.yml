@@ -26,6 +26,24 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Codex audit 18 Nov, finding 11: a pull request that changes only documentation (documentation/, *.md) skips the browser smoke
+      # test below, as workflow-tests.yml already does. Everything else in this job still runs; pushes to main always run all of it.
+      - name: Did only documentation change?
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then echo "app=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "origin/$BASE_REF...HEAD" | grep -qvE '^documentation/|\.md$'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Only documentation changed; the screen smoke test is not needed."
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -60,10 +78,12 @@ jobs:
       # image already has most of Chromium's libraries: if the system packages cannot be fetched, install the browser alone. The smoke
       # test below still runs and still stops the deploy if a screen breaks (or if a library really is missing).
       - name: Install the smoke-test browser
+        if: steps.changes.outputs.app == 'true'
         run: npx playwright install --with-deps chromium || { echo "::warning::System packages could not be fetched; installing the browser alone"; npx playwright install chromium; }
         working-directory: apps/web
 
       - name: Smoke test every screen
+        if: steps.changes.outputs.app == 'true'
         run: npm run test:e2e -w apps/web
 
       - name: Build web app
