@@ -40,8 +40,15 @@ export function toBaseLine(qty: number, priceMinor: number, factor: number, base
 }
 
 /** "3 box (36 piece)" for a saved line; just "36 piece" when it was typed in the base unit. */
-export function unitText(qty: number, baseUnit: string, unit: string | null | undefined, factor: number | null | undefined): string {
+export function unitText(
+  qty: number,
+  baseUnit: string,
+  unit: string | null | undefined,
+  factor: number | null | undefined,
+  /** Shows a stored unit name in the reader's language (pass tr: "box" reads "علبة" in Arabic). */
+  name: (unit: string) => string = (u) => u,
+): string {
   const n = (v: number) => String(Math.round(v * 1000) / 1000);
-  if (!unit || !factor) return `${n(qty)} ${baseUnit}`;
-  return `${n(qty / factor)} ${unit} (${n(qty)} ${baseUnit})`;
+  if (!unit || !factor) return `${n(qty)} ${name(baseUnit)}`;
+  return `${n(qty / factor)} ${name(unit)} (${n(qty)} ${name(baseUnit)})`;
 }

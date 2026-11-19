@@ -464,9 +464,9 @@ export function NewOrderForm(props: {
                       setLine(i, { unit, price });
                     }}
                   >
-                    <option value="">{baseUnitOf(l.itemId)}</option>
+                    <option value="">{tr(baseUnitOf(l.itemId))}</option>
                     {unitsOf(l.itemId).map((u) => (
-                      <option key={u.unit} value={u.unit}>{trf('{unit} ({factor} {base})', { unit: u.unit, factor: u.factor, base: baseUnitOf(l.itemId) })}</option>
+                      <option key={u.unit} value={u.unit}>{trf('{unit} ({factor} {base})', { unit: tr(u.unit), factor: u.factor, base: tr(baseUnitOf(l.itemId)) })}</option>
                     ))}
                   </select>
                 ) : null}
@@ -477,7 +477,7 @@ export function NewOrderForm(props: {
               <input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value, suggested: false })} />
               {l.suggested ? <span className="hint muted">{tr('Suggested price; you can change it.')}</span> : null}
             </label>
-            {l.itemId && l.unit ? <LineUnitHint b={saved(l)} unit={l.unit} base={baseUnitOf(l.itemId)} money={money2} /> : null}
+            {l.itemId && l.unit ? <LineUnitHint b={saved(l)} unit={tr(l.unit)} base={tr(baseUnitOf(l.itemId))} money={money2} /> : null}
             {vatOn ? (
               <LineVatPreview itemId={l.itemId} qty={saved(l).baseQty} priceMinor={saved(l).baseMinor} vat={props.vat!} items={cat.items.data ?? []} currency={currency} />
             ) : null}
