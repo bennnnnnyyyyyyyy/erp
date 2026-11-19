@@ -72,7 +72,8 @@ const TUTORIAL_EN: TutorialContent = {
     '**Approving by WhatsApp or voice** is not switched on yet. Messages can already be copied to email, Slack, Microsoft Teams or Telegram (Settings → Integrations); decisions are always made in the app.',
     '**Manufacturing** (recipes and production orders) is not built, so profit for a factory is approximate until it is.',
     '**Arabic** covers every screen.',
-    "**Tax and e-invoicing** (VAT, the tax authority's electronic invoice) are not included. This is a management view, not statutory accounts.",
+    // 19 Nov: VAT is live (invoices, bills, notes, the VAT summary and closing the VAT month); sending to the ETA is not built yet.
+    "**Sending invoices to the tax authority** (ETA e-invoicing) is not switched on yet. VAT itself is built in: on invoices, supplier bills and notes, with a monthly VAT summary.",
     'No printing or PDF of invoices yet.',
   ],
   hide: 'Hide this guide',
@@ -109,7 +110,7 @@ const TUTORIAL_AR: TutorialContent = {
     '**الموافقة عبر واتساب أو الصوت** غير مفعّلة بعد. يمكن بالفعل نسخ الرسائل إلى البريد الإلكتروني أو Slack أو Microsoft Teams أو Telegram (الإعدادات ← التكاملات)؛ وتُتخذ القرارات دائمًا داخل التطبيق.',
     '**التصنيع** (الوصفات وأوامر الإنتاج) غير مبني، لذا تكون الأرباح لمصنع تقريبية إلى أن يُبنى.',
     '**العربية** تشمل كل الشاشات.',
-    '**الضرائب والفاتورة الإلكترونية** (ضريبة القيمة المضافة والفاتورة الإلكترونية لمصلحة الضرائب) غير مشمولة. هذه نظرة إدارية وليست حسابات قانونية.',
+    '**إرسال الفواتير إلى مصلحة الضرائب** (الفاتورة الإلكترونية) غير مفعّل بعد. أما ضريبة القيمة المضافة نفسها فمبنية: على الفواتير وفواتير المورّدين والإشعارات، مع ملخص شهري للضريبة.',
     'لا طباعة ولا PDF للفواتير بعد.',
   ],
   hide: 'إخفاء هذا الدليل',
