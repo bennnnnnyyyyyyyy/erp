@@ -131,6 +131,9 @@ export function stockShortMessage(details: string): string | null {
   return `Not enough stock: you asked for ${asked}, but only ${available} ${available === '1' ? 'is' : 'are'} available in this warehouse.`;
 }
 
+export const VAT_MISMATCH_MESSAGE =
+  "The VAT entered is too far from the VAT worked out from the line rates: check the VAT you typed against the supplier's invoice, and the rate on each line";
+
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */
 export async function callRpc<T>(client: SupabaseClient, fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await client.rpc(fn, args);
@@ -142,6 +145,8 @@ export async function callRpc<T>(client: SupabaseClient, fn: string, args: Recor
     if (reason) {
       const short = reason.code === 'insufficient_available' && error.details ? stockShortMessage(error.details) : null;
       if (short) throw new HttpError(reason.status, short, reason.code);
+      // VAT_MISMATCH's detail gives both amounts in minor units ("(250) … (168)"), which read as 250 pounds (walkthrough 19 Nov).
+      if (reason.code === 'vat_mismatch') throw new HttpError(reason.status, VAT_MISMATCH_MESSAGE, reason.code);
       // A detail that only repeats the message (e.g. NOT_APPROVED: "this purchase order needs approval…") is left out, so the person
       // does not read the same sentence twice (Ben's walkthrough, 10 Nov 2026).
       const detail = error.details ? trimQty(error.details) : '';

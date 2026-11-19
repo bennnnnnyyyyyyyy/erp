@@ -10,7 +10,9 @@ export const ERRORS_AR: Record<string, string> = {
   'Billed quantity cannot exceed received quantity': 'لا يمكن أن تتجاوز الكمية المفوترة الكمية المستلمة',
   'Both accounts must hold the same currency': 'يجب أن يكون الحسابان بنفس العملة',
   'The VAT entered does not match the rates on the lines': 'الضريبة المُدخلة لا تطابق النسب على البنود',
-  'This VAT cannot be deducted': 'لا يمكن خصم هذه الضريبة',
+  "The VAT entered is too far from the VAT worked out from the line rates: check the VAT you typed against the supplier's invoice, and the rate on each line":
+    'الضريبة المُدخلة بعيدة جدًا عن الضريبة المحسوبة من نسب البنود: راجع الضريبة التي كتبتها مقابل فاتورة المورد، والنسبة على كل بند',
+  'This VAT cannot be deducted':'لا يمكن خصم هذه الضريبة',
   'VAT and Shopify cannot be used together yet': 'لا يمكن استخدام ضريبة القيمة المضافة مع Shopify معًا بعد',
   'Choose the default VAT rate in Settings, then try again': 'اختر نسبة ضريبة القيمة المضافة الافتراضية من الإعدادات ثم أعد المحاولة',
   'Cannot return more than was delivered and not yet returned': 'لا يمكن إرجاع أكثر مما سُلّم ولم يُرجع بعد',
