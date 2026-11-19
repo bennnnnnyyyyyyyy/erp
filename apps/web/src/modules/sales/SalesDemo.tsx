@@ -185,10 +185,10 @@ export function SalesOrderPage() {
             {o.lines.map((l, i) => (
               <tr key={i}>
                 <td>{cat.itemName(l.itemId)}</td>
-                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor)}</td>
+                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor, tr)}</td>
                 <td className="right">
                   {l.unit && l.unitFactor
-                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitPriceMinor * l.unitFactor), o.currency), unit: l.unit })
+                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitPriceMinor * l.unitFactor), o.currency), unit: tr(l.unit) })
                     : money(l.unitPriceMinor, o.currency)}
                 </td>
                 <td className="right">{money(l.qty * l.unitPriceMinor, o.currency)}</td>

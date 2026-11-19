@@ -116,5 +116,13 @@ export const MASTER_DATA_AR: Record<string, string> = {
   'A new purchase or sales order line for this item starts in this unit; it can still be changed on the line.':
     'يبدأ بند أمر الشراء أو البيع الجديد لهذا الصنف بهذه الوحدة؛ ويمكن تغييرها في البند.',
   'Buying in': 'الشراء بـ',
+  // balance sheet date ("on this date"), not the on/off switch word
+  'As at': 'في تاريخ',
+  // audit log phrases for units (sql/044, sql/101); without them "units set" was translated word by word ("set" as طقم)
+  'order units set': 'تم تحديد وحدات الأمر',
+  'item default units changed': 'تم تغيير الوحدات الافتراضية للصنف',
+  'item unit added': 'أُضيفت وحدة للصنف',
+  'item unit changed': 'تم تعديل وحدة الصنف',
+  'item unit removed': 'حُذفت وحدة من الصنف',
   'Selling in': 'البيع بـ',
 };

@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — Presentation check on live, small Arabic fixes (no migration)
+
+**Objective:** Ben presents today: test the slices on erp-live (Claude in Chrome, owner Chris, Demo Cosmetics Factory, Arabic).
+
+**Actions Completed:**
+- Tested on live: hand cream given "box = 12" (buying and selling) and "selling in: box"; a new sales order line started in boxes,
+  3 boxes at 120.00 showed "= 36 piece at 10.00" and VAT 360.00 + 50.40 = 410.40; saved as SO-0331 ("3 box (36 piece)", "120.00 per
+  box", "Total before VAT"); a purchase line in boxes took the supplier's last cost × 12, warned that 100.00 a box is saved as 99.96,
+  and refused 1.3 boxes; home, item groups, prices, VAT summary, balance sheet and reorder levels ("139.029 l") all load.
+- Fixed: the new audit actions read "أمر units طقم" (no phrase, so "set" became "طقم"): phrases added for the unit actions; the
+  balance sheet date was labelled with the on/off word ("مفعّلة"): now "As at" / "في تاريخ"; unit names show in the reader's language
+  on orders, invoices, the order form and the item's Units tab ("box" reads "علبة").
+
+**Database / System Result:** none. Typecheck and web tests (157) pass.
+
+**Safety Status:** labels only. Test data left: SO-0331, unit "box" and the selling default on hand cream (Demo Cosmetics Factory).
+
 ## 2026-11-19 — On-prem step 1: the API on Node and a first Docker Compose package (no migration)
 
 **Objective:** start the [on-prem plan](../planning/2026-11-19-on-prem-deployment-plan.md) without waiting for Joe's remaining

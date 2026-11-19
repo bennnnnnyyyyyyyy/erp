@@ -278,11 +278,11 @@ export function PurchaseOrderPage() {
               <tr key={i}>
                 <td>{cat.itemName(l.itemId)}</td>
                 <TheirCodeCell codes={theirCodes} itemId={l.itemId} />
-                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor)}</td>
+                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor, tr)}</td>
                 {byLine && <td className="right">{l.receivedQty ?? 0}</td>}
                 <td className="right">
                   {l.unit && l.unitFactor
-                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitCostMinor * l.unitFactor), o.currency), unit: l.unit })
+                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitCostMinor * l.unitFactor), o.currency), unit: tr(l.unit) })
                     : money(l.unitCostMinor, o.currency)}
                 </td>
                 <td className="right">{money(l.qty * l.unitCostMinor, o.currency)}</td>

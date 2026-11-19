@@ -61,12 +61,12 @@ export function ItemUnits({ itemId, baseUnit, units, canManage, onChanged }: {
   return (
     <div className="stack">
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Unit')}</th><th scope="col" className="right">{trf('In {unit}', { unit: baseUnit })}</th><th scope="col">{tr('Used for')}</th>{canManage ? <th scope="col"><span className="sr-only">{tr('Actions')}</span></th> : null}</tr></thead>
+        <thead><tr><th scope="col">{tr('Unit')}</th><th scope="col" className="right">{trf('In {unit}', { unit: tr(baseUnit) })}</th><th scope="col">{tr('Used for')}</th>{canManage ? <th scope="col"><span className="sr-only">{tr('Actions')}</span></th> : null}</tr></thead>
         <tbody>
-          <tr><td><strong>{baseUnit}</strong></td><td className="right">1</td><td className="muted">{tr('Base unit: stock is counted in it')}</td>{canManage ? <td /> : null}</tr>
+          <tr><td><strong>{tr(baseUnit)}</strong></td><td className="right">1</td><td className="muted">{tr('Base unit: stock is counted in it')}</td>{canManage ? <td /> : null}</tr>
           {units.map((u) => (
             <tr key={u.id}>
-              <td>{u.unit}</td>
+              <td>{tr(u.unit)}</td>
               <td className="right">{formatQty(u.factor)}</td>
               <td>{[u.forPurchase ? tr('Buying') : '', u.forSale ? tr('Selling') : ''].filter(Boolean).join(', ') || <span className="muted">—</span>}</td>
               {canManage ? (
@@ -86,10 +86,10 @@ export function ItemUnits({ itemId, baseUnit, units, canManage, onChanged }: {
       {canManage ? (
         <form className="form-card stack" onSubmit={add}>
           <strong>{tr('Add a unit')}</strong>
-          <p className="muted small">{trf('For example a box that holds 12 {base}. Orders can then be typed in boxes; stock stays in {base}.', { base: baseUnit })}</p>
+          <p className="muted small">{trf('For example a box that holds 12 {base}. Orders can then be typed in boxes; stock stays in {base}.', { base: tr(baseUnit) })}</p>
           <div className="form-row">
             <label>{tr('Unit')}<UnitSelect value={unit} onChange={setUnit} label={tr('Unit')} /></label>
-            <label>{trf('How many {base} in one', { base: baseUnit })}<input inputMode="decimal" value={factor} placeholder="12" onChange={(e) => setFactor(e.target.value)} /></label>
+            <label>{trf('How many {base} in one', { base: tr(baseUnit) })}<input inputMode="decimal" value={factor} placeholder="12" onChange={(e) => setFactor(e.target.value)} /></label>
           </div>
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2"><input type="checkbox" checked={forPurchase} onChange={(e) => setForPurchase(e.target.checked)} />{tr('Buying')}</label>
@@ -107,15 +107,15 @@ export function ItemUnits({ itemId, baseUnit, units, canManage, onChanged }: {
             <label>
               {tr('Buying in')}
               <select disabled={!canManage || busy} value={defaults?.purchaseUnit ?? ''} onChange={(e) => setDefaults(e.target.value || null, defaults?.saleUnit ?? null)}>
-                <option value="">{baseUnit}</option>
-                {buyUnits.map((u) => <option key={u.id} value={u.unit}>{u.unit}</option>)}
+                <option value="">{tr(baseUnit)}</option>
+                {buyUnits.map((u) => <option key={u.id} value={u.unit}>{tr(u.unit)}</option>)}
               </select>
             </label>
             <label>
               {tr('Selling in')}
               <select disabled={!canManage || busy} value={defaults?.saleUnit ?? ''} onChange={(e) => setDefaults(defaults?.purchaseUnit ?? null, e.target.value || null)}>
-                <option value="">{baseUnit}</option>
-                {sellUnits.map((u) => <option key={u.id} value={u.unit}>{u.unit}</option>)}
+                <option value="">{tr(baseUnit)}</option>
+                {sellUnits.map((u) => <option key={u.id} value={u.unit}>{tr(u.unit)}</option>)}
               </select>
             </label>
           </div>
