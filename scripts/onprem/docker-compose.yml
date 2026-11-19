@@ -1,0 +1,107 @@
+# On-premises package, step 1 (documentation/planning/2026-11-19-on-prem-deployment-plan.md). NOT YET RUN: needs a Linux test server
+# with Docker (requested from Joe, 19 Nov). One server, one command: `docker compose --env-file .env up -d` from this folder.
+# Everything is reached through `web` (Caddy) on ports 80/443; the database, sign-in and API are not exposed outside the server.
+
+name: erp
+
+services:
+  db:
+    # Supabase's Postgres: has the roles (anon, authenticated, service_role), the auth schema and Vault our migrations expect.
+    image: supabase/postgres:15.8.1.085
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: 3600
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 10s
+      retries: 10
+
+  auth:
+    image: supabase/gotrue:v2.177.0
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${PUBLIC_URL}/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: ${PUBLIC_URL}
+      GOTRUE_URI_ALLOW_LIST: ${PUBLIC_URL}/**
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: ${MAILER_AUTOCONFIRM:-false}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_FROM}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-ERP}
+
+  rest:
+    image: postgrest/postgrest:v12.2.12
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+
+  api:
+    build: { context: ../.., dockerfile: scripts/onprem/Dockerfile.api }
+    image: erp-api:${ERP_VERSION:-dev}
+    restart: unless-stopped
+    depends_on: [auth, rest]
+    env_file: .env
+    environment:
+      PORT: 8787
+      APP_ENV: onprem
+      # The API reaches sign-in and the database through Caddy's routes, the same paths as on Supabase's cloud.
+      SUPABASE_URL: http://web:8080
+      SUPABASE_PUBLISHABLE_KEY: ${ANON_KEY}
+      SUPABASE_SECRET_KEY: ${SERVICE_ROLE_KEY}
+      ALLOWED_ORIGINS: ${PUBLIC_URL}
+      APP_URL: ${PUBLIC_URL}
+
+  web:
+    build:
+      context: ../..
+      dockerfile: scripts/onprem/Dockerfile.web
+      args:
+        PUBLIC_URL: ${PUBLIC_URL}
+        ANON_KEY: ${ANON_KEY}
+    image: erp-web:${ERP_VERSION:-dev}
+    restart: unless-stopped
+    depends_on: [api, auth, rest]
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - caddy-data:/data
+
+  backup:
+    image: supabase/postgres:15.8.1.085
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups
+      - ./backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/bash", "/backup.sh"]
+
+volumes:
+  db-data:
+  caddy-data:

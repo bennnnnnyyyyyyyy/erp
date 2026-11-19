@@ -1,0 +1,28 @@
+# On-prem settings. The installer (step 4) writes the real .env; until then copy this file to .env and fill it in.
+# Never commit a filled-in .env. Secrets below must be long random values (for example: openssl rand -hex 32).
+
+ERP_VERSION=dev
+# The address people type: https://erp.customer.local or https://10.0.0.20
+PUBLIC_URL=https://erp.example.local
+# What Caddy serves: the server's name (Caddy makes or loads the certificate) or ":443" with a certificate of the customer's.
+SITE_ADDRESS=erp.example.local
+
+POSTGRES_PASSWORD=change-me
+# Signs sign-in tokens. ANON_KEY and SERVICE_ROLE_KEY are JWTs signed with it (roles anon and service_role); the installer makes them.
+JWT_SECRET=change-me-at-least-32-characters
+ANON_KEY=
+SERVICE_ROLE_KEY=
+
+# The customer's mail server, for invitations and password resets.
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=erp@example.local
+SMTP_SENDER_NAME=ERP
+# true only for a first test without a mail server (no email confirmation).
+MAILER_AUTOCONFIRM=false
+
+# Backups (another disk or a network share mounted on the server).
+BACKUP_DIR=./backups
+BACKUP_KEEP_DAYS=14
