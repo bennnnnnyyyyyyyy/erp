@@ -174,7 +174,8 @@ export function BalanceSheetPage() {
       <p className="muted">{tr('What the company owns and owes on a date, from posted entries in the books. Until year-end closing is built, the profit of the year so far and of earlier unclosed years show under equity.')}</p>
       <Notice message={message} />
       <div className="form-row">
-        <label>{tr('On')}<input type="date" value={at} onChange={(e) => setAt(e.target.value)} /></label>
+        {/* Not tr('On'): that word is the "switched on" label elsewhere, and read "مفعّلة" (enabled) here (19 Nov). */}
+        <label>{tr('As at')}<input type="date" value={at} onChange={(e) => setAt(e.target.value)} /></label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />{tr('Compare with the same day last year')}</label>
         <Button variant="outline" disabled={!at} onClick={() => { setShown({ at, compare }); data.reload(); }}>{tr('Show')}</Button>
         <Button variant="ghost" disabled={busy} onClick={() => run(async () => {

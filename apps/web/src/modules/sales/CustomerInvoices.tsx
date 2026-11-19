@@ -210,7 +210,7 @@ export function CustomerInvoicePage() {
   const qtyText = (l: InvoiceLine) => {
     const ol = order?.lines.find((x) => x.id === l.orderLineId);
     const uom = items.data?.find((v) => v.id === ol?.itemId)?.uom ?? '';
-    return ol?.unit ? unitText(l.qty, uom, ol.unit, ol.unitFactor) : String(l.qty);
+    return ol?.unit ? unitText(l.qty, uom, ol.unit, ol.unitFactor, tr) : String(l.qty);
   };
   const canManage = session.permissions.includes('sales.invoices.manage');
   // Approved credit and debit notes change what is owed (the invoice itself is never edited).

@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — Presentation check on live, small Arabic fixes (no migration)
+
+**Objective:** Ben presents today: test the slices on erp-live (Claude in Chrome, owner Chris, Demo Cosmetics Factory, Arabic).
+
+**Actions Completed:**
+- Tested on live: hand cream given "box = 12" (buying and selling) and "selling in: box"; a new sales order line started in boxes,
+  3 boxes at 120.00 showed "= 36 piece at 10.00" and VAT 360.00 + 50.40 = 410.40; saved as SO-0331 ("3 box (36 piece)", "120.00 per
+  box", "Total before VAT"); a purchase line in boxes took the supplier's last cost × 12, warned that 100.00 a box is saved as 99.96,
+  and refused 1.3 boxes; home, item groups, prices, VAT summary, balance sheet and reorder levels ("139.029 l") all load.
+- Fixed: the new audit actions read "أمر units طقم" (no phrase, so "set" became "طقم"): phrases added for the unit actions; the
+  balance sheet date was labelled with the on/off word ("مفعّلة"): now "As at" / "في تاريخ"; unit names show in the reader's language
+  on orders, invoices, the order form and the item's Units tab ("box" reads "علبة").
+
+**Database / System Result:** none. Typecheck and web tests (157) pass.
+
+**Safety Status:** labels only. Test data left: SO-0331, unit "box" and the selling default on hand cream (Demo Cosmetics Factory).
+
 ## 2026-11-19 — On-prem step 1: the API on Node and a first Docker Compose package (no migration)
 
 **Objective:** start the [on-prem plan](../planning/2026-11-19-on-prem-deployment-plan.md) without waiting for Joe's remaining
@@ -3599,3 +3616,5 @@ the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitigno
 **Addendum (18 Nov), "Failed to fetch" on the preview, and a build command that checks itself.** Ben reported "Failed to fetch" when clicking the company on the preview. Cause (found by reading the deployed files): that deploy was built without `VITE_API_BASE_URL` and without `DESIGN_LAB=1`, so its API address was `http://localhost:8787` and it had no Design Lab; sign-in (Supabase) and the company list worked, the first call to our API failed. The live app's build has the real API address. Fix for the user: rebuild and redeploy. Added `npm run preview:build` (`scripts/preview-build.mjs`): sets both settings itself, builds, and refuses to finish if the build points at localhost, has no Lab or no Supabase address; checked by running it (it passes with both settings unset in the shell). Documented in `PREVIEW_DEPLOYS.md`. Not verified: the corrected preview has not been deployed (needs Ben's Cloudflare login).
 
 **Addendum (19 Nov), merge of origin/main (a053aa2) into worktree-ui-warm, new look kept.** Objective: bring today's main features (slice D units sql/101, owner-walkthrough fixes, party item codes, prices, statements, Codex audit fixes, on-prem step 1) into the Design Lab preview. Actions: merged origin/main with no conflicts (git auto-merged styles.css, WORKLOG.md and package.json); the six look files (theme.css, styles.css warm layer, Shell.tsx, AppMenu.tsx, icons.tsx, Home.tsx) remain this branch's versions; main's CSS (statements block, tick-box width, td select) sits before the warm layer and the warm layer does not override it (checked by reading: it sets only padding and radius on inputs). Backup of the previous tip: local branch backup/ui-warm-before-main-merge-2026-11-19. fix/presentation-19nov had not reached main, so it is not included. Checks: biome ci --diagnostic-level=error 0 errors; typecheck 0 errors; tests shared 82, api 664, web 166 passed; doc links OK; check-migrations OK (99 migrations, no new one on this branch). Database / system result: none, no migration, nothing deployed. Safety status: nothing pushed, no PR, nothing on main; the new look stays off live until Ben says "launch the new look".
+
+**Addendum (19 Nov, second merge), origin/main (c42f3ab, PR #90/#91 fix/presentation-19nov) into worktree-ui-warm, new look kept.** Objective: bring the presentation fixes (unit names translated, unit audit phrases, balance sheet "As at", Getting started VAT line) into the Design Lab preview. Actions: merged with no conflicts; #91 changes only screen code, text and the worklog, none of the six look files or styles.css. Checks: biome ci --diagnostic-level=error 0 errors; typecheck 0; tests shared 82, api 664, web 166 passed; doc links OK; check-migrations OK. Not checked in the browser. Database / system result: none. Safety status: commit only, nothing pushed, nothing on main.
