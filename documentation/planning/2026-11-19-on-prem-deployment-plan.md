@@ -18,6 +18,20 @@ cloud version; the customer's data never leaves their server unless they choose.
 | Install and updates | **Docker Compose** (one package, one command) |
 | Backups | **Built-in nightly backup** with one-command restore; their IT may replace or extend it |
 | First step | **This written plan only** |
+| Edition | **Same code and releases as the cloud for now**, built so a separate on-prem edition can be split off quickly if needed |
+| AI assistant, voice notes | **Not sent abroad.** We publish the requirements to run an equivalent local model through Ollama on their own hardware; the owner points the app at it. Not tested by us yet (no suitable machine) |
+| Updates | **Their IT runs `./update` when we send a release** (online or from USB); nothing updates on its own |
+| Support access | **Only when they open it** (a support bundle with no business data, or a remote session they start) |
+| Servers | **Linux (Ubuntu) first**; Windows Server with Docker later if a customer needs it |
+
+### Egypt: legal points (Ben, 19 Nov; to be confirmed by an Egyptian lawyer)
+
+| Topic | Decision |
+|---|---|
+| Personal data (Law 151/2020) | The customer is the data controller and holds any PDPC licence. **Data stays on their server:** nothing is sent abroad by default (AI off, licence offline); our support bundle holds no personal data. We give a short data-protection note listing what the system stores and where |
+| Tax records (Unified Tax Procedures Law 206/2020) | **Nothing is ever deleted.** After the licence expires the data stays viewable (read-only) and a full export (CSV and database dump) is always allowed, licensed or not |
+| ETA e-invoicing and e-receipts | **The customer holds their own ETA credentials and e-signature token (USB token or HSM) on their server;** we never hold them. Submission needs the internet; documents wait in a queue while offline |
+| Licence agreement (EULA) and guide | **Arabic and English, Arabic prevails;** Egyptian law and courts; reviewed by an Egyptian lawyer. Covers copyright (IP Law 82/2002), no reverse engineering, the licence limits, and that the data is the customer's |
 
 ## 3. What runs on the customer's server
 
@@ -106,12 +120,19 @@ their own backups instead; the guide says what must be included.
 5. **Release process:** tagged releases build the images; an install guide in Arabic and English.
 6. **Pilot** with the first customer.
 
-## 9. Open questions
+## 9. Open questions (any decision above can still change while the work is under way)
 
-1. **Joe:** will the first customers' servers have the internet? (Decides how much of section 4.4 matters first.)
-2. **Joe:** Linux or Windows servers? Any customer IT team to work with?
-3. **Joe / Ben:** price model: yearly licence (renewed with a new file) or a one-off licence plus yearly support?
-4. **Ben:** do on-prem customers get the AI assistant and voice notes? They send data to outside services (OpenAI, ElevenLabs).
-5. **Accountant:** ETA e-invoicing from a customer's own server: their own ETA credentials and certificate on the server (likely), as
-   with the cloud version.
-6. **Ben:** who holds the licence signing key, and where (a password manager, not a laptop file)?
+**For Joe:**
+1. **Internet:** will the first customers' servers have the internet? (Decides how much of section 4.4 comes first.)
+2. **Pricing:** yearly licence including updates and support, a one-off licence plus yearly support, or per user per year?
+3. **Installation:** Ben's view: as is usual for on-prem software, **we install the first two or three customers ourselves** (remote
+   or on site, often as a paid setup) to prove the guide, then their IT or a local partner installs from the guide.
+4. **Servers:** Ben's view: **Ubuntu Linux first**. Do the customers you have in mind run Windows only?
+
+**Decided later:**
+5. **Licence signing key:** who holds it and where (to decide before the first licence is issued; never in the repo or a laptop file).
+
+**For a lawyer (Egypt):** the data-protection note, the EULA, and whether on-prem customers need anything from us for their PDPC
+licence.
+
+**For the accountant:** ETA from a customer's own server with their own token (expected to be the same as the cloud set-up).
