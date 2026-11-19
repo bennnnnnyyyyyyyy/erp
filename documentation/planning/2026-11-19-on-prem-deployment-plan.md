@@ -11,7 +11,7 @@ cloud version; the customer's data never leaves their server unless they choose.
 
 | Question | Decision |
 |---|---|
-| Internet on the server | **Not known yet:** the design must work fully offline and use the internet when it is there |
+| Internet on the server | **Yes (Joe, 19 Nov):** customers' servers will have the internet. The licence stays an offline-checked file; updates download online (a USB stick stays possible); ETA, WhatsApp and the other online features work as in the cloud; short outages are handled (ETA documents wait in a queue) |
 | Licence | **A signed licence file** we issue; checked on the server, no call home needed |
 | Licence limits | **Expiry date, number of users, number of companies, modules** |
 | At expiry | **Warnings from 30 days before, 14 days' grace, then read-only** (data can still be seen and exported) |
@@ -123,7 +123,8 @@ their own backups instead; the guide says what must be included.
 ## 9. Open questions (any decision above can still change while the work is under way)
 
 **For Joe:**
-1. **Internet:** will the first customers' servers have the internet? (Decides how much of section 4.4 comes first.)
+1. ~~**Internet:** will the first customers' servers have the internet?~~ **Answered 19 Nov (Joe): yes.** Section 4.4 (offline
+   behaviour) shrinks to handling short outages, and rollout step 3 becomes "outage handling".
 2. **Pricing:** yearly licence including updates and support, a one-off licence plus yearly support, or per user per year?
 3. **Installation:** Ben's view: as is usual for on-prem software, **we install the first two or three customers ourselves** (remote
    or on site, often as a paid setup) to prove the guide, then their IT or a local partner installs from the guide.
