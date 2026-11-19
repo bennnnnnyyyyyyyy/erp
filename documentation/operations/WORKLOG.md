@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — HR app integration: plan and contract v1 (no migration)
+
+**Objective.** Ben (19 Nov): connect the ERP to a separate HR app built by a colleague's team, treated like Shopify / Bosta / Paymob;
+we write the contract they build from.
+
+**Actions Completed.** Plan [HR_APP_INTEGRATION_PLAN.md](../plans/HR_APP_INTEGRATION_PLAN.md) (scope, tables `hr_units`,
+`hr_employees`, `hr_sync_state`, `hr_webhook_events`, functions, permissions, sync job, webhook security, tests, rollout,
+decisions D1-D5 for Ben, phase 2 sketch). Contract [hr-app-integration-contract.md](../reference/hr-app-integration-contract.md)
+(read-only API under `/erp/v1`, cursor pagination with `updated_since` and tombstones, error shape, HMAC-SHA256 webhooks over
+timestamp + raw body with a worked example, retries, versioning, test checklist). Checklist and reference index updated.
+Numbers reserved if approved: `sql/102`, SQL test 099.
+
+**Database / System Result.** None. Nothing built, applied or deployed.
+
+**Safety Status.** Documentation only; link check by hand. Waiting for Ben's approval of the plan and decisions D1-D3 (new
+master-key files, one webhook route without a permission check, two new per-company Vault secrets) before any build.
+
 ## 2026-11-19 — Presentation check on live, small Arabic fixes (no migration)
 
 **Objective:** Ben presents today: test the slices on erp-live (Claude in Chrome, owner Chris, Demo Cosmetics Factory, Arabic).
