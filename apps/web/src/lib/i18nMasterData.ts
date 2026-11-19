@@ -94,4 +94,27 @@ export const MASTER_DATA_AR: Record<string, string> = {
   "Add a code": "إضافة كود",
   "Their name (optional)": "اسمهم للصنف (اختياري)",
   "Save code": "حفظ الكود",
+  // Slice D: units on order lines (sql/101).
+  '{unit} ({factor} {base})': '{unit} (بها {factor} {base})',
+  'Not a whole number of {base}: {qty} {base}.': 'ليس عددًا صحيحًا من {base}: {qty} {base}.',
+  '= {qty} {base} at {price} each': '= {qty} {base} بسعر {price} للواحدة',
+  'the price per {unit} does not split evenly: the line is saved as {saved}': 'سعر {unit} لا ينقسم بالتساوي: يُحفظ البند بقيمة {saved}',
+  '{qty} {unit} is not a whole number of {base}. Change the quantity.': '{qty} {unit} ليست عددًا صحيحًا من {base}. غيّر الكمية.',
+  '{price} per {unit}': '{price} لكل {unit}',
+  '{qty} {unit} reserved': '{qty} {unit} محجوزة',
+  'Type the unit and how many base units it holds.': 'اكتب الوحدة وعدد الوحدات الأساسية التي تحتويها.',
+  'Unit saved.': 'حُفظت الوحدة.',
+  'Default units saved.': 'حُفظت الوحدات الافتراضية.',
+  'Unit removed.': 'حُذفت الوحدة.',
+  'Add a unit': 'إضافة وحدة',
+  'For example a box that holds 12 {base}. Orders can then be typed in boxes; stock stays in {base}.':
+    'مثلًا علبة تحتوي 12 {base}. يمكن بعدها كتابة الطلبات بالعلب؛ ويبقى المخزون بـ{base}.',
+  'How many {base} in one': 'كم {base} في الواحدة',
+  Selling: 'البيع',
+  'Save unit': 'حفظ الوحدة',
+  'Units new lines start in': 'الوحدات التي تبدأ بها البنود الجديدة',
+  'A new purchase or sales order line for this item starts in this unit; it can still be changed on the line.':
+    'يبدأ بند أمر الشراء أو البيع الجديد لهذا الصنف بهذه الوحدة؛ ويمكن تغييرها في البند.',
+  'Buying in': 'الشراء بـ',
+  'Selling in': 'البيع بـ',
 };

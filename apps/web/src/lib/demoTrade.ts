@@ -34,7 +34,7 @@ export type PurchaseOrder = {
   warehouseId: string;
   status: POStatus;
   /** lineId and receivedQty come from the real API (sql/064); the sample data receives orders whole. */
-  lines: { itemId: string; qty: number; unitCostMinor: number; lineId?: string; receivedQty?: number }[];
+  lines: { itemId: string; qty: number; unitCostMinor: number; lineId?: string; receivedQty?: number; unit?: string | null; unitFactor?: number | null }[];
   /** Open, with some goods already in (sql/064). */
   partlyReceived?: boolean;
   totalMinor: number;
@@ -61,7 +61,7 @@ export type SalesOrder = {
   customerId: string;
   warehouseId: string;
   status: SOStatus;
-  lines: { itemId: string; qty: number; unitPriceMinor: number }[];
+  lines: { itemId: string; qty: number; unitPriceMinor: number; unit?: string | null; unitFactor?: number | null }[];
   totalMinor: number;
   currency: string;
   requestId: string | null;
