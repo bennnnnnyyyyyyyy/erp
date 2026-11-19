@@ -15,7 +15,8 @@ import { Shipments } from './Shipments';
 import { ConfirmButton } from '../../components/FormToggle';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
-import { tr } from '../../lib/i18n';
+import { tr, trf } from '../../lib/i18n';
+import { unitText } from '../../lib/lineUnits';
 // DEMO ONLY: sample sales screens (wave 2 in TECHNICAL_PLAN.md section 3.5). A sales order does not move
 // stock by itself: it raises a stock request, which still needs a manager's approval before it ships.
 
@@ -184,8 +185,12 @@ export function SalesOrderPage() {
             {o.lines.map((l, i) => (
               <tr key={i}>
                 <td>{cat.itemName(l.itemId)}</td>
-                <td className="right">{l.qty}</td>
-                <td className="right">{money(l.unitPriceMinor, o.currency)}</td>
+                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor)}</td>
+                <td className="right">
+                  {l.unit && l.unitFactor
+                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitPriceMinor * l.unitFactor), o.currency), unit: l.unit })
+                    : money(l.unitPriceMinor, o.currency)}
+                </td>
                 <td className="right">{money(l.qty * l.unitPriceMinor, o.currency)}</td>
               </tr>
             ))}

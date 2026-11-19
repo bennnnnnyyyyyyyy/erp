@@ -19,6 +19,7 @@ import { ConfirmButton } from '../../components/FormToggle';
 import { OrderApproval, OrderApprovalSetting, OrderConfirmation } from './OrderApproval';
 
 import { tr, trf } from '../../lib/i18n';
+import { unitText } from '../../lib/lineUnits';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
 
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
@@ -277,9 +278,13 @@ export function PurchaseOrderPage() {
               <tr key={i}>
                 <td>{cat.itemName(l.itemId)}</td>
                 <TheirCodeCell codes={theirCodes} itemId={l.itemId} />
-                <td className="right">{l.qty}</td>
+                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor)}</td>
                 {byLine && <td className="right">{l.receivedQty ?? 0}</td>}
-                <td className="right">{money(l.unitCostMinor, o.currency)}</td>
+                <td className="right">
+                  {l.unit && l.unitFactor
+                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitCostMinor * l.unitFactor), o.currency), unit: l.unit })
+                    : money(l.unitCostMinor, o.currency)}
+                </td>
                 <td className="right">{money(l.qty * l.unitCostMinor, o.currency)}</td>
               </tr>
             ))}

@@ -3,6 +3,7 @@ import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError, isMissingSchema } from '../../lib/errors';
+import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -133,21 +134,36 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
   if (error) throw error;
   const rows = (data ?? []) as unknown as OrderRow[];
   const ids = rows.map((o) => o.id);
-  const lines = new Map<string, { lineId: string; itemId: string; qty: number; receivedQty: number; unitCostMinor: number }[]>();
+  const lines = new Map<
+    string,
+    {
+      lineId: string;
+      itemId: string;
+      qty: number;
+      receivedQty: number;
+      unitCostMinor: number;
+      unit: string | null;
+      unitFactor: number | null;
+    }[]
+  >();
   if (ids.length) {
-    const { data: lineRows, error: lineError } = await userDb(c)
-      .from('pur_order_lines')
-      .select('id, order_id, item_id, qty, received_qty, unit_cost_minor')
-      .eq('org_id', orgOf(c))
-      .in('order_id', ids);
+    // The typed unit (sql/101); before it is applied the lines are read without it.
+    const lineQuery = (cols: string) => userDb(c).from('pur_order_lines').select(cols).eq('org_id', orgOf(c)).in('order_id', ids);
+    let { data: lineRows, error: lineError } = await lineQuery(
+      'id, order_id, item_id, qty, received_qty, unit_cost_minor, unit, unit_factor',
+    );
+    if (lineError && isMissingSchema(lineError))
+      ({ data: lineRows, error: lineError } = await lineQuery('id, order_id, item_id, qty, received_qty, unit_cost_minor'));
     if (lineError) throw lineError;
-    for (const l of (lineRows ?? []) as {
+    for (const l of (lineRows ?? []) as unknown as {
       id: string;
       order_id: string;
       item_id: string;
       qty: number;
       received_qty: number;
       unit_cost_minor: number;
+      unit?: string | null;
+      unit_factor?: number | null;
     }[])
       lines.set(l.order_id, [
         ...(lines.get(l.order_id) ?? []),
@@ -158,6 +174,8 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
           // sql/064: how much of the line has arrived so far.
           receivedQty: Number(l.received_qty),
           unitCostMinor: Number(l.unit_cost_minor),
+          unit: l.unit ?? null,
+          unitFactor: l.unit_factor == null ? null : Number(l.unit_factor),
         },
       ]);
   }
@@ -311,7 +329,7 @@ purchasingRoutes.post('/orders', requirePermission('purchasing.orders.create'), 
   const lines = (Array.isArray(body.lines) ? body.lines : [])
     .map((line) => {
       const value = line as Record<string, unknown>;
-      return { itemId: text(value.itemId), qty: Number(value.qty), unitCostMinor: Number(value.unitCostMinor) };
+      return { itemId: text(value.itemId), qty: Number(value.qty), unitCostMinor: Number(value.unitCostMinor), unit: text(value.unit) };
     })
     .filter(
       (line) =>
@@ -327,9 +345,10 @@ purchasingRoutes.post('/orders', requirePermission('purchasing.orders.create'), 
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'pur_create_order', {
     p_supplier_id: supplierId,
     p_warehouse_id: warehouseId,
-    p_lines: lines,
+    p_lines: lines.map(({ unit: _unit, ...l }) => l),
   });
-  return ok(c, await oneOrder(c, made.id), 201);
+  const unitsError = await setLineUnits(c, 'pur_set_order_line_units', made.id, lines);
+  return ok(c, { ...(await oneOrder(c, made.id)), unitsError }, 201);
 });
 // Receive goods. No body: everything still to come (the old one-click receipt). With a body (sql/064, decision D3):
 // { lines: [{ lineId, qty }], restComing: boolean } receives what actually arrived; restComing false closes the order short.

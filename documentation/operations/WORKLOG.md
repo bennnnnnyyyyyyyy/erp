@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — Units on order lines, master data slice D (`sql/101`)
+
+**Objective:** buy and sell in other units (a box of 12) while stock stays in the base unit (Ben's 18 Nov email promise). Ben's
+decisions, 19 Nov: buying and selling documents only; prices from the piece price; a default buying and selling unit per item; whole
+pieces only; lines stored in base units plus the typed unit ([ADR-0006](../architecture/decisions/ADR-0006-line-units-stored-in-base.md)).
+
+**Actions Completed:**
+- `sql/101_doc_line_units.sql`: `unit` and `unit_factor` on `sal_order_lines` and `pur_order_lines`; default buying and selling units on
+  `inv_items` (with their column read grant); `inv_set_item_default_units`, `sal_set_order_line_units`, `pur_set_order_line_units`
+  (audited; only while the order has not moved; whole base units unless the base unit is a measure). Test `sql/tests/098`.
+- API: `GET /v1/inventory/item-units` (every item's units and defaults), `PUT /v1/inventory/items/:id/default-units`; sales and
+  purchase order create accept `lines[].unit` and record it (`lib/lineUnits.ts`; a failure keeps the order in base units and is returned
+  as `unitsError`); order reads return `unit` and `unitFactor` (and still work before `sql/101`).
+- Web: unit picker on new order lines (starts in the item's default unit; a suggested price follows the unit; shows "= 36 piece at
+  10.00 each" and any rounding before saving); orders and sales invoices show "3 box (36 piece)" and the price per box; the item's
+  Units tab can now add and remove units and set the default units (until now units could only be added through the API); reorder
+  levels show quantities with their unit and the "reserved" text is translated (Ben's walkthrough comment). Arabic for all new text.
+
+**Database / System Result:** `sql/101` applied to live 19 Nov via CLI (by Claude): new_columns 6, users_read_defaults true,
+anon_sets_units false, users_call_internal false. Tests 098 and 092 on live: ALL TESTS PASSED (rolled back). Local: 96 of 96 SQL tests;
+typecheck, tests (shared 82, API 660, web 157) and lint pass.
+
+**Safety Status:** additive columns and new functions only; existing lines unchanged (no unit = base unit). Not done in this slice:
+supplier bills and goods receipts still show quantities in base units only.
+
 ## 2026-11-19 — Owner walkthrough display fixes (no migration)
 
 **Objective:** fix four display problems found in the owner walkthrough on live (Claude in Chrome, Demo Cosmetics Factory, 19 Nov).

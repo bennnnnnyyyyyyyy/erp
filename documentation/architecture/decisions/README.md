@@ -10,6 +10,7 @@ old one `Superseded by ADR-NNNN`.
 | [0002](ADR-0002-multi-tenancy.md) | Multi-tenancy: shared database, `org_id` on every row | Proposed |
 | [0003](ADR-0003-mutations-via-rpc.md) | Business mutations go through database functions called with the user's own JWT | Proposed |
 | [0005](ADR-0005-vat-on-documents.md) | VAT is computed and stored on each document line, once | Accepted (16 Nov 2026) |
+| [0006](ADR-0006-line-units-stored-in-base.md) | Order lines stay in the base unit and remember the unit they were typed in | Accepted (19 Nov 2026) |
 
 ## Template
 

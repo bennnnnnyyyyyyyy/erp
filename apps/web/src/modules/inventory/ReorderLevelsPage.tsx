@@ -6,6 +6,7 @@ import type { DemoItem, StockRow } from '../../lib/demoInventory';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { tr, trf } from '../../lib/i18n';
+import { formatQty } from '../../lib/numbers';
 import { useCatalog } from './inventoryShared';
 
 // ------------------------------------------------------------------ reorder levels
@@ -69,10 +70,16 @@ export function ReorderLevelsPage() {
               return (
                 <tr key={row.id}>
                   <td><code>{row.sku}</code></td>
-                  <td><strong>{row.name}</strong><div className="muted small">{row.uom} · {row.reserved} reserved</div></td>
-                  <td className="right"><strong>{row.available}</strong></td>
+                  <td><strong>{row.name}</strong><div className="muted small">{trf('{qty} {unit} reserved', { qty: formatQty(row.reserved), unit: row.uom })}</div></td>
+                  {/* Walkthrough 18 Nov: "139.029" with no unit; the quantity now reads "139.029 litre". */}
+                  <td className="right"><strong>{formatQty(row.available)}</strong> <span className="muted small">{row.uom}</span></td>
                   <td className="right">
-                    {canManage ? <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Off')} /> : (row.reorderLevel ?? tr('Off'))}
+                    {canManage ? (
+                      <span className="flex items-center gap-2">
+                        <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Off')} />
+                        <span className="muted small">{row.uom}</span>
+                      </span>
+                    ) : row.reorderLevel === null ? tr('Off') : `${formatQty(row.reorderLevel)} ${row.uom}`}
                   </td>
                   <td>{row.reorderLevel === null ? <span className="muted">{tr('Not monitored')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
                   <td>{canManage && <Button type="submit" disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? tr('Saving…') : tr('Save')}</Button>}</td>
