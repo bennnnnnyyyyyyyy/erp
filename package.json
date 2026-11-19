@@ -11,6 +11,7 @@
     "preview:build": "node scripts/preview-build.mjs",
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
+    "designlab": "npm run dev:demo -w apps/web",
     "build:demo": "npm run build:demo -w apps/web",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

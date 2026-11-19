@@ -3,6 +3,7 @@ import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError, isMissingSchema } from '../../lib/errors';
+import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -45,18 +46,36 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
   if (error) throw error;
   const rows = (data ?? []) as Order[];
   const ids = rows.map((o) => o.id);
-  const lineMap = new Map<string, { id: string; itemId: string; qty: number; unitPriceMinor: number }[]>();
+  const lineMap = new Map<
+    string,
+    { id: string; itemId: string; qty: number; unitPriceMinor: number; unit: string | null; unitFactor: number | null }[]
+  >();
   if (ids.length) {
-    const { data: ls, error: le } = await userDb(c)
-      .from('sal_order_lines')
-      .select('id,order_id,item_id,qty,unit_price_minor')
-      .eq('org_id', orgOf(c))
-      .in('order_id', ids);
+    // The typed unit (sql/101); before it is applied the lines are read without it.
+    const lineQuery = (cols: string) => userDb(c).from('sal_order_lines').select(cols).eq('org_id', orgOf(c)).in('order_id', ids);
+    let { data: ls, error: le } = await lineQuery('id,order_id,item_id,qty,unit_price_minor,unit,unit_factor');
+    if (le && isMissingSchema(le)) ({ data: ls, error: le } = await lineQuery('id,order_id,item_id,qty,unit_price_minor'));
     if (le) throw le;
-    for (const l of (ls ?? []) as { id: string; order_id: string; item_id: string; qty: number; unit_price_minor: number }[])
+    type OrderLineRow = {
+      id: string;
+      order_id: string;
+      item_id: string;
+      qty: number;
+      unit_price_minor: number;
+      unit?: string | null;
+      unit_factor?: number | null;
+    };
+    for (const l of (ls ?? []) as unknown as OrderLineRow[])
       lineMap.set(l.order_id, [
         ...(lineMap.get(l.order_id) ?? []),
-        { id: l.id, itemId: l.item_id, qty: Number(l.qty), unitPriceMinor: Number(l.unit_price_minor) },
+        {
+          id: l.id,
+          itemId: l.item_id,
+          qty: Number(l.qty),
+          unitPriceMinor: Number(l.unit_price_minor),
+          unit: l.unit ?? null,
+          unitFactor: l.unit_factor == null ? null : Number(l.unit_factor),
+        },
       ]);
   }
   const requestIds = rows.map((o) => o.request_id).filter((x): x is string => Boolean(x));
@@ -241,7 +260,7 @@ salesRoutes.post('/orders', requirePermission('sales.orders.create'), async (c) 
   const lines = (Array.isArray(b.lines) ? b.lines : [])
     .map((v) => {
       const l = v as Record<string, unknown>;
-      return { itemId: text(l.itemId), qty: Number(l.qty), unitPriceMinor: Number(l.unitPriceMinor) };
+      return { itemId: text(l.itemId), qty: Number(l.qty), unitPriceMinor: Number(l.unitPriceMinor), unit: text(l.unit) };
     })
     .filter(
       (l) => UUID_RE.test(l.itemId) && Number.isFinite(l.qty) && l.qty > 0 && Number.isInteger(l.unitPriceMinor) && l.unitPriceMinor >= 0,
@@ -251,9 +270,10 @@ salesRoutes.post('/orders', requirePermission('sales.orders.create'), async (c) 
   const made = await callRpc<{ id: string }>(userDb(c), 'sal_create_order', {
     p_customer_id: customerId,
     p_warehouse_id: warehouseId,
-    p_lines: lines,
+    p_lines: lines.map(({ unit: _unit, ...l }) => l),
   });
-  return ok(c, await one(c, made.id), 201);
+  const unitsError = await setLineUnits(c, 'sal_set_order_line_units', made.id, lines);
+  return ok(c, { ...(await one(c, made.id)), unitsError }, 201);
 });
 salesRoutes.post('/orders/:id/request-stock', requirePermission('sales.orders.fulfill'), async (c) => {
   const id = idParam(c);

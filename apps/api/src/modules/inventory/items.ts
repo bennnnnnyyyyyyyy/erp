@@ -311,6 +311,55 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     return ok(c, { removed: true });
   });
 
+  // Every item's extra units and its default buying and selling units, for the order forms' unit pickers (sql/044, sql/101). Before
+  // sql/101 is applied the defaults are simply empty.
+  inventoryRoutes.get('/item-units', requirePermission('inventory.items.read'), async (c) => {
+    const { data, error } = await userDb(c)
+      .from('inv_item_units')
+      .select('item_id, unit, factor, for_purchase, for_sale')
+      .eq('org_id', orgOf(c))
+      .is('deleted_at', null)
+      .order('factor');
+    if (error) throw error;
+    const defaults = await userDb(c)
+      .from('inv_items')
+      .select('id, default_purchase_unit, default_sale_unit')
+      .eq('org_id', orgOf(c))
+      .is('deleted_at', null)
+      .or('default_purchase_unit.not.is.null,default_sale_unit.not.is.null');
+    if (defaults.error && !isMissingSchema(defaults.error)) throw defaults.error;
+    type UnitRow = { item_id: string; unit: string; factor: number; for_purchase: boolean; for_sale: boolean };
+    type DefaultRow = { id: string; default_purchase_unit: string | null; default_sale_unit: string | null };
+    return ok(c, {
+      units: ((data ?? []) as UnitRow[]).map((u) => ({
+        itemId: u.item_id,
+        unit: u.unit,
+        factor: Number(u.factor),
+        forPurchase: u.for_purchase,
+        forSale: u.for_sale,
+      })),
+      defaults: (defaults.error ? [] : ((defaults.data ?? []) as DefaultRow[])).map((d) => ({
+        itemId: d.id,
+        purchaseUnit: d.default_purchase_unit,
+        saleUnit: d.default_sale_unit,
+      })),
+    });
+  });
+
+  // The units new lines start with: { purchaseUnit, saleUnit } (null or the base unit = the base unit). Owners and admins (database).
+  inventoryRoutes.put('/items/:id/default-units', requirePermission('inventory.items.manage'), async (c) => {
+    const body = await jsonBody(c);
+    const purchaseUnit = text(body.purchaseUnit) || null;
+    const saleUnit = text(body.saleUnit) || null;
+    if ((purchaseUnit?.length ?? 0) > 32 || (saleUnit?.length ?? 0) > 32) invalid('A unit name is up to 32 characters');
+    await callRpc<void>(userDb(c), 'inv_set_item_default_units', {
+      p_item_id: idParam(c),
+      p_purchase_unit: purchaseUnit,
+      p_sale_unit: saleUnit,
+    });
+    return ok(c, { purchaseUnit, saleUnit });
+  });
+
   // Convert a quantity in a unit to the base unit: ?unit=box&qty=3.
   inventoryRoutes.get('/items/:id/to-base', requirePermission('inventory.items.read'), async (c) => {
     const qty = Number(c.req.query('qty'));

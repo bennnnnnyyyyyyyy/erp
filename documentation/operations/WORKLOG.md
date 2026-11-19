@@ -11,6 +11,107 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — On-prem step 1: the API on Node and a first Docker Compose package (no migration)
+
+**Objective:** start the [on-prem plan](../planning/2026-11-19-on-prem-deployment-plan.md) without waiting for Joe's remaining
+answers (Ben, 19 Nov). Joe confirmed customers' servers will have the internet.
+
+**Actions Completed:**
+- `apps/api/src/node.ts`: the same Hono app served by Node's own HTTP server (no new package); settings from environment variables;
+  in-memory rate limiters with the Worker's limits; the 5-minute job on a timer (`CRON_DISABLED=1` turns it off); the client address
+  is always taken from the proxy, never from a client-sent header. Test `apps/api/test/node_entry.test.ts` (real HTTP).
+- Bundled with esbuild into one file and run with plain Node on this Windows machine: `/health` answers `env: onprem`, a signed-out
+  `/v1/core/session` gets 401.
+- `scripts/onprem/`: Docker Compose (Supabase Postgres, GoTrue, PostgREST, the API, the web app behind Caddy, nightly backup),
+  Caddyfile routes, Dockerfiles, backup script, settings template, README.
+
+**Database / System Result:** none. The Docker package has **not been run**: no Docker on this machine; a Linux test server was
+requested from Joe. Lint, typecheck and API tests (664) pass.
+
+**Safety Status:** new files only; the Worker and the cloud deployment are unchanged.
+
+## 2026-11-19 — Units on order lines, master data slice D (`sql/101`)
+
+**Objective:** buy and sell in other units (a box of 12) while stock stays in the base unit (Ben's 18 Nov email promise). Ben's
+decisions, 19 Nov: buying and selling documents only; prices from the piece price; a default buying and selling unit per item; whole
+pieces only; lines stored in base units plus the typed unit ([ADR-0006](../architecture/decisions/ADR-0006-line-units-stored-in-base.md)).
+
+**Actions Completed:**
+- `sql/101_doc_line_units.sql`: `unit` and `unit_factor` on `sal_order_lines` and `pur_order_lines`; default buying and selling units on
+  `inv_items` (with their column read grant); `inv_set_item_default_units`, `sal_set_order_line_units`, `pur_set_order_line_units`
+  (audited; only while the order has not moved; whole base units unless the base unit is a measure). Test `sql/tests/098`.
+- API: `GET /v1/inventory/item-units` (every item's units and defaults), `PUT /v1/inventory/items/:id/default-units`; sales and
+  purchase order create accept `lines[].unit` and record it (`lib/lineUnits.ts`; a failure keeps the order in base units and is returned
+  as `unitsError`); order reads return `unit` and `unitFactor` (and still work before `sql/101`).
+- Web: unit picker on new order lines (starts in the item's default unit; a suggested price follows the unit; shows "= 36 piece at
+  10.00 each" and any rounding before saving); orders and sales invoices show "3 box (36 piece)" and the price per box; the item's
+  Units tab can now add and remove units and set the default units (until now units could only be added through the API); reorder
+  levels show quantities with their unit and the "reserved" text is translated (Ben's walkthrough comment). Arabic for all new text.
+
+**Database / System Result:** `sql/101` applied to live 19 Nov via CLI (by Claude): new_columns 6, users_read_defaults true,
+anon_sets_units false, users_call_internal false. Tests 098 and 092 on live: ALL TESTS PASSED (rolled back). Local: 96 of 96 SQL tests;
+typecheck, tests (shared 82, API 660, web 157) and lint pass.
+
+**Safety Status:** additive columns and new functions only; existing lines unchanged (no unit = base unit). Not done in this slice:
+supplier bills and goods receipts still show quantities in base units only.
+
+## 2026-11-19 — Owner walkthrough display fixes (no migration)
+
+**Objective:** fix four display problems found in the owner walkthrough on live (Claude in Chrome, Demo Cosmetics Factory, 19 Nov).
+
+**Actions Completed:**
+- VAT mismatch on a supplier bill showed both amounts in minor units ("(250) … (168)"). `apps/api/src/lib/rpc.ts` now answers a plain
+  sentence (`VAT_MISMATCH_MESSAGE`) with its Arabic in `i18nErrors.ts`; test in `rpc_messages.test.ts`. On the bill form the error now
+  shows next to the "Record purchase invoice" button, not at the top of the page (`SupplierInvoices.tsx`).
+- Tick boxes and radio buttons took the full width of their row (the "Deduct this VAT" box showed as a long bar): `styles.css` gives
+  them their own width.
+- Drop-downs inside tables were forced to capitals ("Test Rate (14%)", "Goods And Services"): the `text-transform` is removed from
+  `td select` (no table drop-down shows raw lowercase values).
+- The sales order said "Total" without saying whether VAT is in it: it now says "Total before VAT" or "Total including VAT", from the
+  company's VAT setting (`SalesDemo.tsx`), with Arabic.
+
+**Database / System Result:** no database change. Typecheck, tests (shared 82, API 659, web 151) and lint pass.
+
+**Safety Status:** display and message changes only.
+
+## 2026-11-18 — Codex audit fixes 1, 2, 4, 5, 6, 11, 12 (`sql/100`)
+
+**Objective.** Ben decided (18 Nov) to fix these findings of documentation/planning/2026-11-18-codex-audit-findings.md, after slice B. Findings 8-10 (Design Lab) are with the UI chat; 7 (pinning GitHub Actions) waits for the deployment chat; 3 was already closed (097 live).
+
+**Actions Completed.**
+- 1+2: `sql/100` redefines `pur__record_supplier_price`: a transaction lock on the supplier + item + currency key before reading; the conflict update refuses an order replacing a bill; a history row whenever cost, source kind, number or id changes. Test `sql/tests/097`; `093` P9a now expects the order-to-bill change at the same cost to be audited.
+- 4: `OrgPicker.tsx`: a failed invitations lookup shows "try again" and never sends a new person to create a company (no auto-open either).
+- 5: `lib/authErrors.ts` maps the sign-in service error codes to our own Arabic/English messages (general message otherwise); used in SignIn, SetPassword and OrgPicker; three plain English messages translated. Tested.
+- 6: `requirePermission` marks itself; `apps/api/test/route_permissions.test.ts` proves every /v1 route checks a permission or is one of three documented exceptions (also in agents.md).
+- 11: `ci-deploy.yml` skips the screen smoke test on documentation-only pull requests (pushes to main run everything).
+- 12: README and checklist status (001-099 live, 100 pending); duplicate root `AUDIT_FINDINGS.md` removed (the linked copy stays in documentation/planning).
+
+**Database / System Result.** `sql/100` applied to live 18 Nov by Claude (CLI) after the merge: takes_key_lock true, users_can_call false; tests 097 and 093 passed on live (rolled back).
+
+**Safety Status.** Local PGlite, 98 migrations: 95 of 95 SQL tests. Typecheck clean; API 658, web 151 tests pass; biome ci 0 errors; migration and link checks OK.
+
+## 2026-11-18 — Supplier and customer item codes, master data slice B (`sql/099`)
+
+**Objective.** Slice B of the [master data plan](../plans/MASTER_DATA_PLAN.md), assigned by Ben through the master chat (18 Nov). Decisions:
+only owners and admins add, change or remove a code; one code per item per supplier or customer; "Their code" on purchase orders, bills
+and invoices when a line has one.
+
+**Actions Completed.** `sql/099_inv_party_item_codes.sql`: `inv_party_item_codes` and the set / remove / find functions (audited, owners
+and admins write, members read). `sql/tests/096_inv_party_item_codes.sql` (new). Permission `inventory.party_codes.manage` (owners and
+admins). API (`apps/api/src/modules/inventory/partyCodes.ts`): `GET /v1/inventory/party-item-codes` (by item or by party),
+`GET /party-item-codes/find`, `PUT /items/:id/party-codes`, `DELETE /items/:id/party-codes/:partyType/:partyId`. Web: "Supplier and
+customer codes" on the item page; new purchase and sales orders search items by the chosen party's codes and show them beside ours; a
+"Their code" column on the purchase order, bill and invoice pages (also when they are printed from the browser), only when a line has a
+code. Arabic machine drafts in `i18nMasterData.ts`. Not done: there are no separate supplier or customer pages yet, so the codes are not
+listed from the party's side; the bill and invoice forms pick order lines, not items, so they only show the codes.
+
+**Database / System Result.** None. Not applied to live; the master chat applies it after the merge.
+
+**Safety Status.** Local SQL run (PGlite, all 97 migrations, 099 applied a second time): 94 of 94, including 096 (one code per item and
+party, unique per party case-insensitively, same code at another party allowed, lookup, remove frees the code, wrong or foreign party
+refused, members read but cannot write, audit count, isolation, no direct writes) and guard 092. Typecheck clean; tests: shared 82, API
+655 (new `party_item_codes.test.ts`), web 148 (new `PartyCodes.test.ts`). `biome ci .`: 0 errors. Not viewed in a browser.
+
 ## 2026-11-18 — Walkthrough fixes A1-E1 (Ben decided the plan; `sql/098`)
 
 **Objective.** Ben's walkthrough notes of 18 Nov, fixed as he decided them in .temp/fix-plan-18nov.md (B1, B2 chosen; A, C, D, E from his notes; A1 after confirming that Egypt's standard is prices before VAT).
@@ -3496,3 +3597,5 @@ the fixes. Arabic is machine draft. `.env` was copied into the worktree (gitigno
 **Safety Status.** Checked: `biome ci` 0 errors; `tsc` 0 errors in shared, api and web; tests shared 82, api 647, web 155 (9 new, for the contrast arithmetic and the arrow keys); doc-links and migration checks OK; in Chrome on the sample-data build: 69 radio groups all named, one tab stop each, real arrow keys select (and reverse in right-to-left), panel flips to the left in Arabic, launcher 44px on a 390px frame and flips side. Not checked: a real screen reader (only the accessibility attributes and the keyboard), a real phone, the contrast panel on every page. The panel's first run found one real issue outside the Lab, left unchanged: search-box placeholder text in dark mode is 3.6 : 1 (browser default colour), below 4.5.
 
 **Addendum (18 Nov), "Failed to fetch" on the preview, and a build command that checks itself.** Ben reported "Failed to fetch" when clicking the company on the preview. Cause (found by reading the deployed files): that deploy was built without `VITE_API_BASE_URL` and without `DESIGN_LAB=1`, so its API address was `http://localhost:8787` and it had no Design Lab; sign-in (Supabase) and the company list worked, the first call to our API failed. The live app's build has the real API address. Fix for the user: rebuild and redeploy. Added `npm run preview:build` (`scripts/preview-build.mjs`): sets both settings itself, builds, and refuses to finish if the build points at localhost, has no Lab or no Supabase address; checked by running it (it passes with both settings unset in the shell). Documented in `PREVIEW_DEPLOYS.md`. Not verified: the corrected preview has not been deployed (needs Ben's Cloudflare login).
+
+**Addendum (19 Nov), merge of origin/main (a053aa2) into worktree-ui-warm, new look kept.** Objective: bring today's main features (slice D units sql/101, owner-walkthrough fixes, party item codes, prices, statements, Codex audit fixes, on-prem step 1) into the Design Lab preview. Actions: merged origin/main with no conflicts (git auto-merged styles.css, WORKLOG.md and package.json); the six look files (theme.css, styles.css warm layer, Shell.tsx, AppMenu.tsx, icons.tsx, Home.tsx) remain this branch's versions; main's CSS (statements block, tick-box width, td select) sits before the warm layer and the warm layer does not override it (checked by reading: it sets only padding and radius on inputs). Backup of the previous tip: local branch backup/ui-warm-before-main-merge-2026-11-19. fix/presentation-19nov had not reached main, so it is not included. Checks: biome ci --diagnostic-level=error 0 errors; typecheck 0 errors; tests shared 82, api 664, web 166 passed; doc links OK; check-migrations OK (99 migrations, no new one on this branch). Database / system result: none, no migration, nothing deployed. Safety status: nothing pushed, no PR, nothing on main; the new look stays off live until Ben says "launch the new look".

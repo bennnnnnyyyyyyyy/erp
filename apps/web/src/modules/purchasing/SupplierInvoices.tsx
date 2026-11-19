@@ -16,6 +16,7 @@ import { UnpaidBills } from './UnpaidBills';
 import { SupplierNotes } from './SupplierNotes';
 import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseVat } from '../finance/PurchaseVatFields';
 
+import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
 import { tr, trf } from '../../lib/i18n';
 type Summary = { orderId:string;number:string;supplierId:string;currency:string;lines:{orderLineId:string;itemId:string;receivedQty:number;billedQty:number;unitCostMinor:number}[] };
 type Supplier = {id:string;name:string};
@@ -51,14 +52,14 @@ export function SupplierInvoices(){
   const shownBilling=showAll?billingRows:toBill;
   return <section className="page">
     <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Supplier invoices matched against received purchase orders.')}</p>
-    {message&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
+    {message&&(message.ok||!(formOpen&&summary))&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
     {hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
         <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>
-      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" /><Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button></>}
+      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" />{message&&!message.ok&&<p className="error notice" role="alert">{message.text}</p>}<Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button></>}
     </FormToggle>}
     <UnpaidBills supplierName={supplierName} />
     <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Purchase order')}</th><th scope="col">{tr('Date recorded')}</th><th scope="col" className="right">{tr('Amount')}</th></tr></thead><tbody>
@@ -85,6 +86,8 @@ export function SupplierInvoicePage() {
   const invoice = useLoad(() => api<Omit<Invoice, 'lines'> & { orderNumber: string | null; lines: (BillLine & { itemId: string | null })[] }>(`/v1/purchasing/supplier-invoices/${id}`));
   const suppliers = useLoad(() => api<Supplier[]>('/v1/purchasing/suppliers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
+  // The supplier's own codes for these items (sql/099), as a "Their code" column when a line has one.
+  const theirCodes = codesFor(usePartyCodes('supplier', invoice.data?.supplierId), (invoice.data?.lines ?? []).map((l) => l.itemId ?? undefined));
 
   if (invoice.error) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><Loading error={invoice.error} /></section>;
   if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
@@ -125,14 +128,14 @@ export function SupplierInvoicePage() {
         {inv.vatClass && inv.vatClass !== 'local' ? <div><dt>{tr('Kind of purchase')}</dt><dd>{inv.vatClass === 'import' ? tr('Import (customs)') : inv.vatClass === 'mixed' ? tr('Mixed (each line has its own)') : tr('Capital asset (equipment, machinery)')}</dd></div> : null}
       </dl>
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
+        <thead><tr><th scope="col">{tr('Item')}</th><TheirCodeHeader codes={theirCodes} /><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
           {hasVat ? <><th scope="col" className="right">{tr('VAT rate')}</th><th scope="col" className="right">{tr('VAT')}</th></> : null}</tr></thead>
         <tbody>
           {inv.lines.map((l) => (
-            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.netMinor ?? Math.round(l.qty * l.unitCostMinor), inv.currency)}</td>
+            <tr key={l.orderLineId}><td>{itemOf(l.orderLineId)}</td><TheirCodeCell codes={theirCodes} itemId={l.itemId ?? undefined} /><td className="right">{l.qty}</td><td className="right">{money(l.unitCostMinor, inv.currency)}</td><td className="right">{money(l.netMinor ?? Math.round(l.qty * l.unitCostMinor), inv.currency)}</td>
               {hasVat ? <><td className="right">{(l.taxRate ?? 0) > 0 ? `${l.taxRate}%` : tr('None')}</td><td className="right">{money(l.taxMinor ?? 0, inv.currency)}</td></> : null}</tr>
           ))}
-          <tr><td colSpan={hasVat ? 5 : 3} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
+          <tr><td colSpan={(hasVat ? 5 : 3) + (theirCodes.size ? 1 : 0)} className="right"><strong>{hasVat ? tr('Total with VAT') : tr('Total')}</strong></td><td className="right"><strong>{money(inv.totalMinor, inv.currency)}</strong></td></tr>
         </tbody>
       </table></div>
       <SupplierNotes billId={inv.id} currency={inv.currency} lines={inv.lines} itemOf={itemOf} onChanged={invoice.reload} />

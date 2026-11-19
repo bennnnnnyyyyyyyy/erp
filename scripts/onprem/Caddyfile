@@ -1,0 +1,28 @@
+# One address for everything (SITE_ADDRESS: the server's name or IP; Caddy makes the certificate, or uses the customer's).
+# Port 8080 is the same routes for the API container inside the package (no TLS, not published).
+
+(routes) {
+	handle_path /auth/v1/* {
+		reverse_proxy auth:9999
+	}
+	handle_path /rest/v1/* {
+		reverse_proxy rest:3000
+	}
+	@api path /health /v1/* /r/* /webhooks/*
+	handle @api {
+		reverse_proxy api:8787
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+{$SITE_ADDRESS} {
+	import routes
+}
+
+:8080 {
+	import routes
+}

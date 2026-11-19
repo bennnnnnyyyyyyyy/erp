@@ -1,0 +1,13 @@
+# The web app, built for this server's address, served by Caddy with the routes in Caddyfile. Built from the repository root.
+FROM node:24-alpine AS build
+ARG PUBLIC_URL
+ARG ANON_KEY
+WORKDIR /app
+COPY . .
+RUN npm ci
+ENV SUPABASE_URL=${PUBLIC_URL} SUPABASE_PUBLISHABLE_KEY=${ANON_KEY} VITE_API_BASE_URL=${PUBLIC_URL}
+RUN npm run build -w apps/web
+
+FROM caddy:2-alpine
+COPY scripts/onprem/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/apps/web/dist /srv

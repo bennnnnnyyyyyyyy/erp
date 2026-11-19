@@ -1,0 +1,15 @@
+# The API on Node (apps/api/src/node.ts): the same code as the Cloudflare Worker, bundled into one file with esbuild (installed with
+# wrangler). Checked 19 Nov 2026 on Windows: the bundle starts, /health answers env "onprem", a signed-out /v1 call gets 401.
+FROM node:24-alpine AS build
+WORKDIR /app
+COPY . .
+RUN npm ci
+RUN npx esbuild apps/api/src/node.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/node.mjs
+
+FROM node:24-alpine
+WORKDIR /app
+COPY --from=build /app/dist/node.mjs ./node.mjs
+USER node
+ENV NODE_ENV=production
+EXPOSE 8787
+CMD ["node", "node.mjs"]

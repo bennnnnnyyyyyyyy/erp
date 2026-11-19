@@ -77,6 +77,8 @@ main.content:focus { outline: none; }
     border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface);
     transition: border-color 0.12s, box-shadow 0.12s;
   }
+  /* Walkthrough 19 Nov: a tick box took the full width above and showed as a long empty bar ("Deduct this VAT" on the bill form). */
+  input[type='checkbox'], input[type='radio'] { width: auto; margin-top: 0; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
   textarea { resize: vertical; }
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
@@ -256,7 +258,7 @@ tbody tr.row-link:hover a { text-decoration: underline; }
 tbody tr.row-link:focus-within { background: var(--surface-2); }
 th.right, td.right { text-align: end; font-variant-numeric: tabular-nums; }
 td.right { font-family: var(--mono); font-size: 0.9rem; }
-td select { width: auto; margin-top: 0; padding: 0.3rem 0.5rem; text-transform: capitalize; }
+td select { width: auto; margin-top: 0; padding: 0.3rem 0.5rem; }
 td input { margin-top: 0; }
 /* Demo note (5 Nov): inputs inside table cells were squeezed to a few characters. Give them a usable minimum width. */
 .table-wrap td input:not([type='checkbox']):not([type='radio']) { min-width: 9rem; }

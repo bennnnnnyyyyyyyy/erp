@@ -17,17 +17,19 @@ import { Pill } from '../trade/common';
 import { InvoiceNotes } from './InvoiceNotes';
 import { netInvoiceMinor } from './noteMath';
 
+import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
 import { tr, trf } from '../../lib/i18n';
+import { unitText } from '../../lib/lineUnits';
 // Customer invoices: bill a delivered sales order, line by line, and see ordered / delivered / invoiced with a flag for
 // whatever does not match. The price always comes from the order line; the database refuses over-invoicing.
 
-type OrderLine = { id: string; itemId: string; qty: number; unitPriceMinor: number };
+type OrderLine = { id: string; itemId: string; qty: number; unitPriceMinor: number; unit?: string | null; unitFactor?: number | null };
 type Order = { id: string; number: string; customerId: string; status: string; currency: string; requestStatus: string | null; lines: OrderLine[] };
 // netMinor / taxMinor / grossMinor: stored by the database (sql/086); totalMinor is the gross. Optional while an older API answers.
 type InvoiceLine = { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; netMinor?: number; taxMinor?: number; grossMinor?: number; priceIncludesVat?: boolean };
 type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; netMinor?: number; taxMinor?: number; grossMinor?: number; createdAt: string; creditedMinor?: number; debitedMinor?: number; lines: InvoiceLine[] };
 type Customer = { id: string; name: string };
-type Item = { id: string; sku: string; name: string };
+type Item = { id: string; sku: string; name: string; uom?: string };
 
 const FLAG: Record<BillingFlag, { label: string; pill: string }> = {
   ok: { label: 'Fully invoiced', pill: 'received' },
@@ -190,6 +192,9 @@ export function CustomerInvoicePage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const invoices = { reload: record.reload };
   const [payKey, setPayKey] = useState(0);
+  // The customer's own codes for these items (sql/099), as a "Their code" column when a line has one.
+  const lineItem = (orderLineId: string) => record.data?.order?.lines.find((l) => l.id === orderLineId)?.itemId;
+  const theirCodes = codesFor(usePartyCodes('customer', record.data?.invoice.customerId), (record.data?.invoice.lines ?? []).map((l) => lineItem(l.orderLineId)));
 
   if (record.error) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link><Loading error={record.error} /></section>;
   if (!record.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
@@ -201,6 +206,12 @@ export function CustomerInvoicePage() {
     const i = items.data?.find((v) => v.id === itemId);
     return i ? `${i.sku} · ${i.name}` : '—';
   };
+  // Slice D: the quantity as the order line was typed ("3 box (36 piece)"); the invoice itself stays in the base unit.
+  const qtyText = (l: InvoiceLine) => {
+    const ol = order?.lines.find((x) => x.id === l.orderLineId);
+    const uom = items.data?.find((v) => v.id === ol?.itemId)?.uom ?? '';
+    return ol?.unit ? unitText(l.qty, uom, ol.unit, ol.unitFactor) : String(l.qty);
+  };
   const canManage = session.permissions.includes('sales.invoices.manage');
   // Approved credit and debit notes change what is owed (the invoice itself is never edited).
   const credited = inv.creditedMinor ?? 0;
@@ -209,7 +220,7 @@ export function CustomerInvoicePage() {
   // VAT (sql/086): shown only when the invoice carries any, so invoices without VAT look as they always did.
   const lineNet = (l: InvoiceLine) => l.netMinor ?? Math.round(l.qty * l.unitPriceMinor);
   const hasVat = (inv.taxMinor ?? 0) > 0 || inv.lines.some((l) => (l.taxRate ?? 0) > 0);
-  const cols = hasVat ? 6 : 4;
+  const cols = (hasVat ? 6 : 4) + (theirCodes.size ? 1 : 0);
 
   async function voidIt() {
     setBusy(true); setMessage(null);
@@ -240,11 +251,11 @@ export function CustomerInvoicePage() {
       </dl>
 
       <div className="table-wrap"><table>
-        <thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{inv.lines.some((l) => l.priceIncludesVat) ? tr('Unit price (with VAT)') : tr('Unit price')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
+        <thead><tr><th scope="col">{tr('Item')}</th><TheirCodeHeader codes={theirCodes} /><th scope="col" className="right">{tr('Quantity')}</th><th scope="col" className="right">{inv.lines.some((l) => l.priceIncludesVat) ? tr('Unit price (with VAT)') : tr('Unit price')}</th><th scope="col" className="right">{hasVat ? tr('Before VAT') : tr('Line total')}</th>
           {hasVat ? <><th scope="col" className="right">{tr('VAT rate')}</th><th scope="col" className="right">{tr('VAT')}</th></> : null}</tr></thead>
         <tbody>
           {inv.lines.map((l) => (
-            <tr key={l.id ?? l.orderLineId}><td>{itemOf(l.orderLineId)}</td><td className="right">{l.qty}</td><td className="right">{money(l.unitPriceMinor, inv.currency)}</td><td className="right">{money(lineNet(l), inv.currency)}</td>
+            <tr key={l.id ?? l.orderLineId}><td>{itemOf(l.orderLineId)}</td><TheirCodeCell codes={theirCodes} itemId={lineItem(l.orderLineId)} /><td className="right">{qtyText(l)}</td><td className="right">{money(l.unitPriceMinor, inv.currency)}</td><td className="right">{money(lineNet(l), inv.currency)}</td>
               {hasVat ? <><td className="right">{(l.taxRate ?? 0) > 0 ? `${l.taxRate}%` : tr('None')}</td><td className="right">{money(l.taxMinor ?? 0, inv.currency)}</td></> : null}</tr>
           ))}
           {hasVat ? <tr><td colSpan={cols - 1} className="right">{tr('Before VAT')}</td><td className="right">{money(inv.netMinor ?? 0, inv.currency)}</td></tr> : null}

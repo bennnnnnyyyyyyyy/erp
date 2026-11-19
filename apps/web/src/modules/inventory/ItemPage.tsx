@@ -16,6 +16,8 @@ import { useSession } from '../../session';
 import { EditItemModal, MOVE_KIND_LABEL, useCatalog } from './Inventory';
 import { ItemBatchSwitch } from './ItemBatchSwitch';
 import { ItemPrices } from '../sales/ItemPrices';
+import { ItemPartyCodes } from './PartyCodes';
+import { ItemUnits } from './ItemUnits';
 
 // One page per item (inventory redesign Q1, Ben 10 Nov 2026). Everything the app knows about one item, which used to be spread over
 // six screens: totals, stock per warehouse, its movements, batches, units, average cost and its history. Read-only apart from Edit;
@@ -94,6 +96,8 @@ export function ItemPage() {
       )}
       {/* Sales price, supplier costs and a suggested price (sql/097). */}
       {!demoMode && can('sales.prices.read') && <ItemPrices itemId={item.id} canManage={can('sales.prices.manage')} />}
+      {/* Supplier and customer codes (sql/099). */}
+      {!demoMode && <ItemPartyCodes itemId={item.id} canManage={can('inventory.party_codes.manage')} />}
 
       <div className="stats">
         <div className="stat" style={{ '--i': 0 } as CSSProperties}><div className="stat-label">{tr('On hand')}</div><div className="stat-value">{qty(onHand)}</div><div className="stat-note">{item.uom}</div></div>
@@ -170,16 +174,7 @@ export function ItemPage() {
         )}
 
         {tab === 'units' && (
-          <div className="table-wrap"><table>
-            <thead><tr><th scope="col">{tr('Unit')}</th><th scope="col" className="right">{trf('In {unit}', { unit: item.uom })}</th><th scope="col">{tr('Used for')}</th></tr></thead>
-            <tbody>
-              <tr><td><strong>{item.uom}</strong></td><td className="right">1</td><td className="muted">{tr('Base unit: stock is counted in it')}</td></tr>
-              {(units.data ?? []).map((u) => (
-                <tr key={u.id}><td>{u.unit}</td><td className="right">{qty(u.factor)}</td>
-                  <td>{[u.forPurchase ? tr('Buying') : '', u.forSale ? tr('Selling') : ''].filter(Boolean).join(', ') || <span className="muted">—</span>}</td></tr>
-              ))}
-            </tbody>
-          </table></div>
+          <ItemUnits itemId={item.id} baseUnit={item.uom} units={units.data ?? []} canManage={can('inventory.items.manage')} onChanged={units.reload} />
         )}
 
         {tab === 'cost' && (

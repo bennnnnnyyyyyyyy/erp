@@ -1,7 +1,7 @@
 # Master data and coding Plan (accounting roadmap phase 4)
 
 **Module key:** `inventory` (items, groups, units), `purchasing` and `sales` (party item codes, prices); no new module
-**Status:** Approved by Ben on 17 Nov 2026 (build order A → C → B → D). Slice A (item groups and codes, sql/095) and its read-grant fix (sql/096) are applied to live. Slice C (prices and price lists, sql/097) was started at Ben’s request and built on 18 Nov; it is not applied to live yet. See sql/README.md and the dated worklog for current rollout evidence.
+**Status:** Approved by Ben on 17 Nov 2026 (build order A → C → B → D). Slice A (item groups and codes, sql/095) and its read-grant fix (sql/096) are applied to live. Slice C (prices and price lists, sql/097) was started at Ben’s request and built on 18 Nov; it is not applied to live yet. See sql/README.md and the dated worklog for current rollout evidence. Slice B (supplier and customer item codes, `sql/099`) built 18 Nov, not applied.
 **Owner:** Ben · **Reviewers:** Ben, the accountant
 **Roadmap:** [ROADMAP_ACCOUNTING_SUITE.md](ROADMAP_ACCOUNTING_SUITE.md) phase 4. Ben's notes there: "item, sub-item and sub-sub-item,
 each with coding", "auto SKU or our own (best for the Egyptian Tax Authority)", "SKU as the supplier knows it differs from the SKU the
@@ -38,9 +38,12 @@ money to rounding.
   sales price per item (before or with VAT, following the company's VAT setting), and price lists (per customer group, with a validity
   period) that override it. A company setting: a new purchase price **updates** the item's last cost and suggested sales price, or only
   **suggests** it (roadmap Q6). Order lines take the price list's price, editable.
-- **D. Units on document lines (S5b).** Order, request, bill and invoice lines keep their own unit and factor; quantity and price are
-  stored as typed (per box), stock moves in base units (box × 12). Money is computed on the typed quantity and price, so no rounding is
-  lost; the per-base-unit cost is derived for stock.
+- **D. Units on document lines (S5b).** ~~Order, request, bill and invoice lines keep their own unit and factor; quantity and price are
+  stored as typed (per box)…~~ **Decided 19 Nov (Ben; [ADR-0006](../architecture/decisions/ADR-0006-line-units-stored-in-base.md),
+  `sql/101`):** lines stay in the base unit (pieces, price per piece) and sales and purchase order lines also remember the unit they
+  were typed in; invoices and bills show the order line's unit. Buying and selling documents only (transfers, counts and adjustments
+  stay in base units). Prices come from the piece price (a box suggests piece × factor). Each item has a default buying and selling
+  unit. Whole pieces only, unless the base unit is a measure.
 
 **Out (later):** barcodes and label printing; item variants (size/colour matrices); price rules by quantity break; promotions.
 **Won't:** importing a competitor's item master as-is (an import from a file exists for that).

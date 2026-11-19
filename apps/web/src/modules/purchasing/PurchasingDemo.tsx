@@ -14,10 +14,12 @@ import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
+import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
 import { ConfirmButton } from '../../components/FormToggle';
 import { OrderApproval, OrderApprovalSetting, OrderConfirmation } from './OrderApproval';
 
 import { tr, trf } from '../../lib/i18n';
+import { unitText } from '../../lib/lineUnits';
 // The demo and real module use the same response shape; the real receipt posts to the inventory ledger.
 
 const money = (minor: number, currency = 'EGP') => formatMoney({ amountMinor: minor, currency });
@@ -219,6 +221,8 @@ export function PurchaseOrderPage() {
   const canManageOrder = hasPermission(session.permissions, 'purchasing.orders.manage');
   // The real API gives line ids and received quantities (sql/064); the sample data receives orders whole.
   const byLine = Boolean(o?.lines.every((l) => l.lineId));
+  // The supplier's own codes for these items (sql/099), as a "Their code" column when a line has one.
+  const theirCodes = codesFor(usePartyCodes('supplier', o?.supplierId), (o?.lines ?? []).map((l) => l.itemId));
 
   async function act(action: 'receive' | 'cancel', done: string) {
     setBusy(true);
@@ -264,7 +268,7 @@ export function PurchaseOrderPage() {
         <table>
           <thead>
             <tr>
-              <th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Quantity')}</th>
+              <th scope="col">{tr('Item')}</th><TheirCodeHeader codes={theirCodes} /><th scope="col" className="right">{tr('Quantity')}</th>
               {byLine && <th scope="col" className="right">{tr('Received')}</th>}
               <th scope="col" className="right">{tr('Unit cost')}</th><th scope="col" className="right">{tr('Line total')}</th>
             </tr>
@@ -273,14 +277,19 @@ export function PurchaseOrderPage() {
             {o.lines.map((l, i) => (
               <tr key={i}>
                 <td>{cat.itemName(l.itemId)}</td>
-                <td className="right">{l.qty}</td>
+                <TheirCodeCell codes={theirCodes} itemId={l.itemId} />
+                <td className="right">{unitText(l.qty, cat.uomOf(l.itemId), l.unit, l.unitFactor)}</td>
                 {byLine && <td className="right">{l.receivedQty ?? 0}</td>}
-                <td className="right">{money(l.unitCostMinor, o.currency)}</td>
+                <td className="right">
+                  {l.unit && l.unitFactor
+                    ? trf('{price} per {unit}', { price: money(Math.round(l.unitCostMinor * l.unitFactor), o.currency), unit: l.unit })
+                    : money(l.unitCostMinor, o.currency)}
+                </td>
                 <td className="right">{money(l.qty * l.unitCostMinor, o.currency)}</td>
               </tr>
             ))}
             <tr>
-              <td colSpan={byLine ? 4 : 3} className="right"><strong>{tr('Total')}</strong></td>
+              <td colSpan={(byLine ? 4 : 3) + (theirCodes.size ? 1 : 0)} className="right"><strong>{tr('Total')}</strong></td>
               <td className="right"><strong>{money(o.totalMinor, o.currency)}</strong></td>
             </tr>
           </tbody>

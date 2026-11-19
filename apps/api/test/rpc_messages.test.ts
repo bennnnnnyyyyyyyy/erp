@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { callRpc, stockShortMessage, trimQty } from '../src/lib/rpc';
+import { callRpc, stockShortMessage, trimQty, VAT_MISMATCH_MESSAGE } from '../src/lib/rpc';
 
 describe('stock shortage message', () => {
   it('drops trailing zeros from quantities', () => {
@@ -39,6 +39,14 @@ describe('a database detail that repeats the message', () => {
   it('is kept when it adds something', async () => {
     await expect(callRpc(fakeClient({ message: 'INVALID_STATE', details: 'the order is pending' }), 'x')).rejects.toMatchObject({
       message: 'That is not possible in the current state: the order is pending',
+    });
+  });
+
+  it('is replaced for a VAT mismatch, whose amounts are in minor units (walkthrough 19 Nov: "(250)" read as 250 pounds)', async () => {
+    const detail = 'the VAT entered (250) is too far from the VAT worked out from the lines (168): check the rates on the lines';
+    await expect(callRpc(fakeClient({ message: 'VAT_MISMATCH', details: detail }), 'x')).rejects.toMatchObject({
+      message: VAT_MISMATCH_MESSAGE,
+      status: 409,
     });
   });
 });

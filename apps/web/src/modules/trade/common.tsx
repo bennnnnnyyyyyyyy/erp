@@ -17,6 +17,9 @@ import { useSession } from '../../session';
 import { formatMoney, hasPermission, vatLine, vatLineInclusive } from '@erp/shared';
 
 import { tr, trf } from '../../lib/i18n';
+import { usePartyCodes } from '../inventory/PartyCodes';
+import { toBaseLine } from '../../lib/lineUnits';
+import { useItemUnits } from '../../lib/useItemUnits';
 // DEMO ONLY: shared pieces for the sample purchasing and sales screens (lib/demoTrade.ts).
 
 export function useCatalog() {
@@ -24,7 +27,8 @@ export function useCatalog() {
   const warehouses = useLoad(() => api<DemoWarehouse[]>('/v1/inventory/warehouses'));
   const itemName = (id: string) => items.data?.find((i) => i.id === id)?.name ?? id;
   const warehouseName = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? id;
-  return { items, warehouses, itemName, warehouseName, ready: Boolean(items.data && warehouses.data) };
+  const uomOf = (id: string) => items.data?.find((i) => i.id === id)?.uom ?? '';
+  return { items, warehouses, itemName, warehouseName, uomOf, ready: Boolean(items.data && warehouses.data) };
 }
 
 const PILL_VARIANT: Record<string, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
@@ -246,20 +250,24 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
 // ------------------------------------------------------------------ new order form (purchase and sales)
 
 /** `suggested`: the price was filled in from the price lookup and not typed (it is replaced when the party or item changes). */
-type Line = { itemId: string; qty: string; price: string; suggested?: boolean };
+/** `unit`: the unit quantity and price are typed in ('' = the item's base unit; slice D, sql/101). `suggestedBase`: the looked-up price
+ *  per base unit, so a suggested price follows a change of unit (a box suggests the piece price x 12). */
+type Line = { itemId: string; qty: string; price: string; suggested?: boolean; unit: string; suggestedBase?: number };
+const emptyLine = (): Line => ({ itemId: '', qty: '1', price: '', unit: '' });
 
 /** Under a sales order line: what the typed price means once VAT applies (walkthrough 18 Nov: a price typed with "prices include VAT"
  *  on was silently read as including VAT). The item's own rate, else the company default; shown only when quantity and price are set. */
-function LineVatPreview({ line, vat, items, currency }: {
-  line: Line;
+function LineVatPreview({ itemId, qty, priceMinor, vat, items, currency }: {
+  itemId: string;
+  /** In the base unit, as saved (slice D: a box line is previewed as the pieces the database will see). */
+  qty: number;
+  priceMinor: number;
   vat: NonNullable<Parameters<typeof NewOrderForm>[0]['vat']>;
   items: DemoItem[];
   currency: string;
 }) {
-  const qty = parseAmount(line.qty);
-  const priceMinor = toMinor(line.price);
-  if (!line.itemId || !Number.isFinite(qty) || qty <= 0 || priceMinor <= 0) return null;
-  const item = items.find((it) => it.id === line.itemId);
+  if (!itemId || !Number.isFinite(qty) || qty <= 0 || priceMinor <= 0) return null;
+  const item = items.find((it) => it.id === itemId);
   const rateId = item?.vatRateId ?? vat.defaultVatRateId;
   const rate = vat.rates.find((r) => r.id === rateId)?.rate ?? 0;
   const split = (vat.pricesIncludeVat ? vatLineInclusive : vatLine)(qty, priceMinor, rate);
@@ -267,6 +275,20 @@ function LineVatPreview({ line, vat, items, currency }: {
   return (
     <p className="hint muted small" aria-live="polite">
       {trf('Before VAT {net} · VAT {rate}% {tax} · Total {gross}', { net: m(split.netMinor), rate, tax: m(split.taxMinor), gross: m(split.grossMinor) })}
+    </p>
+  );
+}
+
+/** Under a line typed in another unit: what is saved in the base unit, and the rounding when the price per unit does not split. */
+function LineUnitHint({ b, unit, base, money }: { b: ReturnType<typeof toBaseLine>; unit: string; base: string; money: (minor: number) => string }) {
+  if (!Number.isFinite(b.baseQty) || b.baseQty <= 0) return null;
+  if (!b.whole) return <p className="hint error small" aria-live="polite">{trf('Not a whole number of {base}: {qty} {base}.', { base, qty: b.baseQty })}</p>;
+  return (
+    <p className="hint muted small" aria-live="polite">
+      {trf('= {qty} {base} at {price} each', { qty: b.baseQty, base, price: money(b.baseMinor) })}
+      {b.lineMinor !== b.typedLineMinor
+        ? ` · ${trf('the price per {unit} does not split evenly: the line is saved as {saved}', { unit, saved: money(b.lineMinor) })}`
+        : ''}
     </p>
   );
 }
@@ -298,7 +320,7 @@ export function NewOrderForm(props: {
   const [quickAdd, setQuickAdd] = useState(false);
   const canQuickAdd = Boolean(props.partyAddPermission && hasPermission(session.permissions, props.partyAddPermission));
   const [warehouseId, setWarehouseId] = useState('');
-  const [lines, setLines] = useState<Line[]>([{ itemId: '', qty: '1', price: '' }]);
+  const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
@@ -308,7 +330,24 @@ export function NewOrderForm(props: {
     if (warehouses?.length && !warehouses.some((w) => w.id === warehouseId)) setWarehouseId(warehouses[0]?.id ?? '');
   }, [warehouses, warehouseId]);
   const currency = session.org?.defaultCurrency ?? 'EGP';
+  // The chosen party's own codes for our items (sql/099): searchable and shown beside ours.
+  const partyCodes = usePartyCodes(props.partyField === 'customerId' ? 'customer' : 'supplier', partyId);
   const vatOn = props.vat?.registered === true;
+  // Units (slice D): each item's base unit plus the units set up for this side (selling or buying), and the unit a new line starts in.
+  const side = props.partyField === 'customerId' ? 'sale' : 'purchase';
+  const itemUnits = useItemUnits();
+  const baseUnitOf = (itemId: string) => (cat.items.data ?? []).find((it) => it.id === itemId)?.uom ?? '';
+  const unitsOf = (itemId: string) =>
+    (itemUnits.data?.units ?? []).filter((u) => u.itemId === itemId && (side === 'sale' ? u.forSale : u.forPurchase));
+  const factorOf = (itemId: string, unit: string) => (unit ? (unitsOf(itemId).find((u) => u.unit === unit)?.factor ?? 1) : 1);
+  const defaultUnitOf = (itemId: string) => {
+    const d = (itemUnits.data?.defaults ?? []).find((x) => x.itemId === itemId);
+    const unit = (side === 'sale' ? d?.saleUnit : d?.purchaseUnit) ?? '';
+    return unit && unitsOf(itemId).some((u) => u.unit === unit) ? unit : '';
+  };
+  /** A line as it will be saved: pieces and price per piece. */
+  const saved = (l: Line) => toBaseLine(parseAmount(l.qty), toMinor(l.price), factorOf(l.itemId, l.unit), baseUnitOf(l.itemId));
+  const money2 = (minor: number) => formatMoney({ amountMinor: minor, currency });
 
   // Fill empty (or still suggested) prices once a party and items are chosen; a typed price is never replaced.
   const { priceLookup } = props;
@@ -323,7 +362,8 @@ export function NewOrderForm(props: {
           ls.map((l) => {
             if (!l.itemId || (l.price !== '' && !l.suggested)) return l;
             const minor = prices[l.itemId];
-            return minor === null || minor === undefined ? (l.suggested ? { ...l, price: '', suggested: false } : l) : { ...l, price: (minor / 100).toFixed(2), suggested: true };
+            if (minor === null || minor === undefined) return l.suggested ? { ...l, price: '', suggested: false, suggestedBase: undefined } : l;
+            return { ...l, price: ((minor * factorOf(l.itemId, l.unit)) / 100).toFixed(2), suggested: true, suggestedBase: minor };
           }),
         );
       })
@@ -340,6 +380,9 @@ export function NewOrderForm(props: {
     if (!chosen.length) return setError(tr('Add at least one item.'));
     if (chosen.some((l) => !(parseAmount(l.qty) > 0))) return setError(tr('Each item needs a quantity above zero.'));
     if (chosen.some((l) => !Number.isFinite(parseAmount(l.price)))) return setError(tr('Each item needs a price. Type 0 if it is free.'));
+    const notWhole = chosen.find((l) => !saved(l).whole);
+    if (notWhole)
+      return setError(trf('{qty} {unit} is not a whole number of {base}. Change the quantity.', { qty: notWhole.qty, unit: notWhole.unit, base: baseUnitOf(notWhole.itemId) }));
     setBusy(true);
     setError(null);
     try {
@@ -348,7 +391,10 @@ export function NewOrderForm(props: {
         body: JSON.stringify({
           [props.partyField]: partyId,
           warehouseId,
-          lines: chosen.map((l) => ({ itemId: l.itemId, qty: parseAmount(l.qty), [props.priceField]: toMinor(l.price) })),
+          lines: chosen.map((l) => {
+            const b = saved(l);
+            return { itemId: l.itemId, qty: b.baseQty, [props.priceField]: b.baseMinor, ...(l.unit ? { unit: l.unit } : {}) };
+          }),
         }),
       });
       navigate(`${props.backTo}/${order.id}`);
@@ -394,23 +440,51 @@ export function NewOrderForm(props: {
               {tr('Item')}
               <SearchSelect
                 value={l.itemId}
-                onChange={(v) => setLine(i, { itemId: v })}
+                onChange={(v) => setLine(i, { itemId: v, unit: defaultUnitOf(v) })}
                 label={tr('Item')}
                 placeholder={tr('Choose an item…')}
-                options={(cat.items.data ?? []).map((it) => ({ value: it.id, label: `${it.sku} · ${it.name}`, keywords: it.nameAr ?? '' }))}
+                options={(cat.items.data ?? []).map((it) => {
+                  const theirs = partyCodes.get(it.id);
+                  return { value: it.id, label: theirs ? `${it.sku} · ${it.name} · (${theirs})` : `${it.sku} · ${it.name}`, keywords: `${it.nameAr ?? ''} ${theirs ?? ''}` };
+                })}
               />
             </label>
-            <label>{tr('Quantity')}<input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></label>
+            <label>
+              {tr('Quantity')}
+              <span className="flex items-center gap-2">
+                <input inputMode="decimal" value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
+                {l.itemId && unitsOf(l.itemId).length ? (
+                  <select
+                    aria-label={tr('Unit')}
+                    className="unit-select"
+                    value={l.unit}
+                    onChange={(e) => {
+                      const unit = e.target.value;
+                      const price = l.suggested && l.suggestedBase !== undefined ? ((l.suggestedBase * factorOf(l.itemId, unit)) / 100).toFixed(2) : l.price;
+                      setLine(i, { unit, price });
+                    }}
+                  >
+                    <option value="">{baseUnitOf(l.itemId)}</option>
+                    {unitsOf(l.itemId).map((u) => (
+                      <option key={u.unit} value={u.unit}>{trf('{unit} ({factor} {base})', { unit: u.unit, factor: u.factor, base: baseUnitOf(l.itemId) })}</option>
+                    ))}
+                  </select>
+                ) : null}
+              </span>
+            </label>
             <label>
               {vatOn ? (props.vat?.pricesIncludeVat ? trf('{label} including VAT', { label: props.priceLabel }) : trf('{label} before VAT', { label: props.priceLabel })) : props.priceLabel} ({currency})
               <input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value, suggested: false })} />
               {l.suggested ? <span className="hint muted">{tr('Suggested price; you can change it.')}</span> : null}
             </label>
-            {vatOn ? <LineVatPreview line={l} vat={props.vat!} items={cat.items.data ?? []} currency={currency} /> : null}
+            {l.itemId && l.unit ? <LineUnitHint b={saved(l)} unit={l.unit} base={baseUnitOf(l.itemId)} money={money2} /> : null}
+            {vatOn ? (
+              <LineVatPreview itemId={l.itemId} qty={saved(l).baseQty} priceMinor={saved(l).baseMinor} vat={props.vat!} items={cat.items.data ?? []} currency={currency} />
+            ) : null}
           </div>
         ))}
         <div className="form-actions">
-          <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, { itemId: '', qty: '1', price: '' }])}>{tr('Add another item')}</Button>
+          <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, emptyLine()])}>{tr('Add another item')}</Button>
         </div>
         <ErrorToast message={error} onClose={() => setError(null)} />
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>

@@ -171,7 +171,8 @@ begin
 
   -- ---- P9: audit rows
   select count(*) into n from public.audit_log where org_id = o and action = 'purchasing.supplier_price.recorded';
-  if n <> 2 then raise exception 'FAIL P9a: % supplier price audits, expected 2 (100.00 first, then 105.00)', n; end if;
+  -- sql/100 (Codex audit finding 2): a change of source at the same cost is now audited too, so P2's order-to-bill at 100.00 adds one.
+  if n <> 3 then raise exception 'FAIL P9a: % supplier price audits, expected 3 (100.00 from the order, the same 100.00 now from bill B-1, then 105.00)', n; end if;
   select count(*) into n from public.audit_log where org_id = o and action like 'sales.price_list.%';
   -- created: 3; item set: 2, admin change: 1
   if n <> 6 then raise exception 'FAIL P9b: % price list audits, expected 6', n; end if;

@@ -1,0 +1,3 @@
+# The on-prem package runs in Linux containers: its scripts and configs must keep LF line endings on every checkout, Windows included
+# (a CRLF backup.sh fails with "bad interpreter").
+scripts/onprem/** text eol=lf

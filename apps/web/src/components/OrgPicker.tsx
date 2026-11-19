@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { CreateCompany } from './CreateCompany';
 
 import { tr, trf } from '../lib/i18n';
+import { authErrorMessage } from '../lib/authErrors';
 import { Rich } from './Rich';
 type OrgOption = { id: string; name: string };
 type InvitationRow = { id: string; org_id: string; org_name: string; role: MyInvitation['role']; invited_by_name: string | null; created_at: string };
@@ -18,13 +19,15 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // Codex audit 18 Nov, finding 4: a failed invitations lookup is not "no invitations". Until it succeeds, nobody is sent to create a company.
+  const [invitesFailed, setInvitesFailed] = useState(false);
 
   const load = useCallback(async (autoOpen: boolean) => {
     const [orgRes, invRes] = await Promise.all([
       supabase.from('memberships').select('organizations(id, name)').is('disabled_at', null),
       supabase.rpc('core_my_invitations'),
     ]);
-    if (orgRes.error) return setError(orgRes.error.message);
+    if (orgRes.error) return setError(authErrorMessage(orgRes.error));
     // An invitations error (for example the migration not run yet) must not lock people out of their organizations.
     const pending = invRes.error
       ? []
@@ -34,7 +37,8 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
     const rows = (orgRes.data ?? []) as unknown as { organizations: OrgOption | null }[];
     const list = rows.flatMap((r) => (r.organizations ? [r.organizations] : []));
     // Most people belong to one organization: open it instead of asking, unless an invitation is waiting.
-    if (autoOpen && list.length === 1 && list[0] && pending.length === 0) return onPick(list[0].id);
+    setInvitesFailed(Boolean(invRes.error));
+    if (autoOpen && list.length === 1 && list[0] && pending.length === 0 && !invRes.error) return onPick(list[0].id);
     setInvitations(pending);
     setOrgs(list);
   }, [onPick]);
@@ -50,7 +54,7 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
     setError(null);
     const { error: rpcError } = await supabase.rpc('core_respond_invitation', { p_invitation_id: inv.id, p_accept: accept });
     setBusyId(null);
-    if (rpcError) return setError(rpcError.message);
+    if (rpcError) return setError(authErrorMessage(rpcError));
     await load(false);
   }
 
@@ -58,7 +62,7 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
   if (!orgs) return <main className="center"><p className="muted">{tr('Loading organizations…')}</p></main>;
 
   // Brand-new account with nothing waiting for them: this is sign-up step two, so ask for the company right away.
-  if (creating || (orgs.length === 0 && invitations.length === 0)) {
+  if (creating || (orgs.length === 0 && invitations.length === 0 && !invitesFailed)) {
     return <CreateCompany first={orgs.length === 0} onCreated={onPick} onCancel={orgs.length > 0 ? () => setCreating(false) : undefined} />;
   }
 
@@ -84,6 +88,14 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
               </div>
             ))}
           </>
+        )}
+        {invitesFailed && (
+          <div className="notice stack" role="alert">
+            <p>{tr('We couldn’t check whether you have been invited to a company. If someone invited you, try again before creating a new company.')}</p>
+            <div className="form-actions">
+              <Button type="button" variant="outline" onClick={() => void load(false)}>{tr('Try again')}</Button>
+            </div>
+          </div>
         )}
         <h1>{tr('Choose an organization')}</h1>
         {error && <p className="error">{error}</p>}
