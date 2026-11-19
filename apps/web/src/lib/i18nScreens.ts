@@ -1290,6 +1290,8 @@ export const SCREENS_AR: Record<string, string> = {
   "Prices are before VAT. The VAT is worked out on each line when the invoice is created and never changes afterwards.": "الأسعار قبل الضريبة. تُحسب ضريبة القيمة المضافة على كل بند عند إنشاء الفاتورة ولا تتغير بعد ذلك.",
   "Before VAT": "قبل الضريبة",
   "Total with VAT": "الإجمالي شامل الضريبة",
+  "Total before VAT": "الإجمالي قبل الضريبة",
+  "Total including VAT": "الإجمالي شامل الضريبة",
   "VAT rate": "نسبة الضريبة",
   "Before VAT {net}, VAT {vat}": "قبل الضريبة {net}، الضريبة {vat}",
   "VAT on sales (output VAT)": "ضريبة القيمة المضافة على المبيعات (ضريبة المخرجات)",

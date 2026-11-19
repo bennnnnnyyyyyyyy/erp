@@ -130,6 +130,11 @@ export function SalesOrderPage() {
   const cat = useCatalog();
   const order = useLoad(() => api<SalesOrder>(`/v1/sales/orders/${id}`));
   const customers = useLoad(() => api<Party[]>('/v1/sales/customers'));
+  // Walkthrough 19 Nov: the order said "Total 200.00" without saying whether VAT is in it. The typed prices are read by the company's
+  // VAT setting when the order is invoiced, so the labels follow that setting.
+  const vat = useLoad(() => (demoMode ? Promise.resolve(null) : api<VatBasis>('/v1/core/org/vat').catch(() => null)));
+  const vatLabel = vat.data?.vatRegistered ? (vat.data.pricesIncludeVat ? 'including VAT' : 'before VAT') : null;
+  const totalLabel = vatLabel === 'including VAT' ? tr('Total including VAT') : vatLabel === 'before VAT' ? tr('Total before VAT') : tr('Total');
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const o = order.data;
@@ -166,7 +171,7 @@ export function SalesOrderPage() {
         <div><dt>{tr('Customer')}</dt><dd>{customer?.name}{customer?.city ? <span className="muted"> · {customer.city}</span> : ''}</dd></div>
         <div><dt>{tr('Ships from')}</dt><dd>{cat.warehouseName(o.warehouseId)}</dd></div>
         <div><dt>{tr('Ordered')}</dt><dd>{formatDateTime(o.createdAt, session.org)}</dd></div>
-        <div><dt>{tr('Total')}</dt><dd className="amount">{money(o.totalMinor, o.currency)}</dd></div>
+        <div><dt>{totalLabel}</dt><dd className="amount">{money(o.totalMinor, o.currency)}</dd></div>
       </dl>
       <OrderSteps status={o.status} />
 
@@ -185,7 +190,7 @@ export function SalesOrderPage() {
               </tr>
             ))}
             <tr>
-              <td colSpan={3} className="right"><strong>{tr('Total')}</strong></td>
+              <td colSpan={3} className="right"><strong>{totalLabel}</strong></td>
               <td className="right"><strong>{money(o.totalMinor, o.currency)}</strong></td>
             </tr>
           </tbody>

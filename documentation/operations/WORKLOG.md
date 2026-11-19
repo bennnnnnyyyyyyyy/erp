@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — Owner walkthrough display fixes (no migration)
+
+**Objective:** fix four display problems found in the owner walkthrough on live (Claude in Chrome, Demo Cosmetics Factory, 19 Nov).
+
+**Actions Completed:**
+- VAT mismatch on a supplier bill showed both amounts in minor units ("(250) … (168)"). `apps/api/src/lib/rpc.ts` now answers a plain
+  sentence (`VAT_MISMATCH_MESSAGE`) with its Arabic in `i18nErrors.ts`; test in `rpc_messages.test.ts`. On the bill form the error now
+  shows next to the "Record purchase invoice" button, not at the top of the page (`SupplierInvoices.tsx`).
+- Tick boxes and radio buttons took the full width of their row (the "Deduct this VAT" box showed as a long bar): `styles.css` gives
+  them their own width.
+- Drop-downs inside tables were forced to capitals ("Test Rate (14%)", "Goods And Services"): the `text-transform` is removed from
+  `td select` (no table drop-down shows raw lowercase values).
+- The sales order said "Total" without saying whether VAT is in it: it now says "Total before VAT" or "Total including VAT", from the
+  company's VAT setting (`SalesDemo.tsx`), with Arabic.
+
+**Database / System Result:** no database change. Typecheck, tests (shared 82, API 659, web 151) and lint pass.
+
+**Safety Status:** display and message changes only.
+
 ## 2026-11-18 — Codex audit fixes 1, 2, 4, 5, 6, 11, 12 (`sql/100`)
 
 **Objective.** Ben decided (18 Nov) to fix these findings of documentation/planning/2026-11-18-codex-audit-findings.md, after slice B. Findings 8-10 (Design Lab) are with the UI chat; 7 (pinning GitHub Actions) waits for the deployment chat; 3 was already closed (097 live).
