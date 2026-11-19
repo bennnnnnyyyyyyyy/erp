@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-19 — On-prem step 1: the API on Node and a first Docker Compose package (no migration)
+
+**Objective:** start the [on-prem plan](../planning/2026-11-19-on-prem-deployment-plan.md) without waiting for Joe's remaining
+answers (Ben, 19 Nov). Joe confirmed customers' servers will have the internet.
+
+**Actions Completed:**
+- `apps/api/src/node.ts`: the same Hono app served by Node's own HTTP server (no new package); settings from environment variables;
+  in-memory rate limiters with the Worker's limits; the 5-minute job on a timer (`CRON_DISABLED=1` turns it off); the client address
+  is always taken from the proxy, never from a client-sent header. Test `apps/api/test/node_entry.test.ts` (real HTTP).
+- Bundled with esbuild into one file and run with plain Node on this Windows machine: `/health` answers `env: onprem`, a signed-out
+  `/v1/core/session` gets 401.
+- `scripts/onprem/`: Docker Compose (Supabase Postgres, GoTrue, PostgREST, the API, the web app behind Caddy, nightly backup),
+  Caddyfile routes, Dockerfiles, backup script, settings template, README.
+
+**Database / System Result:** none. The Docker package has **not been run**: no Docker on this machine; a Linux test server was
+requested from Joe. Lint, typecheck and API tests (664) pass.
+
+**Safety Status:** new files only; the Worker and the cloud deployment are unchanged.
+
 ## 2026-11-19 — Units on order lines, master data slice D (`sql/101`)
 
 **Objective:** buy and sell in other units (a box of 12) while stock stays in the base unit (Ben's 18 Nov email promise). Ben's
