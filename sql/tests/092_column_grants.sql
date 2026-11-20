@@ -15,6 +15,9 @@ declare
     'msg_identities.attempts',                    -- verification code
     'core_integrations.secret_id',                -- vault reference
     'msg_outbox.secret_body',                     -- message secret
+    -- HR app copies (sql/102): members see the directory only; these come through hr_directory for owners and admins
+    'hr_employees.work_email', 'hr_employees.hired_on', 'hr_employees.left_on', 'hr_employees.user_id', 'hr_employees.link_source',
+    'hr_employees.source_updated_at', 'hr_employees.last_seen_run',   -- sync bookkeeping
     -- not read by any screen yet: grant them in the migration that first reads them
     'inv_stock_moves.transfer_id', 'inv_stock_moves.count_id', 'inv_stock_moves.note_id', 'inv_stock_moves.purchase_order_id',
     'msg_identities.updated_at', 'core_integrations.last_check_started_at', 'msg_outbox.delivered_via'
