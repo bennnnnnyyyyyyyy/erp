@@ -1,123 +1,215 @@
 # Bellvox ERP readiness roadmap
 
-**Status:** `[📝 Draft, awaiting Ben's approval]`
-**Owner:** Ben · **Source:** Bellvox meeting with Chris, 20 Nov 2026, and the discussion that followed
-([discussion notes](../planning/2026-11-20-bellvox-meeting-discussion.md)) · **Business questions:** [for Grant](../planning/2026-11-20-grant-business-questions.md)
+**Status:** Draft. Ben must approve it.
+**Owner:** Ben
+**Source:** the meeting with Chris (Bellvox) on 20 Nov 2026, and the discussion after it.
+**Read also:** [discussion notes](../planning/2026-11-20-bellvox-meeting-discussion.md) ·
+[questions for Grant](../planning/2026-11-20-grant-business-questions.md)
+
+> **In short**
+> - Chris says the ERP is not ready to sell. The engine is good. The look and the first impression are not.
+> - We do four things first: **low stock alerts, a new Bellvox look, invoice printing, and scanning.**
+> - After that, we do the other work in order of how fast it is to build.
+> - The product name is **"Bellvox ERP"** for now.
 
 ---
 
-## 1. Why
+## 1. Why we do this
 
-Chris looked at the ERP as a buyer and found it hard to sell: the UX is messy, it doesn't look like a Bellvox product, and the
-things buyers ask for first (invoices on their own letterhead, scanning, alerts, AI, "can it fit us?") are missing or hidden. The
-engine (approvals enforced in the database, stock ledger, VAT, statements) is not in question. This roadmap covers the
-**packaging**: how the product looks, how well it demos, and what it does first.
+Chris looked at the ERP as a buyer. He saw these problems:
 
-Product name: **"Bellvox ERP"** for now (replaces "TBD" in [TECHNICAL_PLAN](TECHNICAL_PLAN.md) §10.6). App look: Bellvox colours
-and font for every customer; each company adds its own logo and name.
+- The screens look messy. The menu has too many items.
+- The app does not look like a Bellvox product.
+- Buyers ask for some things first. Many of these are missing:
+  - invoices on their own letterhead
+  - scanning
+  - alerts
+  - AI
+  - a way to change the ERP to fit their business
 
-## 2. Order
+The core of the ERP is strong. Approvals, the stock ledger, VAT and statements all work. This roadmap is about the **packaging**.
 
-Ben's rule: **UX and Bellvox look, invoices, scanning and low stock first, ASAP**; then everything else **by ease and speed of
-building**. Inside each phase, the quickest items come first.
+## 2. The order of work
 
-| Phase | Work | Plan | Why here |
-|---|---|---|---|
-| **0. Quick fixes** | Wrong tile links (Top products and Receivables both open `/sales/invoices`); bell notifications for low stock and overdue invoices that open nothing | [UX_BRAND_PLAN](UX_BRAND_PLAN.md) §7 | Hours of work, visible in every demo |
-| **1a. Low stock** | Sign-in summary and live pop-up; snooze or mute per item, per person; "Create purchase order"; suggested reorder points | [LOW_STOCK_AND_EXPIRY_PLAN](LOW_STOCK_AND_EXPIRY_PLAN.md) part A | Most of the data exists (reorder levels, forecast, alerts, bell) |
-| **1b. UX audit + Bellvox look** | Screen-by-screen audit on live; Bellvox design tokens (light and dark); about 6 top-level sections; mockups in a worktree with preview links; approval; rollout | [UX_BRAND_PLAN](UX_BRAND_PLAN.md) | Every later screen is then built in the new look |
-| **1c. Invoice printing** | Arabic print and PDF; draft watermark; company logo, letterhead image, footer; ETA-style layout marked "Not yet submitted"; numbering per type and year; WhatsApp, email and direct print | [INVOICE_PRINTING_PLAN](INVOICE_PRINTING_PLAN.md) | "Show me an invoice" is the first demo question |
-| **1d. Scanning** | Multi-provider AI with the company's own key; supplier bill reading; camera barcodes; scan and attach; QR lookup | [SCANNING_PLAN](SCANNING_PLAN.md) | Needs the company AI key work, which the open API and chatbots reuse later |
-| **1e. Word templates** | Company uploads a .docx with placeholders (fixed list plus custom fields); filled and converted to PDF | [INVOICE_PRINTING_PLAN](INVOICE_PRINTING_PLAN.md) §3.4 | Needs a document conversion service (see that plan), so it follows the simpler letterhead path |
-| **2a. Period pickers** | Presets, All time, custom from–to on every screen with a period | Roadmap §3.1 (plan to write) | Small and shared by all of 2b |
-| **2b. Customisable home tiles** | Tile library, company default plus personal, per-tile settings, the same tile twice, chosen during setup, detail view with chart | Roadmap §3.2 (plan to write) | Builds on 2a |
-| **2c. Expiry and stock value** | Warning days per item group, setup-wizard step, optional discount suggestion; value-loss bracket table (screen only) | [LOW_STOCK_AND_EXPIRY_PLAN](LOW_STOCK_AND_EXPIRY_PLAN.md) parts B and C | Batches and FEFO already exist (`sql/026`) |
-| **2d. Demo companies** | Grocery (fruit and veg) and chemicals, beside Demo Cosmetics Factory; load-demo button | Roadmap §3.3 (plan to write) | Uses 2b and 2c to look real |
-| **3a. Customisation layers** | Renamed labels, custom fields (all kinds, can be required), document numbering formats, columns and saved views, approval rules | Roadmap §3.4 (plan to write) | Bigger; custom fields also feed Word placeholders |
-| **3b. Open API and chatbots** | Company API keys (admins only, permissions per key); read and draft only; stronger built-in assistant; MCP connector after the API | Roadmap §3.5 (plan to write; fold in or replace the draft [INTEGRATIONS_PLAN](INTEGRATIONS_PLAN.md)) | Reuses the AI provider layer from 1d |
-| **3c. Simple report builder** | Pick a list, filters, columns, group and total, chart, save as report or tile; export Excel, PDF, scheduled email or WhatsApp | Roadmap §3.6 (plan to write) | Deeper version (formulas, joins) only after customer feedback |
-| **3d. Workflow builder** | n8n-style canvas: messages, tasks, drafts, field changes. **Never posts or approves** | Roadmap §3.7 (plan to write) | Largest item |
-| **3e. On-prem, steps 2+** | Run the Docker package on a Linux server, update packages with backup and rollback, licence check with grace period | [on-prem plan](../planning/2026-11-19-on-prem-deployment-plan.md) | Step 1 done 19 Nov; waiting on a test server |
-| **Later** | Fixed-asset depreciation module; deeper report builder; barcode label printing, USB scanners, weighing-scale barcodes | Own plans later | Agreed on 20 Nov to plan later |
+**Ben's rule:** do the four urgent items first. Then do the rest in order of speed and ease.
 
-## 3. Areas not yet given their own plan (decisions already taken)
+### Phase 0: quick fixes (hours)
+- Two home tiles open the wrong page. "Top products" and "Receivables and payables" both open the sales invoices page.
+- Some bell notifications open nothing. Low stock and overdue invoice notifications have no link.
+- Plan: [UX and brand plan](UX_BRAND_PLAN.md), part "Quick fixes".
 
-### 3.1 Period pickers
-Every screen or tile with a period offers: **presets** (today, 7, 30, 90 and 180 days, 12 months, this month, this quarter, this year,
-last year), **All time**, and **custom from–to**. No "compare to previous". Fixed windows in today's code to replace: Top products
-(90 days), Profit and loss and Main suppliers (12 months), Forecast (90 days of usage), Batches (30/60/90 days). Expiry windows become
-settings (part B of the low-stock plan), not pickers.
+### Phase 1: the urgent four
+
+| Step | What | Plan |
+|---|---|---|
+| 1a | **Low stock alerts.** A pop-up shows low items. One click makes a draft purchase order. | [Low stock and expiry plan](LOW_STOCK_AND_EXPIRY_PLAN.md), part A |
+| 1b | **New Bellvox look.** Check every screen. Make mockups. Get approval. Then change the screens. | [UX and brand plan](UX_BRAND_PLAN.md) |
+| 1c | **Invoice printing.** Arabic print and PDF. Company logo and letterhead. ETA layout. Send by WhatsApp or email. | [Invoice printing plan](INVOICE_PRINTING_PLAN.md) |
+| 1d | **Scanning.** Read supplier bills with AI. Scan barcodes with the phone camera. Attach photos. Scan QR codes. | [Scanning plan](SCANNING_PLAN.md) |
+| 1e | **Word templates.** A company uploads its own Word invoice. The ERP fills it in. | [Invoice printing plan](INVOICE_PRINTING_PLAN.md), part "Word templates" |
+
+Why low stock is first: most parts already exist. The ERP already has reorder levels, a forecast, alert rules and a bell.
+
+Why the new look is early: we then build every new screen in the new look. We do not build screens twice.
+
+### Phase 2: medium work
+
+| Step | What | Plan |
+|---|---|---|
+| 2a | **Date range pickers.** Every period gets presets, "All time", and "from–to". | Section 3.1 below |
+| 2b | **Home tiles you can change.** | Section 3.2 below |
+| 2c | **Expiry warnings and stock value.** | [Low stock and expiry plan](LOW_STOCK_AND_EXPIRY_PLAN.md), parts B and C |
+| 2d | **Demo companies.** A grocery and a chemicals company. | Section 3.3 below |
+
+### Phase 3: large work
+
+| Step | What | Plan |
+|---|---|---|
+| 3a | **Customisation tools.** Rename labels, add fields, set numbering, save views, set approval rules. | Section 3.4 below |
+| 3b | **Open API and chatbots.** | Section 3.5 below |
+| 3c | **Report builder** (simple version). | Section 3.6 below |
+| 3d | **Workflow builder** ("when X happens, do Y"). | Section 3.7 below |
+| 3e | **On-prem, step 2 and later.** | [On-prem plan](../planning/2026-11-19-on-prem-deployment-plan.md) |
+
+### Later (plan these after the work above)
+- Fixed-asset depreciation (vans, laptops, machines). This is a new module.
+- A deeper report builder.
+- USB barcode scanners, barcode labels, and barcodes from weighing scales.
+
+## 3. Decisions for areas that do not have their own plan yet
+
+### 3.1 Date range pickers
+Each screen or tile with a time period gets the same picker. It has three kinds of choice:
+
+1. **Presets:** today, 7 days, 30 days, 90 days, 180 days, 12 months, this month, this quarter, this year, last year.
+2. **All time.**
+3. **From–to:** the person picks two dates.
+
+There is no "compare to the previous period".
+
+These screens have a fixed period today. We change them:
+- Top products: 90 days.
+- Profit and loss: 12 months.
+- Main suppliers: 12 months.
+- Forecast: 90 days of use.
+
+Expiry windows (30, 60 and 90 days) become a setting, not a picker. See the low stock plan, part B.
 
 ### 3.2 Home tiles
-- **Company default** set by an owner (or whoever the owner gives the "customise" permission), **plus each person's own changes**,
-  with "reset to default". Stored in `user_preferences` (personal) and a new company-level setting (default).
-- A person can **show, hide and reorder** tiles, **change each tile's settings** (period, how many, ranking, warehouse, chart or
-  list), and **add the same tile twice** with different settings. No resizing.
-- **Chosen during setup** (onboarding wizard step), changeable later.
-- **Clicking a tile** opens a detail view with a chart first, then the full list.
-- Starting library: sales, top and bottom products (by **sales value with % share, quantity, profit and margin**), cash and bank,
-  receivables and payables, low stock, expiry and stock value, pending approvals, main suppliers and customers, profit and loss,
-  VAT due, tasks.
+- The **owner sets a default home page** for the company.
+- **Each person can change it** for themselves. A button resets it to the company default.
+- A person can:
+  - show or hide tiles
+  - put tiles in a different order
+  - change the settings of each tile, for example the period, how many rows, how to rank, the warehouse, and chart or list
+  - add the same tile two times with different settings
+- A person **cannot** change the size of a tile.
+- The company picks its tiles **during the setup wizard**. It can change them later.
+- A click on a tile opens a **detail view with a chart**. From there, the person can open the full list.
+
+The first set of tiles:
+- sales
+- top or bottom products
+- cash and bank
+- money owed to us and money we owe
+- low stock
+- expiry and stock value
+- approvals that wait
+- main suppliers and customers
+- profit and loss
+- VAT due
+- tasks
+
+**Top products** can rank by sales value (with % of total), by quantity, or by profit and margin.
 
 ### 3.3 Demo companies
-Grocery (fruit and veg: short expiry, sold by weight, fast turnover) and chemicals (long expiry, hazard notes, drums and litres),
-built **the same way as Demo Cosmetics Factory**: separate companies, 12 months of history, switched between like any company.
-"Load demo company" is open to any company.
+- We add two demo companies:
+  - **Grocery (fruit and vegetables):** short expiry, sold by weight, fast sales.
+  - **Chemicals:** long expiry, hazard notes, drums and litres, slower sales.
+- We build them the same way as "Demo Cosmetics Factory". Each one is a separate company with 12 months of history.
+- Any company can use a **"Load demo company"** button.
 
-### 3.4 Customisation layers
-All are settings; nothing is written as code for one customer. The **owner gives permissions** (a new customise permission).
-1. Navigation and tiles (hide, reorder, pin; company default plus personal).
-2. Rename labels (menu, fields, document names), English and Arabic.
-3. Custom fields on items, customers, suppliers and invoices: text, number, date, yes/no, dropdown, link to a person or customer,
-   photo or file. **The owner can make a field required.** Shown on screens, filters and printouts; usable as Word placeholders.
-4. Document numbering: per type **and year, restarting each year** (`INV-2026-00001`), prefix editable, optional branch code later.
-5. Approval rules: amounts and multi-step, expanding today's approval policies. The database rule (requester ≠ approver, D1/D1b/D1c
-   exceptions only) is unchanged.
-6. Columns and saved views per person.
+### 3.4 Customisation tools
+These are settings. We never write code for one customer.
+The **owner gives the permission** to change them.
 
-### 3.5 Open API, AI providers and chatbots
-- **Company API keys**, created by **admins only**, with permissions chosen per key. Bots **read and create drafts**; a person
-  approves or posts through the same database functions. Every call is audited under the key ("via API key <name>").
-- **AI providers:** the company chooses and brings its own key: **OpenAI, Gemini, Claude, Grok, OpenRouter, online Ollama**.
-  Whether we also sell credits is a business question for Grant. Today only OpenAI, Ollama and ElevenLabs (speech) are wired in.
-- **Built-in assistant:** answers across all modules, Arabic voice.
-- **MCP connector** (Claude, ChatGPT and others plug in directly), **after** the API: each person signs in with their own account
-  (OAuth), no approve or post tools, audited "via AI connector", rate limited, owner can switch it off. Main risk is prompt injection
-  from document text; drafts-only keeps the damage small.
+1. **Menu and tiles:** hide, reorder and pin items.
+2. **Labels:** rename menu items, fields and document names, in English and Arabic.
+3. **Custom fields:** the company adds its own fields to items, customers, suppliers and invoices.
+   - Kinds: text, number, date, yes/no, dropdown, link to a person or customer, photo or file.
+   - The owner can make a field **required**.
+   - The fields show on screens, filters and printouts. They also work in Word templates.
+4. **Document numbers:** one sequence for each document type and year. It starts again each year, for example `INV-2026-00001`.
+   The owner can change the prefix. A branch code can come later.
+5. **Approval rules:** amounts and approvals in more than one step. The database rule stays the same: a person cannot approve
+   their own request. The only exceptions are the ones that already exist (D1, D1b, D1c).
+6. **Columns and saved views:** each person picks the columns and filters on a list and saves them.
+
+### 3.5 Open API, AI and chatbots
+- **API keys** belong to the company. Only **admins** can make them. Each key has its own permissions.
+- A bot can **read data and make drafts**. A person must still approve or post.
+- The audit log records every action of a key.
+- **AI providers:** the company picks one and gives its own key. Supported: OpenAI, Gemini, Claude, Grok, OpenRouter and online Ollama.
+  Today only OpenAI, Ollama and ElevenLabs work.
+- Will we also sell AI credits? Grant decides. See the questions for Grant.
+- **Built-in assistant:** it answers questions about all modules. It also understands Arabic voice.
+- **MCP connector:** with it, Claude or ChatGPT connects directly to the ERP. We build it **after** the API.
+  - Each person signs in with their own account.
+  - It cannot approve or post.
+  - It is audited and rate limited.
+  - The owner can turn it off.
+  - The main risk: text inside a document can try to trick the AI. Because the AI can only make drafts, the damage stays small.
 
 ### 3.6 Report builder
-Simple version first (list, filters, columns, group and total, chart, save as report or tile). Exports: Excel, PDF, scheduled email or
-WhatsApp. Formulas and joins across modules only after feedback on the simple version.
+- **First version:** pick a list. Add filters and columns. Group and total. Add a chart. Save it as a report or as a tile.
+- **Export:** Excel, PDF, and email or WhatsApp on a schedule.
+- **Later**, after customers give feedback: formulas, and data from more than one module.
 
 ### 3.7 Workflow builder
-Visual "when X happens, do Y" canvas. Actions: send WhatsApp, email or in-app message; create a task; create a draft; change a field.
-**Never posts or approves** (Ben, 20 Nov: the exception was considered and dropped). Licence check (20 Nov):
+- A drag-and-drop canvas: "when X happens, do Y".
+- Actions:
+  - send a WhatsApp, email or in-app message
+  - make a task
+  - make a draft
+  - change a field
+- **It never posts and never approves.** Ben decided this on 20 Nov.
 
-| Project | Licence | Usable in a product we sell? |
+**Which code can we use?** We checked the licences on GitHub on 20 Nov:
+
+| Project | Can we use it? | Why |
 |---|---|---|
-| n8n | "Sustainable Use" (general knowledge; GitHub didn't respond) | No |
-| Windmill, Automatisch | AGPL (general knowledge; GitHub shows "other") | No (our licensing rule) |
-| Activepieces | MIT, except its `ee` folders (read from its LICENSE) | MIT parts yes, but it's a whole separate platform |
-| xyflow / React Flow | MIT | Yes: the canvas |
-| Node-RED, Trigger.dev, Kestra | Apache-2.0 | Yes, but separate servers |
+| n8n | No | Its licence does not allow it inside a product we sell. |
+| Windmill, Automatisch | No | AGPL. Our rules do not allow GPL or AGPL code. |
+| Activepieces | Partly | MIT, except its `ee` folders. But it is a full separate platform. |
+| React Flow | **Yes** | MIT. It gives us the drag-and-drop canvas. |
+| Node-RED, Trigger.dev, Kestra | Yes, but | Apache-2.0. Each is a separate server, not a part of our app. |
 
-Recommendation: React Flow canvas, run on our existing outbox and jobs, study Activepieces' behaviour only. Adding React Flow is a new
-dependency: Ben installs it in the main checkout (never `npm install` in a worktree).
+**Recommendation:** use React Flow for the canvas. Run the workflows on our existing message queue and jobs.
+Look at Activepieces only for ideas. Do not copy its code.
+Ben must install React Flow in the main folder. Never run `npm install` in a worktree.
 
 ### 3.8 On-prem
-One install = one company. The customer's own server runs our web and API with a local Supabase. **Online**: only AI and outside
-integrations (WhatsApp, payments, couriers, ETA) leave the server. Updates follow common practice: versioned packages; the admin
-approves; database backup first, then numbered migrations, with rollback. Licence checks our server now and then, with a grace period.
+- One install is for one company.
+- The customer's server runs our web app, our API, and a local Supabase database.
+- The server **is online.** Only AI and outside services use the internet. Outside services are WhatsApp, payments, couriers and ETA.
+- **Updates:**
+  1. We publish a new version.
+  2. The customer's admin sees "Update available" and approves it.
+  3. The update makes a database backup first.
+  4. Then it runs the new database changes.
+  5. If something fails, it goes back to the old version.
+- The licence checks our server from time to time. If the internet stops, the ERP works for a grace period.
+- Step 1 is done (19 Nov). We need a Linux test server for step 2.
 
-## 4. Rules that stay
+## 4. Rules that do not change
 
-- Every new business table: `org_id`, row level security, isolation tests, `revoke all` then `grant select`, writes through
-  database functions, audit rows in the same transaction.
-- Nothing customer-specific in code. Bellvox is the product's own look, not a customer's.
-- Arabic and English for every new string; logical CSS properties.
-- Approvals, including anything made by an API key, bot, scanner or workflow: drafts only, and a person approves.
+- Every new business table has `org_id` and row level security. It has tests that show one company cannot see another company's data.
+- Writes go through database functions. Each change writes an audit row in the same step.
+- We put nothing customer-specific in code. Bellvox is our product's look. It is not a customer's look.
+- Every new text has English and Arabic.
+- Bots, scanners, API keys and workflows only make drafts. A person approves.
 
 ## 5. Open questions
 
-Business questions are in the [Grant document](../planning/2026-11-20-grant-business-questions.md). Technical questions are listed
-in each plan.
+- Business questions: see the [questions for Grant](../planning/2026-11-20-grant-business-questions.md).
+- Technical questions: see the end of each plan.
