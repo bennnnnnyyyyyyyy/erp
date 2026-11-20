@@ -50,7 +50,7 @@ The product becomes **Bellvox ERP**. It uses Bellvox colours and font. Each cust
   - a screenshot
   - the problems, most serious first: clutter, unclear order, wording, broken parts, right-to-left problems
   - the fix
-- The report goes in `documentation/reviews/2026-11-ux-audit/`. Screenshots stay on the computer. They do not go into git.
+- The report is [`documentation/planning/2026-11-20-ux-audit.md`](../planning/2026-11-20-ux-audit.md) (done 20 Nov). Screenshots stay on the computer. They do not go into git.
 
 **2. Bellvox look**
 - For now we take colours and fonts from **bellvox.ai**. There is no brand guide yet. We ask Grant for one.
