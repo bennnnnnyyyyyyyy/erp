@@ -53,6 +53,9 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
   listed here and in `apps/api/test/boundaries.test.ts` (`ADMIN_DB_ALLOWED`); a new one needs Ben's explicit yes and a line below.
   - *No person waiting* (webhooks and jobs): `jobs/outbox.ts`, `jobs/fx.ts`, `lib/channels/*.ts` (delivery), `lib/whatsappInbound.ts`,
     `lib/telegramInbound.ts`, `lib/store/shopify.ts`, and the callback parts of `lib/payments/links.ts` and `lib/shipping/bosta.ts`.
+    HR & payroll app (Ben, 20 Nov 2026; sql/102): `lib/hr/hrWebhook.ts` (finds the company only by our own connection id and checks
+    the HMAC signature first; it only asks for a read) and `jobs/hrSync.ts` (the scheduled read, each company with its own key, each
+    page written to that company only). No route may import either (`boundaries.test.ts`).
     Webhooks act only after their signature or secret is verified, and find the company through our own reference, never the body alone.
   - *A person is waiting* (each confines itself to that person's company):
     - `lib/authAdmin.ts`: Supabase Auth account calls from the member routes, only after a database function has approved the action.

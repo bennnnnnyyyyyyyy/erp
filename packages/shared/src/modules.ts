@@ -234,6 +234,17 @@ export const MODULES: readonly ModuleManifest[] = [
     ],
     suite: 'Finance',
   },
+  {
+    // documentation/plans/HR_APP_INTEGRATION_PLAN.md (sql/102). The staff directory read from the HR & payroll app. Every member
+    // reads the directory (Ben, 20 Nov); owners and admins link employees to ERP members and map branches.
+    key: 'hr',
+    name: 'People',
+    description: 'The staff directory from your HR and payroll app: who works where, linked to the people who use the ERP.',
+    core: false,
+    dependsOn: [],
+    permissions: ['hr.people.read', 'hr.people.manage'],
+    suite: 'Team and messages',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {
