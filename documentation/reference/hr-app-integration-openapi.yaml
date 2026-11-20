@@ -1,0 +1,295 @@
+# OpenAPI description of the HR app <-> ERP contract v1 (documentation/reference/hr-app-integration-contract.md).
+# Part 1 (paths): the read-only API the HR app exposes and the ERP calls.
+# Part 2 (webhooks): the signed webhook the HR app sends to the ERP.
+# The prose contract is authoritative where the two differ; keep them in step.
+openapi: 3.1.0
+info:
+  title: HR app API for the ERP
+  version: '1'
+  description: >
+    Read-only API that the HR app exposes so the ERP can read branches, departments and employees, plus the signed webhook the HR
+    app sends to the ERP. Auth: `Authorization: Bearer <api_key>` (one key per tenant). See hr-app-integration-contract.md for
+    pagination, deletions, signing, retries and the test checklist.
+servers:
+  - url: '{base_url}/erp/v1'
+    variables:
+      base_url:
+        default: https://hr.example.com
+security:
+  - apiKey: []
+paths:
+  /ping:
+    get:
+      summary: Check connection (no side effects)
+      operationId: ping
+      responses:
+        '200':
+          description: The key works
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ping' }
+        '401': { $ref: '#/components/responses/Error' }
+  /branches:
+    get:
+      summary: List branches
+      operationId: listBranches
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/updated_since'
+      responses:
+        '200':
+          description: One page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          oneOf: [{ $ref: '#/components/schemas/Branch' }, { $ref: '#/components/schemas/Tombstone' }]
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /departments:
+    get:
+      summary: List departments
+      operationId: listDepartments
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/updated_since'
+      responses:
+        '200':
+          description: One page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          oneOf: [{ $ref: '#/components/schemas/Department' }, { $ref: '#/components/schemas/Tombstone' }]
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /employees:
+    get:
+      summary: List employees
+      operationId: listEmployees
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/updated_since'
+        - name: status
+          in: query
+          schema: { type: array, items: { $ref: '#/components/schemas/EmployeeStatus' } }
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: One page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          oneOf: [{ $ref: '#/components/schemas/Employee' }, { $ref: '#/components/schemas/Tombstone' }]
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /employees/{id}:
+    get:
+      summary: Read one employee
+      operationId: getEmployee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: The employee, or a tombstone if deleted
+          content:
+            application/json:
+              schema:
+                oneOf: [{ $ref: '#/components/schemas/Employee' }, { $ref: '#/components/schemas/Tombstone' }]
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+webhooks:
+  hrEvent:
+    post:
+      summary: Event sent by the HR app to the ERP webhook URL (https://<erp-api-host>/webhooks/hr-app)
+      description: >
+        Signature: X-HR-Signature = "v1=" + hex(HMAC_SHA256(webhook_secret, X-HR-Timestamp + "." + raw_body)). The ERP rejects a
+        timestamp more than 300 seconds from its clock, de-duplicates on X-HR-Event-Id for 7 days, and re-reads the record from the
+        API (the body carries ids only).
+      security: []
+      parameters:
+        - { name: X-ERP-Connection, in: header, required: true, schema: { type: string, pattern: '^hrc_[A-Za-z0-9]{24}$' } }
+        - { name: X-HR-Event-Id, in: header, required: true, schema: { type: string, maxLength: 64 } }
+        - { name: X-HR-Timestamp, in: header, required: true, schema: { type: string, pattern: '^[0-9]{10}$' } }
+        - { name: X-HR-Signature, in: header, required: true, schema: { type: string, pattern: '^v1=[0-9a-f]{64}(,v1=[0-9a-f]{64})*$' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Event' }
+            example:
+              id: evt_01JD3K8Q2V
+              type: employee.updated
+              api_version: '1'
+              occurred_at: '2026-11-19T08:30:00Z'
+              data: { object: employee, id: emp_123 }
+      responses:
+        '200':
+          description: 'handled: ok, ignored (unknown connection or event type) or duplicate'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { handled: { enum: [ok, ignored, duplicate] } }
+        '400': { description: 'handled: invalid (bad JSON or over 64 KB); do not retry' }
+        '401': { description: 'handled: bad_signature (wrong signature or timestamp outside 300 s)' }
+components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: Per-tenant read-only API key issued on the HR app's ERP card.
+  parameters:
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+    cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    updated_since:
+      name: updated_since
+      in: query
+      description: Records with updated_at >= this value, deleted ones included as tombstones. Order is updated_at, then id.
+      schema: { type: string, format: date-time }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds to wait }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Ping:
+      type: object
+      required: [app, api_version, tenant, integration_enabled, server_time]
+      properties:
+        app: { type: string, example: hr-app }
+        api_version: { type: string, const: '1' }
+        tenant:
+          type: object
+          required: [id, name]
+          properties: { id: { type: string }, name: { type: string } }
+        integration_enabled: { type: boolean }
+        server_time: { type: string, format: date-time }
+    Page:
+      type: object
+      required: [data, next_cursor, has_more]
+      properties:
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+    Tombstone:
+      type: object
+      required: [id, deleted, updated_at]
+      properties:
+        id: { type: string }
+        deleted: { const: true }
+        updated_at: { type: string, format: date-time }
+    Branch:
+      type: object
+      required: [id, name, active, updated_at]
+      properties:
+        id: { type: string, maxLength: 64 }
+        code: { type: [string, 'null'], maxLength: 30 }
+        name: { type: string, maxLength: 120 }
+        name_ar: { type: [string, 'null'], maxLength: 120 }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    Department:
+      type: object
+      required: [id, name, active, updated_at]
+      properties:
+        id: { type: string, maxLength: 64 }
+        code: { type: [string, 'null'], maxLength: 30 }
+        name: { type: string, maxLength: 120 }
+        name_ar: { type: [string, 'null'], maxLength: 120 }
+        branch_id: { type: [string, 'null'] }
+        parent_department_id: { type: [string, 'null'] }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    EmployeeStatus:
+      type: string
+      enum: [active, on_leave, terminated]
+    Employee:
+      type: object
+      required: [id, display_name, status, updated_at]
+      properties:
+        id: { type: string, maxLength: 64 }
+        employee_number: { type: [string, 'null'], maxLength: 40 }
+        display_name: { type: string, maxLength: 160 }
+        display_name_ar: { type: [string, 'null'], maxLength: 160 }
+        work_email: { type: [string, 'null'], format: email }
+        job_title: { type: [string, 'null'], maxLength: 120 }
+        job_title_ar: { type: [string, 'null'], maxLength: 120 }
+        branch_id: { type: [string, 'null'] }
+        department_id: { type: [string, 'null'] }
+        manager_id: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/EmployeeStatus' }
+        hired_on: { type: [string, 'null'], format: date }
+        left_on: { type: [string, 'null'], format: date }
+        updated_at: { type: string, format: date-time }
+    Event:
+      type: object
+      required: [id, type, api_version, occurred_at, data]
+      properties:
+        id: { type: string, maxLength: 64 }
+        type:
+          enum: [ping, branch.created, branch.updated, branch.deleted, department.created, department.updated, department.deleted,
+                 employee.created, employee.updated, employee.deleted, sync.requested]
+        api_version: { const: '1' }
+        occurred_at: { type: string, format: date-time }
+        data:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [object, id]
+              properties:
+                object: { enum: [branch, department, employee] }
+                id: { type: string }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { enum: [invalid_request, invalid_api_key, integration_disabled, not_found, cursor_expired, rate_limited, server_error] }
+            message: { type: string }
+            request_id: { type: string }
