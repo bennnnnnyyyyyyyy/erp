@@ -112,7 +112,7 @@ find the company. It is not a secret (the signature is), but it is never a compa
 | `hr_request_sync()` | owner, admin (own JWT) | sets `requested_at`; at most once a minute; audited `hr.sync.requested` |
 | `hr_link_employee(employee, user)` / `hr_unlink_employee(employee)` | owner, admin | sets or clears the member link; the user must be an active member of the same org; audited |
 | `hr_map_branch(unit, core_branch)` | owner, admin | maps an HR branch to an ERP branch; audited |
-| `hr__sync_due()` | service role | the companies whose sync is requested, or older than the interval (default 60 min), or whose daily full read is due |
+| `hr__sync_due()` | service role | the companies whose sync is requested, or older than the interval (default 15 min, Ben 20 Nov), or whose daily full read is due |
 | `hr__begin_sync(org)` / `hr__finish_sync(org, result, error, cursors, counts)` | service role | lock (one sync per org at a time, stale after 10 min), record the result; one audit row per run `hr.sync.finished` with counts |
 | `hr__apply_units(org, jsonb)` / `hr__apply_employees(org, jsonb)` | service role | upsert a page; ignore unknown fields; refuse a page over 200 rows; older `source_updated_at` ignored; deleted → `deleted_at`; audit one row per changed record (`hr.employee.changed`, before/after of the stored fields) |
 | `hr__accept_webhook(connection_id)` → `{org, secret}` | service role | the callback-credentials pattern of `sal__shopify_callback_credentials`: only for an enabled `hr_app` integration |
@@ -123,11 +123,13 @@ find the company. It is not a secret (the signature is), but it is never a compa
 | Key | Granted to by default | Allows |
 |---|---|---|
 | `core.integrations.view` / `core.integrations.manage` | existing | the HR app card, Check connection, Sync now (no new key) |
-| `hr.people.read` | owner, admin | the People screen |
+| `hr.people.read` | owner, admin, member | the People screen as a company directory (Ben, 20 Nov: "industry standard") |
 | `hr.people.manage` | owner, admin | linking employees to members, mapping branches |
 
-RLS: owners and admins of the org read `hr_units`, `hr_employees`, `hr_sync_state`; members read nothing in phase 1 (people data
-is HR data). `work_email` is read only through the People screen's function, not by column grant to members. Isolation tests cover
+RLS (Ben, 20 Nov: "industry standard", i.e. a company directory open to staff, HR details restricted): every active member of the org
+reads `hr_units` and the directory columns of `hr_employees` (name, number, job title, branch, department, manager, status) through
+column grants; `work_email`, `user_id`, `link_source`, hire/leave dates, `hr_sync_state` and `hr_webhook_events` are owners and admins
+only (read through an owner/admin function, no column grant to members). Isolation tests cover
 every table (section 9).
 
 ## 5. API
@@ -176,14 +178,14 @@ All text in Arabic and English (`i18nScreens.ts`), logical CSS properties. Arabi
 
 ## 8. Org settings this module adds
 
-`hr_app` integration fields (above); sync interval (`settings.config.sync_minutes`, 15-1440, default 60); module `hr` on/off in
+`hr_app` integration fields (above); sync interval (`settings.config.sync_minutes`, 15-1440, default 15; Ben, 20 Nov); module `hr` on/off in
 `org_modules`. Nothing customer-specific is hard-coded.
 
 ## 9. Tests
 
 - **SQL** `sql/tests/099_hr_app_link.sql`: RLS on every new table; `anon`/`authenticated` cannot insert, update, delete or truncate;
   a member of org B cannot read org A's units, employees, sync state or webhook events, nor link, map or request a sync for org A;
-  members (non-admin) read nothing; `hr__*` not executable by `authenticated`; upsert ignores older `source_updated_at`; replayed
+  members read only the directory columns, never `work_email`, links, dates or sync state; `hr__*` not executable by `authenticated`; upsert ignores older `source_updated_at`; replayed
   event id → `duplicate`; link refuses a user from another org; every change writes `audit_log`; unique connection id across orgs.
 - **API** (`apps/api/test/hr*.test.ts`): signature valid / wrong secret / old timestamp (> 5 min) / future timestamp / missing
   headers / unknown connection id (plain 200 `ignored`, nothing revealed) / switched-off integration / body over limit / replay;
@@ -209,13 +211,13 @@ All text in Arabic and English (`i18nScreens.ts`), logical CSS properties. Arabi
 | # | Decision | Recommended |
 |---|---|---|
 | D1 | **New master-key files** (secret-key client): `lib/hr/hrWebhook.ts` (webhook: no person waiting; acts only after the signature is verified and finds the company through our own connection id) and `jobs/hrSync.ts` (scheduled job: reads keys via `core__provider_credentials`, writes via `hr__apply_*`). Plus an `hr_app` branch in the already-allowed `lib/integrationChecks.ts` (Check connection: the signed-in company only). Each needs a line in agents.md and in `boundaries.test.ts`. | Yes |
-| D2 | **One new route without a permission check**: `POST /webhooks/hr-app` (like the other `/webhooks/*`; protected by the HMAC signature, timestamp window and event-id de-duplication instead). | Yes |
+| D2 | ✅ **Approved by Ben, 20 Nov.** **One new route without a permission check**: `POST /webhooks/hr-app` (like the other `/webhooks/*`; protected by the HMAC signature, timestamp window and event-id de-duplication instead). | Yes |
 | D3 | **New secrets**: per company, two in Vault (`hr_app.api_key`, `hr_app.webhook_secret`), entered by the customer like Shopify's. **No new Worker secret** (no environment variable). | Yes |
 | D4 | People data minimisation: phase 1 stores names, employee number, work email, job title, branch/department, manager, status, hire/leave dates only. | Yes |
 | D5 | Webhooks only trigger a re-read from the HR app's API (body not trusted as data). | Yes |
 
-Still open for Ben (asked as multiple choice when the plan is handed over): who may see the People screen (owners and admins only,
-recommended, or members too), and the default sync interval (60 minutes, recommended).
+Decided by Ben, 20 Nov: D2 yes; People screen "industry standard" (staff directory for every member, HR details for owners and
+admins only, section 4); default sync every 15 minutes. Still open: D1 (explained to Ben, awaiting his answer), D3, D4, D5.
 
 ## 12. Phase 2 (plan only, not built)
 
