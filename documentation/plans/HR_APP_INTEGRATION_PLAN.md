@@ -3,7 +3,7 @@
 **Module key:** `hr` (new; lowercase, to be added to `packages/shared/src/modules.ts`)
 **Status:** `[📝 Draft / RFC]`: waiting for Ben's approval. Nothing here is built.
 **Owner:** Claude · **Reviewers:** Ben; the HR app team (for the contract only)
-**Contract for the HR app team:** [hr-app-integration-contract.md](../reference/hr-app-integration-contract.md) (v1)
+**Contract for the HR app team:** [hr-app/CONTRACT.md](hr-app/CONTRACT.md) (with [openapi.yaml](hr-app/openapi.yaml)) (v1)
 **Depends on modules:** core (organizations, memberships, `core_branches`, `core_integrations`, Vault, outbox / 5-minute job)
 
 ---
@@ -12,7 +12,7 @@
 
 A colleague's team is building an HR app as a **separate product in its own repository**. Ben's decision (19 Nov 2026): treat it
 exactly like Shopify, Bosta or Paymob: an outside provider on **Settings > Integrations**. Because that app has no documentation
-yet, we write the contract ([reference](../reference/hr-app-integration-contract.md)) and the HR app team implements their side
+yet, we write the contract ([reference](hr-app/CONTRACT.md)) and the HR app team implements their side
 from it.
 
 Phase 1 gives an owner one place to see **who works where**: the HR app's branches, departments and employees, copied into the ERP

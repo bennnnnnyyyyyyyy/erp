@@ -16,7 +16,7 @@ run or deployed.
 **Objective.** Ben (20 Nov): setup should be one click (OAuth), the contract should explain the ERP and show with diagrams how the
 two apps talk and what each exposes; the app is an HR and payroll app and is not built yet.
 
-**Actions Completed.** Contract rewritten as draft 2 ([contract](../reference/hr-app-integration-contract.md)): About the ERP; overview
+**Actions Completed.** Contract rewritten as draft 2 ([contract](../plans/hr-app/CONTRACT.md)): About the ERP; overview
 diagram; table of what each side exposes and what is never exchanged; Connect with OAuth 2.0 + PKCE (authorize, token with rotating
 refresh tokens, revoke) and a webhook-subscription API that returns the signing secret; everyday sync diagram; payroll phase 2 with
 an accounting-status call back to the HR app. OpenAPI copy rewritten to match (checked that it parses). Plan updated (connect
@@ -35,7 +35,7 @@ we write the contract they build from.
 
 **Actions Completed.** Plan [HR_APP_INTEGRATION_PLAN.md](../plans/HR_APP_INTEGRATION_PLAN.md) (scope, tables `hr_units`,
 `hr_employees`, `hr_sync_state`, `hr_webhook_events`, functions, permissions, sync job, webhook security, tests, rollout,
-decisions D1-D5 for Ben, phase 2 sketch). Contract [hr-app-integration-contract.md](../reference/hr-app-integration-contract.md)
+decisions D1-D5 for Ben, phase 2 sketch). Contract [hr-app-integration-contract.md](../plans/hr-app/CONTRACT.md)
 (read-only API under `/erp/v1`, cursor pagination with `updated_since` and tombstones, error shape, HMAC-SHA256 webhooks over
 timestamp + raw body with a worked example, retries, versioning, test checklist). Checklist and reference index updated.
 Numbers reserved if approved: `sql/102`, SQL test 099.

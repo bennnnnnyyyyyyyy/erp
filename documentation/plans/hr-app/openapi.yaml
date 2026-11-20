@@ -1,4 +1,4 @@
-# OpenAPI description of the HR & payroll app <-> ERP contract v1 (documentation/reference/hr-app-integration-contract.md).
+# OpenAPI description of the HR & payroll app <-> ERP contract v1 (documentation/plans/hr-app/CONTRACT.md).
 # paths: the API the HR app exposes and the ERP calls. webhooks: the signed webhook the HR app sends to the ERP.
 # OAuth endpoints (authorize, token, revoke) follow RFC 6749 / 7636 / 7009 and are described in the contract, section 3.
 # Phase 2 (payroll) is in the contract only until v1.1. The prose contract is authoritative where the two differ.
@@ -9,7 +9,7 @@ info:
   description: >
     API that the HR & payroll app exposes so the ERP can read branches, departments and employees and register its webhook, plus
     the signed webhook the HR app sends to the ERP. Auth: v1 a per-company ERP key, v1.1 OAuth 2.0 authorization code with PKCE;
-    either way the ERP calls with `Authorization: Bearer <key or access token>`. See hr-app-integration-contract.md for the connect flow, pagination, deletions,
+    either way the ERP calls with `Authorization: Bearer <key or access token>`. See CONTRACT.md for the connect flow, pagination, deletions,
     signing, retries and the test checklist.
 servers:
   - url: '{api_base}/erp/v1'

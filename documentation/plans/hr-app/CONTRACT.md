@@ -1,9 +1,9 @@
 # HR & payroll app ↔ ERP integration contract, v1
 
 **Status:** v1 draft for the HR app team, 20 Nov 2026. Our side is planned in
-[HR_APP_INTEGRATION_PLAN.md](../plans/HR_APP_INTEGRATION_PLAN.md) and not built yet. Until both sides ship, changes are agreed
+[HR_APP_INTEGRATION_PLAN.md](../HR_APP_INTEGRATION_PLAN.md) and not built yet. Until both sides ship, changes are agreed
 together; after that, v1 only grows by additions (section 10). A machine-readable copy (OpenAPI 3.1) is in
-[hr-app-integration-openapi.yaml](hr-app-integration-openapi.yaml).
+[openapi.yaml](openapi.yaml).
 
 **In one paragraph.** A customer who uses both products creates an "ERP key" in the HR app and pastes it once into the ERP;
 the ERP then registers its own webhook, so nothing else is copied (v1, section 3.1). One-click **Connect HR app** with OAuth
