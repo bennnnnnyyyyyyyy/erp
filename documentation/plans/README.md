@@ -23,6 +23,7 @@ Add a line here in the same change that adds a plan.
 - [`TECHNICAL_PLAN.md`](TECHNICAL_PLAN.md): attack plan against competitor weaknesses, architecture, data layer, messaging, phases.
 - [`FEATURE_SET_AND_TECH_STACK.md`](FEATURE_SET_AND_TECH_STACK.md): feature set and technology choices.
 - [`ROADMAP_ACCOUNTING_SUITE.md`](ROADMAP_ACCOUNTING_SUITE.md): accounting suite roadmap, phases 0–9.
+- [`BELLVOX_READINESS_ROADMAP.md`](BELLVOX_READINESS_ROADMAP.md): making it sellable after the Bellvox meeting (20 Nov): UX and look, invoices, scanning, low stock, tiles, customisation, API, on-prem.
 
 **Module plans**
 
@@ -42,6 +43,10 @@ Add a line here in the same change that adds a plan.
 - [`BANK_STATEMENT_IMPORT_PLAN.md`](BANK_STATEMENT_IMPORT_PLAN.md): bank statement import and reconciliation (draft, waiting for Ben's approval).
 - [`ONBOARDING_WIZARD_PLAN.md`](ONBOARDING_WIZARD_PLAN.md): first-run setup wizard.
 - [`IN_APP_TOUR_PLAN.md`](IN_APP_TOUR_PLAN.md): the in-app tour.
+- [`UX_BRAND_PLAN.md`](UX_BRAND_PLAN.md): UX overhaul in the Bellvox look, six-section menu, quick link fixes.
+- [`INVOICE_PRINTING_PLAN.md`](INVOICE_PRINTING_PLAN.md): Arabic invoice print and PDF, letterhead and Word templates, ETA layout, WhatsApp and email.
+- [`SCANNING_PLAN.md`](SCANNING_PLAN.md): AI providers with the company key, supplier bill reading, camera barcodes, attachments, QR.
+- [`LOW_STOCK_AND_EXPIRY_PLAN.md`](LOW_STOCK_AND_EXPIRY_PLAN.md): low-stock pop-ups and suggested reorder points, expiry windows, stock value brackets.
 
 **Dated audits and working plans**
 

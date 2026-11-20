@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-20 — Bellvox meeting: discussion and readiness plans (documentation only)
+
+**Objective:** turn the notes from the meeting with Chris (Bellvox), who found the ERP hard to sell (messy UX, no Bellvox look,
+missing invoice printing, scanning, alerts, customisation, AI and on-prem), into decisions and plans. Ben answered eleven rounds of
+questions in chat.
+
+**Actions Completed:**
+- `documentation/planning/2026-11-20-bellvox-meeting-discussion.md`: plain-language recap and every decision taken.
+- `documentation/plans/BELLVOX_READINESS_ROADMAP.md`: order of work (quick fixes; low stock, UX and Bellvox look, invoice printing,
+  scanning first; then tiles, periods, expiry, demo companies, customisation, open API and chatbots, report and workflow builders,
+  on-prem steps 2+), plus the decisions for areas without their own plan yet.
+- New plans: `UX_BRAND_PLAN.md`, `INVOICE_PRINTING_PLAN.md` (including how to test ETA without its portal: offline, a mock ETA
+  server, then one PreProd registration), `SCANNING_PLAN.md`, `LOW_STOCK_AND_EXPIRY_PLAN.md`.
+- `documentation/planning/2026-11-20-grant-business-questions.md`: ten business decisions for Grant (AI credits or own key, ETA
+  timing, brand guide, name, on-prem pricing, billing, data region, WhatsApp and voice provider, support, record keeping).
+- Licence checks on GitHub (20 Nov) recorded in the roadmap and plans: n8n, Windmill and Automatisch not usable; React Flow (MIT),
+  Gotenberg (MIT), ZXing JS (Apache-2.0) usable; docxtemplater's licence still to confirm.
+- Found while reading code: the "Top products" and "Receivables and payables" home cards both link to `/sales/invoices` (UX plan Q1).
+- `plans/README.md` and `checklist.md` link the new plans.
+
+**Database / System Result:** none. No code or migration changed.
+
+**Safety Status:** documentation only; all plans are drafts awaiting Ben's approval. Product name "Bellvox ERP" is recorded as Ben's
+choice "for now". Migration and test numbers in the plans are "next free at build time".
+
 ## 2026-11-19 — Presentation check on live, small Arabic fixes (no migration)
 
 **Objective:** Ben presents today: test the slices on erp-live (Claude in Chrome, owner Chris, Demo Cosmetics Factory, Arabic).
