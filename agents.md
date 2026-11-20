@@ -19,6 +19,7 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 
 - **Multi-agent collaboration**: humans and AI agents (Claude, Codex, Antigravity, Cursor) co-develop this repo. Follow the folder authorities in [`documentation/README.md`](documentation/README.md) to prevent context drift.
 - Keep plans, research, operational notes, architecture and worklogs under `documentation/` (`architecture/`, `plans/`, `planning/`, `research/`, `operations/`, `reference/`, `reviews/`).
+- Before editing, identify the relevant files and read them along with the applicable plan, architecture decisions and relevant worklog entries. Batch independent reads. If exploration reveals another relevant file, read it before editing.
 - **Competitor research** (studying an existing system to learn what it does) goes in `documentation/research/<system-slug>/`, copied from `documentation/research/_TEMPLATE/`. Record what the system does, never copy its code, assets, branding or copy text. See [`documentation/research/README.md`](documentation/research/README.md). Our written teardowns are committed; screenshots, exports and imported files under `research/` are git-ignored (licensing) and stay local.
 - A module is not built until it has an approved plan in `documentation/plans/` (start from [`MODULE_PLAN_TEMPLATE.md`](documentation/plans/MODULE_PLAN_TEMPLATE.md)) and an entry in [`checklist.md`](documentation/plans/checklist.md).
 - Significant fixes, schema changes, migrations and architectural work must add a dated section to [`documentation/operations/WORKLOG.md`](documentation/operations/WORKLOG.md) with **Objective**, **Actions Completed**, **Database / System Result**, and **Safety Status**.
@@ -76,6 +77,7 @@ types from `packages/shared/`, backed by Supabase Postgres. Migrations live in `
 ## Safety and implementation rules
 
 - State assumptions before coding and make surgical changes only in files relevant to the request.
+- Don't add session-specific notes to agent instructions. If a mistake reveals a lasting instruction gap, describe the cause accurately and propose a focused rule; promote it only when the pattern recurs or the failure was high-impact. Put project history in its existing documentation home.
 - Do not give estimates of your own accord. When asked, check how fast things were actually coded in this project and estimate based upon that.
 - Never run `DROP`, `TRUNCATE`, broad `DELETE`, bucket destruction or production mutations without explicit user consent and a verified target.
 - Preserve append-only audit behavior. Prefer reviewed SQL migrations and local verification before any production schema change. Migrations are numbered, rerun-safe, and end with read-only verification queries.
