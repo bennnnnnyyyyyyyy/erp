@@ -25,9 +25,11 @@ The HR app stays the **source of truth** for people data. The ERP never writes b
 
 **In (phase 1):**
 
-- H1. "HR app" card in Settings > Integrations: base URL, API key, webhook secret (both secrets in Vault, like every provider),
-  on/off, **Check connection**, last sync time and result, **Sync now**, and the two values the customer pastes into the HR app's
-  "ERP" card (our webhook URL and the company's connection id).
+- H1. "HR app" card in Settings > Integrations with a **Connect HR app** button (Ben, 20 Nov: OAuth so setup is one click; the HR
+  app is not built yet, so it builds OAuth from the start). Connect = OAuth 2.0 authorization code + PKCE (contract section 3):
+  the owner or admin signs in to the HR app and approves; we receive tokens and register our webhook through the HR app's
+  subscription API, which returns the signing secret. Nothing to copy or paste. The card then shows the HR tenant name, who
+  connected and when, **Check connection**, **Sync now**, last sync and last webhook, and **Disconnect** (revokes the tokens).
 - H2. Pull sync from the HR app's API (contract section 3): branches, departments, employees; incremental by `updated_since`, full
   re-read once a day; run by the existing 5-minute scheduled job.
 - H3. Signed webhooks from the HR app (contract section 4): HMAC-SHA256 over timestamp + raw body, five-minute window, event id
@@ -50,14 +52,23 @@ Migration `sql/102_hr_app_link.sql` (next free number at time of writing; SQL te
 `authenticated` only; writes only through audited functions; index leading with `org_id`; soft delete (`deleted_at`) where they
 are business records.
 
-**Provider registration** (`core__provider_fields`, `core_save_integration`, kind check on `core_integrations`, each recreated from
-its latest version with only these additions):
+**Provider registration**: kind `hr_app` added to the `core_integrations` kind check and to `core_save_integration` (switching on
+only through `hr_save_connection`, below), each recreated from its latest version with only these additions.
 
-| kind | field | secret | required | notes |
-|---|---|---|---|---|
-| `hr_app` | `base_url` | no | yes | `https://` only, no credentials, no path beyond the app's prefix; checked like `ollama.base_url` plus `assertSafe…` in the API (no private or local addresses) |
-| `hr_app` | `api_key` | yes | yes | sent by us as `Authorization: Bearer` |
-| `hr_app` | `webhook_secret` | yes | yes | verifies the HR app's webhooks |
+No fields are typed by a person (OAuth). Per company, after Connect:
+
+| Where | What |
+|---|---|
+| Vault bundle (`core_integrations.secret_id`) | `access_token`, `access_expires_at`, `refresh_token`, `signing_secret` (never shown, never returned) |
+| `settings.config` (owners and admins read) | `tenant_id`, `tenant_name`, `scopes`, `subscription_id`, `connected_by`, `connected_at` |
+
+ERP-wide, set once (Worker configuration, not per company): `HR_APP_ISSUER` (the HR app's address), `HR_APP_CLIENT_ID` (plain), and
+**`HR_APP_CLIENT_SECRET` (new Worker secret, decision D3)**. The redirect address registered with the HR app is
+`https://<erp-web-host>/settings/integrations/hr-app/callback` (production and staging).
+
+**`hr_oauth_states`** (one row per Connect attempt): `org_id`, `user_id`, `state_hash` (sha-256 of the state), `code_verifier`
+(PKCE), `expires_at` (10 minutes), `used_at`. RLS on, no grants to users at all (read and written only by the two connect
+functions); rows older than a day removed by the retention job.
 
 `core_integrations.settings.config.connection_id`: a random id **we** generate when the card is first saved (`hrc_` + 24 random
 characters), unique across companies (unique index like sql/083's Shopify one). The HR app sends it in every webhook; it is how we
@@ -109,6 +120,11 @@ find the company. It is not a secret (the signature is), but it is never a compa
 
 | Function | Caller | Does |
 |---|---|---|
+| `hr_begin_connect()` → `{state, code_challenge}` | owner, admin (own JWT) | makes the state and PKCE pair, stores `hr_oauth_states`; audited `hr.connect.started` |
+| `hr_take_connect_state(state)` → `code_verifier` | owner, admin (own JWT) | the same person, same company, unexpired, unused; marks used |
+| `hr_save_connection(tokens jsonb, tenant jsonb, subscription jsonb)` | owner, admin (own JWT) | writes the Vault bundle and `settings.config`, switches the integration on; refused if the HR tenant is already connected to another company (unique index on `tenant_id`); audited `hr.connected` (tenant name, never a token) |
+| `hr_clear_connection()` | owner, admin (own JWT) | deletes the Vault bundle, switches off, keeps the copied data marked stale; audited `hr.disconnected` |
+| `hr__save_tokens(org, tokens)` | service role | the sync job's refresh (rotated refresh token) |
 | `hr_request_sync()` | owner, admin (own JWT) | sets `requested_at`; at most once a minute; audited `hr.sync.requested` |
 | `hr_link_employee(employee, user)` / `hr_unlink_employee(employee)` | owner, admin | sets or clears the member link; the user must be an active member of the same org; audited |
 | `hr_map_branch(unit, core_branch)` | owner, admin | maps an HR branch to an ERP branch; audited |
@@ -136,8 +152,10 @@ every table (section 9).
 
 | Method | Path | Permission | Body / query | Returns |
 |---|---|---|---|---|
-| PUT | `/v1/core/integrations/hr_app` and `/hr_app/fields` | `core.integrations.manage` | existing provider routes, new kind | as today |
-| POST | `/v1/core/integrations/hr_app/check` | `core.integrations.manage` | existing check route; new `hr_app` branch in `integrationChecks.ts`: `GET {base_url}/erp/v1/ping` | `IntegrationCheck` |
+| POST | `/v1/hr/connect/start` | `core.integrations.manage` | — | `{ authorizeUrl }` (the web app sends the browser there) |
+| POST | `/v1/hr/connect/finish` | `core.integrations.manage` | `{ code, state }` from the callback page | `{ tenantName }`. The API takes the verifier with the person's own sign-in, exchanges the code with `HR_APP_CLIENT_SECRET`, registers the webhook subscription, and saves with `hr_save_connection` (own sign-in). **No master key**: nothing is read from another company and the tokens arrive in this request |
+| POST | `/v1/hr/disconnect` | `core.integrations.manage` | — | revokes at the HR app (best effort), deletes the subscription, `hr_clear_connection` |
+| POST | `/v1/core/integrations/hr_app/check` | `core.integrations.manage` | existing check route; new `hr_app` branch in `integrationChecks.ts`: `GET /erp/v1/ping` with the company's token | `IntegrationCheck` |
 | POST | `/v1/hr/sync` | `core.integrations.manage` | — | `{ requestedAt }` (the 5-minute job runs it; the card says "within 5 minutes") |
 | GET | `/v1/hr/units` | `hr.people.read` | `kind`, `includeDeleted` | units |
 | GET | `/v1/hr/employees` | `hr.people.read` | `page`, `pageSize`, `branch`, `department`, `status`, `q` | `Paginated<Employee>` |
@@ -158,7 +176,7 @@ recorded on `hr_sync_state` and shown on the card; no key or URL query string is
 
 | Screen | Route | Permission | Notes |
 |---|---|---|---|
-| HR app card | Settings > Integrations | `core.integrations.view` / `.manage` | fields (secrets write-only, "saved" shown), on/off, Check connection, Sync now, last sync (time, result, counts), last webhook received, and a box "Paste into the HR app's ERP card": our webhook URL and the connection id, each with a copy button |
+| HR app card | Settings > Integrations | `core.integrations.view` / `.manage` | not connected: **Connect HR app** (OAuth); connected: HR tenant name, connected by and when, Check connection, Sync now, last sync (time, result, counts), last webhook received, **Disconnect**. Callback page `/settings/integrations/hr-app/callback` finishes the connect and returns to the card |
 | People | `/hr/people` (new nav item under Settings or a "People" section, module `hr` on) | `hr.people.read` | table: name, number, branch, department, job title, status, ERP member (or "Not linked" / "Suggested: …" with Confirm); filters; read-only banner "Managed in the HR app" |
 | Branch mapping | inside People, a tab | `hr.people.manage` | HR branch → ERP branch, suggested by equal code |
 
@@ -192,6 +210,10 @@ All text in Arabic and English (`i18nScreens.ts`), logical CSS properties. Arabi
   sync job against a fake HR app (pagination, `updated_since`, 429, 401, timeout, malformed JSON, page over 200, unknown fields
   dropped); `route_permissions.test.ts` passes with the webhook under `/webhooks` (not a `/v1` route); `boundaries.test.ts` updated
   for the new master-key files.
+- **OAuth** (API tests with a fake HR app): state from another person, another company, expired or reused → refused; wrong PKCE
+  verifier; token exchange failure leaves nothing saved; an HR tenant already connected to company A cannot connect to company B;
+  refresh rotation saved; 401 after a failed refresh shows "Reconnect"; Disconnect revokes and clears Vault; no token in any response or
+  log.
 - **Web**: card renders in both languages; People screen empty and filled; no secret ever in a response (`saved_fields` only).
 - **Contract fixture**: a small fake HR app in `apps/api/test/fixtures/hrApp.ts` that implements contract v1, so our tests and the
   HR app team's checklist describe the same thing.
@@ -212,7 +234,8 @@ All text in Arabic and English (`i18nScreens.ts`), logical CSS properties. Arabi
 |---|---|---|
 | D1 | **New master-key files** (secret-key client): `lib/hr/hrWebhook.ts` (webhook: no person waiting; acts only after the signature is verified and finds the company through our own connection id) and `jobs/hrSync.ts` (scheduled job: reads keys via `core__provider_credentials`, writes via `hr__apply_*`). Plus an `hr_app` branch in the already-allowed `lib/integrationChecks.ts` (Check connection: the signed-in company only). Each needs a line in agents.md and in `boundaries.test.ts`. | Yes |
 | D2 | ✅ **Approved by Ben, 20 Nov.** **One new route without a permission check**: `POST /webhooks/hr-app` (like the other `/webhooks/*`; protected by the HMAC signature, timestamp window and event-id de-duplication instead). | Yes |
-| D3 | **New secrets**: per company, two in Vault (`hr_app.api_key`, `hr_app.webhook_secret`), entered by the customer like Shopify's. **No new Worker secret** (no environment variable). | Yes |
+| D3 | **New secrets** (changed 20 Nov for OAuth): one **new Worker secret** `HR_APP_CLIENT_SECRET` (the ERP's OAuth client secret, given to us by the HR app team; plus plain config `HR_APP_ISSUER`, `HR_APP_CLIENT_ID`), and per company in Vault: access token, refresh token and webhook signing secret, all received during Connect, never typed or shown. | Yes |
+| D6 | **OAuth instead of pasted keys** (Ben, 20 Nov: "make the integration use OAuth so it's smooth to set up"). The HR app must act as an OAuth 2.0 authorization server (authorize, token with PKCE and rotating refresh tokens, revoke) and offer a webhook-subscription API. | ✅ Ben, 20 Nov |
 | D4 | People data minimisation: phase 1 stores names, employee number, work email, job title, branch/department, manager, status, hire/leave dates only. | Yes |
 | D5 | Webhooks only trigger a re-read from the HR app's API (body not trusted as data). | Yes |
 
@@ -230,6 +253,10 @@ admins only, section 4); default sync every 15 minutes. Still open: D1 (explaine
 - **Advances and expense claims.** HR app: `advance.approved`, `expense_claim.approved`; ERP creates an employee advance (receivable
   from the employee) or an expense (sql/024 `fin_record_expense`, with VAT data when a tax invoice is attached) **in draft for
   approval**; payment through treasury. The approval in the HR app does not replace the ERP approval of the posting.
+- The app is an HR **and payroll** app (Ben, 20 Nov), so phase 2 is the main business value. The contract (section 9) already
+  shows the payroll run shape and adds one ERP → HR call: `POST /erp/v1/payroll-runs/{id}/accounting-status` (awaiting approval,
+  posted with journal number, paid, rejected), with OAuth scope `erp.payroll.status.write`. This is the only place the ERP writes
+  to the HR app.
 - Phase 2 needs its own plan revision, new permissions (`hr.payroll.post`), and its contract section 9 moved from "draft" to v1.1.
 
 ## 13. Open questions

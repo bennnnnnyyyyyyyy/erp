@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-20 — HR app integration: OAuth connect, flow diagrams, payroll (no migration)
+
+**Objective.** Ben (20 Nov): setup should be one click (OAuth), the contract should explain the ERP and show with diagrams how the
+two apps talk and what each exposes; the app is an HR and payroll app and is not built yet.
+
+**Actions Completed.** Contract rewritten as draft 2 ([contract](../reference/hr-app-integration-contract.md)): About the ERP; overview
+diagram; table of what each side exposes and what is never exchanged; Connect with OAuth 2.0 + PKCE (authorize, token with rotating
+refresh tokens, revoke) and a webhook-subscription API that returns the signing secret; everyday sync diagram; payroll phase 2 with
+an accounting-status call back to the HR app. OpenAPI copy rewritten to match (checked that it parses). Plan updated (connect
+routes and functions, `hr_oauth_states`, decision D3 now a new Worker secret `HR_APP_CLIENT_SECRET`, D6 OAuth). Earlier Ben
+answers recorded: D2 yes, staff directory for members, sync every 15 minutes. The contract and OpenAPI files are force-added
+(`documentation/reference/` is git-ignored for third-party material; these are our own writing).
+
+**Database / System Result.** None. Nothing built, applied or deployed. Shareable page for the HR app team published (private to Ben).
+
+**Safety Status.** Documentation only; link check passes. Waiting for Ben: D1 (master-key files), D3 (new Worker secret).
+
 ## 2026-11-19 — HR app integration: plan and contract v1 (no migration)
 
 **Objective.** Ben (19 Nov): connect the ERP to a separate HR app built by a colleague's team, treated like Shopify / Bosta / Paymob;
