@@ -211,5 +211,5 @@ begin
   if exists (select 1 from public.audit_log where org_id = o and (coalesce(after::text, '') ~ 'whsec_|hrk_' or summary ~ 'whsec_|hrk_')) then
     raise exception 'FAIL H10b: a secret reached the audit log'; end if;
 
-  raise exception 'ALL TESTS PASSED';
+  raise exception 'ALL TESTS PASSED (everything rolled back)';
 end $$;
