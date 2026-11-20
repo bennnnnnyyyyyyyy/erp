@@ -11,30 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-20 — Bellvox meeting: discussion and readiness plans (documentation only)
+## 2026-11-20 — Bellvox meeting: decisions and plans (documents only)
 
-**Objective:** turn the notes from the meeting with Chris (Bellvox), who found the ERP hard to sell (messy UX, no Bellvox look,
-missing invoice printing, scanning, alerts, customisation, AI and on-prem), into decisions and plans. Ben answered eleven rounds of
-questions in chat.
+**Objective:** Chris (Bellvox) said the ERP is not ready to sell. The look is messy, and some features that buyers ask for are
+missing. Ben answered 11 rounds of questions. We wrote the answers down and made plans.
 
 **Actions Completed:**
-- `documentation/planning/2026-11-20-bellvox-meeting-discussion.md`: plain-language recap and every decision taken.
-- `documentation/plans/BELLVOX_READINESS_ROADMAP.md`: order of work (quick fixes; low stock, UX and Bellvox look, invoice printing,
-  scanning first; then tiles, periods, expiry, demo companies, customisation, open API and chatbots, report and workflow builders,
-  on-prem steps 2+), plus the decisions for areas without their own plan yet.
-- New plans: `UX_BRAND_PLAN.md`, `INVOICE_PRINTING_PLAN.md` (including how to test ETA without its portal: offline, a mock ETA
-  server, then one PreProd registration), `SCANNING_PLAN.md`, `LOW_STOCK_AND_EXPIRY_PLAN.md`.
-- `documentation/planning/2026-11-20-grant-business-questions.md`: ten business decisions for Grant (AI credits or own key, ETA
-  timing, brand guide, name, on-prem pricing, billing, data region, WhatsApp and voice provider, support, record keeping).
-- Licence checks on GitHub (20 Nov) recorded in the roadmap and plans: n8n, Windmill and Automatisch not usable; React Flow (MIT),
-  Gotenberg (MIT), ZXing JS (Apache-2.0) usable; docxtemplater's licence still to confirm.
-- Found while reading code: the "Top products" and "Receivables and payables" home cards both link to `/sales/invoices` (UX plan Q1).
-- `plans/README.md` and `checklist.md` link the new plans.
+- `documentation/planning/2026-11-20-bellvox-meeting-discussion.md`: what Chris said and every decision.
+- `documentation/plans/BELLVOX_READINESS_ROADMAP.md`: the order of work. First: low stock, new look, invoice printing, scanning.
+- Four plans: `UX_BRAND_PLAN.md`, `INVOICE_PRINTING_PLAN.md`, `SCANNING_PLAN.md`, `LOW_STOCK_AND_EXPIRY_PLAN.md`.
+  The invoice plan explains how to test ETA without its portal.
+- `documentation/planning/2026-11-20-grant-business-questions.md`: 10 business questions for Grant.
+- Licences checked on the code hosting site: n8n, Windmill and Automatisch cannot be used. React Flow, Gotenberg and ZXing can.
+  docxtemplater: check its licence before use.
+- Bug found: two home tiles open the wrong page (see the UX plan, quick fixes).
+- Ben asked for plain writing, so all these documents use short sentences (ASD-STE100 style, about half the time).
+- `plans/README.md` and `checklist.md` link to the new plans.
 
-**Database / System Result:** none. No code or migration changed.
+**Database / System Result:** none. No code and no migration changed.
 
-**Safety Status:** documentation only; all plans are drafts awaiting Ben's approval. Product name "Bellvox ERP" is recorded as Ben's
-choice "for now". Migration and test numbers in the plans are "next free at build time".
+**Safety Status:** documents only. All plans are drafts. Ben must approve them. Migration numbers are "the next free number when we
+build" (the HR app work uses 102 and test 099).
 
 ## 2026-11-19 — Presentation check on live, small Arabic fixes (no migration)
 
