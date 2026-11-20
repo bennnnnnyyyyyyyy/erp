@@ -21,6 +21,10 @@ const ADMIN_DB_ALLOWED = new Set([
   'lib/whatsappInbound.ts',
   // "Check connection" (sql/082): reads a company's saved keys to make one real call; never writes, never returns a key.
   'lib/integrationChecks.ts',
+  // HR & payroll app (sql/102; Ben's yes, 20 Nov 2026): the webhook (company found by our own connection id, signature checked first)
+  // and the 15-minute sync job (each company's own key, each page written to that company only). No person is waiting in either.
+  'lib/hr/hrWebhook.ts',
+  'jobs/hrSync.ts',
 ]);
 // Auth account calls (creating accounts, sign-in links) only from the member routes, after a database function has allowed it.
 const AUTH_ADMIN_ALLOWED = new Set(['modules/core/memberRoutes.ts']);
@@ -69,7 +73,7 @@ describe('database client boundaries (ADR-0003)', () => {
 
   it('routes that reach master-key code never take a company id from the request', () => {
     const masterKeyLib =
-      /from\s+['"][^'"]*(jobs\/outbox|lib\/aiService|lib\/integrationChecks|lib\/payments\/links|lib\/shipping\/bosta|lib\/store\/shopify|lib\/channels\/[a-z]+|lib\/authAdmin)['"]/;
+      /from\s+['"][^'"]*(jobs\/outbox|jobs\/hrSync|lib\/hr\/hrWebhook|lib\/aiService|lib\/integrationChecks|lib\/payments\/links|lib\/shipping\/bosta|lib\/store\/shopify|lib\/channels\/[a-z]+|lib\/authAdmin)['"]/;
     const companyFromRequest =
       /c\.req\.(param|query|header)\(\s*['"](org|orgId|org_id|x-org-id)['"]|\b(orgId|org_id|p_org)\s*:\s*(b|body|input|q|query|params|payload)\s*[.[]/;
     const offenders = routeFiles()
@@ -103,6 +107,15 @@ describe('database client boundaries (ADR-0003)', () => {
       }
     }
     expect(calls).toBeGreaterThanOrEqual(2); // the routes exist; a rename must not silently empty this guard
+    expect(offenders).toEqual([]);
+  });
+
+  // Ben, 20 Nov 2026: the HR app's master-key code runs only with no person waiting (the webhook, the scheduled job). No route may
+  // reach it; "Sync now" only asks the database (hr_request_sync) and the job does the reading.
+  it('no route imports the HR app webhook or sync job', () => {
+    const offenders = routeFiles()
+      .filter(({ text }) => /from\s+['"][^'"]*(jobs\/hrSync|lib\/hr\/hrWebhook)['"]/.test(text))
+      .map(({ rel }) => rel);
     expect(offenders).toEqual([]);
   });
 

@@ -230,6 +230,7 @@ export function IntegrationsSettings() {
     { title: 'Payments', keys: entries('payments') },
     { title: 'Shipping', keys: entries('shipping') },
     { title: 'Online store', keys: entries('store') },
+    { title: 'HR and payroll', keys: entries('people') },
     { title: 'Messages', keys: channelConnections.map((c) => c.key) },
     { title: 'AI and voice', keys: [AI_NOTICE_KEY, ...entries('ai')] },
     { title: 'Other', keys: [RATES_KEY, SHEETS_KEY] },

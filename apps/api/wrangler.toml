@@ -19,6 +19,8 @@ APP_ENV = "production"
 # of the branch preview of the real app (Cloudflare Pages project erp-live, branch worktree-ui-warm), so the new look can be tried with
 # real sign-in and real data before it goes live. It reads and writes the same database as the live app. Delete it when not needed.
 ALLOWED_ORIGINS = "https://erp-live.pages.dev,https://worktree-ui-warm.erp-live.pages.dev"
+# This API's own public address (not a secret): the HR & payroll app sync gives it to the HR app as our webhook address (sql/102).
+API_PUBLIC_URL = "https://erp-api.meetings-dmedeskai.workers.dev"
 
 # Request limit (src/middleware/rateLimit.ts; system audit 2026-11-03, finding 4): 600 requests a minute per signed-in user, or per
 # IP where there is no user (webhooks). A page makes about six requests, so this only stops runaway scripts.

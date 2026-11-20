@@ -30,6 +30,9 @@ export type Bindings = {
   TELEGRAM_BOT_USERNAME?: string;
   /** The web app's address, for "Open in the app" buttons (defaults to the first ALLOWED_ORIGINS entry). */
   APP_URL?: string;
+  /** This API's own public https address (not a secret). The HR app sync (jobs/hrSync.ts) gives it to the HR app as our webhook
+   * address; without it the sync still reads every 15 minutes, but no webhook is registered. */
+  API_PUBLIC_URL?: string;
   // AI (lib/ai.ts, sql/056). Our keys, used for companies that accepted the AI notice and have no key of their own. Secrets:
   // OPENAI_API_KEY, ELEVENLABS_API_KEY. AI_MONTHLY_CAP_USD: the most we spend a month across all companies on our keys (default 100).
   OPENAI_API_KEY?: string;

@@ -62,9 +62,9 @@ export type IntegrationCheck = {
 
 // ------------------------------------------------------------------ providers (sql/056; Ben's choices, 6 Nov)
 
-export const PROVIDER_KINDS = ['paymob', 'fawry', 'bosta', 'shopify', 'openai', 'elevenlabs', 'ollama'] as const;
+export const PROVIDER_KINDS = ['paymob', 'fawry', 'bosta', 'shopify', 'openai', 'elevenlabs', 'ollama', 'hr_app'] as const;
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];
-export type ProviderGroup = 'payments' | 'shipping' | 'store' | 'ai';
+export type ProviderGroup = 'payments' | 'shipping' | 'store' | 'ai' | 'people';
 
 export type ProviderField = {
   key: string;
@@ -217,6 +217,32 @@ export const PROVIDERS: readonly ProviderDef[] = [
       },
       { key: 'model', label: 'Model', secret: false, required: true, placeholder: 'qwen2.5:7b' },
       { key: 'api_key', label: 'Access key (optional)', secret: true, required: false, help: 'If your address is protected by a key.' },
+    ],
+  },
+  {
+    // HR & payroll app (sql/102; documentation/plans/hr-app/CONTRACT.md). v1: a per-company ERP key made in the HR app. The ERP
+    // registers its own webhook with the HR app, so there is no address to give it.
+    kind: 'hr_app',
+    group: 'people',
+    name: 'HR & payroll app',
+    summary: 'Branches, departments and employees from your HR and payroll app, read every 15 minutes, shown in People.',
+    fields: [
+      {
+        key: 'base_url',
+        label: 'HR app address',
+        secret: false,
+        required: true,
+        placeholder: 'https://hr.example.com',
+        help: 'The address shown on the ERP card in your HR app.',
+      },
+      {
+        key: 'api_key',
+        label: 'ERP key',
+        secret: true,
+        required: true,
+        placeholder: 'hrk_…',
+        help: 'In the HR app: Settings → Integrations → ERP → Create ERP key. It is shown once there.',
+      },
     ],
   },
 ];

@@ -1,0 +1,382 @@
+# OpenAPI description of the HR & payroll app <-> ERP contract v1 (documentation/plans/hr-app/CONTRACT.md).
+# paths: the API the HR app exposes and the ERP calls. webhooks: the signed webhook the HR app sends to the ERP.
+# OAuth endpoints (authorize, token, revoke) follow RFC 6749 / 7636 / 7009 and are described in the contract, section 3.
+# Phase 2 (payroll) is in the contract only until v1.1. The prose contract is authoritative where the two differ.
+openapi: 3.1.0
+info:
+  title: HR & payroll app API for the ERP
+  version: '1'
+  description: >
+    API that the HR & payroll app exposes so the ERP can read branches, departments and employees and register its webhook, plus
+    the signed webhook the HR app sends to the ERP. Auth: v1 a per-company ERP key, v1.1 OAuth 2.0 authorization code with PKCE;
+    either way the ERP calls with `Authorization: Bearer <key or access token>`. See CONTRACT.md for the connect flow, pagination, deletions,
+    signing, retries and the test checklist.
+servers:
+  - url: '{api_base}/erp/v1'
+    variables:
+      api_base:
+        default: https://hr.example.com
+security:
+  - erpKey: []
+  - oauth: [erp.people.read]
+paths:
+  /ping:
+    get:
+      summary: Check connection (no side effects)
+      operationId: ping
+      responses:
+        '200':
+          description: The token works
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ping' }
+        '401': { $ref: '#/components/responses/Error' }
+  /branches:
+    get:
+      summary: List branches
+      operationId: listBranches
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/updated_since'
+      responses:
+        '200':
+          description: One page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          oneOf: [{ $ref: '#/components/schemas/Branch' }, { $ref: '#/components/schemas/Tombstone' }]
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /departments:
+    get:
+      summary: List departments
+      operationId: listDepartments
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/updated_since'
+      responses:
+        '200':
+          description: One page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          oneOf: [{ $ref: '#/components/schemas/Department' }, { $ref: '#/components/schemas/Tombstone' }]
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /employees:
+    get:
+      summary: List employees
+      operationId: listEmployees
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/updated_since'
+        - name: status
+          in: query
+          schema: { type: array, items: { $ref: '#/components/schemas/EmployeeStatus' } }
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: One page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          oneOf: [{ $ref: '#/components/schemas/Employee' }, { $ref: '#/components/schemas/Tombstone' }]
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /employees/{id}:
+    get:
+      summary: Read one employee
+      operationId: getEmployee
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, maxLength: 64 } }
+      responses:
+        '200':
+          description: The employee, or a tombstone if deleted
+          content:
+            application/json:
+              schema:
+                oneOf: [{ $ref: '#/components/schemas/Employee' }, { $ref: '#/components/schemas/Tombstone' }]
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /webhook-subscriptions:
+    post:
+      summary: Create (or replace) this connection's webhook subscription; the signing secret is returned only here
+      operationId: createWebhookSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, connection_id, events]
+              properties:
+                url: { type: string, format: uri, pattern: '^https://' }
+                connection_id: { type: string, pattern: '^hrc_[A-Za-z0-9]{24}$' }
+                events: { type: array, items: { type: string }, example: ['*'] }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, signing_secret, events, created_at]
+                properties:
+                  id: { type: string }
+                  signing_secret: { type: string }
+                  events: { type: array, items: { type: string } }
+                  created_at: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    get:
+      summary: List the subscription (never the secret)
+      operationId: listWebhookSubscriptions
+      responses:
+        '200':
+          description: Subscriptions without signing_secret
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        url: { type: string }
+                        connection_id: { type: string }
+                        events: { type: array, items: { type: string } }
+                        created_at: { type: string, format: date-time }
+  /webhook-subscriptions/{id}:
+    delete:
+      summary: Delete the subscription
+      operationId: deleteWebhookSubscription
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+  /webhook-subscriptions/{id}/rotate-secret:
+    post:
+      summary: New signing secret; old and new both sign for 24 hours
+      operationId: rotateWebhookSecret
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The new secret
+          content:
+            application/json:
+              schema: { type: object, required: [signing_secret], properties: { signing_secret: { type: string } } }
+webhooks:
+  hrEvent:
+    post:
+      summary: Event sent by the HR app to the subscribed ERP URL (https://<erp-api-host>/webhooks/hr-app)
+      description: >
+        X-HR-Signature = "v1=" + hex(HMAC_SHA256(signing_secret, X-HR-Timestamp + "." + raw_body)). The ERP rejects a timestamp
+        more than 300 seconds from its clock, de-duplicates on X-HR-Event-Id for 7 days, and re-reads the record from the API (the
+        body carries ids only).
+      security: []
+      parameters:
+        - { name: X-ERP-Connection, in: header, required: true, schema: { type: string, pattern: '^hrc_[A-Za-z0-9]{24}$' } }
+        - { name: X-HR-Event-Id, in: header, required: true, schema: { type: string, maxLength: 64 } }
+        - { name: X-HR-Timestamp, in: header, required: true, schema: { type: string, pattern: '^[0-9]{10}$' } }
+        - { name: X-HR-Signature, in: header, required: true, schema: { type: string, pattern: '^v1=[0-9a-f]{64}(,v1=[0-9a-f]{64})*$' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Event' }
+            example:
+              id: evt_01JD3K8Q2V
+              type: employee.updated
+              api_version: '1'
+              occurred_at: '2026-11-19T08:30:00Z'
+              data: { object: employee, id: emp_123 }
+      responses:
+        '200':
+          description: 'handled: ok, ignored (unknown connection or event type) or duplicate'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { handled: { enum: [ok, ignored, duplicate] } }
+        '400': { description: 'handled: invalid (bad JSON or over 64 KB); do not retry' }
+        '401': { description: 'handled: bad_signature (wrong signature or timestamp outside 300 s)' }
+components:
+  securitySchemes:
+    erpKey:
+      type: http
+      scheme: bearer
+      description: v1. Per-company ERP key (hrk_...) created by a company admin in the HR app; read-only, shown once, stored hashed.
+    oauth:
+      type: oauth2
+      description: >
+        Authorization code with PKCE (S256 only), client_secret_basic at the token endpoint, rotating refresh tokens (old one valid
+        60 s), revocation per RFC 7009. Phase 2 adds erp.payroll.read and erp.payroll.status.write.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://hr.example.com/oauth/authorize
+          tokenUrl: https://hr.example.com/oauth/token
+          refreshUrl: https://hr.example.com/oauth/token
+          scopes:
+            erp.people.read: Read branches, departments and employees; manage this connection's webhook subscription
+            offline_access: Receive a refresh token
+  parameters:
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+    cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    updated_since:
+      name: updated_since
+      in: query
+      description: Records with updated_at >= this value, deleted ones included as tombstones. Order is updated_at, then id.
+      schema: { type: string, format: date-time }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds to wait }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Ping:
+      type: object
+      required: [app, api_version, tenant, scopes, server_time]
+      properties:
+        app: { type: string, example: hr-app }
+        api_version: { type: string, const: '1' }
+        tenant:
+          type: object
+          required: [id, name]
+          properties: { id: { type: string }, name: { type: string } }
+        scopes: { type: array, items: { type: string } }
+        server_time: { type: string, format: date-time }
+    Page:
+      type: object
+      required: [data, next_cursor, has_more]
+      properties:
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+    Tombstone:
+      type: object
+      required: [id, deleted, updated_at]
+      properties:
+        id: { type: string }
+        deleted: { const: true }
+        updated_at: { type: string, format: date-time }
+    Branch:
+      type: object
+      required: [id, name, active, updated_at]
+      properties:
+        id: { type: string, maxLength: 64 }
+        code: { type: [string, 'null'], maxLength: 30 }
+        name: { type: string, maxLength: 120 }
+        name_ar: { type: [string, 'null'], maxLength: 120 }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    Department:
+      type: object
+      required: [id, name, active, updated_at]
+      properties:
+        id: { type: string, maxLength: 64 }
+        code: { type: [string, 'null'], maxLength: 30 }
+        name: { type: string, maxLength: 120 }
+        name_ar: { type: [string, 'null'], maxLength: 120 }
+        branch_id: { type: [string, 'null'] }
+        parent_department_id: { type: [string, 'null'] }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    EmployeeStatus:
+      type: string
+      enum: [active, on_leave, terminated]
+    Employee:
+      type: object
+      required: [id, display_name, status, updated_at]
+      properties:
+        id: { type: string, maxLength: 64 }
+        employee_number: { type: [string, 'null'], maxLength: 40 }
+        display_name: { type: string, maxLength: 160 }
+        display_name_ar: { type: [string, 'null'], maxLength: 160 }
+        work_email: { type: [string, 'null'], format: email }
+        job_title: { type: [string, 'null'], maxLength: 120 }
+        job_title_ar: { type: [string, 'null'], maxLength: 120 }
+        branch_id: { type: [string, 'null'] }
+        department_id: { type: [string, 'null'] }
+        manager_id: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/EmployeeStatus' }
+        hired_on: { type: [string, 'null'], format: date }
+        left_on: { type: [string, 'null'], format: date }
+        updated_at: { type: string, format: date-time }
+    Event:
+      type: object
+      required: [id, type, api_version, occurred_at, data]
+      properties:
+        id: { type: string, maxLength: 64 }
+        type:
+          enum: [ping, branch.created, branch.updated, branch.deleted, department.created, department.updated, department.deleted,
+                 employee.created, employee.updated, employee.deleted, sync.requested, connection.revoked]
+        api_version: { const: '1' }
+        occurred_at: { type: string, format: date-time }
+        data:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [object, id]
+              properties:
+                object: { enum: [branch, department, employee] }
+                id: { type: string }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { enum: [invalid_request, invalid_token, insufficient_scope, not_found, conflict, cursor_expired, rate_limited, server_error] }
+            message: { type: string }
+            request_id: { type: string }

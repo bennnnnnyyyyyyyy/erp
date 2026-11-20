@@ -71,6 +71,7 @@ const BankStatementPage = lazyNamed(() => import('./treasury/Statements'), 'Bank
 const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'StatementsPage');
 const VatSummaryPage = lazyNamed(() => import('./finance/VatSummary'), 'VatSummaryPage');
 const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
+const PeoplePage = lazyNamed(() => import('./hr/People'), 'PeoplePage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/SetupGuide'), 'AccountingSetupPage');
@@ -295,6 +296,13 @@ export const APPS: AppDef[] = [
       // Bank statements (sql/067; BANK_STATEMENT_IMPORT_PLAN.md).
       { path: '/statements', label: 'Bank statements', permission: 'treasury.statements.view', component: BankStatementsPage },
       { path: '/statements/:id', label: 'Bank statement', permission: 'treasury.statements.view', component: BankStatementPage, nav: false, parent: '/statements' },
+    ],
+  } satisfies AppDef]),
+  // People (sql/102; HR_APP_INTEGRATION_PLAN.md): the staff directory from the HR & payroll app. Real API only. Every member reads it.
+  ...(demoMode ? [] : [{
+    key: 'hr', module: 'hr', name: 'People', description: 'Your staff from the HR and payroll app: who works where',
+    suite: 'Core', basePath: '/hr', pages: [
+      { path: '', label: 'People', permission: 'hr.people.read', component: PeoplePage },
     ],
   } satisfies AppDef]),
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.

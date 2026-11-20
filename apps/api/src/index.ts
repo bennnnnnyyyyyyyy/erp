@@ -4,7 +4,9 @@ import { findModule } from '@erp/shared';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Bindings } from './env';
 import { runFxPass } from './jobs/fx';
+import { runHrSyncPass } from './jobs/hrSync';
 import { runOutboxPass } from './jobs/outbox';
+import { processHrWebhook } from './lib/hr/hrWebhook';
 import { processShopifyWebhook } from './lib/store/shopify';
 import { processBostaWebhook } from './lib/shipping/bosta';
 import { processFawryCallback, processPaymobCallback } from './lib/payments/links';
@@ -46,6 +48,7 @@ app.route('/v1', v1);
 app.use('/webhooks/*', rateLimit('webhook'));
 // Body caps before any handler reads the body (repo audit 2026-11-06, finding 8). Shopify order payloads are larger than the rest.
 for (const hook of ['whatsapp', 'telegram', 'paymob', 'fawry', 'bosta']) app.use(`/webhooks/${hook}`, limitBody(100 * KB));
+app.use('/webhooks/hr-app', limitBody(64 * KB));
 app.use('/webhooks/shopify', limitBody(1 * MB));
 // Private report links for Google Sheets (sql/070): no user, the token in the address is the only credential. Read-only CSV. The token
 // format is checked before any database call; every refusal (missing, revoked, expired, module off) is the same bare 404.
@@ -139,6 +142,20 @@ app.post('/webhooks/shopify', async (c) => {
   return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', String(r.body.handled));
 });
 
+// HR & payroll app (sql/102; contract section 6). Signed with the company's signing secret (HMAC-SHA256 over timestamp and body),
+// found by our own connection id; the event only asks for a read, which the sync job does from the HR app's API.
+app.post('/webhooks/hr-app', async (c) => {
+  const raw = await c.req.text();
+  if (raw.length > 64 * 1024) return fail(c, 413, 'Too large', 'too_large');
+  const r = await processHrWebhook(c.env, raw, {
+    connection: c.req.header('X-ERP-Connection') ?? '',
+    eventId: c.req.header('X-HR-Event-Id') ?? '',
+    timestamp: c.req.header('X-HR-Timestamp') ?? '',
+    signature: c.req.header('X-HR-Signature') ?? '',
+  });
+  return r.status === 200 ? c.json({ success: true, data: r.body }) : fail(c, r.status, 'Rejected', r.body.handled);
+});
+
 app.notFound((c) => fail(c, 404, 'Not found'));
 
 app.onError((err, c) => {
@@ -161,6 +178,13 @@ export default Object.assign(app, {
       runOutboxPass(env).then(
         (r) => console.log('outbox pass', JSON.stringify(r)),
         (e) => console.error('outbox pass failed', e instanceof Error ? e.message : String(e)),
+      ),
+    );
+    // HR & payroll app (sql/102): each company's read is due every 15 minutes, or sooner after "Sync now" or a webhook.
+    ctx.waitUntil(
+      runHrSyncPass(env).then(
+        (r) => r.companies > 0 && console.log('hr sync pass', JSON.stringify(r)),
+        (e) => console.error('hr sync pass failed', e instanceof Error ? e.message : String(e)),
       ),
     );
     // Daily exchange rates (sql/053); fetches at most every 6 hours, so most runs only check.

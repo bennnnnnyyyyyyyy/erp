@@ -3,6 +3,7 @@ import type { Bindings } from '../env';
 import { assertSafeOllamaUrl } from './aiProviders';
 import { adminDb } from './db.admin';
 import { sha256Hex } from './payments/links';
+import { hrApiBase, hrCall, hrReason, hrUrl, isObj as isHrObj } from './hr/hrClient';
 import { appUrl } from './telegram';
 
 // "Check connection" (sql/082; plan https://claude.ai/artifact/Bhoasn4YNGrEb4jsWQJtZi). There is no test mode any more, so this is how
@@ -264,6 +265,33 @@ async function checkOllama(env: Bindings, who: CheckCaller, deps: CheckDeps): Pr
     : fail(`Your Ollama server answered, but it does not have the model ${c.model} (it has: ${models.slice(0, 5).join(', ') || 'none'}).`);
 }
 
+// ------------------------------------------------------------------ HR & payroll app (sql/102; contract 4.3: GET /erp/v1/ping)
+
+async function checkHrApp(env: Bindings, who: CheckCaller, deps: CheckDeps): Promise<IntegrationCheck> {
+  const c = await credentials(env, who.orgId, 'hr_app');
+  if (!c.base_url || !c.api_key) return fail('Save the HR app address and the ERP key first.');
+  let base: URL;
+  try {
+    base = hrApiBase(c.base_url);
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : 'The HR app address is not allowed');
+  }
+  const r = await hrCall(deps, hrUrl(base, 'ping'), c.api_key);
+  if (r.status >= 300 && r.status < 400) return fail('The HR app address redirects. Save the final https address instead.');
+  if (r.status === 401 || r.status === 403) return fail(`The HR app refused the ERP key: ${hrReason(r)}`);
+  if (r.status !== 200) return fail(`The HR app answered: ${hrReason(r)}`);
+  const b = isHrObj(r.body) ? r.body : {};
+  const tenant = isHrObj(b.tenant) && typeof b.tenant.name === 'string' ? b.tenant.name.slice(0, 120) : null;
+  const time = typeof b.server_time === 'string' ? Date.parse(b.server_time) : Number.NaN;
+  const skew = Number.isNaN(time) ? 0 : Math.abs(time - Date.now());
+  const company = tenant ? `"${tenant}"` : 'the HR app';
+  return skew > 120_000
+    ? pass(
+        `Connected to ${company}, but its clock is ${Math.round(skew / 60_000)} minutes off ours: its webhooks would be refused until that is fixed.`,
+      )
+    : pass(`Connected to ${company}. Employees are read within 15 minutes.`);
+}
+
 // ------------------------------------------------------------------ one door
 
 export const CHECKABLE = [
@@ -279,6 +307,7 @@ export const CHECKABLE = [
   'openai',
   'elevenlabs',
   'ollama',
+  'hr_app',
 ] as const;
 export type CheckableKind = (typeof CHECKABLE)[number];
 
@@ -312,6 +341,8 @@ export async function checkIntegration(
         return await checkElevenLabs(env, who, deps);
       case 'ollama':
         return await checkOllama(env, who, deps);
+      case 'hr_app':
+        return await checkHrApp(env, who, deps);
     }
   } catch (e) {
     const timeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
