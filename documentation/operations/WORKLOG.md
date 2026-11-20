@@ -11,6 +11,30 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-20 — HR & payroll app link, phase 1 built (`sql/102`, not applied)
+
+**Objective.** Ben approved the HR app plan (20 Nov): master-key files `lib/hr/hrWebhook.ts` and `jobs/hrSync.ts`, the webhook route
+without a permission check, v1 connecting with a per-company ERP key (OAuth later), People visible to every member, sync every 15
+minutes. Build the ERP side so the HR app team can test against it.
+
+**Actions Completed.** `sql/102_hr_app_link.sql` (provider `hr_app`; `hr_units`, `hr_employees`, `hr_sync_state`,
+`hr_webhook_events` with RLS, revoke all, select-only grants, column grants hiding work email, link and dates from members;
+`hr_directory`, `hr_request_sync`, `hr_link_employee`, `hr_unlink_employee`, `hr_map_branch`, all audited; service-role sync and
+webhook functions; `core_save_provider_fields` from 056 and `core_save_integration`, `core__provider_fields` from 082 recreated with
+only the hr_app additions). Test `sql/tests/099_hr_app_link.sql`; `sql/tests/092` lists the hidden columns. API: HR client and
+signature check, signed webhook `POST /webhooks/hr-app` (company found by our connection id only, HMAC-SHA256 over timestamp and body,
+five-minute window, replays refused), 15-minute sync job (pages, cursors, daily full read, webhook self-registration), Check
+connection for the HR app, People routes; `API_PUBLIC_URL` added to wrangler vars. agents.md and `boundaries.test.ts` list the two
+new master-key files, and a new guard stops any route importing them. Web: People screen, HR app card (Settings → Integrations →
+HR and payroll), Arabic (machine draft). Contract moved to `documentation/plans/hr-app/` (master chat review).
+
+**Database / System Result.** None on live. `sql/102` is written and tested locally only; nothing deployed.
+
+**Safety Status.** Local PGlite, all 100 migrations: 97 of 97 SQL tests (099 new; 102 applied twice to prove rerun-safety); typecheck
+clean (api, web, shared, against this worktree's shared package); tests: API 699 passed (7 skipped), web 159, shared 82; biome ci 0
+errors; migration and link checks OK. Not checked in a browser. Before live: Ben's yes, a rolled-back dry run of 102 on live, then
+apply via the Supabase CLI; switch on the People app per company; the HR app team's staging address to test the read API.
+
 ## 2026-11-20 — HR app integration: OAuth connect, flow diagrams, payroll (no migration)
 
 **Objective.** Ben (20 Nov): setup should be one click (OAuth), the contract should explain the ERP and show with diagrams how the

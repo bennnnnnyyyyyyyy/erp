@@ -1,7 +1,7 @@
 # HR app integration Plan
 
 **Module key:** `hr` (new; lowercase, to be added to `packages/shared/src/modules.ts`)
-**Status:** `[📝 Draft / RFC]`: waiting for Ben's approval. Nothing here is built.
+**Status:** `[✅ Approved, built]` 20 Nov 2026 (Ben: D1 master-key files, D2 webhook route, v1 ERP key; People for every member; sync every 15 minutes). Phase 1 built on branch `feat/hr-app-contract`; `sql/102` written and tested locally, **not applied to live** until Ben says so. Phase 2 (payroll) not built.
 **Owner:** Claude · **Reviewers:** Ben; the HR app team (for the contract only)
 **Contract for the HR app team:** [hr-app/CONTRACT.md](hr-app/CONTRACT.md) (with [openapi.yaml](hr-app/openapi.yaml)) (v1)
 **Depends on modules:** core (organizations, memberships, `core_branches`, `core_integrations`, Vault, outbox / 5-minute job)
@@ -265,3 +265,17 @@ admins only, section 4); default sync every 15 minutes. Still open: D1 (explaine
 - Does the HR app team want the ERP to call them on a schedule only, or also need an ERP → HR callback later (e.g. "member
   switched off")? Not in v1; the contract reserves `/erp/v1` for their side and `/v1/integrations/hr/*` on ours.
 - Which HR app environment (staging URL) we test against, and when.
+
+## 14. As built (phase 1, 20 Nov 2026)
+
+- `sql/102_hr_app_link.sql`, test `sql/tests/099_hr_app_link.sql` (H1-H10), `sql/tests/092` lists the hidden HR columns.
+- API: `lib/hr/hrClient.ts` (HTTP and signatures, no database), `lib/hr/hrWebhook.ts` and `jobs/hrSync.ts` (master key, Ben's yes),
+  `hr_app` branch in `lib/integrationChecks.ts` (GET /erp/v1/ping), `modules/hr/routes.ts` (`/v1/hr/employees`, `/units`,
+  `/status`, `/sync`, `/employees/:id/link`, `/units/:id/branch`), `POST /webhooks/hr-app`, the scheduled pass in `index.ts`.
+  `API_PUBLIC_URL` (wrangler vars) is the address given to the HR app for webhooks.
+- Shared: provider `hr_app` (group `people`), module `hr` ("People"), types in `hr.ts`.
+- Web: People screen (`/hr`), HR app card under Settings → Integrations → HR and payroll (the existing provider card), Arabic in
+  `i18nPeople.ts` (machine draft).
+- Differences from the plan above: v1 connects with a per-company ERP key (fields `base_url`, `api_key`), not OAuth (D7); the ERP
+  registers its webhook itself, so nothing is pasted into the HR app; hr_units/hr_employees keep the HR app's ids for links
+  (resolved when read) instead of foreign keys; members read the directory (Ben, 20 Nov), so `hr.people.read` is a member grant.

@@ -14,13 +14,25 @@ export type HrWebhookResult = { status: 200 | 400 | 401; body: { handled: 'ok' |
 const CONNECTION_RE = /^hrc_[A-Za-z0-9]{24}$/;
 const EVENT_TYPES = new Set([
   'ping',
-  'branch.created', 'branch.updated', 'branch.deleted',
-  'department.created', 'department.updated', 'department.deleted',
-  'employee.created', 'employee.updated', 'employee.deleted',
-  'sync.requested', 'connection.revoked',
+  'branch.created',
+  'branch.updated',
+  'branch.deleted',
+  'department.created',
+  'department.updated',
+  'department.deleted',
+  'employee.created',
+  'employee.updated',
+  'employee.deleted',
+  'sync.requested',
+  'connection.revoked',
 ]);
 
-export async function processHrWebhook(env: Bindings, raw: string, h: HrWebhookHeaders, nowMs: number = Date.now()): Promise<HrWebhookResult> {
+export async function processHrWebhook(
+  env: Bindings,
+  raw: string,
+  h: HrWebhookHeaders,
+  nowMs: number = Date.now(),
+): Promise<HrWebhookResult> {
   // unknown or malformed connection: a plain 200 so the sender stops retrying, and nothing is revealed
   if (!CONNECTION_RE.test(h.connection)) return { status: 200, body: { handled: 'ignored' } };
   const { data, error } = await adminDb(env).rpc('hr__accept_webhook', { p_connection_id: h.connection });
@@ -35,9 +47,14 @@ export async function processHrWebhook(env: Bindings, raw: string, h: HrWebhookH
   } catch {
     return { status: 400, body: { handled: 'invalid' } };
   }
-  if (!isObj(event) || typeof event.type !== 'string' || !/^[\w.-]{1,64}$/.test(h.eventId)) return { status: 400, body: { handled: 'invalid' } };
+  if (!isObj(event) || typeof event.type !== 'string' || !/^[\w.-]{1,64}$/.test(h.eventId))
+    return { status: 400, body: { handled: 'invalid' } };
   if (!EVENT_TYPES.has(event.type)) return { status: 200, body: { handled: 'ignored' } };
-  const { data: r, error: e2 } = await adminDb(env).rpc('hr__record_webhook', { p_org: found.orgId, p_event_id: h.eventId, p_type: event.type });
+  const { data: r, error: e2 } = await adminDb(env).rpc('hr__record_webhook', {
+    p_org: found.orgId,
+    p_event_id: h.eventId,
+    p_type: event.type,
+  });
   if (e2) throw new Error(e2.message);
   return { status: 200, body: { handled: r === 'duplicate' ? 'duplicate' : 'ok' } };
 }

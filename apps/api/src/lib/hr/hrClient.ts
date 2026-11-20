@@ -22,7 +22,15 @@ export function hrApiBase(raw: string | undefined): URL {
   }
   const host = u.hostname.toLowerCase();
   const ipLike = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':') || host.startsWith('[');
-  if (u.protocol !== 'https:' || u.username || u.password || host === 'localhost' || ipLike || !host.includes('.') || /\.(local|internal|localhost|lan)$/.test(host)) {
+  if (
+    u.protocol !== 'https:' ||
+    u.username ||
+    u.password ||
+    host === 'localhost' ||
+    ipLike ||
+    !host.includes('.') ||
+    /\.(local|internal|localhost|lan)$/.test(host)
+  ) {
     throw new Error('The HR app address must be a public https host name (not localhost or an IP number)');
   }
   u.search = '';
@@ -68,7 +76,11 @@ export async function hrCall(deps: HrDeps, url: string, key: string, init: Reque
 export function hrReason(r: HrResponse): string {
   const e = isObj(r.body) && isObj(r.body.error) ? r.body.error : {};
   const raw = [e.code, e.message].filter((x) => typeof x === 'string' && x).join(': ');
-  const clean = raw.replace(/\b(hrk|hrat|hrrt|whsec)_[A-Za-z0-9_-]+/g, '[key]').replace(/https?:\/\/\S+/g, '[address]').replace(/\s+/g, ' ').trim();
+  const clean = raw
+    .replace(/\b(hrk|hrat|hrrt|whsec)_[A-Za-z0-9_-]+/g, '[key]')
+    .replace(/https?:\/\/\S+/g, '[address]')
+    .replace(/\s+/g, ' ')
+    .trim();
   return `HTTP ${r.status}${clean ? `: ${clean.slice(0, 160)}` : ''}`;
 }
 
@@ -102,7 +114,13 @@ function sameText(a: string, b: string): boolean {
  * True when `X-HR-Signature` (one or more `v1=<hex>`, comma separated, during a rotation) matches the body signed with the secret,
  * and `X-HR-Timestamp` is within five minutes of now (either way).
  */
-export async function verifyHrSignature(secret: string, timestamp: string, header: string, raw: string, nowMs: number = Date.now()): Promise<boolean> {
+export async function verifyHrSignature(
+  secret: string,
+  timestamp: string,
+  header: string,
+  raw: string,
+  nowMs: number = Date.now(),
+): Promise<boolean> {
   if (!secret || !/^\d{9,11}$/.test(timestamp) || !header) return false;
   if (Math.abs(nowMs / 1000 - Number(timestamp)) > HR_SIGNATURE_TOLERANCE_S) return false;
   const expected = await hrSignatureHex(secret, timestamp, raw);

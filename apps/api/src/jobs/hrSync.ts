@@ -12,7 +12,13 @@ import { HR_PAGE_LIMIT, type HrDeps, hrApiBase, hrCall, hrReason, hrUrl, isObj, 
 const MAX_COMPANIES = 20;
 const MAX_PAGES = 50;
 
-type Due = { org_id: string; full_read: boolean; credentials: Record<string, string> | null; connection_id: string | null; subscription_id: string | null };
+type Due = {
+  org_id: string;
+  full_read: boolean;
+  credentials: Record<string, string> | null;
+  connection_id: string | null;
+  subscription_id: string | null;
+};
 type Counts = Record<string, number>;
 type Resource = { path: 'branches' | 'departments' | 'employees'; apply: (rows: unknown[]) => Promise<Counts> };
 
@@ -48,7 +54,13 @@ async function registerWebhook(env: Bindings, d: Due, base: URL, key: string, de
   return r.status === 404 ? 'no webhook: the HR app does not offer webhooks yet' : `no webhook: ${hrReason(r)}`;
 }
 
-async function readAll(deps: HrDeps, base: URL, key: string, res: Resource, since: string | undefined): Promise<{ counts: Counts; latest: string | undefined; complete: boolean }> {
+async function readAll(
+  deps: HrDeps,
+  base: URL,
+  key: string,
+  res: Resource,
+  since: string | undefined,
+): Promise<{ counts: Counts; latest: string | undefined; complete: boolean }> {
   const total: Counts = {};
   let latest = since;
   let cursor: string | undefined;
@@ -56,7 +68,8 @@ async function readAll(deps: HrDeps, base: URL, key: string, res: Resource, sinc
     const r = await hrCall(deps, hrUrl(base, res.path, { limit: HR_PAGE_LIMIT, cursor, updated_since: cursor ? undefined : since }), key);
     if (r.status === 429) throw new StopRun(`the HR app asked us to slow down (${res.path})`, 'partial');
     if (r.status === 401 || r.status === 403) throw new StopRun(`the HR app refused the ERP key: ${hrReason(r)}`, 'failed');
-    if (r.status === 410 && cursor) throw new StopRun(`the HR app's page marker expired (${res.path}); the next run starts again`, 'partial');
+    if (r.status === 410 && cursor)
+      throw new StopRun(`the HR app's page marker expired (${res.path}); the next run starts again`, 'partial');
     if (r.status !== 200) throw new StopRun(`the HR app answered ${hrReason(r)} (${res.path})`, 'failed');
     const p = parsePage(r.body);
     if (!p) throw new StopRun(`the HR app's answer is not in the agreed shape (${res.path})`, 'failed');
@@ -66,7 +79,8 @@ async function readAll(deps: HrDeps, base: URL, key: string, res: Resource, sinc
     }
     for (const row of p.data) {
       const u = typeof row.updated_at === 'string' ? row.updated_at : undefined;
-      if (u && !Number.isNaN(Date.parse(u)) && (!latest || Date.parse(u) > Date.parse(latest))) latest = new Date(Date.parse(u)).toISOString();
+      if (u && !Number.isNaN(Date.parse(u)) && (!latest || Date.parse(u) > Date.parse(latest)))
+        latest = new Date(Date.parse(u)).toISOString();
     }
     if (!p.hasMore) return { counts: total, latest, complete: true };
     cursor = p.nextCursor ?? undefined;
@@ -76,7 +90,10 @@ async function readAll(deps: HrDeps, base: URL, key: string, res: Resource, sinc
 
 /** One company: claim it, read, record the result. Never throws for the HR app's own failures (they are recorded). */
 export async function syncCompany(env: Bindings, d: Due, deps: HrDeps = realHrDeps): Promise<'ok' | 'partial' | 'failed' | 'busy'> {
-  const begun = await rpc<{ runId: string; cursors: Record<string, string> } | null>(env, 'hr__begin_sync', { p_org: d.org_id, p_full: d.full_read });
+  const begun = await rpc<{ runId: string; cursors: Record<string, string> } | null>(env, 'hr__begin_sync', {
+    p_org: d.org_id,
+    p_full: d.full_read,
+  });
   if (!begun) return 'busy';
   const run = begun.runId;
   const cursors: Record<string, string> = { ...(begun.cursors ?? {}) };
@@ -96,8 +113,14 @@ export async function syncCompany(env: Bindings, d: Due, deps: HrDeps = realHrDe
     const note = await registerWebhook(env, d, base, key, deps);
     if (note) notes.push(note);
     const resources: Resource[] = [
-      { path: 'branches', apply: (rows) => rpc<Counts>(env, 'hr__apply_units', { p_org: d.org_id, p_run: run, p_kind: 'branch', p_rows: rows }) },
-      { path: 'departments', apply: (rows) => rpc<Counts>(env, 'hr__apply_units', { p_org: d.org_id, p_run: run, p_kind: 'department', p_rows: rows }) },
+      {
+        path: 'branches',
+        apply: (rows) => rpc<Counts>(env, 'hr__apply_units', { p_org: d.org_id, p_run: run, p_kind: 'branch', p_rows: rows }),
+      },
+      {
+        path: 'departments',
+        apply: (rows) => rpc<Counts>(env, 'hr__apply_units', { p_org: d.org_id, p_run: run, p_kind: 'department', p_rows: rows }),
+      },
       { path: 'employees', apply: (rows) => rpc<Counts>(env, 'hr__apply_employees', { p_org: d.org_id, p_run: run, p_rows: rows }) },
     ];
     for (const res of resources) {
@@ -135,7 +158,10 @@ export async function syncCompany(env: Bindings, d: Due, deps: HrDeps = realHrDe
 }
 
 /** One pass of the scheduled job: every company that is due, one after the other. */
-export async function runHrSyncPass(env: Bindings, deps: HrDeps = realHrDeps): Promise<{ companies: number; results: Record<string, number> }> {
+export async function runHrSyncPass(
+  env: Bindings,
+  deps: HrDeps = realHrDeps,
+): Promise<{ companies: number; results: Record<string, number> }> {
   const due = await rpc<Due[] | null>(env, 'hr__sync_due', { p_limit: MAX_COMPANIES });
   const results: Record<string, number> = {};
   for (const d of due ?? []) {

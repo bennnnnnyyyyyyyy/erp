@@ -32,6 +32,7 @@ const USED_IN: Record<string, { label: string; to: string }> = {
   teams: { label: 'Copies of your messages', to: '/messaging' },
   telegram: { label: 'Copies of your messages', to: '/messaging' },
   google_chat: { label: 'Copies of your messages', to: '/messaging' },
+  hr_app: { label: 'People', to: '/hr' },
 };
 
 export function IntegrationLogo({ kind, name, size = 'md' }: { kind: string; name: string; size?: 'sm' | 'md' }) {

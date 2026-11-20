@@ -286,7 +286,9 @@ async function checkHrApp(env: Bindings, who: CheckCaller, deps: CheckDeps): Pro
   const skew = Number.isNaN(time) ? 0 : Math.abs(time - Date.now());
   const company = tenant ? `"${tenant}"` : 'the HR app';
   return skew > 120_000
-    ? pass(`Connected to ${company}, but its clock is ${Math.round(skew / 60_000)} minutes off ours: its webhooks would be refused until that is fixed.`)
+    ? pass(
+        `Connected to ${company}, but its clock is ${Math.round(skew / 60_000)} minutes off ours: its webhooks would be refused until that is fixed.`,
+      )
     : pass(`Connected to ${company}. Employees are read within 15 minutes.`);
 }
 

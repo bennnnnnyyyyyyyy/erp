@@ -84,7 +84,8 @@ hrRoutes.delete('/employees/:id/link', requirePermission('hr.people.manage'), as
 hrRoutes.put('/units/:id/branch', requirePermission('hr.people.manage'), async (c) => {
   const id = uuidParam(c.req.param('id'));
   const coreBranchId = (await jsonBody(c)).coreBranchId;
-  if (coreBranchId !== null && (typeof coreBranchId !== 'string' || !UUID_RE.test(coreBranchId))) invalid('coreBranchId must be an id or null');
+  if (coreBranchId !== null && (typeof coreBranchId !== 'string' || !UUID_RE.test(coreBranchId)))
+    invalid('coreBranchId must be an id or null');
   await callRpc<void>(userDb(c), 'hr_map_branch', { p_unit: id, p_core_branch: coreBranchId });
   return ok(c, { id, coreBranchId });
 });

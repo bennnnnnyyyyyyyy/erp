@@ -30,7 +30,10 @@ function fakeDb(answer: (fn: string, args: Record<string, unknown>) => unknown):
     if (!m) throw new Error(`unexpected fetch ${url}`);
     const args = JSON.parse(String(init?.body ?? (input instanceof Request ? await input.text() : '{}')) || '{}');
     calls.push({ fn: m[1] as string, args });
-    return new Response(JSON.stringify(answer(m[1] as string, args) ?? null), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(answer(m[1] as string, args) ?? null), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   });
   return calls;
 }
@@ -66,10 +69,14 @@ describe('HR webhook signatures (contract 6.2)', () => {
 });
 
 describe('HR app address', () => {
-  it.each(['http://hr.example.com', 'https://localhost', 'https://10.0.0.5', 'https://user:pw@hr.example.com', 'https://hr.local', 'nonsense'])(
-    'refuses %s',
-    (u) => expect(() => hrApiBase(u)).toThrow(),
-  );
+  it.each([
+    'http://hr.example.com',
+    'https://localhost',
+    'https://10.0.0.5',
+    'https://user:pw@hr.example.com',
+    'https://hr.local',
+    'nonsense',
+  ])('refuses %s', (u) => expect(() => hrApiBase(u)).toThrow());
   it('keeps a path prefix and drops any query', () => {
     expect(hrUrl(hrApiBase('https://x.example.com/hr/?a=1'), 'employees', { limit: 200, cursor: undefined })).toBe(
       'https://x.example.com/hr/erp/v1/employees?limit=200',
@@ -80,7 +87,13 @@ describe('HR app address', () => {
 describe('HR webhook', () => {
   const now = 1_800_000_000_000;
   const ts = now / 1000;
-  const body = JSON.stringify({ id: 'evt_1', type: 'employee.updated', api_version: '1', occurred_at: '2027-01-15T08:00:00Z', data: { object: 'employee', id: 'emp_1' } });
+  const body = JSON.stringify({
+    id: 'evt_1',
+    type: 'employee.updated',
+    api_version: '1',
+    occurred_at: '2027-01-15T08:00:00Z',
+    data: { object: 'employee', id: 'emp_1' },
+  });
 
   it('ignores a malformed connection id without touching the database', async () => {
     const calls = fakeDb(() => null);
@@ -163,10 +176,22 @@ describe('HR sync job', () => {
     const { seen, deps } = hrDeps((url) => {
       if (url.pathname === '/erp/v1/branches')
         return url.searchParams.get('cursor')
-          ? json({ data: [{ id: 'br_2', name: 'B', active: true, updated_at: '2026-11-18T12:00:00Z' }], next_cursor: null, has_more: false })
-          : json({ data: [{ id: 'br_1', name: 'A', active: true, updated_at: '2026-11-17T12:00:00Z' }], next_cursor: 'c2', has_more: true });
+          ? json({
+              data: [{ id: 'br_2', name: 'B', active: true, updated_at: '2026-11-18T12:00:00Z' }],
+              next_cursor: null,
+              has_more: false,
+            })
+          : json({
+              data: [{ id: 'br_1', name: 'A', active: true, updated_at: '2026-11-17T12:00:00Z' }],
+              next_cursor: 'c2',
+              has_more: true,
+            });
       if (url.pathname === '/erp/v1/departments') return json({ data: [], next_cursor: null, has_more: false });
-      return json({ data: [{ id: 'emp_1', display_name: 'X', status: 'active', updated_at: '2026-11-19T08:00:00Z' }], next_cursor: null, has_more: false });
+      return json({
+        data: [{ id: 'emp_1', display_name: 'X', status: 'active', updated_at: '2026-11-19T08:00:00Z' }],
+        next_cursor: null,
+        has_more: false,
+      });
     });
     expect(await syncCompany(env, due(), deps)).toBe('ok');
     expect(seen.every((s) => s.auth === 'Bearer hrk_test_key')).toBe(true);
@@ -181,7 +206,7 @@ describe('HR sync job', () => {
     expect(applies.every((c) => c.args.p_org === ORG && c.args.p_run === 'run-1')).toBe(true);
     const finish = calls.find((c) => c.fn === 'hr__finish_sync')?.args;
     expect(finish).toMatchObject({ p_org: ORG, p_result: 'ok', p_full_complete: true, p_error: null });
-    expect((finish?.p_cursors as Record<string, string>).employees).toBe('2026-11-19T08:00:00.000Z');
+    expect((finish?.p_cursors as Record<string, string> | undefined)?.employees).toBe('2026-11-19T08:00:00.000Z');
   });
   it('an incremental read asks only for changes since the saved cursor', async () => {
     dbForSync();
@@ -235,7 +260,9 @@ describe('HR sync job', () => {
     expect(seen).toEqual([]);
   });
   it('one pass works through the due companies', async () => {
-    fakeDb((fn) => (fn === 'hr__sync_due' ? [due(), due({ org_id: '22222222-2222-4222-8222-222222222222' })] : fn === 'hr__begin_sync' ? null : null));
+    fakeDb((fn) =>
+      fn === 'hr__sync_due' ? [due(), due({ org_id: '22222222-2222-4222-8222-222222222222' })] : fn === 'hr__begin_sync' ? null : null,
+    );
     expect(await runHrSyncPass(env, hrDeps(() => json({})).deps)).toEqual({ companies: 2, results: { busy: 2 } });
   });
 });
@@ -244,7 +271,15 @@ describe('HR app check connection', () => {
   const who = { orgId: ORG, email: 'o@test.invalid', apiBase: 'https://api.erp.test' };
   it('pings with the saved key and names the HR company', async () => {
     fakeDb((fn) => (fn === 'core__provider_credentials' ? { base_url: 'https://hr.example.com', api_key: 'hrk_k' } : null));
-    const { seen, deps } = hrDeps(() => json({ app: 'hr-app', api_version: '1', tenant: { id: 't', name: 'Example Trading Co.' }, scopes: [], server_time: new Date().toISOString() }));
+    const { seen, deps } = hrDeps(() =>
+      json({
+        app: 'hr-app',
+        api_version: '1',
+        tenant: { id: 't', name: 'Example Trading Co.' },
+        scopes: [],
+        server_time: new Date().toISOString(),
+      }),
+    );
     const r = await checkIntegration(env, 'hr_app', who, deps);
     expect(r.ok).toBe(true);
     expect(r.message).toContain('Example Trading Co.');
@@ -252,13 +287,23 @@ describe('HR app check connection', () => {
   });
   it('says so when the key is refused, without the key', async () => {
     fakeDb(() => ({ base_url: 'https://hr.example.com', api_key: 'hrk_secret_value' }));
-    const r = await checkIntegration(env, 'hr_app', who, hrDeps(() => json({ error: { code: 'invalid_token', message: 'hrk_secret_value is revoked' } }, 401)).deps);
+    const r = await checkIntegration(
+      env,
+      'hr_app',
+      who,
+      hrDeps(() => json({ error: { code: 'invalid_token', message: 'hrk_secret_value is revoked' } }, 401)).deps,
+    );
     expect(r.ok).toBe(false);
     expect(r.message).not.toContain('hrk_secret_value');
   });
   it('warns when the HR app clock is off (its webhooks would be refused)', async () => {
     fakeDb(() => ({ base_url: 'https://hr.example.com', api_key: 'k' }));
-    const r = await checkIntegration(env, 'hr_app', who, hrDeps(() => json({ tenant: { name: 'X' }, server_time: new Date(Date.now() - 10 * 60_000).toISOString() })).deps);
+    const r = await checkIntegration(
+      env,
+      'hr_app',
+      who,
+      hrDeps(() => json({ tenant: { name: 'X' }, server_time: new Date(Date.now() - 10 * 60_000).toISOString() })).deps,
+    );
     expect(r.message).toContain('clock');
   });
 });
@@ -273,6 +318,8 @@ describe('People routes', () => {
     ['DELETE', '/v1/hr/employees/11111111-1111-4111-8111-111111111111/link'],
     ['PUT', '/v1/hr/units/11111111-1111-4111-8111-111111111111/branch'],
   ])('%s %s needs a signed-in user', async (method, path) => {
-    expect((await app.request(path, { method }, { APP_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:5173' } as Bindings)).status).toBe(401);
+    expect((await app.request(path, { method }, { APP_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:5173' } as Bindings)).status).toBe(
+      401,
+    );
   });
 });

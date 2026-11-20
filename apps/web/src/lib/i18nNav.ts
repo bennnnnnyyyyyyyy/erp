@@ -120,6 +120,9 @@ export const NAV_AR: Record<string, string> = {
   'Accounting setup': 'إعداد المحاسبة',
   // treasury (phase 2)
   Treasury: 'الخزينة',
+  // People (sql/102)
+  People: 'الموظفون',
+  'Your staff from the HR and payroll app: who works where': 'موظفوك من تطبيق الموارد البشرية والرواتب: من يعمل أين',
   'Cash boxes, bank accounts and transfers, by branch': 'الخزائن والحسابات البنكية والتحويلات، حسب الفرع',
   'Cash and banks': 'النقدية والبنوك',
   'Treasury account': 'حساب الخزينة',
