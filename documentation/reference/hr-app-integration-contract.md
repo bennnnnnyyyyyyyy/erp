@@ -5,8 +5,9 @@
 together; after that, v1 only grows by additions (section 10). A machine-readable copy (OpenAPI 3.1) is in
 [hr-app-integration-openapi.yaml](hr-app-integration-openapi.yaml).
 
-**In one paragraph.** A customer who uses both products clicks **Connect HR app** in the ERP, signs in to the HR app, approves,
-and is done: no keys to copy (OAuth 2.0, section 3). From then on the ERP **reads** people data from the HR app's API, and the HR
+**In one paragraph.** A customer who uses both products creates an "ERP key" in the HR app and pastes it once into the ERP;
+the ERP then registers its own webhook, so nothing else is copied (v1, section 3.1). One-click **Connect HR app** with OAuth
+2.0 is the v1.1 goal (section 3.2 onwards), so building the key first is never wasted. From then on the ERP **reads** people data from the HR app's API, and the HR
 app **notifies** the ERP with signed webhooks when something changes. Phase 1 is "who works where": branches, departments,
 employees. Phase 2 is payroll: an approved payroll run becomes an accounting entry in the ERP, waiting for the ERP's own approval,
 and the ERP tells the HR app when it is posted and paid.
@@ -47,7 +48,7 @@ flowchart LR
     PEOPLE["People directory"]
     ACC["Accounting: entry awaiting approval (phase 2)"]
   end
-  CARD -- "1 Connect (OAuth sign-in)" --> HRAUTH
+  CARD -- "1 Connect (ERP key in v1, OAuth sign-in in v1.1)" --> HRAUTH
   HRHOOK -- "2 signed 'X changed' (ids only)" --> WH
   WH -- "asks for a read" --> JOB
   JOB -- "3 GET branches, departments, employees (Bearer token)" --> HRAPI
@@ -81,7 +82,36 @@ Three rules make it robust:
 ID, passport, phone, home address, birth date, gender, religion, health, bank details, photos, documents. The ERP drops any field
 it does not know.
 
-## 3. Connecting: OAuth 2.0 (one click for the customer)
+## 3. Connecting
+
+### 3.1 v1: an ERP key, pasted once
+
+Most HR products already have an "API keys" or "integrations" screen, so this is the quickest path to a working connection.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor P as Owner or admin
+  participant H as HR & payroll app
+  participant A as ERP
+  P->>H: Settings > Integrations > ERP > Create ERP key
+  H-->>P: key shown once (hrk_…), read-only, this company only
+  P->>A: Settings > Integrations > HR app: paste the key and the HR app address
+  A->>H: GET /erp/v1/ping (Bearer key)
+  H-->>A: company name, scopes
+  A->>H: POST /erp/v1/webhook-subscriptions (our webhook URL, connection id)
+  H-->>A: signing secret (shown once)
+  A-->>P: Connected to "Example Trading Co."
+```
+
+- The key: at least 32 random bytes, prefix `hrk_`, stored hashed, shown once, scoped to one company and to the scopes in 4.1
+  (`erp.people.read`; phase 2 adds the payroll scopes). Only an admin of that company can create, rotate or revoke it; record who
+  and when. Rotation: the old key keeps working for 24 hours.
+- **One key = one company.** If one person manages several companies in your app, they create a key in each company.
+- The ERP sends it exactly like an OAuth token (`Authorization: Bearer hrk_…`), so moving to OAuth later changes nothing in
+  section 4.
+
+### 3.2 v1.1: one-click Connect with OAuth 2.0
 
 The ERP is registered **once** as an OAuth client of the HR app (not once per customer). The HR app team gives us a `client_id`
 and `client_secret` and registers our redirect address:
@@ -113,7 +143,7 @@ sequenceDiagram
   Note over A,H: The first full read starts within 15 minutes
 ```
 
-### 3.1 `GET {issuer}/oauth/authorize`
+### 3.3 `GET {issuer}/oauth/authorize` (v1.1)
 
 | Parameter | Value |
 |---|---|
@@ -129,7 +159,7 @@ the ERP will be able to read (section 2.1), Approve / Cancel. **Only an admin of
 to `redirect_uri?code=…&state=…`; on cancel or error `redirect_uri?error=access_denied&state=…` (standard OAuth error codes). The
 code is single-use and expires within 60 seconds.
 
-### 3.2 `POST {issuer}/oauth/token`
+### 3.4 `POST {issuer}/oauth/token` (v1.1)
 
 Client authentication: HTTP Basic with `client_id:client_secret` (`client_secret_basic`). Body `application/x-www-form-urlencoded`.
 
@@ -163,27 +193,29 @@ Response:
 - A token belongs to one tenant and one connection; it must never read another tenant's data.
 - Errors use the OAuth format: `{"error": "invalid_grant", "error_description": "…"}`.
 
-### 3.3 `POST {issuer}/oauth/revoke`
+### 3.5 `POST {issuer}/oauth/revoke` (v1.1)
 
 RFC 7009, same client authentication, `token=<refresh token>`. Revokes the whole connection (its access tokens too). The ERP calls
 it when the customer clicks **Disconnect** in the ERP.
 
-### 3.4 Disconnecting from the HR app's side
+### 3.6 Disconnecting from the HR app's side
 
 If the HR tenant admin disconnects the ERP in your app: revoke the tokens, send the signed `connection.revoked` webhook (section 6),
 then delete the webhook subscription. The ERP shows "Disconnected in the HR app" and keeps the read-only copy, marked stale.
 
-### 3.5 Your "ERP" card
+### 3.7 Your "ERP" card
 
-Show: connected or not, which ERP connection id, who approved it and when, last webhook delivery result, **Send test webhook**
-(sends `ping`), **Disconnect**. Nothing to type: everything is set by the Connect flow.
+Show: connected or not, **Create / rotate / revoke ERP key** (v1), which ERP connection id, who created or approved it and when,
+when the ERP last read data, last webhook delivery result, **Send test webhook** (sends `ping`), **Disconnect**. Nothing else to
+type: the ERP registers its own webhook.
 
 ## 4. The API the HR app exposes
 
 ### 4.1 General rules
 
 - Base: `{api_base}/erp/v1` (`api_base` is in the discovery document, or agreed if you do not offer discovery). HTTPS only.
-- **Auth:** `Authorization: Bearer <access_token>`. The token identifies the tenant; the ERP never sends a tenant id.
+- **Auth:** `Authorization: Bearer <ERP key or access token>`. It identifies the company; the ERP never sends a company id, and
+  the HR app must never take one from the request.
 - Scopes: `erp.people.read` for sections 4.3-4.6; phase 2 scopes in section 9. Missing scope → `403 insufficient_scope`.
 - The ERP sends `User-Agent: ERP-HR-Connector/1` and `X-Request-Id: <uuid>`; log it and echo it in `X-Request-Id`.
 - Ids are opaque strings ≤ 64 characters, stable, never reused. Dates `YYYY-MM-DD`. UTF-8; Arabic in the `_ar` fields.
@@ -340,6 +372,10 @@ sequenceDiagram
 
 ## 6. Webhooks the HR app sends to the ERP
 
+**Recommended, not blocking.** The ERP reads every 15 minutes anyway, so a first release can ship the read API alone and add
+webhooks next. When they come, send them from a background job queue with retries (6.3), not from inside the request that
+changed the data: a slow or failing ERP must never slow down or fail your own save.
+
 ### 6.1 Delivery
 
 `POST` to the subscription `url`, headers:
@@ -419,7 +455,11 @@ Any `2xx` is delivered. Retry timeouts, network errors, `401` and `5xx` after 1 
 
 ## 7. Security requirements for the HR app
 
-- Authorization server: PKCE S256 required; exact `redirect_uri` match; codes single-use, ≤ 60 s; `state` returned unchanged.
+- **Company separation is enforced below the route**, not only by remembering a filter in each query: a database rule (for
+  example PostgreSQL row level security) or one shared data-access layer that always adds the company. The ERP endpoints are a
+  new way in, so they must go through the same guard. Please include a test that tries to read another company with a valid key.
+- No unauthenticated debug or "dev" endpoints on any server the ERP can reach (staging included).
+- Authorization server (v1.1): PKCE S256 required; exact `redirect_uri` match; codes single-use, ≤ 60 s; `state` returned unchanged.
 - Store refresh tokens and API tokens hashed; signing secrets encrypted. Never log tokens, secrets, the `Authorization` header or
   bodies with personal data.
 - Only tenant admins can approve or disconnect the ERP; record who did, and when.
@@ -428,7 +468,7 @@ Any `2xx` is delivered. Retry timeouts, network errors, `401` and `5xx` after 1 
 
 ## 8. ERP-side security (for your information)
 
-The ERP keeps its `client_secret` as a server secret, and each company's tokens and signing secret encrypted (Supabase Vault),
+The ERP keeps each company's ERP key (v1), its `client_secret` (v1.1) as a server secret, and each company's tokens and signing secret encrypted (Supabase Vault),
 never shown again. Connect and Disconnect need an ERP owner or admin, are tied to the signed-in person's own company, and are
 written to the ERP's audit log. The `state` value is single-use, tied to that person and expires in 10 minutes.
 
@@ -460,7 +500,9 @@ sequenceDiagram
   "id": "pr_2026_11",
   "period": { "from": "2026-11-01", "to": "2026-11-30" },
   "pay_date": "2026-11-28",
+  "type": "regular",
   "status": "approved",
+  "country": "EG",
   "currency": "EGP",
   "employee_count": 42,
   "lines": [
@@ -482,7 +524,22 @@ sequenceDiagram
 ```
 
   `item` codes are a fixed list we agree in v1.1; totals only, never per-employee pay. Deductions are negative. `gross - deductions
-  = net_pay` must hold exactly. A corrected run is a new run plus `payroll_run.reversed` for the old one (never an edit).
+  = net_pay` must hold **exactly, to the piastre**, and so must the `by_unit` split against the totals. The ERP refuses a run that
+  does not balance.
+- **Exact money.** Amounts are summed and rounded inside the HR app; the ERP never rounds them again. If your database keeps money
+  as floating point (`float`, `double`, JavaScript `number` arithmetic), convert to integer minor units at the point of
+  calculation, not only at the API edge: 0.1 + 0.2 ≠ 0.3 in floating point, and a one-piastre gap makes a journal that does not
+  balance. A `numeric`/`decimal` column, or integers in piastres, avoids it.
+- **Run types** (`"type"`): `regular` (the monthly run), `off_cycle` (bonus or one-off), `final_settlement` (a leaver's last pay),
+  `adjustment` (back pay or a correction for an earlier period, with `"adjusts": "<run id>"`). A correction is always a new run
+  (or `payroll_run.reversed` plus a new run), never an edit of an approved one.
+- **Items we expect to map** (final list in v1.1; send only those you use): `basic_salary`, `allowances`, `overtime`, `bonus`,
+  `commission`, `back_pay`, `leave_encashment`, `end_of_service`, `social_insurance_employee`, `social_insurance_employer`,
+  `health_insurance_employee`, `health_insurance_employer`, `martyrs_fund`, `training_fund`, `income_tax_withheld`,
+  `income_tax_settlement` (year-end correction, positive or negative), `advance_recovery`, `loan_recovery`, `other_deduction`,
+  `net_pay`. An unknown item makes the ERP hold the run for a person to map, never guess.
+- **Country and currency.** Each run carries `currency` and `country` (ISO 3166, e.g. `EG`). If your app also runs payroll for
+  other countries, the ERP accepts only runs whose currency the ERP company uses.
 - `GET /erp/v1/advances/{id}` and `GET /erp/v1/expense-claims/{id}`: employee id, date, `amount_minor`, `currency`, description,
   approved by/at; claims also supplier name, supplier tax number and tax invoice reference when present.
 - **ERP → HR app:** `POST /erp/v1/payroll-runs/{id}/accounting-status` (and the same for advances and claims), scope
@@ -509,7 +566,13 @@ sequenceDiagram
 
 Items marked **(ERP)** need our staging ERP; until then use a test OAuth client and a request bin you control.
 
-**OAuth**
+**ERP key (v1)**
+
+- [ ] Only a company admin can create, rotate or revoke an ERP key; it is shown once and stored hashed.
+- [ ] A revoked key → 401 at once; a rotated key keeps working for 24 hours, then 401.
+- [ ] A key of company B, with any parameter or header you can think of, never returns company A's data.
+
+**OAuth (v1.1)**
 
 - [ ] Discovery document (if offered) lists `authorization_endpoint`, `token_endpoint`, `revocation_endpoint`, `api_base`.
 - [ ] Authorize without PKCE, with `plain` PKCE, or with an unregistered `redirect_uri` → refused.
@@ -549,4 +612,5 @@ Items marked **(ERP)** need our staging ERP; until then use a test OAuth client 
 | Date | Version | Change |
 |---|---|---|
 | 2026-11-19 | v1 draft | First version (API key and pasted webhook secret). |
+| 2026-11-20 | v1 draft 3 | v1 connects with a per-company ERP key (OAuth Connect moves to v1.1, unchanged); webhooks recommended but not needed for a first release, sent from a job queue; company separation below the route and no open debug endpoints; payroll: exact money, run types (regular, off-cycle, final settlement, adjustment), expected pay items, country. |
 | 2026-11-20 | v1 draft 2 | Connect with OAuth 2.0 + PKCE instead of pasted keys; webhook subscriptions API; "About the ERP"; flow diagrams; what each side exposes; payroll phase 2 with accounting status back to the HR app. |

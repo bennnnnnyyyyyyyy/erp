@@ -8,8 +8,8 @@ info:
   version: '1'
   description: >
     API that the HR & payroll app exposes so the ERP can read branches, departments and employees and register its webhook, plus
-    the signed webhook the HR app sends to the ERP. Auth: OAuth 2.0 authorization code with PKCE; the ERP calls with
-    `Authorization: Bearer <access_token>`. See hr-app-integration-contract.md for the connect flow, pagination, deletions,
+    the signed webhook the HR app sends to the ERP. Auth: v1 a per-company ERP key, v1.1 OAuth 2.0 authorization code with PKCE;
+    either way the ERP calls with `Authorization: Bearer <key or access token>`. See hr-app-integration-contract.md for the connect flow, pagination, deletions,
     signing, retries and the test checklist.
 servers:
   - url: '{api_base}/erp/v1'
@@ -17,6 +17,7 @@ servers:
       api_base:
         default: https://hr.example.com
 security:
+  - erpKey: []
   - oauth: [erp.people.read]
 paths:
   /ping:
@@ -237,6 +238,10 @@ webhooks:
         '401': { description: 'handled: bad_signature (wrong signature or timestamp outside 300 s)' }
 components:
   securitySchemes:
+    erpKey:
+      type: http
+      scheme: bearer
+      description: v1. Per-company ERP key (hrk_...) created by a company admin in the HR app; read-only, shown once, stored hashed.
     oauth:
       type: oauth2
       description: >
