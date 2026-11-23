@@ -163,6 +163,9 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Next week': 'الأسبوع القادم',
   "Don't show again": 'لا تعرضه مرة أخرى',
   'Show all': 'عرض الكل',
+  Maximum: 'الحد الأقصى',
+  'Orders fill stock up to this level (optional).': 'تملأ الطلبات المخزون حتى هذا الحد (اختياري).',
+  'Maximum level for {sku}': 'الحد الأقصى لـ {sku}',
   // Work week (sql/106)
   'Work week': 'أسبوع العمل',
   'Workdays': 'أيام العمل',

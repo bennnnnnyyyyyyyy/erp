@@ -32,17 +32,25 @@ export function ReorderLevelsPage() {
     return { ...item, onHand, reserved, available, low: item.reorderLevel !== null && available <= item.reorderLevel };
   });
 
-  // UX audit 20 Nov: a black Save button on every row. Now one "Save changes" saves every row that was changed.
-  const current = (row: ReorderLine) => (row.reorderLevel === null ? '' : String(row.reorderLevel));
-  const changed = rows.filter((row) => drafts[row.id] !== undefined && drafts[row.id]!.trim() !== current(row));
+  // UX audit 20 Nov: a black Save button on every row. Now one "Save changes" saves every changed box. Each row has two boxes: the
+  // reorder level and (sql/106, low stock pop-up) the maximum level an order fills stock up to. Drafts are keyed "<item id>:level|max".
+  type Field = 'level' | 'max';
+  const savedOf = (row: ReorderLine, f: Field) => {
+    const v = f === 'level' ? row.reorderLevel : (row.maxLevel ?? null);
+    return v === null ? '' : String(v);
+  };
+  const valueOf = (row: ReorderLine, f: Field) => drafts[`${row.id}:${f}`] ?? savedOf(row, f);
+  const changed = rows.flatMap((row) =>
+    (['level', 'max'] as Field[]).filter((f) => drafts[`${row.id}:${f}`] !== undefined && drafts[`${row.id}:${f}`]!.trim() !== savedOf(row, f)).map((f) => ({ row, f })),
+  );
 
   async function saveAll() {
-    const bad = changed.find((row) => {
-      const raw = drafts[row.id]!.trim();
+    const bad = changed.find(({ row, f }) => {
+      const raw = drafts[`${row.id}:${f}`]!.trim();
       return raw !== '' && (!Number.isFinite(Number(raw)) || Number(raw) < 0);
     });
     if (bad) {
-      setError(trf('{sku}: a reorder level must be zero or more, or empty.', { sku: bad.sku }));
+      setError(trf('{sku}: a reorder level must be zero or more, or empty.', { sku: bad.row.sku }));
       return;
     }
     setSaving(true);
@@ -50,11 +58,14 @@ export function ReorderLevelsPage() {
     setError(null);
     let saved = 0;
     try {
-      for (const row of changed) {
-        const raw = drafts[row.id]!.trim();
-        await api(`/v1/inventory/items/${row.id}/reorder-level`, { method: 'POST', body: JSON.stringify({ level: raw === '' ? null : Number(raw) }) });
+      for (const { row, f } of changed) {
+        const key = `${row.id}:${f}`;
+        const raw = drafts[key]!.trim();
+        const level = raw === '' ? null : Number(raw);
+        if (f === 'level') await api(`/v1/inventory/items/${row.id}/reorder-level`, { method: 'POST', body: JSON.stringify({ level }) });
+        else await api(`/v1/inventory/items/${row.id}/max-level`, { method: 'PUT', body: JSON.stringify({ level }) });
         saved += 1;
-        setDrafts((cur) => { const next = { ...cur }; delete next[row.id]; return next; });
+        setDrafts((cur) => { const next = { ...cur }; delete next[key]; return next; });
       }
       setNotice(trf('{n} reorder level(s) saved.', { n: saved }));
     } catch (err) {
@@ -78,10 +89,10 @@ export function ReorderLevelsPage() {
       {error && <p className="error notice">{error}</p>}
       <div className="table-wrap">
         <table>
-          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col">{tr('Status')}</th></tr></thead>
+          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col" className="right" title={tr('Orders fill stock up to this level (optional).')}>{tr('Maximum')}</th><th scope="col">{tr('Status')}</th></tr></thead>
           <tbody>
             {rows.map((row) => {
-              const value = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
+              const value = valueOf(row, 'level');
               return (
                 <tr key={row.id}>
                   <td><code>{row.sku}</code></td>
@@ -91,10 +102,15 @@ export function ReorderLevelsPage() {
                   <td className="right">
                     {canManage ? (
                       <span className="flex items-center gap-2">
-                        <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Not watched')} />
+                        <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [`${row.id}:level`]: e.target.value }))} placeholder={tr('Not watched')} />
                         <span className="muted small">{unitLabel(row.uom)}</span>
                       </span>
                     ) : row.reorderLevel === null ? tr('Not watched') : `${formatQty(row.reorderLevel)} ${unitLabel(row.uom)}`}
+                  </td>
+                  <td className="right">
+                    {canManage ? (
+                      <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Maximum level for {sku}', { sku: row.sku })} value={valueOf(row, 'max')} onChange={(e) => setDrafts((current) => ({ ...current, [`${row.id}:max`]: e.target.value }))} placeholder="—" />
+                    ) : row.maxLevel == null ? '—' : formatQty(row.maxLevel)}
                   </td>
                   <td>{row.reorderLevel === null ? <span className="muted">{tr('Not watched')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
                 </tr>
