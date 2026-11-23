@@ -11,6 +11,7 @@ import { createBostaDelivery, type ShipmentInfo } from '../../lib/shipping/bosta
 import { billingFor } from './billing';
 import { registerNoteRoutes } from './notes';
 import { registerPriceRoutes } from './prices';
+import { registerPrintRoutes } from './printing';
 import { docTotals, lineOut, noteTotals, type LineOut, type LineRow } from '../../lib/vatRows';
 
 export const salesRoutes = new Hono<AppEnv>();
@@ -446,6 +447,7 @@ salesRoutes.post('/orders/:id/cancel', requirePermission('sales.orders.manage'),
 // ---- credit and debit notes with approval (sql/037); see ./notes.ts
 registerNoteRoutes(salesRoutes);
 registerPriceRoutes(salesRoutes);
+registerPrintRoutes(salesRoutes);
 
 // ---- Bosta shipments (sql/058). A courier update never changes stock or money; cash on delivery is settled in finance.
 const SHIP_COLS =

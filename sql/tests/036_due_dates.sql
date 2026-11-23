@@ -91,10 +91,13 @@ begin
   end;
   if not ok then raise exception 'FAIL T4a: a due date before the invoice date was stored'; end if;
   -- moving an invoice's date moves its due date by the same days (the terms stay the same); test 024 relies on this
+  -- fixture: issued invoices are locked (sql/103); only a database-owner session may move one, with this setting
+  perform set_config('erp.allow_issued_fix', 'on', true);
   update public.sal_invoices set invoice_date = invoice_date - 5 where id = inv2;
   select due_date into d from public.sal_invoices where id = inv2;
   if d is distinct from current_date + 2 then raise exception 'FAIL T4b: after moving the invoice 5 days back the due date is %, expected %', d, current_date + 2; end if;
   update public.sal_invoices set invoice_date = invoice_date + 5 where id = inv2;   -- back, so T5 below sees the original dates
+  perform set_config('erp.allow_issued_fix', '', true);
 
   -- ---- T5: the overdue alert counts from the due date
   set local role authenticated;

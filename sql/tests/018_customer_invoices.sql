@@ -56,7 +56,7 @@ begin
   j := public.sal_create_invoice(so, current_date, jsonb_build_array(jsonb_build_object('orderLineId', ol, 'qty', 4, 'unitPriceMinor', 1)));
   reset role;
   inv1 := (j ->> 'id')::uuid;
-  if j ->> 'number' <> 'INV-0001' then raise exception 'FAIL S3a: number %', j ->> 'number'; end if;
+  if j ->> 'number' <> format('INV-%s-00001', extract(year from current_date)::int) then raise exception 'FAIL S3a: number %', j ->> 'number'; end if;
   select unit_price_minor into n from public.sal_invoice_lines where invoice_id = inv1;
   if n <> 250 then raise exception 'FAIL S3b: price not from the order line (%)', n; end if;
 

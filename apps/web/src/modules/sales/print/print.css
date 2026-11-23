@@ -1,0 +1,88 @@
+/* Invoice printing (sql/103, step 1c). The printed A4 page, its own file: the app's own styles.css and theme.css are not touched.
+   Logical properties only (right to left for Arabic). Fixed print colours: the paper is white in light and dark mode alike. */
+
+.print-stage { display: flex; justify-content: center; padding-block: 1rem; overflow-x: auto; }
+
+.print-sheet {
+  position: relative;
+  box-sizing: border-box;
+  inline-size: 210mm;
+  min-block-size: 297mm;
+  padding: 14mm 14mm 16mm;
+  background: #fff no-repeat top center / 100% 100%;
+  color: #111;
+  font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 18%);
+  overflow: hidden;
+}
+.print-sheet * { box-sizing: border-box; }
+.print-mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; unicode-bidi: isolate; }
+.print-muted { color: #555; font-size: 9pt; }
+.print-strong { font-weight: 600; }
+.print-pre { white-space: pre-line; }
+
+.print-watermark {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
+  font-size: 96pt; font-weight: 700; color: rgb(200 30 30 / 13%); transform: rotate(-30deg); z-index: 0; letter-spacing: 0.05em;
+}
+.print-sheet > *:not(.print-watermark) { position: relative; z-index: 1; }
+
+.print-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; margin-block-end: 6mm; }
+.print-company { display: flex; gap: 4mm; align-items: flex-start; }
+.print-logo { max-block-size: 24mm; max-inline-size: 45mm; object-fit: contain; }
+.print-company-name { font-size: 13pt; font-weight: 700; }
+.print-title-block { text-align: end; min-inline-size: 60mm; }
+.print-title { font-size: 18pt; margin: 0 0 2mm; font-weight: 700; }
+.print-info { display: grid; gap: 0.5mm; margin: 0; }
+.print-info > div { display: flex; justify-content: space-between; gap: 4mm; }
+.print-info dt { color: #555; margin: 0; }
+.print-info dd { margin: 0; font-weight: 600; }
+
+.print-parties { display: flex; gap: 6mm; margin-block-end: 5mm; }
+.print-party { flex: 1; border: 1px solid #ccc; border-radius: 2mm; padding: 3mm 4mm; }
+.print-party h2, .print-extra h2 { font-size: 9.5pt; color: #555; margin: 0 0 1mm; font-weight: 600; }
+.print-reason { margin-block: 0 4mm; }
+
+.print-lines { inline-size: 100%; border-collapse: collapse; margin-block-end: 5mm; }
+.print-lines th, .print-lines td { border-block-end: 1px solid #ddd; padding: 1.6mm 1.5mm; text-align: start; vertical-align: top; }
+.print-lines thead th { background: #f1f1f1; border-block-end: 1.5px solid #999; font-weight: 600; font-size: 9.5pt; }
+.print-lines .print-num { text-align: end; white-space: nowrap; }
+.print-lines tr { break-inside: avoid; }
+.print-eta .print-lines td, .print-eta-cell { font-size: 9pt; }
+
+.print-bottom { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; }
+.print-extra { flex: 1; display: grid; gap: 3mm; }
+.print-extra p { margin: 0; }
+.print-totals { border-collapse: collapse; min-inline-size: 70mm; }
+.print-totals th { text-align: start; font-weight: 400; color: #333; padding: 1mm 2mm; }
+.print-totals td { text-align: end; padding: 1mm 2mm; white-space: nowrap; }
+.print-totals .print-grand th, .print-totals .print-grand td { font-weight: 700; font-size: 12pt; border-block-start: 1.5px solid #333; }
+
+.print-eta { display: flex; gap: 4mm; align-items: center; }
+.print-qr { inline-size: 26mm; block-size: 26mm; border: 1.5px dashed #888; flex: none; }
+
+.print-footer { margin-block-start: 8mm; padding-block-start: 3mm; border-block-start: 1px solid #ccc; text-align: center; color: #444; font-size: 9pt; }
+
+.print-missing { max-inline-size: 210mm; margin-inline: auto; border: 1px solid #c33; border-radius: 6px; padding: 0.75rem 1rem; background: #fff5f5; color: #7a1010; }
+
+.print-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
+.print-toolbar label { display: grid; gap: 0.2rem; }
+
+.public-invoice { min-block-size: 100vh; background: #e9e9e9; padding-block: 1rem; }
+.public-invoice .print-toolbar { justify-content: center; margin-block-end: 0.5rem; }
+
+/* The PDF picture is taken from an off-screen copy at exactly A4 width, without the shadow. */
+.print-capture { position: fixed; inset-block-start: 0; inset-inline-start: -10000px; }
+.print-capture .print-sheet { box-shadow: none; }
+
+@page { size: A4; margin: 0; }
+@media print {
+  body * { visibility: hidden !important; }
+  .print-root, .print-root * { visibility: visible !important; }
+  .print-root { position: absolute; inset-block-start: 0; inset-inline-start: 0; inline-size: 210mm; }
+  .print-root .print-stage { padding: 0; display: block; }
+  .print-root .print-sheet { box-shadow: none; }
+  .print-noprint { display: none !important; }
+}

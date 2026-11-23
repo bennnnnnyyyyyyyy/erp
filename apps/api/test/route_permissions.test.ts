@@ -5,7 +5,7 @@ import app from '../src/index';
 // every /v1 route, read and write, and fails unless one of its handlers is a permission check or the route is an explained exception
 // below. The database still re-checks on every call; this keeps the early refusal from being forgotten on a new route.
 // Routes outside /v1 (health, webhooks, report links) are not tenant routes: webhooks verify a signature or secret and find the company
-// through our own reference (agents.md, master-key exceptions); /r/* links carry their own signed token.
+// through our own reference (agents.md, master-key exceptions); /r/* report links and /i/* invoice links (sql/103) carry their own token.
 
 /** Routes that deliberately have no permission key, each with the reason. Keep this list short. */
 const EXCEPTIONS: Record<string, string> = {

@@ -13,6 +13,7 @@ import { memberRoutes } from './memberRoutes';
 import { moduleRoutes } from './moduleRoutes';
 import { orgRoutes } from './org';
 import { reportLinkRoutes } from './reportLinkRoutes';
+import { docSettingsRoutes } from './docSettingsRoutes';
 
 export const coreRoutes = new Hono<AppEnv>();
 
@@ -23,6 +24,7 @@ coreRoutes.route('/branches', branchRoutes);
 coreRoutes.route('/integrations', integrationRoutes);
 coreRoutes.route('/fx', fxRoutes);
 coreRoutes.route('/report-links', reportLinkRoutes);
+coreRoutes.route('/doc-settings', docSettingsRoutes);
 coreRoutes.route('/ai', aiRoutes);
 
 // The person's own saved language (sql/038). A display preference, not essential: if it cannot be read (for example the migration is not

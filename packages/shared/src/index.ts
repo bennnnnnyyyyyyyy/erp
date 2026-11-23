@@ -12,3 +12,4 @@ export * from './bankStatements';
 export * from './mt940';
 export * from './integrations';
 export * from './hr';
+export * from './docPrint';

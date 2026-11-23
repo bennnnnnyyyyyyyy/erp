@@ -1,7 +1,7 @@
 # Invoice printing, PDF and templates plan
 
 **Module:** `sales` (we add to it). Templates are a `core` setting, so other documents can use them later.
-**Status:** Draft. Ben must approve it.
+**Status:** Approved by Ben 23 Nov 2026 (Bellvox roadmap, Track B). Step 1c built on branch `feat/invoice-printing` (`sql/103`, not applied). Step 1e (Word templates) not built.
 **Owner:** Ben
 **Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md), steps 1c and 1e
 **Related plans:** [Customer invoices](CUSTOMER_INVOICES_PLAN.md) · [ETA e-invoicing](ETA_EINVOICING_PLAN.md)
@@ -223,3 +223,34 @@ After one sign-up, everything works through the API. Levels 1 and 2 need nothing
 2. Digits on printouts: Western only, or a company choice of Arabic-Indic?
 3. How long does a WhatsApp or email link work: 7 days?
 4. Who signs up on the ETA test portal, and with which company's tax number? (A business question for Grant.)
+
+## 13. Decisions and what was built (23 Nov 2026)
+
+**Ben's decisions (23 Nov):**
+- The PDF is made in the person's browser for now. It is a picture-style PDF, so Arabic is correct. No server converter yet.
+  Gotenberg comes later, only for automatic sends and Word templates. (Replaces section 3.1 "PDF file" for now.)
+- Digits: the company chooses. Western digits are the default.
+- Invoice links: they work until the invoice is voided. Someone can switch a link off. No end date. (Replaces "7 days" in section 7.)
+- "Send": the company chooses. From the person's own device, or from the company's connected WhatsApp or email.
+- Logo and letterhead are kept in the database (logo up to about 300 KB, letterhead up to about 1.5 MB). PNG, JPEG or WebP. Not SVG.
+- The public link page has no sign-in. It is `/i/<token>`, outside `/v1`, next to the report links `/r/<token>`. It reads with the
+  publishable key only (no secret key).
+- Numbers per type and year now (`INV-2026-00001`), not with step 3a. Old numbers stay. (Replaces section 3.2.)
+- Arabic by default. DRAFT mark until issued. Issued means locked forever.
+
+**What was built (step 1c, branch `feat/invoice-printing`):**
+- `sql/103`: drafts, yearly numbers, the issued-invoice lock, document settings, links, send records, one print builder. Test `sql/tests/100`.
+- Drafts are in their own tables. So reports, VAT, statements and payments never see a draft.
+- API: `/v1/sales/invoice-drafts`, `/v1/sales/print/:type/:id`, `/v1/sales/documents/:type/:id/link` and `/sends`,
+  `/v1/core/doc-settings`, and the public `GET /i/:token`.
+- Web: print and send page (three layouts, three languages, Print, Download PDF, WhatsApp, email, copy link, new link, switch off),
+  draft invoices on the invoices page, Settings → Invoices and documents with a live preview, the public invoice page.
+- Permissions: `sales.invoices.send` (members too), `core.templates.manage` (owners and admins; the plan said owner only, but admins
+  get every key today, and the database allows owners and admins).
+
+**Not built yet (next parts of this step):**
+- Sending from the company's connected WhatsApp or email (the "server" choice). WhatsApp needs an approved Meta message template
+  before a business can start a chat. Until then the screen says so and sends from the device.
+- A letterhead as a one-page PDF (needs one more library, `pdfjs-dist`). Only pictures for now.
+- The PDF fingerprint in `core_doc_sends` (needs the server converter).
+- Saved pictures of each layout for comparison tests (section 9).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCancel, canDecide, creditableLeft, creditedQty, netInvoiceMinor, noteTotalMinor, noteVatTotals, type NoteForMath } from './noteMath';
+import { canCancel, canDecide, mayDecideOwn, creditableLeft, creditedQty, netInvoiceMinor, noteTotalMinor, noteVatTotals, type NoteForMath } from './noteMath';
 
 const note = (kind: string, status: string, qty: number, id = 'L1'): NoteForMath => ({ kind, status, lines: [{ invoiceLineId: id, qty }] });
 
@@ -42,5 +42,23 @@ describe('note VAT (sql/086)', () => {
   });
   it('is the plain total when the invoice had no VAT', () => {
     expect(noteVatTotals([{ qty: 2, unitPriceMinor: 12550 }])).toEqual({ netMinor: 25100, taxMinor: 0, grossMinor: 25100 });
+  });
+});
+
+describe('own notes (UX audit 23 Nov: Approve was shown to the requester and then refused)', () => {
+  const mine = { status: 'submitted', requesterId: 'me' };
+  it('hides Approve / Reject on your own note unless you may decide your own', () => {
+    expect(canDecide(mine, true, { userId: 'me', mayDecideOwn: false })).toBe(false);
+    expect(canDecide(mine, true, { userId: 'me', mayDecideOwn: true })).toBe(true);
+    expect(canDecide({ status: 'submitted', requesterId: 'other' }, true, { userId: 'me', mayDecideOwn: false })).toBe(true);
+  });
+  it('follows the database rule: the only owner or admin, or an owner with owner self-approval on', () => {
+    const active = (userId: string, role: string) => ({ userId, role, status: 'active' });
+    expect(mayDecideOwn({ userId: 'me', role: 'owner' }, [active('me', 'owner'), active('m', 'member')], false)).toBe(true);
+    expect(mayDecideOwn({ userId: 'me', role: 'owner' }, [active('me', 'owner'), active('a', 'admin')], false)).toBe(false);
+    expect(mayDecideOwn({ userId: 'me', role: 'owner' }, [active('me', 'owner'), active('a', 'admin')], true)).toBe(true);
+    expect(mayDecideOwn({ userId: 'me', role: 'admin' }, [active('me', 'admin'), active('o', 'owner')], true)).toBe(false);
+    expect(mayDecideOwn({ userId: 'me', role: 'admin' }, [active('me', 'admin'), { userId: 'o', role: 'owner', status: 'disabled' }], false)).toBe(true);
+    expect(mayDecideOwn({ userId: 'me', role: 'member' }, [active('me', 'member')], true)).toBe(false);
   });
 });
