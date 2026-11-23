@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory';
-import { MODULES, defaultPermissionsFor, hasPermission, type Role } from '@erp/shared';
+import { DEFAULT_WORK_WEEK, MODULES, defaultPermissionsFor, hasPermission, type Role, type WorkWeek } from '@erp/shared';
 import type { AppEnv } from '../env';
 import { userDb } from '../lib/db.user';
 import { HttpError } from '../lib/errors';
@@ -60,6 +60,7 @@ export const requireTenant = createMiddleware<AppEnv>(async (c, next) => {
     showTour: org.settings?.show_tour === true,
     blindCounts: org.settings?.blind_counts === true,
     ownerSelfApproval: org.settings?.owner_self_approval === true,
+    workWeek: readWorkWeek(org.settings?.work_week),
     role: membership.role,
     permissions: defaultPermissionsFor(membership.role),
     modules: [...modules],
@@ -94,4 +95,16 @@ export function requireModule(moduleKey: string, openPaths: readonly string[] = 
     }
     await next();
   });
+}
+
+/** The company's work week from its settings (sql/106), or the default when it is missing or not well formed. */
+export function readWorkWeek(raw: unknown): WorkWeek {
+  const w = raw as { days?: unknown; start?: unknown; end?: unknown } | null | undefined;
+  const time = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+  const days = Array.isArray(w?.days)
+    ? (w.days as unknown[]).filter((d): d is number => Number.isInteger(d) && (d as number) >= 0 && (d as number) <= 6)
+    : [];
+  if (!days.length || typeof w?.start !== 'string' || typeof w?.end !== 'string' || !time.test(w.start) || !time.test(w.end))
+    return DEFAULT_WORK_WEEK;
+  return { days, start: w.start, end: w.end };
 }

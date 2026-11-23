@@ -12,6 +12,10 @@ export type Paginated<T> = {
 
 export type Role = 'owner' | 'admin' | 'member' | 'viewer';
 
+/** A company's work week (sql/106). Default: Sunday to Thursday, 09:00 to 17:00. */
+export type WorkWeek = { days: number[]; start: string; end: string };
+export const DEFAULT_WORK_WEEK: WorkWeek = { days: [0, 1, 2, 3, 4], start: '09:00', end: '17:00' };
+
 export type SessionInfo = {
   userId: string;
   email: string;
@@ -31,6 +35,8 @@ export type SessionInfo = {
     blindCounts: boolean;
     /** Owners may approve their own requests, each flagged self-approved (sql/077, decision D1c). Optional until every API sends it. */
     ownerSelfApproval?: boolean;
+    /** The company's work week (sql/106): workdays 0 = Sunday .. 6, start and end time "HH:MM". Optional until every API sends it. */
+    workWeek?: WorkWeek;
   } | null;
   /** The person's own saved language (sql/038), or null to follow the company default. Same in every company they belong to. */
   userLanguage: 'en' | 'ar' | null;

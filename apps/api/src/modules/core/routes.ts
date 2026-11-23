@@ -86,6 +86,7 @@ coreRoutes.get('/session', async (c) => {
       showTour: tenant.showTour,
       blindCounts: tenant.blindCounts,
       ownerSelfApproval: tenant.ownerSelfApproval,
+      workWeek: tenant.workWeek,
     },
     role: tenant.role,
     permissions: tenant.permissions,
