@@ -8,6 +8,7 @@ import { useSession } from '../../session';
 import { todayIn } from '../../lib/dates';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { ClickRow } from '../../components/ClickRow';
+import { DateInput } from '../../components/DateInput';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Link, useParam } from '../../lib/router';
@@ -127,7 +128,7 @@ export function CustomerInvoices() {
                 {open.map((r) => <option key={r.o.id} value={r.o.id}>{r.o.number} · {customer(r.o.customerId)}</option>)}
               </select>
             </label>
-            <label>{tr('Invoice date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /><span className="muted small">{formatDay(date, session.org)}</span></label>
+            <label>{tr('Invoice date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} required /></label>
           </div>
           {chosen && (
             <>

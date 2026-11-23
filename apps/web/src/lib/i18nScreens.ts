@@ -629,7 +629,6 @@ export const SCREENS_AR: Record<string, string> = {
   "Invoiced more than delivered": "مفوتر أكثر من المسلَّم",
   "Invoice {number} created.": "أُنشئت الفاتورة {number}.",
   "Invoice voided. Its quantity can be invoiced again.": "أُبطلت الفاتورة. يمكن فوترة كميتها مرة أخرى.",
-  "Invoice delivered sales orders. A wrong invoice is voided, not edited.": "فوتِر أوامر البيع المسلَّمة. الفاتورة الخاطئة تُبطل ولا تُعدَّل.",
   "Create an invoice": "إنشاء فاتورة",
   "Delivered sales order": "أمر بيع مسلَّم",
   "Delivered": "المسلَّم",
