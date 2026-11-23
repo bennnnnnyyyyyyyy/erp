@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — `sql/103` applied to live (invoice printing)
+
+**Objective.** Ben's yes (23 Nov) to apply the invoice printing migration, merged in PR #100. The invoice pages on live need it.
+
+**Actions Completed.**
+- A rolled-back dry run of `sql/103_sales_invoice_printing.sql` on live (the file up to its `commit`, then `rollback`; no error).
+- Applied with `npx supabase db query --linked -f` from the main checkout (master chat).
+- Ran `sql/tests/100` and `sql/tests/092` on live.
+- `sql/README.md` updated.
+- Same day, before this: merged main into `fix/track-a-audit-bugs` (PR #101). Kept Track A's own-request rule (`lib/approvals.ts`
+  `mayDecide()`, Ben's decision) and removed Track B's second copy (`noteMath.ts` `mayDecideOwn` and its tests). Fixed the workflow
+  test that still looked for the old page title "Stock requests" (now "Requests").
+
+**Database / System Result.** Live (erp-live):
+- 5 new tables with RLS on (`sal_invoice_drafts`, `sal_invoice_draft_lines`, `core_doc_settings`, `sal_doc_links`, `core_doc_sends`).
+- Signed-in users cannot read `sal_doc_links` or write `core_doc_sends`.
+- Anonymous users can only read print data through a link (`sal_doc_link_print`); they cannot make links.
+- 3 triggers: issued invoices and their lines are locked, and the send log is append-only.
+- No existing data changed.
+
+**Safety Status.** Tests 100 and 092 pass on live (both roll back). Merged code: typecheck clean; tests shared 87, API 737, web 185;
+PGlite 104 migrations, 101 of 101 SQL tests. Not checked in a browser on live; Ben's steps are in the Track B report, section 6.
+
 ## 2026-11-23 — `sql/106` applied to live (low stock pop-up)
 
 **Objective.** Ben's yes (23 Nov) to apply the phase 1a migration.
