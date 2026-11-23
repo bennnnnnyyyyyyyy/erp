@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatDay } from '../../lib/format';
+import { todayIn } from '../../lib/dates';
 import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { ReceiveBatchForm } from './ReceiveBatchForm';
@@ -49,6 +50,7 @@ export function BatchesPage() {
   if (!batches.data || !expiry.data || !items.data || !warehouses.data || !conditions.data) return <section className="page"><Loading error={batches.error} /></section>;
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
   const wh = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? id;
+  const today = todayIn();   // company time zone, YYYY-MM-DD (same form as expiryDate)
 
   return (
     <section className="page wide">
@@ -58,7 +60,7 @@ export function BatchesPage() {
 
       {canReceive && <ReceiveBatchForm items={items.data} warehouses={warehouses.data} onReceived={reloadAll} />}
 
-      <h2 className="related">{tr('Expiring in the next 90 days')}</h2>
+      <h2 className="related">{tr('Expired, or expiring in the next 90 days')}</h2>
       <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Batch')}</th><th scope="col" className="right">{tr('Quantity')}</th><th scope="col">{tr('Expires')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {expiry.data.map((e) => { const b = bucket(e.daysLeft); return (
           <tr key={`${e.batchId}`}><td>{e.sku} · {e.name}</td><td><code>{e.batchNo}</code></td><td className="right">{e.qty}</td><td>{formatDay(e.expiryDate, session.org)}</td><td><Pill status={b.pill} label={e.daysLeft < 0 ? trf('Expired {n} days ago', { n: -e.daysLeft }) : trf('{n} days left', { n: e.daysLeft })} /></td><td>{e.status === 'quarantined' ? <Pill status="rejected" label={tr('Quarantined')} /> : ''}</td></tr>); })}
@@ -69,8 +71,9 @@ export function BatchesPage() {
       <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col">{tr('Batch')}</th><th scope="col">{tr('Made')}</th><th scope="col">{tr('Expires')}</th><th scope="col">{tr('Stock')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
         {batches.data.map((b) => (
           <tr key={b.id}><td>{item(b.itemId)}</td><td><code>{b.batchNo}</code></td><td>{formatDay(b.mfgDate, session.org) || '—'}</td><td>{formatDay(b.expiryDate, session.org) || '—'}</td>
-            <td>{b.stock.filter((s) => s.qty > 0).map((s) => `${s.qty} in ${wh(s.warehouseId)}`).join(', ') || '0'}</td>
-            <td><Pill status={b.status === 'quarantined' ? 'rejected' : 'received'} label={b.status === 'quarantined' ? tr('Quarantined') : tr('Available')} /></td>
+            <td>{b.stock.filter((s) => s.qty > 0).map((s) => trf('{qty} in {warehouse}', { qty: s.qty, warehouse: wh(s.warehouseId) })).join(', ') || '0'}</td>
+            {/* UX audit 20 Nov: an expired batch showed "Available" here while the list above said "Expired". */}
+            <td><Pill status={b.status === 'quarantined' || (b.expiryDate && b.expiryDate < today) ? 'rejected' : 'received'} label={b.status === 'quarantined' ? tr('Quarantined') : b.expiryDate && b.expiryDate < today ? tr('Expired') : tr('Available')} /></td>
             <td>{canManage && <Button variant="outline" size="sm" disabled={busy} onClick={() => run(async () => {
               const to = b.status === 'quarantined' ? 'available' : 'quarantined';
               await api(`/v1/inventory/batches/${b.id}/status`, { method: 'POST', body: JSON.stringify({ status: to }) });

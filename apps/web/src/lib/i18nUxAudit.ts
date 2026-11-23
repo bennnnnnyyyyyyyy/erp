@@ -111,4 +111,7 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Quantity sold': 'الكمية المباعة',
   'Sales before VAT': 'المبيعات قبل الضريبة',
   Share: 'الحصة',
+  // Batches (UX audit 20 Nov)
+  'Expired, or expiring in the next 90 days': 'منتهية الصلاحية، أو تنتهي خلال 90 يومًا',
+  '{qty} in {warehouse}': '{qty} في {warehouse}',
 };
