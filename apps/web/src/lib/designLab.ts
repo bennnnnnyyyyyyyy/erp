@@ -47,6 +47,8 @@ export const GROUPS: Group[] = [
   // ---------- Screens being decided (new UI v2): each screen in 2 or 3 versions; Ben and Grant pick one, then the others are deleted ----------
   { key: 'frame', section: 'Screens being decided', label: 'Menu (app frame)', default: 'B', options: [c('A', 'A: Areas on top (Business Central)'), c('B', 'B: Left menu, Home / Recent / Pinned'), c('C', 'C: Search first + icon rail')] },
   { key: 'home', section: 'Screens being decided', label: 'Home page', default: 'A', options: [c('A', 'A: Attention list (things that need you)'), c('B', 'B: Role center (actions, figures, count tiles)'), c('C', 'C: My work + figures, split')] },
+  { key: 'list', section: 'Screens being decided', label: 'List page (shown on Sales orders)', default: 'A', options: [c('A', 'A: Dynamics list + side panel'), c('B', 'B: List and detail side by side'), c('C', 'C: Status lanes')] },
+  { key: 'doc', section: 'Screens being decided', label: 'Document page (shown on a sales order)', default: 'A', options: [c('A', 'A: Dynamics document'), c('B', 'B: Paper + action column'), c('C', 'C: Next step first')] },
   { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------

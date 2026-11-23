@@ -49,8 +49,9 @@ const TaskPage = lazyNamed(() => import('./tasks/Tasks'), 'TaskPage');
 const TasksPage = lazyNamed(() => import('./tasks/Tasks'), 'TasksPage');
 const Customers = lazyNamed(() => import('./sales/SalesDemo'), 'Customers');
 const NewSalesOrder = lazyNamed(() => import('./sales/SalesDemo'), 'NewSalesOrder');
-const SalesOrderPage = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrderPage');
-const SalesOrders = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrders');
+// New UI versions being decided (modules/sales/SalesNew.tsx); the old screens stay in SalesDemo.tsx until Ben and Grant pick.
+const SalesOrderPage = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrderNew');
+const SalesOrders = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrdersNew');
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
 const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
 const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
