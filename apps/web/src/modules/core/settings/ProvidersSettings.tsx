@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AI_NOTICE_VERSION, type AiStatus, type ProviderDef, type ProviderSettings } from '@erp/shared';
+import { AI_NOTICE_VERSION, AI_PROVIDER_KINDS, AI_READER_KINDS, type AiStatus, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Button } from '../../../components/ui/button';
 import { API_BASE_URL, api } from '../../../lib/api';
@@ -16,9 +16,26 @@ import { connectionStatus } from './integrationStatus';
 // the real provider, and needs the required details saved. "Check connection" makes one real, harmless call.
 
 // Every AI provider needs the current AI notice, Ollama included (sql/061; repo audit N10).
-const AI_KINDS = new Set(['openai', 'elevenlabs', 'ollama']);
+const AI_KINDS = new Set<string>(AI_PROVIDER_KINDS);
+// sql/108: these read supplier bills, with the company's own key only.
+const READER_KINDS = new Set<string>(AI_READER_KINDS);
 
-export function ProviderCard({ def, item, canManage, consented, onChanged }: { def: ProviderDef; item: ProviderSettings; canManage: boolean; consented: boolean; onChanged: () => void }) {
+export function ProviderCard({
+  def,
+  item,
+  canManage,
+  consented,
+  reader,
+  onChanged,
+}: {
+  def: ProviderDef;
+  item: ProviderSettings;
+  canManage: boolean;
+  consented: boolean;
+  /** sql/108: the AI chosen to read bills (null = the first one that is on). */
+  reader?: string | null;
+  onChanged: () => void;
+}) {
   const session = useSession();
   const { message, busy, run } = useNotice();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -84,6 +101,9 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
           )}
         </div>
       ) : null}
+      {READER_KINDS.has(def.kind) ? (
+        <ReaderChoice kind={def.kind} name={tr(def.name)} enabled={item.enabled} ownKey={item.savedFields.includes('api_key') || def.kind === 'ollama'} reader={reader ?? null} canManage={canManage} busy={busy} run={run} onChanged={onChanged} />
+      ) : null}
       {canManage && item.savedFields.length > 0 ? <CheckConnection kind={def.kind} disabled={busy || dirty} onChecked={onChanged} /> : null}
       {/* UX audit: this told the owner, in the third person, to accept a notice "below" that is a separate item in the list. */}
       {needsConsent ? (
@@ -105,6 +125,54 @@ export function ProviderCard({ def, item, canManage, consented, onChanged }: { d
   );
 }
 
+/** "Reads bills" line on an AI provider that can read documents (sql/108). Only the company's own key reads bills. */
+function ReaderChoice({
+  kind,
+  name,
+  enabled,
+  ownKey,
+  reader,
+  canManage,
+  busy,
+  run,
+  onChanged,
+}: {
+  kind: string;
+  name: string;
+  enabled: boolean;
+  ownKey: boolean;
+  reader: string | null;
+  canManage: boolean;
+  busy: boolean;
+  run: ReturnType<typeof useNotice>['run'];
+  onChanged: () => void;
+}) {
+  const choose = (k: string | null) =>
+    run(async () => {
+      await api('/v1/core/integrations/ai/reader', { method: 'PUT', body: JSON.stringify({ kind: k }) });
+      return k ? trf('{name} now reads your supplier bills.', { name }) : tr('No AI is chosen: the first one that is on reads bills.');
+    }, onChanged);
+  if (!ownKey) return <p className="muted small">{tr('Reading supplier bills needs your own key here. We do not give a shared key for it.')}</p>;
+  if (reader === kind)
+    return (
+      <div className="form-row">
+        <span className="pill st-sent">{tr('Reads supplier bills')}</span>
+        {canManage ? (
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => choose(null)}>
+            {tr('Stop choosing it')}
+          </Button>
+        ) : null}
+      </div>
+    );
+  return canManage && enabled ? (
+    <div className="form-row">
+      <Button variant="outline" size="sm" disabled={busy} onClick={() => choose(kind)}>
+        {tr('Use this AI to read supplier bills')}
+      </Button>
+    </div>
+  ) : null;
+}
+
 export function AiNotice({ status, canManage, onChanged }: { status: AiStatus; canManage: boolean; onChanged: () => void }) {
   const session = useSession();
   const { message, busy, run } = useNotice();
@@ -120,7 +188,7 @@ export function AiNotice({ status, canManage, onChanged }: { status: AiStatus; c
       <h3>{tr('AI notice')}</h3>
       <p className="small">
         {tr(
-          'When AI is on, the text you ask about, the related company records, or voice recordings are sent to the AI provider to produce an answer: OpenAI or ElevenLabs, or, with Ollama, the server at the address you enter, which our servers reach over the internet. The assistant only suggests: it never changes data by itself and only sees what the person asking is allowed to see.',
+          'When AI is on, the text you ask about, the related company records, voice recordings, or the photos and PDFs of supplier bills you scan are sent to the AI provider you switch on to produce an answer: OpenAI, ElevenLabs, Google Gemini, Claude (Anthropic), Grok (xAI) or OpenRouter (and the model provider you choose there), or, with Ollama, the server at the address you enter, which our servers reach over the internet. The AI only suggests: it never changes or saves data by itself, and only sees what the person asking is allowed to see.',
         )}
       </p>
       <p className="muted small">

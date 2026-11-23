@@ -19,6 +19,7 @@ import { appUrl } from './telegram';
 //   Shopify      gets a token (client ID + secret, Shopify's 2026 rule) or uses an older app's token, reads the shop's name, and checks
 //                that order webhooks point at us
 //   OpenAI, ElevenLabs, Ollama   list models or the account; no prompt, no cost
+//   Gemini, Claude, Grok, OpenRouter (sql/108)   list models, or read the key (OpenRouter); no prompt, no cost
 // On the secret-key allowlist (test/boundaries.test.ts), like lib/aiService.ts: it reads the company's saved keys through the
 // service-role functions core__provider_credentials and core__integration_secret. Keys never leave this file and are never returned.
 
@@ -57,7 +58,8 @@ function reason(r: { status: number; body: unknown; text: string }): string {
       .map((v) => (typeof v === 'string' ? v : v && typeof v === 'object' ? JSON.stringify(v) : ''))
       .find((v) => v.length > 0) ?? r.text;
   const clean = raw
-    .replace(/\b(sk|pk|egy_sk|egy_pk|shpat|shpss|xi)[-_][A-Za-z0-9_-]{6,}/g, '[key]')
+    .replace(/\b(sk|pk|egy_sk|egy_pk|shpat|shpss|xi|xai)[-_][A-Za-z0-9_-]{6,}/g, '[key]')
+    .replace(/\bAIza[0-9A-Za-z_-]{20,}/g, '[key]')
     .replace(/\s+/g, ' ')
     .trim();
   return `HTTP ${r.status}${clean ? `: ${clean.slice(0, 200)}` : ''}`;
@@ -265,6 +267,37 @@ async function checkOllama(env: Bindings, who: CheckCaller, deps: CheckDeps): Pr
     : fail(`Your Ollama server answered, but it does not have the model ${c.model} (it has: ${models.slice(0, 5).join(', ') || 'none'}).`);
 }
 
+// sql/108: the AI providers that read bills, each with the company's own key only. List models or the key; no prompt, no cost.
+const listedIds = (body: unknown, field: 'data' | 'models', idKey: 'id' | 'name') =>
+  isObj(body) && Array.isArray(body[field]) ? (body[field] as Obj[]).map((m) => String(m[idKey] ?? '')) : [];
+
+async function checkReaderKey(
+  env: Bindings,
+  who: CheckCaller,
+  kind: 'gemini' | 'anthropic' | 'grok' | 'openrouter',
+  deps: CheckDeps,
+): Promise<IntegrationCheck> {
+  const names = { gemini: 'Gemini', anthropic: 'Claude', grok: 'Grok', openrouter: 'OpenRouter' } as const;
+  const name = names[kind];
+  const c = await credentials(env, who.orgId, kind);
+  if (!c.api_key) return fail(`Save your ${name} API key first.`);
+  const req: { url: string; headers: Record<string, string> } =
+    kind === 'gemini'
+      ? { url: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', headers: { 'x-goog-api-key': c.api_key } }
+      : kind === 'anthropic'
+        ? { url: 'https://api.anthropic.com/v1/models?limit=1000', headers: { 'x-api-key': c.api_key, 'anthropic-version': '2023-06-01' } }
+        : kind === 'grok'
+          ? { url: 'https://api.x.ai/v1/models', headers: { Authorization: `Bearer ${c.api_key}` } }
+          : { url: 'https://openrouter.ai/api/v1/key', headers: { Authorization: `Bearer ${c.api_key}` } };
+  const r = await call(deps, req.url, { headers: req.headers });
+  if (r.status !== 200) return fail(`${name} refused your key: ${reason(r)}`);
+  if (!c.model || kind === 'openrouter') return pass(`${name} accepted your key.`);
+  const ids =
+    kind === 'gemini' ? listedIds(r.body, 'models', 'name').map((x) => x.replace(/^models\//, '')) : listedIds(r.body, 'data', 'id');
+  if (ids.length === 0 || ids.includes(c.model)) return pass(`${name} accepted your key.`);
+  return fail(`${name} accepted your key, but it does not offer the model ${c.model}.`);
+}
+
 // ------------------------------------------------------------------ HR & payroll app (sql/102; contract 4.3: GET /erp/v1/ping)
 
 async function checkHrApp(env: Bindings, who: CheckCaller, deps: CheckDeps): Promise<IntegrationCheck> {
@@ -308,6 +341,10 @@ export const CHECKABLE = [
   'elevenlabs',
   'ollama',
   'hr_app',
+  'gemini',
+  'anthropic',
+  'grok',
+  'openrouter',
 ] as const;
 export type CheckableKind = (typeof CHECKABLE)[number];
 
@@ -343,6 +380,11 @@ export async function checkIntegration(
         return await checkOllama(env, who, deps);
       case 'hr_app':
         return await checkHrApp(env, who, deps);
+      case 'gemini':
+      case 'anthropic':
+      case 'grok':
+      case 'openrouter':
+        return await checkReaderKey(env, who, kind, deps);
     }
   } catch (e) {
     const timeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
