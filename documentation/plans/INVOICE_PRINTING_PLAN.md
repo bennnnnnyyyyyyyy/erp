@@ -1,158 +1,225 @@
 # Invoice printing, PDF and templates plan
 
-**Module key:** `sales` (extends it; templates are a `core` setting shared by every document type later)
-**Status:** `[📝 Draft, awaiting Ben's approval]`
-**Owner:** Ben · **Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md) phases 1c and 1e
-**Related:** [Customer invoices](CUSTOMER_INVOICES_PLAN.md) (assumed "no printable invoice" in its first slice), [ETA e-invoicing](ETA_EINVOICING_PLAN.md)
-**Depends on modules:** core, sales; einvoicing data (`sql/036`) for the ETA layout
+**Module:** `sales` (we add to it). Templates are a `core` setting, so other documents can use them later.
+**Status:** Draft. Ben must approve it.
+**Owner:** Ben
+**Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md), steps 1c and 1e
+**Related plans:** [Customer invoices](CUSTOMER_INVOICES_PLAN.md) · [ETA e-invoicing](ETA_EINVOICING_PLAN.md)
+
+> **In short**
+> - A company prints its invoice in **Arabic**, with its **own logo or letterhead**. It downloads a PDF or sends it by WhatsApp or email.
+> - It can also print the **ETA layout** now. The layout says "Not yet submitted to ETA".
+> - Later, a company can upload its **own Word template**.
+> - To make PDFs with correct Arabic, we need a small converter service called **Gotenberg** (free, MIT licence).
+> - Section 11 explains **how to test ETA without its portal.**
 
 ---
 
 ## 1. Goal
 
-A company can issue an invoice and hand it to its customer the way it already does: **Arabic, on its own letterhead or its own
-Word template**, as a PDF, by WhatsApp, by email or straight to a printer. It can also print the **ETA layout** today, marked "Not yet
-submitted to ETA", so switching ETA sending on later changes nothing for the customer except the real ETA number and QR.
+A company gives its customer an invoice the way it does today. The invoice is in Arabic, on the company's own paper design.
+It can be a PDF, a WhatsApp message, an email or a printed page.
 
-## 2. Scope
+The ETA layout works now. Later we turn on sending to ETA. Then the only change is the real ETA number and QR code.
 
-**In, phase 1c (first):**
-- P1. **Print view** of a customer invoice (also credit and debit notes): Arabic by default; bilingual layout optional per template.
-- P2. **Draft watermark** on drafts. An issued invoice is **locked forever**; mistakes are fixed by credit or debit note (ETA rule,
-  matches our audit rule). (To check in our ETA reference: ETA's cancellation window after submission.)
-- P3. **Company branding:** logo, name, tax number, address, footer text, bank details and terms, from company settings.
-  **Letterhead image** (PNG, JPG or one-page PDF) as the page background, with adjustable top and bottom margins so the table
-  fits inside it.
-- P4. **Built-in layouts:** simple; detailed with VAT per line; **ETA layout** (ETA's fields: issuer and receiver tax data,
-  activity code, item codes, tax types and subtypes, totals per ETA's equations), stamped **"Not yet submitted to ETA"**, internal
-  UUID shown, QR area empty until submission.
-- P5. **Delivery:** download PDF, **direct print** (browser print dialog), **send by WhatsApp** and **send by email** through the
-  existing outbox (a PDF attachment, or a signed link that expires; see §7).
-- P6. Every send is written to the audit log (who, to whom, which channel, which version of the PDF).
+## 2. What we build
 
-**In, phase 1e (after 1c):**
-- P7. **Word templates:** the company uploads a `.docx` with placeholders; we fill it and convert it to PDF. Placeholders: a
-  **published fixed list** plus **every custom field** (when custom fields exist, roadmap 3a). A template can be set as default per
-  document type.
-- P8. A **template check** on upload: lists unknown placeholders, previews with the latest invoice.
+### Step 1c (first)
 
-**Out (later):** AI "copy my old invoice's layout" (uses the company's own AI key; after scanning phase 1d); quotation, delivery note
-and receipt templates (same machinery, added per document type); drag-and-drop designer (not planned).
-**Won't:** editing an issued invoice.
+1. **Print view** for customer invoices, credit notes and debit notes.
+   - Arabic is the default.
+   - A template can also be in two languages, for companies with foreign customers.
+2. **Draft and issued**
+   - A **draft** can change. Its printout has a large "DRAFT" mark.
+   - An **issued** invoice is **locked forever**.
+   - To fix a mistake, make a credit note or a debit note. This is the ETA rule. It is also our audit rule.
+   - To check: how many days ETA allows to cancel an invoice after we send it.
+3. **Company branding**
+   - Logo, name, tax number, address, footer text, bank details and payment terms.
+   - **Letterhead image:** PNG, JPG or a one-page PDF. It is the page background.
+   - The company sets top and bottom margins, so the table fits inside the letterhead.
+4. **Built-in layouts**
+   - **Simple.**
+   - **Detailed,** with VAT on each line.
+   - **ETA layout.** It has all the ETA fields: the tax data of both companies, activity code, item codes, tax types and totals.
+     It says **"Not yet submitted to ETA"**. The QR area stays empty until we send the invoice to ETA.
+5. **Ways to send**
+   - Download as PDF.
+   - Print (the browser print window).
+   - Send by **WhatsApp**.
+   - Send by **email**.
+   - WhatsApp and email use the message queue that already exists.
+6. **Audit**
+   - Each send writes an audit row: who sent it, to whom, by which channel, and which PDF.
+
+### Step 1e (after 1c): Word templates
+
+1. A company uploads a `.docx` file with **placeholders**, for example `{customer_name}`.
+2. The ERP fills in the placeholders and makes a PDF.
+3. Placeholders: a **fixed list we publish**, plus **every custom field** of the company (custom fields come later, in roadmap step 3a).
+4. A company can set a template as the default for each document type.
+5. **Template check on upload:**
+   - It lists placeholders that the ERP does not know.
+   - It shows a preview with the latest invoice.
+
+### Not now
+- AI that copies the layout of an old invoice. It uses the company's own AI key. It comes after scanning.
+- Templates for quotations, delivery notes and receipts. They use the same tools. We add them one by one.
+- A drag-and-drop template designer. Not planned.
+
+### Never
+- Changing an issued invoice.
 
 ## 3. How it works
 
-### 3.1 Rendering
-One HTML template engine for the built-in layouts (our own code, Arabic RTL, logical CSS). Two outputs:
-- **Browser:** the print view and "Print" use the browser itself. No server work, no new dependency.
-- **PDF file** (for download, WhatsApp, email): HTML → PDF by **Gotenberg** (MIT, a Docker service with Chromium and LibreOffice;
-  licence checked on GitHub 20 Nov). Chromium shapes Arabic correctly; PDF libraries that draw text themselves (pdf-lib and similar)
-  don't shape Arabic, so they are ruled out.
+### 3.1 Making the print and the PDF
+- We make each built-in layout as an HTML page. It is our own code, right-to-left, for Arabic.
+- **Print:** the browser prints the page. This needs no server and no new package.
+- **PDF file:** for download, WhatsApp and email. A converter turns the HTML into a PDF.
+  - We use **Gotenberg**. It is free (MIT licence; checked on GitHub, 20 Nov).
+  - It runs Chromium inside. Chromium shows Arabic correctly.
+  - Simple PDF libraries (for example pdf-lib) do not join Arabic letters correctly. So we do not use them.
 
-**Where Gotenberg runs:** on-prem, as one more container in `scripts/onprem/` Docker Compose. In the cloud, one small container we host
-(Cloudflare Containers or a small VM; decision §12). The Worker calls it over HTTPS with a shared secret. It is a converter only: it
-never reads the database and keeps no files.
+**Where Gotenberg runs**
+- **On-prem:** one more container in the customer's Docker setup (`scripts/onprem/`).
+- **Cloud:** one small container that we host. We must decide where (see section 12).
+- Our API calls it over HTTPS with a secret.
+- It only converts files. It never reads the database. It keeps no files.
 
-### 3.2 Numbering
-Invoices keep their current numbers until the numbering-format work (roadmap 3a: per type and year, `INV-2026-00001`). The print
-layout shows whatever number the invoice has.
+### 3.2 Invoice numbers
+- Invoices keep their numbers as they are today.
+- The new format (`INV-2026-00001`, new sequence each year) comes with the customisation tools (roadmap step 3a).
+- The printout shows the number the invoice has.
 
-### 3.3 ETA layout
-Built from the ETA data already in the schema (`sql/036`: tax profiles, branches, ETA unit types, tax subtypes) and the document builder
-in the einvoicing module, so the printed ETA layout and the later ETA submission use **the same numbers**. Totals follow ETA's
-published equations (see ETA plan §3.2) so a printed invoice never disagrees with what ETA will accept.
+### 3.3 The ETA layout
+- It uses the ETA data that is already in the database (`sql/036`): tax profiles, branches, ETA units and tax types.
+- It uses the same document builder as ETA sending. So the printout and the later ETA submission have **the same numbers**.
+- Totals follow ETA's own maths rules. So a printed invoice never disagrees with ETA.
+- If data is missing, the ETA layout does not print. It lists what is missing, for example:
+  - the company tax number
+  - the activity code
+  - the customer tax ID (for business customers)
+  - item codes
 
 ### 3.4 Word templates
-- Placeholders written like `{customer_name}`, `{invoice_number}`, `{#lines}…{/lines}` for the lines table, `{total}`,
-  `{cf.truck_number}` for custom fields.
-- Filling: either **docxtemplater** (its licence couldn't be read automatically on 20 Nov; check before use: it must be MIT, not the
-  GPL option or a paid module) or our own filler over the `.docx` XML using the platform's `DecompressionStream` (no new
-  dependency). Common difficulty: Word splits a typed placeholder across text runs; the template check (P8) catches it.
-- Conversion `.docx` → PDF: **Gotenberg's LibreOffice route**, the same service as §3.1.
-- Templates stored in Supabase Storage, one folder per company, readable only by that company (storage policies plus a
-  `core_doc_templates` row).
+- **Placeholders** look like this:
+  - `{customer_name}`, `{invoice_number}`, `{total}`
+  - `{#lines}` … `{/lines}` for the table of lines
+  - `{cf.truck_number}` for a custom field
+- **Filling in the template.** Two choices:
+  - **docxtemplater.** Its licence did not show on GitHub. Before we use it, check that we use the MIT version, not GPL and not a paid part.
+  - **Our own code.** A `.docx` file is a zip of XML files. The browser and the Worker can unzip it with no new package.
+- **A known problem:** Word sometimes splits a typed placeholder into pieces inside the file. The template check finds this.
+- **Converting to PDF:** Gotenberg can also convert Word to PDF (it uses LibreOffice). Same service as 3.1.
+- **Storage:** templates go in Supabase Storage, in one folder for each company. Only that company can read its folder.
 
-## 4. Data model
+## 4. Database changes
 
-Migration: next free number at build time. SQL test: next free.
+**Migration number:** the next free number when we build. (The HR app work uses 102 and test 099.)
 
-| Table | Column | Type | Null | Rules |
-|---|---|---|---|---|
-| `core_doc_templates` | `org_id`, `doc_type` (`sales_invoice`, `sales_credit_note`, …), `kind` (`builtin`, `letterhead`, `docx`), `layout` (`simple`, `detailed`, `eta`), `language` (`ar`, `en`, `ar_en`), `file_path`, `margins`, `is_default`, `deleted_at` | | | one default per (org, doc_type); RLS; writes through functions; audited |
-| `core_doc_sends` | `org_id`, `doc_type`, `doc_id`, `channel` (`whatsapp`, `email`, `download`, `print`), `recipient`, `template_id`, `pdf_sha256`, `sent_by`, `sent_at` | | | append-only; also an audit row |
-| `organizations` settings | logo path, footer text, bank details, terms | | | Bellvox is the app look; this is the **customer's** branding on its own documents |
+**New table: `core_doc_templates`** (the templates of a company)
 
-Storage bucket `doc-files`, path `org/<org_id>/…`; policies limit each company to its own folder. Business-table rules apply to both tables.
+| Column | Meaning |
+|---|---|
+| `org_id` | The company. |
+| `doc_type` | For example sales invoice or credit note. |
+| `kind` | Built-in, letterhead or Word file. |
+| `layout` | Simple, detailed or ETA. |
+| `language` | Arabic, English or both. |
+| `file_path` | Where the uploaded file is. |
+| `margins` | Top and bottom margins for a letterhead. |
+| `is_default` | Only one default for each document type. |
+| `deleted_at` | Soft delete. |
+
+**New table: `core_doc_sends`** (a record of each send; rows are never changed)
+
+| Column | Meaning |
+|---|---|
+| `org_id`, `doc_type`, `doc_id` | Which document. |
+| `channel` | WhatsApp, email, download or print. |
+| `recipient` | To whom. |
+| `template_id` | Which template. |
+| `pdf_sha256` | A fingerprint of the PDF. It proves which file we sent. |
+| `sent_by`, `sent_at` | Who and when. |
+
+**Company settings:** logo, footer text, bank details and payment terms.
+This is the **customer's** branding on its own documents. The app itself always looks like Bellvox.
+
+**File storage:** a bucket called `doc-files`. The path is `org/<company id>/…`. Each company can only reach its own folder.
+
+**Standard rules for each new table:** `org_id`, row level security, isolation tests, read access only, writes through database
+functions, audit rows.
 
 ## 5. Permissions
 
-| Key | Default | Allows |
+| Permission | Who has it | What it allows |
 |---|---|---|
-| existing `sales.invoices.read` | as today | view, print and download |
-| `sales.invoices.send` (new) | sales staff and up | send by WhatsApp or email |
-| `core.templates.manage` (new) | owner (owner can give it) | upload and choose templates, branding |
+| Existing "read invoices" | as today | View, print and download. |
+| **New:** `sales.invoices.send` | sales staff and higher | Send by WhatsApp or email. |
+| **New:** `core.templates.manage` | owner (the owner can give it to others) | Upload and choose templates. Set branding. |
 
 ## 6. API
 
-| Method | Path | Permission | Returns |
-|---|---|---|---|
-| GET | `/v1/sales/invoices/:id/print?template=` | `sales.invoices.read` | HTML for the print view |
-| GET | `/v1/sales/invoices/:id/pdf?template=` | `sales.invoices.read` | PDF (via Gotenberg) |
-| POST | `/v1/sales/invoices/:id/send` | `sales.invoices.send` | `{ channel, recipient }` → queued in the outbox |
-| GET/POST/DELETE | `/v1/core/templates` | `core.templates.manage` | upload, check, set default |
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/v1/sales/invoices/:id/print` | Gives the print page. |
+| GET | `/v1/sales/invoices/:id/pdf` | Gives the PDF (made by Gotenberg). |
+| POST | `/v1/sales/invoices/:id/send` | Puts a WhatsApp or email message in the queue. |
+| GET, POST, DELETE | `/v1/core/templates` | Upload, check and choose templates. |
 
-If Gotenberg is not configured, the PDF and send routes return **503 `not_set_up`** (house rule), and the print view still works.
+If Gotenberg is not set up, the PDF and send routes answer **503 `not_set_up`**. The print page still works.
 
 ## 7. Screens
 
-| Screen | Route | Notes |
+| Screen | Where | What it has |
 |---|---|---|
-| Invoice page | `/sales/invoices/:id` | Print, Download PDF, Send ▾ (WhatsApp, email); template picker if more than one |
-| Print view | `/sales/invoices/:id/print` | A4, RTL, watermark on drafts |
-| Templates and branding | `/settings/documents` | logo, letterhead upload with margin preview, layouts, Word upload with placeholder check, list of placeholders |
+| Invoice page | `/sales/invoices/:id` | Buttons: Print, Download PDF, Send (WhatsApp or email). A template choice if there is more than one. |
+| Print view | `/sales/invoices/:id/print` | A4 page, right-to-left. "DRAFT" mark on drafts. |
+| Templates and branding | `/settings/documents` | Logo. Letterhead upload with a margin preview. Layouts. Word upload with the placeholder check and the list of placeholders. |
 
-**WhatsApp:** Meta's API sends a PDF as a document message; the outbox already sends WhatsApp messages. Email uses the existing email
-channel with the PDF attached. A signed, expiring link (7 days, configurable) is the fallback where attachments aren't possible.
+**Sending**
+- **WhatsApp:** Meta's API can send a PDF as a document. Our message queue already sends WhatsApp messages.
+- **Email:** the email channel attaches the PDF.
+- **Backup method:** if a file cannot be attached, we send a secure link. The link stops working after 7 days. The company can change this.
 
-## 8. Business rules
+## 8. Rules
 
-- Amounts printed from minor units with the invoice's currency; Arabic-Indic or Western digits per company setting (default Western,
-  ETA uses Western); question §12.
-- The ETA layout refuses to print (with a list of what's missing) if required ETA data is missing: company tax number, activity code,
-  customer tax ID for B2B, item codes.
-- A PDF is generated from the **issued** invoice data; the same invoice always prints the same (hash stored in `core_doc_sends`).
+- The ERP stores amounts as whole numbers of the smallest unit (piastres). The printout shows them with the invoice's currency.
+- Digits: Western digits (1, 2, 3) are the default. ETA uses them. Arabic-Indic digits are a possible company setting (section 12).
+- The PDF always comes from the **issued** invoice. The same invoice always gives the same PDF. Its fingerprint is in `core_doc_sends`.
 
 ## 9. Tests
 
-- Isolation: another company can't read templates, sends or storage files.
-- Print snapshot tests for each built-in layout, Arabic and English, draft and issued.
-- ETA layout totals match the einvoicing builder for the SDK sample documents.
-- Word: placeholder filling, split-run detection, unknown placeholders.
-- 503 `not_set_up` without Gotenberg.
+- Another company cannot read our templates, sends or files.
+- A saved picture of each built-in layout, in Arabic and English, draft and issued. A test compares new prints with it.
+- ETA layout totals match the ETA builder for ETA's sample documents.
+- Word templates: filling in, finding split placeholders, finding unknown placeholders.
+- Without Gotenberg, the PDF route answers 503 `not_set_up`.
 
 ## 10. Rollout
 
-1. Migration, verification, SQL test on live; worklog.
-2. Gotenberg: on-prem compose service; cloud container (after §12 decision).
-3. Deploy API and web; browser check on live (print, PDF, WhatsApp to a test number, email).
+1. Apply the migration. Run its checks and SQL test on live. Write a worklog entry.
+2. Set up Gotenberg: on-prem in Docker Compose; in the cloud after the decision in section 12.
+3. Deploy the API and the web app.
+4. Check on the live test site: print, PDF, WhatsApp to a test number, email.
 
-## 11. ETA testing without the portal (Ben asked, 20 Nov)
+## 11. How to test ETA without the portal
 
-Three levels, each needing more from ETA:
+Ben asked this on 20 Nov. There are four levels. Each level needs more from ETA.
 
-| Level | Needs ETA? | What it proves |
+| Level | Do we need ETA? | What it proves |
 |---|---|---|
-| **1. Offline** (now) | No | Our document JSON, the canonical serializer (tested against ETA's SDK sample files), ETA's arithmetic rules in our validator, and the ETA print layout |
-| **2. Mock ETA server** (to build) | No | A small fake of ETA's documented API (login, submit, status, printout, cancel) in our test suite, replaying documented responses (valid, invalid with errors, 429 rate limit, 503). The whole flow runs end to end: issue → submit → poll → valid/invalid → print with QR |
-| **3. ETA PreProd** | Yes, **one registration on the PreProd portal** (`profile.preprod.eta.gov.eg`) to get a test Client ID and Secret | Real ETA validation. Version 0.9 documents skip signature checks, so it can be tested **before** buying the eSeal certificate |
-| 4. Production | Production registration, eSeal certificate, signing set-up | Real submission |
+| **1. Offline** (works today) | No | Our invoice data has the correct ETA format. We test it against ETA's sample files. Totals follow ETA's maths rules. The ETA print layout is correct. |
+| **2. A fake ETA server** (we build it) | No | A small fake copy of ETA's API inside our tests. It gives ETA's documented answers: valid, invalid with errors, "too many requests", "try again". The full flow runs: issue → send → check status → valid or invalid → print with QR. |
+| **3. ETA test system (PreProd)** | Yes: **one sign-up** on ETA's test portal (`profile.preprod.eta.gov.eg`) | Real checks by ETA. ETA's older invoice format (version 0.9) skips the signature check. So we can test **before** we buy the eSeal certificate. |
+| **4. Live ETA** | Live sign-up, eSeal certificate, signing setup | Real submission. |
 
-There's no way to get real ETA answers without the portal: credentials only come from registering there. After that one-time
-registration, everything runs through the API. Levels 1 and 2 need nothing from ETA and are part of this plan.
+**Important:** we cannot get real answers from ETA without the portal. ETA gives login details only through the portal.
+After one sign-up, everything works through the API. Levels 1 and 2 need nothing from ETA. They are part of this plan.
 
 ## 12. Open questions
 
-1. Where does Gotenberg run in the cloud: Cloudflare Containers, or a small VM? (Cost and region; affects the Grant document.)
-2. Digits on printouts: Western (ETA uses them) or Arabic-Indic, per company?
-3. Signed link lifetime for WhatsApp and email: 7 days?
-4. Who registers on ETA PreProd, and with which company's tax number? (Business question.)
+1. Where does Gotenberg run in the cloud: Cloudflare Containers or a small server? This affects cost and data location.
+2. Digits on printouts: Western only, or a company choice of Arabic-Indic?
+3. How long does a WhatsApp or email link work: 7 days?
+4. Who signs up on the ETA test portal, and with which company's tax number? (A business question for Grant.)

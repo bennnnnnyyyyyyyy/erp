@@ -1,119 +1,207 @@
-# Scanning plan: bills, barcodes, attachments, QR
+# Scanning plan: bills, barcodes, attachments and QR codes
 
-**Module keys:** `purchasing` (bill reading), `sales` and `inventory` (barcodes), `core` (attachments, AI providers)
-**Status:** `[📝 Draft, awaiting Ben's approval]`
-**Owner:** Ben · **Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md) phase 1d
-**Depends on modules:** core, purchasing, sales, inventory
+**Modules:** `purchasing` (bills), `sales` and `inventory` (barcodes), `core` (attachments and AI)
+**Status:** Draft. Ben must approve it.
+**Owner:** Ben
+**Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md), step 1d
+
+> **In short**
+> - **Less typing.** We build four kinds of scanning, in this order:
+>   1. Take a photo of a supplier bill. The AI fills in a draft. A person checks it and saves it.
+>   2. Scan a barcode with the phone camera. The item goes onto the invoice.
+>   3. Attach a photo or PDF to any record.
+>   4. Scan the QR code on our invoice. The invoice opens.
+> - First, we must let each company use **its own AI key**, with more AI providers.
+> - The AI **never saves anything by itself.**
 
 ---
 
 ## 1. Goal
 
-Less typing. A person photographs a supplier bill and gets a filled-in draft to check; scans a product with the phone camera to add it
-to an invoice; attaches a photo of any paper to the record it belongs to; and scans an invoice's QR code to open it.
+People type less. They scan paper and products instead.
 
-## 2. Scope (in build order, Ben's 20 Nov choice: all four, Claude orders them)
+## 2. What we build
 
-**S0. AI providers with the company's own key (foundation).**
-Today the AI layer (`apps/api/src/lib/aiService.ts`, `aiProviders.ts`) supports OpenAI and Ollama for chat, OpenAI and ElevenLabs
-for speech, and reads no images. Add a provider interface with **vision** (image and PDF input) and **structured output**, and
-providers **OpenAI, Gemini, Claude, Grok, OpenRouter, online Ollama** (Ben, 20 Nov). **Bill reading uses only the company's own key
-for now** (no shared key) until the business decides on credits (Grant document). Keys stay where they are today (service-role only,
-never returned, never logged); consent to the AI notice still applies.
+### Step 0: AI providers with the company's own key (we need this first)
 
-**S1. Supplier bill reading (first: biggest time saver, best demo).**
-- Upload a photo (camera on the phone) or a PDF.
-- The company's AI provider extracts supplier name and tax number, bill number, date, lines (description, quantity, unit price, VAT),
-  totals.
-- **Matching (ours, not AI):** supplier by tax number then name; open **received purchase orders** of that supplier (a supplier bill
-  must belong to a received order, `sql/018`); lines matched to order lines by item code, party item code (`sql/099`) or name.
-- The result is a **draft for a person to check**: mismatches highlighted (price, quantity, VAT, total ≠ sum of lines). Nothing is saved
-  until the person confirms; saving uses the existing `pur_record_supplier_invoice`, so all current rules apply.
-- The original image is attached to the bill (S3).
+**What exists today**
+- The AI code is in `apps/api/src/lib/aiService.ts` and `aiProviders.ts`.
+- Chat works with OpenAI and Ollama.
+- Speech-to-text works with OpenAI and ElevenLabs.
+- **The AI cannot read images today.**
 
-**S2. Camera barcodes onto invoices and orders.**
-- **Phone or laptop camera only for now** (Ben, 20 Nov). Scan → item found by barcode → line added (or quantity +1).
-- Items need a **barcode field** (none exists today): `inv_items.barcode` (several per item later, for packs), unique per company.
-- Camera decoding: the browser's built-in `BarcodeDetector` where available (Chrome on Android and macOS, from general knowledge;
-  **not** on Windows desktop Chrome), and **ZXing for JS** (Apache-2.0, checked 20 Nov) as the fallback. ZXing is a new dependency:
-  Ben installs it in the main checkout.
-- Later (not now): USB or Bluetooth scanners, printing barcode labels, weighing-scale barcodes (grocery).
+**What we add**
+- One common connection for all providers. It can read **images and PDFs**. It can return data in a fixed structure.
+- Providers: **OpenAI, Gemini, Claude, Grok, OpenRouter, online Ollama** (Ben's choice, 20 Nov).
+- For now, bill reading works **only with the company's own key**. We do not give a shared key.
+  Grant decides later if we sell AI credits.
+- Keys stay safe, as today:
+  - only the server can read them
+  - the API never sends them back
+  - the logs never show them
+- The owner must still accept the AI notice first.
 
-**S3. Scan and attach.**
-- Any record (bill, invoice, order, receipt, expense, item, customer, supplier) gets **Attachments**: camera photo, image or PDF upload.
-  Multi-page "scan" = several photos combined into one PDF (later: via Gotenberg, see the invoice printing plan).
-- Storage: Supabase Storage bucket `doc-files`, path `org/<org_id>/…`, each company limited to its own folder.
+### Step 1: read supplier bills (first, because it saves the most time and demos well)
 
-**S4. QR lookup (last: useful once invoices carry QR codes).**
-- Our printed invoices carry a QR with an **internal link** (`/sales/invoices/:id`, for signed-in staff of that company only).
-  ETA's own QR is added when ETA sending is on.
-- Scanning it with the in-app camera opens the invoice. Another company's QR opens nothing (row level security).
+1. The person takes a photo with the phone, or uploads a PDF.
+2. The company's AI reads the bill. It finds:
+   - supplier name and tax number
+   - bill number and date
+   - lines: description, quantity, unit price, VAT
+   - totals
+3. **Our own code (not the AI) does the matching:**
+   - It finds the supplier by tax number, then by name.
+   - It finds the open **received** purchase orders of that supplier.
+     Today a supplier bill must belong to a received order (`sql/018`).
+   - It matches each line to an order line. It uses the item code, the supplier's item code (`sql/099`), or the name.
+4. The result is a **draft**. It shows differences in colour, for example:
+   - price is not the same as the order
+   - quantity is not the same
+   - VAT is not the same
+   - total is not the sum of the lines
+5. **Nothing is saved until the person clicks Save.** Save uses the existing function `pur_record_supplier_invoice`.
+   So all current rules apply.
+6. The ERP attaches the photo to the bill (see step 3).
 
-**Out (later):** USB scanners, label printing, scale barcodes; AI-assisted matching of scanned bills to new suppliers (creating
-suppliers automatically: never without a person).
-**Won't:** saving or posting a scanned bill without a person.
+### Step 2: barcodes with the camera
 
-## 3. Data model
+1. **Phone or laptop camera only, for now** (Ben, 20 Nov).
+2. The person scans. The ERP finds the item by barcode. It adds a line, or it adds 1 to the quantity.
+3. **Items have no barcode field today.** We add `inv_items.barcode`.
+   - One barcode for each item for now.
+   - A barcode is unique in each company.
+4. Reading the barcode from the camera:
+   - Some browsers have a built-in barcode reader (`BarcodeDetector`). From general knowledge: Chrome on Android and Mac have it.
+     **Chrome on Windows does not.**
+   - So we also use **ZXing for JavaScript** as a backup. Licence: Apache-2.0 (checked 20 Nov). We can use it.
+   - ZXing is a new package. **Ben must install it in the main folder.** Never run `npm install` in a worktree.
 
-| Table | Column | Type | Null | Rules |
-|---|---|---|---|---|
-| `inv_items` (new column) | `barcode` | text | yes | unique per (org, barcode) where not deleted; **column grant in the same migration** |
-| `core_attachments` | `org_id`, `entity_type`, `entity_id`, `file_path`, `mime`, `bytes`, `sha256`, `uploaded_by`, `deleted_at` | | | RLS: readable if the person can read the entity's module; soft delete; audited |
-| `core_ai_extractions` | `org_id`, `attachment_id`, `kind` (`supplier_bill`), `provider`, `model`, `result` jsonb, `status` (`done`, `failed`), `cost_micro`, `created_by` | | | keeps what the AI read, for review and support; no key, no prompt secrets |
-| `core_integrations` (existing) | new provider kinds | | | Gemini, Claude, Grok, OpenRouter keys stored like today's |
+**Later, not now:** USB or Bluetooth scanners, printing barcode labels, barcodes from weighing scales (for groceries).
 
-Business-table rules: `org_id`, RLS, isolation tests, `revoke all` then `grant select`, writes through functions, audit rows.
+### Step 3: scan and attach
+
+1. Any record can have **attachments**: bills, invoices, orders, receipts, expenses, items, customers and suppliers.
+2. The person takes a photo, or uploads an image or a PDF.
+3. More than one page: the person takes several photos. Later, Gotenberg joins them into one PDF (see the invoice printing plan).
+4. Storage: Supabase Storage, bucket `doc-files`, folder `org/<company id>/…`. Each company can only reach its own folder.
+
+### Step 4: QR codes (last, because it is useful only when invoices have QR codes)
+
+1. Our printed invoices get a QR code with an **internal link** to the invoice.
+2. Only signed-in staff of that company can open it.
+3. When ETA sending is on, the invoice also gets ETA's own QR code.
+4. The scanner in the app opens the invoice.
+5. A QR code from another company opens nothing. Row level security blocks it.
+
+### Never
+- Saving or posting a scanned bill without a person.
+- Making a new supplier from a scan without a person.
+
+## 3. Database changes
+
+**Migration number:** the next free number when we build. (The HR app work uses 102 and test 099.)
+
+**New column**
+
+| Table | Column | Meaning |
+|---|---|---|
+| `inv_items` | `barcode` | The item's barcode. Unique in each company. **Add its column grant in the same migration.** |
+
+**New table: `core_attachments`**
+
+| Column | Meaning |
+|---|---|
+| `org_id` | The company. |
+| `entity_type`, `entity_id` | The record that the file belongs to. |
+| `file_path`, `mime`, `bytes`, `sha256` | The file, its type, its size and its fingerprint. |
+| `uploaded_by` | Who uploaded it. |
+| `deleted_at` | Soft delete. |
+
+A person can see an attachment only if they can see its record.
+
+**New table: `core_ai_extractions`** (what the AI read, kept for checks and support)
+
+| Column | Meaning |
+|---|---|
+| `org_id` | The company. |
+| `attachment_id` | The photo or PDF. |
+| `kind` | For now only `supplier_bill`. |
+| `provider`, `model` | Which AI read it. |
+| `result` | What the AI read. |
+| `status` | Done or failed. |
+| `cost_micro` | The estimated cost. |
+| `created_by` | Who started it. |
+
+It never stores a key.
+
+**Existing table `core_integrations`:** add the new provider types (Gemini, Claude, Grok, OpenRouter). Store their keys the same way as today.
+
+**Standard rules for each new table:** `org_id`, row level security, isolation tests, read access only, writes through database
+functions, audit rows.
 
 ## 4. Permissions
 
-| Key | Default | Allows |
+| Permission | Who has it | What it allows |
 |---|---|---|
-| `purchasing.bills.scan` (new) | purchasing staff and up | upload a bill for AI reading (still needs the existing record-bill permission to save) |
-| `core.attachments.add` (new) | anyone who can edit the record | attach files |
-| existing integrations permission | owner, admin | add AI provider keys |
+| **New:** `purchasing.bills.scan` | purchasing staff and higher | Upload a bill for the AI to read. To save it, the person also needs the existing "record bill" permission. |
+| **New:** `core.attachments.add` | anyone who can edit the record | Attach files. |
+| Existing integrations permission | owner, admin | Add AI keys. |
 
 ## 5. API
 
-| Method | Path | Permission | Returns |
-|---|---|---|---|
-| POST | `/v1/core/attachments` | `core.attachments.add` + entity read | stored attachment |
-| POST | `/v1/purchasing/bills/scan` | `purchasing.bills.scan` | `{ extractionId, draft, matches, warnings }`; **503 `not_set_up`** if the company has no AI key with vision |
-| GET | `/v1/inventory/items/by-barcode/:code` | inventory read | item or 404 |
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/v1/core/attachments` | Stores a file on a record. |
+| POST | `/v1/purchasing/bills/scan` | Reads a bill. Gives back the draft, the matches and the warnings. If the company has no AI key that reads images, it answers **503 `not_set_up`**. |
+| GET | `/v1/inventory/items/by-barcode/:code` | Finds an item by barcode. |
 
-AI calls go through `aiService.ts` (on the master-key list: it reads the company's key; the company is always `c.var.tenant.orgId`).
+AI calls go through `aiService.ts`. This file is on the approved list of files that can read the secret key. It always uses the
+signed-in company only.
 
 ## 6. Screens
 
-| Screen | Notes |
+| Screen | What it does |
 |---|---|
-| Supplier bills → "Scan a bill" | camera or upload → reading spinner → side-by-side image and draft with highlighted mismatches → Save |
-| Invoice and order line editors | "Scan" button opens the camera; beeps and adds lines |
-| Attachments panel | on every record page; camera, upload, preview |
-| Settings → AI providers | add a key per provider, choose the default, "Check connection" |
+| Supplier bills → "Scan a bill" | Camera or upload → "Reading…" → the photo and the draft side by side, with differences in colour → Save. |
+| Invoice and order line editors | A "Scan" button opens the camera. It beeps and adds lines. |
+| Attachments panel | On every record page: camera, upload, preview. |
+| Settings → AI providers | Add a key for each provider. Choose the default. "Check connection". |
 
-## 7. Rules and worked example
+## 7. Example
 
-Bill photo: supplier "Nile Chemicals", 3 lines, VAT 14%, total 11,400 EGP. Matched to received PO-0042; line 2 price 520 on the bill
-vs 500 on the order → highlighted "Price differs from the order (+20 per unit)". The person corrects or accepts and saves.
-Sum check: if lines + VAT ≠ printed total, a warning, never a silent fix.
+1. A person takes a photo of a bill from "Nile Chemicals". It has 3 lines, VAT 14%, total 11,400 EGP.
+2. The ERP matches it to received order PO-0042.
+3. Line 2 says 520 on the bill. The order says 500.
+4. The screen shows: "Price is not the same as the order (+20 for each unit)."
+5. The person corrects it or accepts it. Then the person saves.
 
-## 8. Org settings
+If the lines plus VAT do not equal the printed total, the screen shows a warning. The ERP never changes numbers without telling the person.
 
-Default AI provider and model for reading; barcode beep on or off; whether a scanned bill must have its image attached (default yes).
+## 8. Company settings
+
+- The default AI provider and model for reading bills.
+- Barcode beep: on or off.
+- Must a scanned bill keep its photo? Default: yes.
 
 ## 9. Tests
 
-Isolation for attachments, extractions, barcode uniqueness per company; AI provider adapters with recorded fake responses (no real
-calls in tests); matching rules; 503 without a key; camera decoding tested with sample barcode images.
+- Another company cannot see our attachments or AI results. Barcodes are unique only inside one company.
+- The AI connections use recorded fake answers. Tests never call a real AI.
+- Matching rules.
+- 503 `not_set_up` when the company has no AI key.
+- Camera reading with sample barcode images.
 
 ## 10. Rollout
 
-Migration and SQL test on live; deploy; browser check on live with a real phone camera (Ben). Ben installs ZXing in the main checkout
-before S2.
+1. Apply the migration and its SQL test on live.
+2. Deploy.
+3. Ben checks with a real phone camera on the live test site.
+4. Ben installs ZXing in the main folder before step 2.
 
 ## 11. Open questions
 
-1. Barcode: one per item now, several (packs and cartons) later. OK?
-2. A scanned bill for goods **not yet received** (no received order): refuse with "receive the goods first", or offer to start the
-   receipt? (Today's rule: bills belong to received orders.)
-3. Keep the original image of every scanned bill for how long? (Storage cost; legal record-keeping in Egypt is a business question.)
+1. One barcode for each item now, and more (packs, cartons) later. Is this OK?
+2. Someone scans a bill, but the goods have not arrived yet (no received order). Two choices:
+   - refuse it: "Receive the goods first", or
+   - offer to start the receipt.
+3. How long do we keep the photo of each scanned bill? This affects storage cost. Egyptian record-keeping rules are a question for Grant.
