@@ -81,8 +81,9 @@ The ETA layout works now. Later we turn on sending to ETA. Then the only change 
   - Simple PDF libraries (for example pdf-lib) do not join Arabic letters correctly. So we do not use them.
 
 **Where Gotenberg runs**
-- **On-prem:** one more container in the customer's Docker setup (`scripts/onprem/`).
-- **Cloud:** one small container that we host. We must decide where (see section 12).
+- **On-prem:** one more container in the customer's Docker setup (`scripts/onprem/`). **Decided 23 Nov (Ben):** yes, the `pdf` container in the on-prem plan ([2026-11-19-on-prem-deployment-plan.md](../planning/2026-11-19-on-prem-deployment-plan.md)), on the same server, internal network only.
+- **Cloud:** not decided (23 Nov: Ben does not know yet if we sell cloud, on-prem or both; we prepare for both). Cloudflare Containers need the paid Workers plan (no free tier). Options for Ben in [INVOICE_SEND_QUEUE_PLAN.md](INVOICE_SEND_QUEUE_PLAN.md) section 6.
+- **Code:** one "PDF maker" in the API with one setting, so the same code uses Gotenberg on-prem and the cloud choice in the cloud.
 - Our API calls it over HTTPS with a secret.
 - It only converts files. It never reads the database. It keeps no files.
 
