@@ -95,4 +95,20 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Acknowledged. The person who assigned it can see that you are on it.': 'تم الإقرار. يرى من أسند المهمة أنك تعمل عليها.',
   'Marked as done. The person who assigned it will be notified.': 'عُلِّمت كمنجزة. سيُبلَّغ من أسندها.',
   'Task cancelled.': 'أُلغيت المهمة.',
+  // Home tile pages (UX audit 20 Nov, phase 0): Money owed, Sales by product
+  'Customer or supplier': 'العميل أو المورّد',
+  'Still owed': 'المتبقي',
+  'Money owed': 'المبالغ المستحقة',
+  'What customers still owe us, and what we still owe suppliers and for expenses. The most overdue come first.':
+    'ما يدين به العملاء لنا، وما ندين به للمورّدين والمصروفات. الأكثر تأخرًا أولًا.',
+  'Customers owe us': 'مستحق لنا من العملاء',
+  'We owe': 'مستحق علينا',
+  'Nothing is owed to us.': 'لا توجد مبالغ مستحقة لنا.',
+  'We owe nothing.': 'لا ندين بشيء.',
+  'Total {total} · of which overdue {late}': 'الإجمالي {total} · منها متأخر {late}',
+  'Sales by product': 'المبيعات حسب الصنف',
+  'Last {days} days, issued invoices, before VAT. Total {total}.': 'آخر {days} يومًا، الفواتير الصادرة، قبل الضريبة. الإجمالي {total}.',
+  'Quantity sold': 'الكمية المباعة',
+  'Sales before VAT': 'المبيعات قبل الضريبة',
+  Share: 'الحصة',
 };

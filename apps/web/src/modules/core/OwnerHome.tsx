@@ -106,7 +106,7 @@ export function OwnerSummary() {
         ) : <span className="text-sm text-muted-foreground">{tr('No transactions yet. Net profit appears once sales are invoiced and expenses recorded.')}</span>}
       </Card>
 
-      <Card to="/sales/invoices" title={tr('Receivables and payables')} subtitle={tr('Accounts receivable and accounts payable')} period={trf('open balances as of {date}', { date: asOfDay })} tone={moneyTone}>
+      <Card to="/finance/owed" title={tr('Receivables and payables')} subtitle={tr('Accounts receivable and accounts payable')} period={trf('open balances as of {date}', { date: asOfDay })} tone={moneyTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
         <span className="text-sm text-muted-foreground"><Rich text={s.overdueMinor > 0 ? trf('receivable from customers, of which **{late}** is more than 30 days overdue.', { late: money(s.overdueMinor) }) : tr('receivable from customers.')} /></span>
         <span className="text-sm"><Rich text={trf('Accounts payable (suppliers and expenses): **{amount}**.', { amount: money(s.iOweMinor) })} /></span>
@@ -132,7 +132,7 @@ export function OwnerSummary() {
         </ul>
       </Card>
 
-      <Card to="/sales/invoices" title={tr('Top products')} subtitle={tr('Products ranked by sales revenue')} period={tr('last 90 days')}>
+      <Card to="/finance/product-sales" title={tr('Top products')} subtitle={tr('Products ranked by sales revenue')} period={tr('last 90 days')}>
         {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">{tr('No sales yet.')}</span> : (
           <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
             {s.topProducts.map((p, i) => (
