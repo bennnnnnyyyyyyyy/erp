@@ -145,6 +145,8 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'A customer gets the price list of their group; otherwise the item’s own sales price. You can still change the price on an order.':
     'يحصل العميل على قائمة أسعار مجموعته؛ وإلا فسعر البيع الخاص بالصنف. يمكنك تغيير السعر في الطلب.',
   Markup: 'هامش الربح',
+  'Net loss in {month}: {amount}': 'صافي الخسارة في {month}: {amount}',
+  'Net profit in {month}: {amount}': 'صافي الربح في {month}: {amount}',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

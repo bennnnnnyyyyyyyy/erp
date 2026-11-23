@@ -102,7 +102,8 @@ export function OwnerSummary() {
         {active && last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
-              {trf(last.net < 0 ? 'Net loss {amount}' : 'Net profit {amount}', { amount: money(Math.abs(last.net)) })}
+              {/* UX audit 20 Nov: home said "Net loss" (one month) and the profit page "Net profit" (12 months); the big figure now names its month. */}
+              {trf(last.net < 0 ? 'Net loss in {month}: {amount}' : 'Net profit in {month}: {amount}', { month: monthName(last.month), amount: money(Math.abs(last.net)) })}
             </span>
             <span className="text-sm text-muted-foreground">{trf('{month}: sales {revenue}, cost of goods sold {cogs}, running costs {expenses}.', { month: monthName(last.month), revenue: money(last.revenue), cogs: money(last.cogs), expenses: money(last.expenses) })}</span>
             <div className="flex h-12 items-end gap-1" aria-hidden="true">
