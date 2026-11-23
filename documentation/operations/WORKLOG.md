@@ -34,7 +34,8 @@ run or deployed.
 
 **Safety Status.** `npm run typecheck` clean; `npm test`: shared 88, API 737 (7 skipped), web 185, all pass; `biome ci` 0 errors;
 doc links OK; `print.e2e.ts` 8 passed on Windows (desktop Chrome). Not checked: the printing in a real browser against live
-(steps for Ben in `.temp/2026-11-23-track-b2-report.md`); the full smoke test was not rerun.
+(steps for Ben in `.temp/2026-11-23-track-b2-report.md`). Smoke test 4 of 4 pass with one worker (with two, two inventory pages
+timed out from dev-server load).
 
 ## 2026-11-23 — `sql/103` applied to live (invoice printing)
 
