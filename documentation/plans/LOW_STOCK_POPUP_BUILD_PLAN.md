@@ -1,6 +1,6 @@
 # Low stock pop-up: build plan (phase 1a)
 
-**Status:** Draft. Ben must approve it before we build.
+**Status:** Approved by Ben, 23 Nov 2026. Building.
 **Owner:** Ben
 **Plan it builds:** [Low stock, expiry and stock value plan](LOW_STOCK_AND_EXPIRY_PLAN.md), part A only.
 **Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md), step 1a
@@ -23,6 +23,9 @@
 | Must "Remind me" and "Don't show again" write to the audit log? | No | They are personal settings, like the language. The functions write no audit row. |
 | An item with no supplier: what does "Create purchase order" do? | Open the order and ask for a supplier | The draft opens with the item and quantity. The supplier box is empty and has focus. A line says "Choose a supplier." |
 | Who sees the pop-up? | Only people who can reorder | People with `purchasing.orders.create` or `inventory.request.create`. The API checks this, and the screen too. |
+| "Remind me: tomorrow" means? (23 Nov) | The company sets its workdays and start time during setup | New company setting **work week**: workdays (default Sunday to Thursday) and start and end time (default 09:00 to 17:00). It is set in the setup steps (`/start`) and in Settings > General (owners and admins, audited). "Tomorrow" = the next workday at the start time. "Next week" = the first workday of next week at the start time. |
+| People who can make stock requests but not purchase orders? (23 Nov) | "Ask for it" | Their row opens a new stock request for the item. |
+| The pop-up for a person who signs in many times a day | (no answer: the plan's default) | Once each sign-in. |
 
 ## 2. What already exists (we reuse it)
 
@@ -48,6 +51,10 @@
 - It has `revoke all` for `anon` and `authenticated`, then `grant select` only. Writes go through functions.
 - **Mute comes back at zero:** the pop-up list ignores a mute when the available quantity is 0 or less. We need no trigger.
 
+**Company setting `work_week`** (in `organizations.settings`): `{ "days": [0,1,2,3,4], "start": "09:00", "end": "17:00" }`
+(0 = Sunday). Written only by `core_set_work_week(days, start, end)`: owners and admins, audited with before and after. The session
+sends it to the screens. Other parts can use it later (for example the reminders job).
+
 **New column `inv_items.max_level`** (numeric, optional, 0 or more). It needs its **column grant in the same migration**, because
 `inv_items` uses column grants (the lesson from sql/095).
 
@@ -56,7 +63,7 @@
 | Function | What it does |
 |---|---|
 | `inv_low_stock_popup()` | Lists the low items for the caller: available ≤ reorder level, not snoozed, not muted (unless available ≤ 0). It also gives the suggested quantity, the last supplier and that supplier's last cost. It refuses people who cannot reorder. |
-| `inv_snooze_low_stock(item, until)` | "Remind me". `until` must be in the future and at most 8 days ahead. |
+| `inv_snooze_low_stock(item, for)` | "Remind me": `hour`, `tomorrow` or `week`. The database works out the time from the work week and the company's time zone. |
 | `inv_mute_low_stock(item, on)` | "Don't show again", or undo it. |
 | `inv_set_max_level(item, level)` | Owners and admins. Audited, like the reorder level. |
 
@@ -73,7 +80,8 @@ is there (test 092 lists it). No anonymous use.
 | Method | Path | Permission | What it does |
 |---|---|---|---|
 | GET | `/v1/inventory/low-stock/popup` | `inventory.items.read`, plus a reorder permission (checked in the route and in the function) | The pop-up list. |
-| POST | `/v1/inventory/low-stock/:itemId/snooze` | the same | Body `{ for: 'hour' \| 'tomorrow' \| 'week' }`. The server works out the time in the company's time zone ("tomorrow" = 08:00 tomorrow). |
+| POST | `/v1/inventory/low-stock/:itemId/snooze` | the same | Body `{ for: 'hour' \| 'tomorrow' \| 'week' }`. The database works out the time (see the work week). |
+| PUT | `/v1/core/org/work-week` | `core.org.manage` (owners and admins) | The work week. |
 | POST / DELETE | `/v1/inventory/low-stock/:itemId/mute` | the same | Mute or undo. |
 | PUT | `/v1/inventory/items/:id/max-level` | `inventory.items.manage` | Maximum level. |
 
@@ -117,11 +125,6 @@ The suggested reorder point column ("Suggested" with an Accept button, plan part
 4. You merge and deploy. I check in the browser on the live test site (you allowed this on 20 Nov). You sign in first. I check a
    buyer (the pop-up shows) and a worker who cannot reorder (no pop-up), in English and Arabic.
 
-## 8. Open questions (choices with a recommended answer)
+## 8. Open questions
 
-1. **"Tomorrow" in "Remind me":** 08:00 tomorrow in the company's time zone, or 24 hours from now?
-   Recommendation: 08:00 tomorrow.
-2. **The pop-up for an owner who signs in many times a day:** once each sign-in (the plan), or at most once each day?
-   Recommendation: once each sign-in, as the plan says.
-3. **"Ask for it" (a stock request) for people who cannot make purchase orders:** build it now, or show these people no button?
-   Recommendation: build it now. It is small, and it keeps the plan's rule "people who can make a purchase order or a stock request".
+None. All were answered on 23 Nov (section 1).
