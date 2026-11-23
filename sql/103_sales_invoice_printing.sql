@@ -786,7 +786,7 @@ begin
     update public.sal_doc_links set revoked_at = now(), revoked_by = auth.uid() where id = l.id;
   end if;
   insert into public.sal_doc_links (org_id, doc_type, doc_id, token, created_by)
-  values (v_org, p_doc_type, p_doc_id, encode(gen_random_bytes(32), 'hex'), auth.uid()) returning * into l;
+  values (v_org, p_doc_type, p_doc_id, encode(extensions.gen_random_bytes(32), 'hex'), auth.uid()) returning * into l;
   insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary)
   values (v_org, auth.uid(), 'sales.document_link.created', case p_doc_type when 'invoice' then 'sales_invoice' else 'sales_note' end, p_doc_id::text,
           format('Customer link made for %s%s', v_lbl, case when p_new then ' (the old link stopped working)' else '' end));
