@@ -11,7 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-23 — Phase 1a: the low stock pop-up built (`sql/106`, not applied)
+## 2026-11-23 — `sql/106` applied to live (low stock pop-up)
+
+**Objective.** Ben's yes (23 Nov) to apply the phase 1a migration.
+
+**Actions Completed.** A rolled-back dry run of `sql/106_inv_low_stock_popup.sql` on live (no error). Then applied with
+`npx supabase db query --linked -f` from the main checkout. Ran `sql/tests/103` and `sql/tests/092` on live. `sql/README.md` updated.
+
+**Database / System Result.** Live (erp-live):
+- `inv_stock_alert_states` has RLS on, and signed-in users can only read it.
+- `inv_items.max_level` is readable.
+- Anonymous users cannot call the pop-up functions.
+- `core__next_work_start` is internal.
+- No data changed. Companies without a saved work week use Sunday to Thursday, 09:00 to 17:00.
+
+**Safety Status.** Tests 103 and 092 pass on live (both roll back). The screens use it only after Ben merges and deploys the branch.
+
+## 2026-11-23 — Phase 1a: the low stock pop-up built
 
 **Objective.** Build part A of the low stock plan, following the
 [build plan](../plans/LOW_STOCK_POPUP_BUILD_PLAN.md) that Ben approved on 23 Nov. Ben's answers: "Remind me" and "Don't show again"
@@ -41,7 +57,7 @@ sets its workdays and hours at the start ("tomorrow" = the next workday); people
   - a Maximum column on Reorder levels
   - Arabic for every new text
 
-**Database / System Result.** None on live. `sql/106` is written and tested locally only.
+**Database / System Result.** `sql/106` applied to live (see the entry above).
 
 **Safety Status.**
 - Local PGlite, all 103 migrations: 100 of 100 SQL tests pass (103 is new; 106 reruns cleanly).
@@ -51,7 +67,6 @@ sets its workdays and hours at the start ("tomorrow" = the next workday); people
   - the "Suggested" reorder point column (plan: a second step)
   - the end-to-end test pop-up → draft → save → approval (the pop-up is off in the demo build that CI uses; it needs a test on a
     real build)
-- Before live: Ben's yes, a rolled-back dry run, then tests 103 and 092 on live.
 
 ## 2026-11-23 — `sql/105` applied to live (Arabic warehouse names)
 
