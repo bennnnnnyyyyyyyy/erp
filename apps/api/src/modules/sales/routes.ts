@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
@@ -41,7 +42,7 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
     .eq('org_id', orgOf(c))
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(200);
+    .range(...pageRange(c, 200));
   if (id) q = q.eq('id', id);
   const { data, error } = await q;
   if (error) throw error;
@@ -300,7 +301,7 @@ salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c)
     .select('*')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
-    .limit(200);
+    .range(...pageRange(c, 200));
   if (error) throw error;
   const rows = (data ?? []) as (InvoiceRow & Record<string, unknown>)[];
   const ids = rows.map((r) => r.id);

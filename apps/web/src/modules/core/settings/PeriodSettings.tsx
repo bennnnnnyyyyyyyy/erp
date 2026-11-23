@@ -1,3 +1,4 @@
+import { DateInput } from '../../../components/DateInput';
 import { useEffect, useState } from 'react';
 import type { OrgSettings } from '@erp/shared';
 import { Button } from '../../../components/ui/button';
@@ -49,7 +50,7 @@ export function PeriodSettings({ org, onSaved }: { org: OrgSettings; onSaved: ()
 
       <label>
         {tr('Lock date')}
-        <input type="date" max={today} value={lockDate} onChange={(e) => setLockDate(e.target.value)} disabled={!isOwner} />
+        <DateInput max={today} value={lockDate} onChange={(e) => setLockDate(e.target.value)} disabled={!isOwner} />
         <span className="hint muted">
           {tr('Nothing dated on or before this day can be created or voided: invoices, supplier invoices, expenses and payments. Only an owner can change it, and every change is recorded in the audit log.')}
         </span>

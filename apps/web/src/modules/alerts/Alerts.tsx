@@ -95,7 +95,7 @@ export function AlertsPage() {
             <label>{tr('Recipients')}
               <select value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })}><option value="">{tr('Choose…')}</option>{recipientOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
             </label>
-            <label>{tr('Repeat interval (hours)')}<input inputMode="numeric" value={f.repeatHours} onChange={(e) => setF({ ...f, repeatHours: e.target.value })} /></label>
+            <label>{tr('Send again after (hours)')}<input inputMode="numeric" value={f.repeatHours} onChange={(e) => setF({ ...f, repeatHours: e.target.value })} /></label>
           </div>
           <div><Button disabled={busy || !f.name.trim() || !f.to || (needsNumber && f.threshold === '')} onClick={() => run(async () => {
             await api('/v1/alerts/rules', { method: 'POST', body: JSON.stringify({ name: f.name, kind: f.kind, itemId: f.itemId, threshold: f.threshold === '' ? null : Number(f.threshold), repeatHours: Number(f.repeatHours) || 24, recipients: [parse(f.to)] }) });
@@ -105,8 +105,8 @@ export function AlertsPage() {
       )}
 
       <h2 className="related">{tr('Rules')}</h2>
-      <p className="muted small">{tr('Each rule is evaluated every five minutes against current stock, batches and invoices.')}</p>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Rule')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Recipients')}</th><th scope="col">{tr('Repeat interval')}</th><th scope="col">{tr('Times triggered')}</th><th scope="col">{tr('State')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
+      <p className="muted small">{tr('The rules are checked every five minutes.')}</p>
+      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Rule')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Recipients')}</th><th scope="col">{tr('Send again after')}</th><th scope="col">{tr('Times sent')}</th><th scope="col">{tr('State')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
             <td>{ruleText(r)}</td>

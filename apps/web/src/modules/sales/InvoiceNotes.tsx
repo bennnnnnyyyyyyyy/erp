@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { hasPermission, formatMoney, type Member } from '@erp/shared';
+import { hasPermission, formatMoney } from '@erp/shared';
 import { Modal } from '../../components/Modal';
 import { ErrorToast } from '../../components/Toast';
 import { Button } from '../../components/ui/button';
@@ -13,7 +13,8 @@ import { useLoad } from '../../lib/useLoad';
 import { Link } from '../../lib/router';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
-import { canCancel, canDecide, creditableLeft, mayDecideOwn, noteVatTotals, type NoteForMath } from './noteMath';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
+import { canCancel, canDecide, creditableLeft, noteVatTotals, type NoteForMath } from './noteMath';
 
 // Credit and debit notes on one sales invoice (sql/037, sql/043; routes in apps/api/src/modules/sales/notes.ts). A note is a request:
 // a different owner or admin approves it (a sole owner may approve their own, sql/063, 065). The database refuses what is not allowed
@@ -59,10 +60,6 @@ export function InvoiceNotes({ invoice, itemOf, onChanged }: { invoice: NoteInvo
   const canRead = hasPermission(session.permissions, 'sales.notes.read');
   const canCreate = hasPermission(session.permissions, 'sales.notes.create');
   const canApprove = hasPermission(session.permissions, 'sales.notes.approve');
-  // Approve / Reject on the person's own note only when the database allows it (UX audit 23 Nov; Track B took this fix). Until the
-  // members list is known the own-note buttons stay hidden: the database is the real check either way.
-  const members = useLoad(() => (canApprove ? api<Member[]>('/v1/core/members').catch(() => [] as Member[]) : Promise.resolve([] as Member[])));
-  const own = { userId: session.userId ?? '', mayDecideOwn: members.data ? mayDecideOwn({ userId: session.userId ?? '', role: session.role }, members.data, !!session.org?.ownerSelfApproval) : false };
   if (!canRead) return null;
 
   const list = notes.data ?? [];
@@ -100,7 +97,8 @@ export function InvoiceNotes({ invoice, itemOf, onChanged }: { invoice: NoteInvo
               <td>{n.decidedBy ? <>{who(n.decidedBy)}{n.decidedAt ? <div className="muted small">{formatDateTime(n.decidedAt, session.org)}</div> : null}{n.decisionComment ? <div className="muted small">“{n.decisionComment}”</div> : null}</> : <span className="muted">—</span>}</td>
               <td>
                 <div className="form-actions">
-                  {canDecide(n, canApprove, own) && (
+                  {canApprove && n.status === 'submitted' && !mayDecide(session, n.requesterId) && <span className="muted small">{tr(OWN_REQUEST_TEXT)}</span>}
+                  {canDecide(n, canApprove, mayDecide(session, n.requesterId)) && (
                     <>
                       <Button size="sm" disabled={busy} onClick={() => setDecide({ note: n, decision: 'approve' })}>{tr('Approve')}</Button>
                       <Button size="sm" variant="outline" disabled={busy} onClick={() => setDecide({ note: n, decision: 'reject' })}>{tr('Reject')}</Button>

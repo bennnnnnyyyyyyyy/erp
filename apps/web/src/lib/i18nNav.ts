@@ -155,4 +155,7 @@ export const NAV_AR: Record<string, string> = {
   admin: 'مدير',
   member: 'موظف',
   viewer: 'مشاهد',
+  // Home tile pages (UX audit 20 Nov, phase 0)
+  'Money owed': 'المبالغ المستحقة',
+  'Sales by product': 'المبيعات حسب الصنف',
 };

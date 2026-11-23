@@ -78,6 +78,8 @@ export function App() {
         onSwitchOrg={() => chooseOrg(null)}
         onSignOut={() => {
           chooseOrg(null);
+          // The low stock pop-up shows once each sign-in (components/LowStockPopup.tsx): forget that it was shown.
+          for (const k of Object.keys(sessionStorage)) if (k.startsWith('lowStockShown:')) sessionStorage.removeItem(k);
           supabase.auth.signOut();
         }}
       />

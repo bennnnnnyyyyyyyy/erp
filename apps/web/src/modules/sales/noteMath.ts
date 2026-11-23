@@ -37,32 +37,11 @@ export function netInvoiceMinor(totalMinor: number, creditedMinor: number, debit
   return totalMinor - creditedMinor + debitedMinor;
 }
 
-/** Whether a waiting note should show Approve / Reject: the person holds the approve permission and the note is still waiting.
- *  A note the person requested themselves shows them only when the database would allow it (UX audit 23 Nov: they were shown and
- *  then refused): `own.userId` is the person, `own.mayDecideOwn` whether they may decide their own requests (see mayDecideOwn). */
-export function canDecide(
-  note: { status: string; requesterId?: string },
-  hasApprove: boolean,
-  own?: { userId: string; mayDecideOwn: boolean },
-): boolean {
-  if (!hasApprove || note.status !== 'submitted') return false;
-  if (own && note.requesterId === own.userId && !own.mayDecideOwn) return false;
-  return true;
-}
-
-/**
- * Whether this person may decide their own note, as the database allows: they are the company's only active owner or admin (decisions
- * D1 and D1b, sql/063 and sql/065), or they are an owner and the company switched on "owners may approve their own" (D1c, sql/077).
- * Admins and members never decide their own otherwise.
- */
-export function mayDecideOwn(
-  me: { userId: string; role: string | null },
-  members: { userId: string; role: string; status: string }[],
-  ownerSelfApproval: boolean,
-): boolean {
-  if (me.role !== 'owner' && me.role !== 'admin') return false;
-  if (me.role === 'owner' && ownerSelfApproval) return true;
-  return !members.some((m) => m.userId !== me.userId && m.status === 'active' && (m.role === 'owner' || m.role === 'admin'));
+/** Whether a waiting note should show Approve / Reject: the person holds the approve permission, the note is still waiting, and it
+ *  is not their own unless they may approve their own (`ownOk`, lib/approvals.ts: the only owner or admin, or D1c; sql/063, 065, 077).
+ *  UX audit 20 Nov: Approve showed on one's own credit note and the database refused it. */
+export function canDecide(note: { status: string }, hasApprove: boolean, ownOk = true): boolean {
+  return hasApprove && note.status === 'submitted' && ownOk;
 }
 
 /** Whether Cancel is offered: only while waiting, to the requester (owners and admins may also cancel, as the database allows). */

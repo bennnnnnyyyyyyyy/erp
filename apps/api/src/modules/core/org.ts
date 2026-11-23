@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import { DATE_FORMATS, type DateFormat, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { userDb } from '../../lib/db.user';
 import { ok } from '../../lib/response';
@@ -253,6 +254,30 @@ orgRoutes.post('/owner-self-approval', requirePermission('core.org.manage'), asy
   if (typeof on !== 'boolean') invalid('on must be true or false');
   await callRpc<boolean>(userDb(c), 'core_set_owner_self_approval', { p_on: on });
   return ok(c, { on });
+});
+
+// The company's work week (sql/106): owners and admins; the database checks again and audits it. "Remind me: tomorrow" in the low
+// stock pop-up uses it (Ben, 23 Nov).
+orgRoutes.put('/work-week', requirePermission('core.org.manage'), async (c) => {
+  const body = await jsonBody(c);
+  const days = body.days;
+  if (!Array.isArray(days) || !days.length || days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) invalid('days are 0 (Sunday) to 6');
+  const time = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+  if (
+    typeof body.start !== 'string' ||
+    typeof body.end !== 'string' ||
+    !time.test(body.start) ||
+    !time.test(body.end) ||
+    body.start >= body.end
+  )
+    invalid('start and end are times like 09:00, and the start is before the end');
+  try {
+    const saved = await callRpc<unknown>(userDb(c), 'core_set_work_week', { p_days: days, p_start: body.start, p_end: body.end });
+    return ok(c, saved);
+  } catch (err) {
+    if (isMissingSchema(err)) throw new HttpError(503, 'The work week needs a database update (sql/106).', 'not_set_up');
+    throw err;
+  }
 });
 
 orgRoutes.post('/tour', requirePermission('core.org.manage'), async (c) => {

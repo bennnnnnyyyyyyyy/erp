@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { hasPermission } from '@erp/shared';
 import { api } from '../lib/api';
-import { formatDateTime } from '../lib/format';
+import { readableMessage } from '../lib/auditText';
+import { formatDateTime, formatDay } from '../lib/format';
 import { Link, navigate } from '../lib/router';
 import { useSession } from '../session';
+import { LOW_STOCK_EVENT } from './LowStockPopup';
 
 import { tr, trf } from '../lib/i18n';
 export type AppNotification = { id: string; title: string; body: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string };
+
+/** The page each kind of alert rule opens. */
+const ALERT_TARGET: Record<string, string> = {
+  stock_below: '/inventory/reorder-levels',
+  forecast_stockout: '/inventory/forecast',
+  expiry_within: '/inventory/batches',
+  receivable_overdue: '/finance/owed',
+  profit_negative: '/finance/overview',
+};
 
 /** Where a notification leads when clicked. */
 export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId'>): string | null {
   if (n.entityType === 'stock_request' && n.entityId) return `/inventory/requests/${n.entityId}`;
   if (n.entityType === 'task' && n.entityId) return `/tasks/${n.entityId}`;
+  // Alerts (sql/104 gives them "alert:<rule kind>"; UX audit 20 Nov: they opened nothing).
+  if (n.entityType?.startsWith('alert:')) return ALERT_TARGET[n.entityType.slice(6)] ?? '/alerts';
   return null;
 }
 
@@ -26,8 +39,17 @@ export function NotificationBell() {
   const button = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
+  // A low stock alert that arrives while the person works opens the low stock pop-up (sql/106, phase 1a).
+  const seen = useRef<Set<string> | null>(null);
   const load = useCallback(() => {
-    api<{ items: AppNotification[]; unread: number }>('/v1/messaging/notifications').then(setData).catch(() => undefined);
+    api<{ items: AppNotification[]; unread: number }>('/v1/messaging/notifications')
+      .then((d) => {
+        const fresh = seen.current ? d.items.filter((n) => !seen.current!.has(n.id) && !n.readAt && n.entityType === 'alert:stock_below') : [];
+        seen.current = new Set(d.items.map((n) => n.id));
+        if (fresh.length) window.dispatchEvent(new CustomEvent(LOW_STOCK_EVENT));
+        setData(d);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -90,7 +112,7 @@ export function NotificationBell() {
             {(data?.items ?? []).slice(0, 8).map((n) => (
               <button key={n.id} className={n.readAt ? 'bell-item' : 'bell-item unread'} onClick={() => openItem(n)}>
                 <span className="bell-title">{n.title}</span>
-                {n.body && <span className="muted small">{n.body}</span>}
+                {n.body && <MessageBody body={n.body} />}
                 <span className="muted small">{formatDateTime(n.createdAt, session.org)}</span>
               </button>
             ))}
@@ -99,5 +121,17 @@ export function NotificationBell() {
         </div>
       )}
     </div>
+  );
+}
+
+/** A notification's text: its first line, money and dates formatted, and "+ N more" for a list (lib/auditText.ts, UX audit 20 Nov). */
+export function MessageBody({ body }: { body: string }) {
+  const session = useSession();
+  const { first, more } = readableMessage(body, (d) => formatDay(d, session.org));
+  return (
+    <span className="muted small">
+      {first}
+      {more > 0 ? <> {trf('+ {count} more', { count: more })}</> : null}
+    </span>
   );
 }

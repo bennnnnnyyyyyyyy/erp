@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { localName, unitLabel } from '../../lib/names';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
@@ -55,10 +56,11 @@ export function StockPage() {
 
   const allColumns: Column<StockLine>[] = [
     { key: 'sku', label: 'SKU', value: (r) => r.sku, render: (r) => <code>{r.sku}</code> },
-    { key: 'name', label: tr('Item'), value: (r) => r.name, render: (r) => <strong>{r.name}</strong> },
+    { key: 'name', label: tr('Item'), value: (r) => localName(r), render: (r) => <strong>{localName(r)}</strong> },
     { key: 'wh', label: tr('Warehouse'), value: (r) => (r.warehouseId ? cat.warehouseName(r.warehouseId) : ''), render: (r) => (r.warehouseId ? cat.warehouseName(r.warehouseId) : <span className="muted">{tr('No stock yet')}</span>) },
-    { key: 'ar', label: tr('Arabic name'), value: (r) => r.nameAr, render: (r) => <span dir="rtl">{r.nameAr}</span> },
-    { key: 'uom', label: tr('Unit'), value: (r) => r.uom },
+    // UX audit 20 Nov: the Arabic name shows as the name in Arabic mode; its own column is hidden but still searched and exported.
+    { key: 'ar', label: tr('Arabic name'), value: (r) => r.nameAr, hidden: true },
+    { key: 'uom', label: tr('Unit'), value: (r) => unitLabel(r.uom) },
     // Status of the item (all warehouses) against its reorder level, which is set per item. "Out" when nothing is available anywhere.
     { key: 'level', label: tr('Status'), value: (r) => (r.totalAvailable <= 0 ? 'out' : r.reorderLevel === null ? '' : isLow(r, r.totalAvailable) ? 'low' : 'ok'), render: (r) =>
       r.totalAvailable <= 0
@@ -70,8 +72,8 @@ export function StockPage() {
             : <Pill status="received" label={tr('OK')} /> },
     // More about each item (walkthrough fix, 10 Nov 2026: "i should have more options"): the reorder level, whether it is tracked by batch,
     // and, for owners and admins only (the database refuses others), the average cost.
-    { key: 'reorder', label: tr('Reorder level'), value: (r) => r.reorderLevel ?? -1, align: 'right', render: (r) => (r.reorderLevel === null ? <span className="muted">—</span> : qty(r.reorderLevel)) },
-    { key: 'batches', label: tr('Batch tracked'), value: (r) => (r.tracksBatches ? 'yes' : 'no'), render: (r) => (r.tracksBatches ? tr('Yes') : <span className="muted">{tr('No')}</span>) },
+    { hidden: true, key: 'reorder', label: tr('Reorder level'), value: (r) => r.reorderLevel ?? -1, align: 'right', render: (r) => (r.reorderLevel === null ? <span className="muted">—</span> : qty(r.reorderLevel)) },
+    { hidden: true, key: 'batches', label: tr('Batch tracked'), value: (r) => (r.tracksBatches ? 'yes' : 'no'), render: (r) => (r.tracksBatches ? tr('Yes') : <span className="muted">{tr('No')}</span>) },
     ...(isManager
       ? [{
           key: 'cost',
@@ -96,6 +98,8 @@ export function StockPage() {
         }]
       : []),
   ];
+  // UX audit 20 Nov: 10 columns, the name wrapped. Reorder level and batch tracking have their own pages (and Status shows low stock);
+  // they are hidden here but still searched and exported.
   // Columns that are empty in every row are left out (for example the Arabic name when no item has one), so the table fits a laptop.
   const hidden = emptyColumnKeys(rows, {
     ar: (r) => r.nameAr,
@@ -157,7 +161,7 @@ export function StockPage() {
             <>
               <select className="narrow-select" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} aria-label={tr('Warehouse')}>
                 <option value="all">{tr('All warehouses')}</option>
-                {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
               </select>
               {canAddWarehouse && warehouseId !== 'all' && <Button variant="outline" type="submit" onClick={() => setEditingWarehouse(true)}>{tr('Edit warehouse')}</Button>}
               {canAddWarehouse && <Button variant="outline" type="submit" onClick={() => setAddingWarehouse(true)}>{tr('Add warehouse')}</Button>}

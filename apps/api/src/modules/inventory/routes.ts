@@ -9,6 +9,7 @@ import { registerItemRoutes } from './items';
 import { registerPartyCodeRoutes } from './partyCodes';
 import { registerRequestRoutes } from './requests';
 import { registerTransferRoutes } from './transfers';
+import { registerLowStockRoutes } from './lowStock';
 import { registerWarehouseRoutes } from './warehouses';
 
 // Inventory slice 1 (documentation/plans/INVENTORY_PLAN.md). Reads use the signed-in user's client (row level
@@ -22,6 +23,7 @@ import { registerWarehouseRoutes } from './warehouses';
 export const inventoryRoutes = new Hono<AppEnv>();
 
 registerWarehouseRoutes(inventoryRoutes);
+registerLowStockRoutes(inventoryRoutes);
 registerItemRoutes(inventoryRoutes);
 registerGroupRoutes(inventoryRoutes);
 registerPartyCodeRoutes(inventoryRoutes);

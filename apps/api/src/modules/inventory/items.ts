@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
@@ -19,6 +20,7 @@ type ItemRow = {
   storage_condition_id?: string | null;
   default_tax_rate_id?: string | null;
   group_id?: string | null;
+  max_level?: number | null;
 };
 const toItem = (r: ItemRow) => ({
   id: r.id,
@@ -33,20 +35,26 @@ const toItem = (r: ItemRow) => ({
   vatRateId: r.default_tax_rate_id ?? null,
   /** The item's group (sql/095), or null. */
   groupId: r.group_id ?? null,
+  /** The level a reorder fills stock up to (sql/106), or null. */
+  maxLevel: r.max_level == null ? null : Number(r.max_level),
 });
 
 const ITEM_COLUMNS = 'id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id, default_tax_rate_id';
 // group_id comes with sql/095; before it is applied the item list falls back to the columns above, so nothing else breaks.
 const ITEM_COLUMNS_WITH_GROUP = `${ITEM_COLUMNS}, group_id`;
+// max_level comes with sql/106 (the low stock pop-up); the same fallback applies.
+const ITEM_COLUMNS_WITH_MAX = `${ITEM_COLUMNS_WITH_GROUP}, max_level`;
 
 export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
     const list = (columns: string) =>
       userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
-    let { data, error } = await list(ITEM_COLUMNS_WITH_GROUP);
     // Also on "permission denied" (42501): inv_items is read through column grants, and a new column without its grant must not
     // block every screen that lists items (sql/095 shipped without one; fixed by sql/096).
-    if (error && (isMissingSchema(error) || (error as { code?: string }).code === '42501')) ({ data, error } = await list(ITEM_COLUMNS));
+    const fallBack = (e: unknown) => !!e && (isMissingSchema(e) || (e as { code?: string }).code === '42501');
+    let { data, error } = await list(ITEM_COLUMNS_WITH_MAX);
+    if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS_WITH_GROUP));
+    if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS));
     if (error) throw error;
     return ok(c, ((data ?? []) as unknown as ItemRow[]).map(toItem));
   });
@@ -78,7 +86,7 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
       .select('id, item_id, warehouse_id, qty, kind, request_id, ref, posted_by, posted_at, inv_requests(number)')
       .eq('org_id', orgOf(c));
     if (itemId) query = query.eq('item_id', itemId);
-    const { data, error } = await query.order('id', { ascending: false }).limit(500);
+    const { data, error } = await query.order('id', { ascending: false }).range(...pageRange(c, 500));
     if (error) throw error;
     type LedgerRow = {
       id: number;

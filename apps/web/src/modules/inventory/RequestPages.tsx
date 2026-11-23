@@ -1,4 +1,7 @@
+import { localName } from '../../lib/names';
+import { readOrderLink } from '../../lib/orderLink';
 import { useState, type FormEvent } from 'react';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -12,6 +15,7 @@ import { usePeople } from '../../lib/people';
 import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { parseAmount } from '../../lib/numbers';
 import { ConfirmButton } from '../../components/FormToggle';
@@ -23,7 +27,7 @@ import { qty, StatusPill, Steps, useCatalog } from './inventoryShared';
 export function RequestsList() {
   const cat = useCatalog();
   const who = usePeople();
-  const requests = useLoad(() => api<DemoRequest[]>('/v1/inventory/requests'));
+  const requests = usePaged<DemoRequest>('/v1/inventory/requests', 200);
   const session = useSession();
   const [filter, setFilter] = useState<'all' | 'submitted'>('all');
   const rows = (requests.data ?? []).filter((r) => filter === 'all' || r.status === 'submitted');
@@ -44,7 +48,7 @@ export function RequestsList() {
 
   return (
     <section className="page">
-      <h1>{tr('Stock requests')}</h1>
+      <h1>{tr('Requests')}</h1>
       <p className="muted">{tr('Goods are issued only against an approved request.')}</p>
       {requests.data && cat.ready ? (
         <ListView
@@ -53,6 +57,7 @@ export function RequestsList() {
           columns={columns}
           rowKey={(r) => r.id}
           rowHref={(r) => `/inventory/requests/${r.id}`}
+          more={{ hasMore: requests.hasMore, loading: requests.loading, onMore: requests.more }}
           empty={tr('No requests yet. A request takes goods out of a warehouse; a manager approves it first.')}
           emptyAction={hasPermission(session.permissions, 'inventory.request.create') ? <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button> : undefined}
           toolbar={
@@ -100,7 +105,11 @@ export function NewRequest() {
   const lastKey = `erp.request.warehouse.${session.org?.id ?? ''}`;
   const warehouseId = chosenWarehouse || defaultWarehouse(cat.warehouses.data ?? [], stock.data ?? [], past.data ?? [], lastKey);
   const [reason, setReason] = useState('');
-  const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
+  // "Ask for it" in the low stock pop-up (sql/106) opens this form with ?item=&qty=.
+  const [lines, setLines] = useState(() => {
+    const link = readOrderLink(window.location.search);
+    return [{ itemId: link.itemId, qty: link.qty || '1' }];
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -137,7 +146,7 @@ export function NewRequest() {
           <label>
             {tr('Issue from warehouse')}
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-              {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
             </select>
           </label>
           <label>{tr('Reason')}<input required value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tr('Customer order, internal use…')} /></label>
@@ -240,14 +249,18 @@ export function RequestPage() {
       {r.status === 'submitted' && isManager && (
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
-          {mine && !demoMode && (
+          {mine && !demoMode && mayDecide(session, r.requesterId) && (
             <p className="muted small">{tr('You made this request. If you are the only owner or manager, you can approve it yourself and the history marks it as self-approved. Otherwise another owner or manager must approve it.')}</p>
           )}
-          <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
-          <div className="form-actions">
-            <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>{tr('Approve')}</Button>
-            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
-          </div>
+          {!demoMode && !mayDecide(session, r.requesterId) ? <p className="muted small">{tr(OWN_REQUEST_TEXT)}</p> : (
+            <>
+              <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
+              <div className="form-actions">
+                <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approved. The stock can now be issued.')}>{tr('Approve')}</Button>
+                <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
+              </div>
+            </>
+          )}
           {demoMode && <p className="hint muted small">{tr('Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
       )}

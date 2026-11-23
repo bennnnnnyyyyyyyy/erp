@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -62,7 +63,7 @@ tasksRoutes.get('/', requirePermission('tasks.tasks.read'), async (c) => {
     .select(COLUMNS)
     .eq('org_id', c.var.tenant.orgId)
     .order('created_at', { ascending: false })
-    .limit(200);
+    .range(...pageRange(c, 200));
   if (error) throw error;
   return ok(c, ((data ?? []) as TaskRow[]).map(toTask));
 });

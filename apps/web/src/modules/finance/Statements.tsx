@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import type { ItemStatementLine, PartyStatementLine } from '@erp/shared';
 import { Loading } from '../../components/Loading';
@@ -61,8 +62,8 @@ export function StatementsPage() {
         <label>{kind === 'customer' ? tr('Customer') : kind === 'supplier' ? tr('Supplier') : tr('Item')}
           <SearchSelect value={id} onChange={setId} options={options.map((o) => ({ value: o.id, label: o.code ? `${o.code} · ${o.name}` : o.name }))} />
         </label>
-        <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>{tr('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>{tr('To')}<DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <Button variant="outline" disabled={!chosen || !from || !to || to < from} onClick={show}>{tr('Show')}</Button>
         {shown ? (
           <>

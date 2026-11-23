@@ -1,3 +1,4 @@
+import { localName } from '../../lib/names';
 import { useState, type FormEvent } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -52,14 +53,14 @@ export function ApprovalPoliciesPage() {
   return (
     <section className="page">
       <h1>{tr('Approval policies')}</h1>
-      <p className="muted">{tr('Thresholds above which a stock request needs more than one approval.')}</p>
+      <p className="muted">{tr('Ask for a second approval when a stock request is above an amount.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canManage && (
         <FormToggle label={tr('Add or update a policy')}><form className="stack" onSubmit={save}>
           <div className="form-row">
             <label>{tr('From total quantity')}<input required type="number" min="0" step="0.001" value={form.minTotalQty} onChange={(e) => setForm((f) => ({ ...f, minTotalQty: e.target.value }))} /></label>
             <label>{tr('Required approvals')}<select value={form.requiredApprovals} onChange={(e) => setForm((f) => ({ ...f, requiredApprovals: e.target.value }))}><option value="1">{tr('1 approval')}</option><option value="2">{tr('2 approvals')}</option><option value="3">{tr('3 approvals')}</option></select></label>
-            <label>{tr('Warehouse')}<select value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('All warehouses')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+            <label>{tr('Warehouse')}<select value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('All warehouses')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           </div>
           <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : tr('Save policy')}</Button></div>
         </form></FormToggle>

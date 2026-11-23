@@ -1,4 +1,5 @@
 import { formatQty } from '../../lib/numbers';
+import { localName } from '../../lib/names';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse, RequestStatus } from '../../lib/demoInventory';
 import { useLoad } from '../../lib/useLoad';
@@ -42,7 +43,7 @@ export function Steps({ status }: { status: RequestStatus }) {
 export function useCatalog() {
   const items = useLoad(() => api<DemoItem[]>('/v1/inventory/items'));
   const warehouses = useLoad(() => api<DemoWarehouse[]>('/v1/inventory/warehouses'));
-  const itemName = (id: string) => items.data?.find((i) => i.id === id)?.name ?? id;
-  const warehouseName = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? id;
+  const itemName = (id: string) => localName(items.data?.find((i) => i.id === id)) || id;
+  const warehouseName = (id: string) => localName(warehouses.data?.find((w) => w.id === id)) || id;
   return { items, warehouses, itemName, warehouseName, ready: Boolean(items.data && warehouses.data) };
 }

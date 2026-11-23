@@ -1,4 +1,6 @@
+import { localName } from '../../lib/names';
 import { useState, type FormEvent } from 'react';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { hasPermission } from '@erp/shared';
@@ -61,14 +63,14 @@ export function AdjustmentsPage() {
 
   return (
     <section className="page">
-      <h1>{tr('Stock adjustments')}</h1>
-      <p className="muted">{tr('Cycle counts. A manager approves any variance before it is posted.')}</p>
+      <h1>{tr('Adjustments')}</h1>
+      <p className="muted">{tr('Correct a quantity after a count. A manager approves the difference before stock changes.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canCount && <FormToggle label={tr('Correct a quantity')} open={formOpen} onOpenChange={setFormOpen}><form className="stack" onSubmit={submit}>
         <p className="muted small">{tr('The books say one number; type what is really there. Your manager will be asked to approve the difference, and stock changes only after they do.')}</p>
         <div className="form-row">
           <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
-          <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('Counted quantity')}<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">{tr('System quantity:')} {expected}</span>}</label>
         </div>
         <label>{tr('Reason')}<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={tr('Physical count, damaged stock…')} /></label>
@@ -78,7 +80,7 @@ export function AdjustmentsPage() {
         <table>
           <thead><tr><th scope="col">{tr('Count')}</th><th scope="col">{tr('Item')}</th><th scope="col">{tr('Warehouse')}</th><th scope="col" className="right">{tr('Book')}</th><th scope="col" className="right">{tr('Counted')}</th><th scope="col" className="right">{tr('Difference')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead>
           <tbody>
-            {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && <><Button type="submit" onClick={() => act(a.id, 'approve')}>{tr('Approve')}</Button> <Button variant="outline" type="submit" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</Button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <Button variant="outline" type="submit" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</Button>}</td></tr>)}
+            {adjustments.data.map((a) => <tr key={a.id}><td><code>{a.number}</code><div className="muted small">{a.reason}</div></td><td>{itemName(a.itemId)}</td><td>{warehouseName(a.warehouseId)}</td><td className="right">{a.expectedQty}</td><td className="right"><strong>{a.countedQty}</strong></td><td className={`right ${a.delta < 0 ? 'overdue' : ''}`}>{a.delta > 0 ? `+${a.delta}` : a.delta}</td><td><span className={`pill st-${a.status === 'applied' ? 'approved' : a.status === 'rejected' ? 'rejected' : a.status}`}>{tr(ADJUSTMENT_STATUS[a.status])}</span></td><td>{a.status === 'submitted' && canApprove && !mayDecide(session, a.requesterId) && <span className="muted small">{tr(OWN_REQUEST_TEXT)}</span>}{a.status === 'submitted' && canApprove && mayDecide(session, a.requesterId) && <><Button type="submit" onClick={() => act(a.id, 'approve')}>{tr('Approve')}</Button> <Button variant="outline" type="submit" onClick={() => act(a.id, 'reject')}>{tr('Reject')}</Button></>}{a.status === 'submitted' && !canApprove && a.requesterId === session.userId && <Button variant="outline" type="submit" onClick={() => act(a.id, 'cancel')}>{tr('Cancel')}</Button>}</td></tr>)}
             {adjustments.data.length === 0 && <tr><td colSpan={8} className="muted empty">{tr('No corrections yet. Use this when the books say one number and the shelf shows another.')}{canCount && !formOpen && <div className="empty-action"><Button onClick={() => setFormOpen(true)}>{tr('Correct a quantity')}</Button></div>}</td></tr>}
           </tbody>
         </table>

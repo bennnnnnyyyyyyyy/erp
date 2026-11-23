@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import {
   ASSET_LINES,
@@ -114,8 +115,8 @@ export function IncomeStatementPage() {
       <p className="muted">{tr('Revenue, costs and profit for a period, from posted entries in the books, laid out as the Egyptian Accounting Standards present them. Each account opens its entries.')}</p>
       <Notice message={message} />
       <div className="form-row">
-        <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>{tr('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>{tr('To')}<DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />{tr('Compare with the same period last year')}</label>
         <Button variant="outline" disabled={!from || !to || to < from} onClick={() => { setShown({ from, to, compare }); data.reload(); }}>{tr('Show')}</Button>
         <Button variant="ghost" disabled={busy} onClick={() => run(async () => {
@@ -175,7 +176,7 @@ export function BalanceSheetPage() {
       <Notice message={message} />
       <div className="form-row">
         {/* Not tr('On'): that word is the "switched on" label elsewhere, and read "مفعّلة" (enabled) here (19 Nov). */}
-        <label>{tr('As at')}<input type="date" value={at} onChange={(e) => setAt(e.target.value)} /></label>
+        <label>{tr('As at')}<DateInput value={at} onChange={(e) => setAt(e.target.value)} /></label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />{tr('Compare with the same day last year')}</label>
         <Button variant="outline" disabled={!at} onClick={() => { setShown({ at, compare }); data.reload(); }}>{tr('Show')}</Button>
         <Button variant="ghost" disabled={busy} onClick={() => run(async () => {

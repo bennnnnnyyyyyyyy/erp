@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { localName, unitLabel } from '../../lib/names';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
@@ -18,7 +19,7 @@ export function ReorderLevelsPage() {
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
   const session = useSession();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const canManage = session.role === 'owner' || session.role === 'admin';
@@ -31,25 +32,47 @@ export function ReorderLevelsPage() {
     return { ...item, onHand, reserved, available, low: item.reorderLevel !== null && available <= item.reorderLevel };
   });
 
-  async function save(row: ReorderLine) {
-    const raw = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
-    const level = raw.trim() === '' ? null : Number(raw);
-    if (level !== null && (!Number.isFinite(level) || level < 0)) {
-      setError('Reorder level must be zero or more, or empty.');
+  // UX audit 20 Nov: a black Save button on every row. Now one "Save changes" saves every changed box. Each row has two boxes: the
+  // reorder level and (sql/106, low stock pop-up) the maximum level an order fills stock up to. Drafts are keyed "<item id>:level|max".
+  type Field = 'level' | 'max';
+  const savedOf = (row: ReorderLine, f: Field) => {
+    const v = f === 'level' ? row.reorderLevel : (row.maxLevel ?? null);
+    return v === null ? '' : String(v);
+  };
+  const valueOf = (row: ReorderLine, f: Field) => drafts[`${row.id}:${f}`] ?? savedOf(row, f);
+  const changed = rows.flatMap((row) =>
+    (['level', 'max'] as Field[]).filter((f) => drafts[`${row.id}:${f}`] !== undefined && drafts[`${row.id}:${f}`]!.trim() !== savedOf(row, f)).map((f) => ({ row, f })),
+  );
+
+  async function saveAll() {
+    const bad = changed.find(({ row, f }) => {
+      const raw = drafts[`${row.id}:${f}`]!.trim();
+      return raw !== '' && (!Number.isFinite(Number(raw)) || Number(raw) < 0);
+    });
+    if (bad) {
+      setError(trf('{sku}: a reorder level must be zero or more, or empty.', { sku: bad.row.sku }));
       return;
     }
-    setSaving(row.id);
+    setSaving(true);
     setNotice(null);
     setError(null);
+    let saved = 0;
     try {
-      await api(`/v1/inventory/items/${row.id}/reorder-level`, { method: 'POST', body: JSON.stringify({ level }) });
-      setDrafts((current) => { const next = { ...current }; delete next[row.id]; return next; });
-      cat.items.reload();
-      setNotice(trf('{sku} reorder level saved.', { sku: row.sku }));
+      for (const { row, f } of changed) {
+        const key = `${row.id}:${f}`;
+        const raw = drafts[key]!.trim();
+        const level = raw === '' ? null : Number(raw);
+        if (f === 'level') await api(`/v1/inventory/items/${row.id}/reorder-level`, { method: 'POST', body: JSON.stringify({ level }) });
+        else await api(`/v1/inventory/items/${row.id}/max-level`, { method: 'PUT', body: JSON.stringify({ level }) });
+        saved += 1;
+        setDrafts((cur) => { const next = { ...cur }; delete next[key]; return next; });
+      }
+      setNotice(trf('{n} reorder level(s) saved.', { n: saved }));
     } catch (err) {
-      setError((err as Error).message);
+      setError(`${saved ? trf('{n} reorder level(s) saved.', { n: saved }) + ' ' : ''}${(err as Error).message}`);
     } finally {
-      setSaving(null);
+      setSaving(false);
+      cat.items.reload();
     }
   }
 
@@ -58,31 +81,38 @@ export function ReorderLevelsPage() {
   return (
     <section className="page">
       <h1>{tr('Reorder levels')}</h1>
-      <p className="muted">{tr('Minimum available quantity per item before reordering.')}</p>
+      <div className="page-head">
+        <p className="muted">{tr('Minimum available quantity per item before reordering.')}</p>
+        {canManage && <span style={{ marginInlineStart: 'auto' }}><Button disabled={saving || changed.length === 0} onClick={() => void saveAll()}>{saving ? tr('Saving…') : changed.length ? trf('Save changes ({n})', { n: changed.length }) : tr('Save changes')}</Button></span>}
+      </div>
       {notice && <p className="notice">{notice}</p>}
       {error && <p className="error notice">{error}</p>}
       <div className="table-wrap">
         <table>
-          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col">{tr('Status')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead>
+          <thead><tr><th scope="col">SKU</th><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Available')}</th><th scope="col" className="right">{tr('Reorder level')}</th><th scope="col" className="right" title={tr('Orders fill stock up to this level (optional).')}>{tr('Maximum')}</th><th scope="col">{tr('Status')}</th></tr></thead>
           <tbody>
             {rows.map((row) => {
-              const value = drafts[row.id] ?? (row.reorderLevel === null ? '' : String(row.reorderLevel));
+              const value = valueOf(row, 'level');
               return (
                 <tr key={row.id}>
                   <td><code>{row.sku}</code></td>
-                  <td><strong>{row.name}</strong><div className="muted small">{trf('{qty} {unit} reserved', { qty: formatQty(row.reserved), unit: row.uom })}</div></td>
+                  <td><strong>{localName(row)}</strong><div className="muted small">{trf('{qty} {unit} reserved', { qty: formatQty(row.reserved), unit: unitLabel(row.uom) })}</div></td>
                   {/* Walkthrough 18 Nov: "139.029" with no unit; the quantity now reads "139.029 litre". */}
-                  <td className="right"><strong>{formatQty(row.available)}</strong> <span className="muted small">{row.uom}</span></td>
+                  <td className="right"><strong>{formatQty(row.available)}</strong> <span className="muted small">{unitLabel(row.uom)}</span></td>
                   <td className="right">
                     {canManage ? (
                       <span className="flex items-center gap-2">
-                        <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Off')} />
-                        <span className="muted small">{row.uom}</span>
+                        <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [`${row.id}:level`]: e.target.value }))} placeholder={tr('Not watched')} />
+                        <span className="muted small">{unitLabel(row.uom)}</span>
                       </span>
-                    ) : row.reorderLevel === null ? tr('Off') : `${formatQty(row.reorderLevel)} ${row.uom}`}
+                    ) : row.reorderLevel === null ? tr('Not watched') : `${formatQty(row.reorderLevel)} ${unitLabel(row.uom)}`}
                   </td>
-                  <td>{row.reorderLevel === null ? <span className="muted">{tr('Not monitored')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
-                  <td>{canManage && <Button type="submit" disabled={saving === row.id} onClick={() => save(row)}>{saving === row.id ? tr('Saving…') : tr('Save')}</Button>}</td>
+                  <td className="right">
+                    {canManage ? (
+                      <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Maximum level for {sku}', { sku: row.sku })} value={valueOf(row, 'max')} onChange={(e) => setDrafts((current) => ({ ...current, [`${row.id}:max`]: e.target.value }))} placeholder="—" />
+                    ) : row.maxLevel == null ? '—' : formatQty(row.maxLevel)}
+                  </td>
+                  <td>{row.reorderLevel === null ? <span className="muted">{tr('Not watched')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
                 </tr>
               );
             })}

@@ -70,9 +70,12 @@ describe('item groups API', () => {
   it('keeps the item list working before sql/095 (falls back without group_id)', () => {
     const items = readFileSync(join(__dirname, '../src/modules/inventory/items.ts'), 'utf8');
     // Falls back when the column is missing (before sql/095) and when its column grant is missing (sql/095 without sql/096: 42501).
+    // sql/106 added max_level in front: the list falls back step by step (max_level, then group_id).
     expect(items).toMatch(
-      /isMissingSchema\(error\) \|\| \(error as \{ code\?: string \}\)\.code === '42501'\)\) \(\{ data, error \} = await list\(ITEM_COLUMNS\)\)/,
+      /const fallBack = \(e: unknown\) => !!e && \(isMissingSchema\(e\) \|\| \(e as \{ code\?: string \}\)\.code === '42501'\);/,
     );
+    expect(items).toContain('if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS_WITH_GROUP));');
+    expect(items).toContain('if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS));');
     // p_group_id is sent only with a group, so the old function still matches before the migration
     expect(items).toContain('...(groupId ? { p_group_id: groupId } : {})');
   });

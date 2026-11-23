@@ -5,6 +5,7 @@
 **Owner:** Ben
 **Roadmap:** [Bellvox readiness](BELLVOX_READINESS_ROADMAP.md), steps 1a and 2c
 **Uses:** core, inventory, purchasing, alerts
+**Build plan for part A:** [Low stock pop-up build plan](LOW_STOCK_POPUP_BUILD_PLAN.md) (draft, 23 Nov)
 
 > **In short**
 > - **Part A (first):** a pop-up tells buyers which items are low. One click opens a filled-in purchase order.

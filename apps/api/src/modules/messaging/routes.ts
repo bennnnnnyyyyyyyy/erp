@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -30,7 +31,7 @@ messagingRoutes.get('/notifications', requirePermission('messaging.notifications
     .eq('org_id', c.var.tenant.orgId)
     .eq('user_id', c.var.user.id)
     .order('created_at', { ascending: false })
-    .limit(50);
+    .range(...pageRange(c, 50));
   if (error) throw error;
   const items = (
     (data ?? []) as {

@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import {
   fingerprints,
@@ -64,7 +65,7 @@ export function Periods({ account, lastClosing }: { account: TreasuryAccount; la
         <div className="form-card stack">
           <p className="muted small">{tr('Close a period when every bank line up to that date is matched or ignored, and the bank balance agrees with the books.')}</p>
           <div className="form-row">
-            <label>{tr('Up to')}<input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} /></label>
+            <label>{tr('Up to')}<DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} /></label>
             <label>{trf('Bank balance on that date ({currency})', { currency: account.currency })}<input inputMode="decimal" value={closing} onChange={(e) => setClosing(e.target.value)} /></label>
           </div>
           <div className="form-actions"><Button type="button" disabled={!toDate || closing.trim() === ''} onClick={close}>{tr('Reconcile and close')}</Button></div>

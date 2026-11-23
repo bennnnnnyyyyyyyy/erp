@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { formatMoney, type VatSummary } from '@erp/shared';
 import { Loading } from '../../components/Loading';
@@ -66,11 +67,11 @@ export function VatSummaryPage() {
       <div className="form-row">
         <label>
           {tr('From')}
-          <input type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
+          <DateInput value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
         </label>
         <label>
           {tr('To')}
-          <input type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
+          <DateInput value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
         </label>
         <Button variant="outline" disabled={!range.from || !range.to || range.to < range.from} onClick={() => { setShown(range); setSection(null); data.reload(); }}>
           {tr('Show')}

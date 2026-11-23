@@ -1,3 +1,5 @@
+import { localName } from '../../lib/names';
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
@@ -43,11 +45,11 @@ export function ReceiveBatchForm({ items, warehouses, open, onOpenChange, onRece
         )}
         <div className="form-row">
           <label>{tr('Item')}<select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Choose…')}</option>{tracked.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
-          <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('Batch number')}<input value={f.batchNo} onChange={(e) => setF({ ...f, batchNo: e.target.value })} /></label>
           <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
-          <label>{tr('Made on (optional)')}<input type="date" value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>
-          <label>{tr('Expires on')}<input type="date" value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} /></label>
+          <label>{tr('Made on (optional)')}<DateInput value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>
+          <label>{tr('Expires on')}<DateInput value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} /></label>
           {/* sql/046: the cost of what was received. Required once accounting is on; otherwise optional (it also updates the average cost). */}
           <label>{tr('Unit cost (needed with accounting)')}<input inputMode="decimal" placeholder="0.00" value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} /></label>
         </div>

@@ -1,3 +1,4 @@
+import { DateInput } from '../../../components/DateInput';
 import { useState } from 'react';
 import type { VatSettings } from '@erp/shared';
 import { Button } from '../../../components/ui/button';
@@ -168,7 +169,7 @@ export function VatSettingsCard() {
           ) : null}
           <label>
             {tr('VAT applies from')}
-            <input type="date" value={fromValue} disabled={busy} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput value={fromValue} disabled={busy} onChange={(e) => setFrom(e.target.value)} />
             <span className="hint muted">{tr('Normally the first day of a tax month. Empty: the first day of this month.')}</span>
           </label>
           {v.vatRegistered && from !== null && from !== (v.vatFrom ?? '') ? (

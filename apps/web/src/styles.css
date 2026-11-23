@@ -645,3 +645,16 @@ tr.statement-subtotal td {
 .action-card[data-kind='move'] { --action-color: #1d4ed8; }
 .action-card[data-kind='count'] { --action-color: #7c3aed; }
 .action-card[data-kind='correct'] { --action-color: #b45309; }
+
+/* Date box in the company's date format (components/DateInput.tsx, UX audit 20 Nov 2026). The browser's own box stays hidden and only
+   opens its calendar. Logical properties, so the button sits at the end in Arabic too. */
+.date-input { position: relative; display: block; }
+.date-input > input[type='text'] { padding-inline-end: 2.4rem; }
+.date-input > input[aria-invalid='true'] { border-color: var(--danger); }
+.date-input-pick {
+  position: absolute; inset-inline-end: 0.3rem; inset-block-end: 0.3rem; padding: 0.25rem 0.4rem; min-height: 0;
+  background: transparent; color: var(--muted-foreground); border: 0; line-height: 0;
+}
+.date-input-pick:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.date-input-native { position: absolute; inset-inline-end: 0; inset-block-end: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+.table-wrap td .date-input { min-width: 9rem; }

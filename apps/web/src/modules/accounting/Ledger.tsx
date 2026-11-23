@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import {
   hasPermission,
@@ -19,6 +20,7 @@ import { tr, trf } from '../../lib/i18n';
 import { usePeople } from '../../lib/people';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { Pill, toMinor } from '../trade/common';
 import { AccountSelect, Notice, accountLabel, accountName, eventLabel, firstOfYear, money, side, sourceLabel, sourcePath, today, useNotice } from './common';
@@ -49,18 +51,16 @@ export function EntriesPage() {
   const [to, setTo] = useState(query('to'));
   const [source, setSource] = useState('');
   const [filter, setFilter] = useState({ from: query('from'), to: query('to'), source: '' });
-  const entries = useLoad(() => {
-    const qs = new URLSearchParams(Object.entries(filter).filter(([, v]) => v));
-    return api<LedgerEntry[]>(`/v1/accounting/entries${qs.size ? `?${qs}` : ''}`);
-  });
+  const qs = new URLSearchParams(Object.entries(filter).filter(([, v]) => v));
+  const entries = usePaged<LedgerEntry>(`/v1/accounting/entries${qs.size ? `?${qs}` : ''}`, 300);
 
   return (
     <section className="page wide">
       <h1>{tr('Journal')}</h1>
-      <p className="muted">{tr('Every entry in the books, newest first (at most 300 shown). Entries cannot be changed; a correction is a reversing entry.')}</p>
+      <p className="muted">{tr('Every entry in the books, newest first. Entries cannot be changed; a correction is a reversing entry.')}</p>
       <div className="form-row">
-        <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>{tr('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>{tr('To')}<DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <label>{tr('Document')}
           <select value={source} onChange={(e) => setSource(e.target.value)}>
             <option value="">{tr('All')}</option>
@@ -86,6 +86,7 @@ export function EntriesPage() {
           {!entries.data.length && <tr><td colSpan={6} className="muted empty">{tr('No entries yet.')}</td></tr>}
         </tbody></table></div>
       )}
+      {entries.hasMore && <div className="form-actions list-more"><Button variant="outline" disabled={entries.loading} onClick={entries.more}>{entries.loading ? tr('Loading…') : tr('Load more')}</Button></div>}
     </section>
   );
 }
@@ -259,7 +260,7 @@ export function JournalEditPage() {
       <Notice message={message} />
       <div className="form-card stack">
         <div className="form-row">
-          <label>{tr('Date')}<input type="date" value={f.entryDate} onChange={(e) => set({ entryDate: e.target.value })} /></label>
+          <label>{tr('Date')}<DateInput value={f.entryDate} onChange={(e) => set({ entryDate: e.target.value })} /></label>
           <label>{tr('Type')}
             <select value={f.kind} onChange={(e) => set({ kind: e.target.value as 'manual' | 'opening' })}>
               <option value="manual">{tr('Manual journal')}</option>
@@ -389,7 +390,7 @@ export function JournalPage() {
           <h2>{tr('Reverse')}</h2>
           <p className="muted small">{tr('A posted journal is never changed. Reversing posts the opposite entry on the date you choose. Owner or head accountant, once.')}</p>
           <div className="form-row">
-            <label>{tr('Date')}<input type="date" value={reverse.date} onChange={(e) => setReverse({ ...reverse, date: e.target.value })} /></label>
+            <label>{tr('Date')}<DateInput value={reverse.date} onChange={(e) => setReverse({ ...reverse, date: e.target.value })} /></label>
             <label>{tr('Reason')}<input value={reverse.memo} maxLength={500} onChange={(e) => setReverse({ ...reverse, memo: e.target.value })} /></label>
             <ConfirmButton label={tr('Reverse')} confirmLabel={tr('Yes, reverse')} question={tr('Post a reversing entry?')} disabled={busy || !reverse.memo.trim() || !reverse.date}
               onConfirm={() => run(async () => {
@@ -425,8 +426,8 @@ export function TrialBalancePage() {
       <p className="muted">{tr('Opening balance, debits and credits in the period, and closing balance for every account, in one currency. Debit balances are positive, credit balances negative. Groups add up their sub-accounts.')}</p>
       <Notice message={message} />
       <div className="form-row">
-        <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>{tr('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>{tr('To')}<DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <label>{tr('Currency')}<input value={currency} maxLength={3} onChange={(e) => setCurrency(e.target.value.toUpperCase())} /></label>
         <Button variant="outline" disabled={!from || !to || to < from || currency.length !== 3} onClick={() => { setShown({ from, to, currency }); rows.reload(); }}>{tr('Show')}</Button>
         <Button variant="ghost" disabled={busy} onClick={() => run(async () => {
@@ -482,8 +483,8 @@ export function AccountLinesPage() {
       <h1>{account ? accountLabel(account) : tr('Account')}</h1>
       {account && !account.isLeaf ? <p className="muted small">{tr('A group account: its sub-accounts\' lines are included.')}</p> : null}
       <div className="form-row">
-        <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>{tr('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>{tr('To')}<DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <label>{tr('Currency')}<input value={currency} maxLength={3} onChange={(e) => setCurrency(e.target.value.toUpperCase())} /></label>
         <Button variant="outline" disabled={!from || !to || to < from || currency.length !== 3} onClick={() => { setShown({ from, to, currency }); lines.reload(); }}>{tr('Show')}</Button>
       </div>

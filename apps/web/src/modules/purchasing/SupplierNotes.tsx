@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
@@ -95,7 +96,8 @@ export function SupplierNotes({ billId, currency, lines, itemOf, onChanged }: { 
                 <td className="right">{money(n.grossMinor)}</td>
                 <td>{n.reason}</td>
                 <td className="nowrap">
-                  {n.status === 'submitted' && canApprove ? (
+                  {n.status === 'submitted' && canApprove && !mayDecide(session, n.requesterId) ? <span className="muted small">{tr(OWN_REQUEST_TEXT)}</span> : null}
+                  {n.status === 'submitted' && canApprove && mayDecide(session, n.requesterId) ? (
                     <>
                       <Button size="sm" disabled={busy} onClick={() => run(async () => { await api(`/v1/purchasing/notes/${n.id}/approve`, { method: 'POST', body: '{}' }); return trf('{number} approved.', { number: n.number }); })}>{tr('Approve')}</Button>
                       <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(async () => { await api(`/v1/purchasing/notes/${n.id}/reject`, { method: 'POST', body: '{}' }); return trf('{number} rejected.', { number: n.number }); })}>{tr('Reject')}</Button>

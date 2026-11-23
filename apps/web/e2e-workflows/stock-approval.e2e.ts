@@ -49,7 +49,7 @@ test('the owner approves and issues it, and the stock goes down by exactly 5', a
 test('the other company sees none of it, even with the direct link', async ({ browser }) => {
   const other = await signIn(browser, OWNER_B);
   await other.goto('/inventory/requests');
-  await expect(other.getByRole('heading', { name: 'Stock requests' })).toBeVisible();
+  await expect(other.getByRole('heading', { level: 1, name: 'Requests', exact: true })).toBeVisible();
   await expect(other.getByText('No requests yet.', { exact: false })).toBeVisible({ timeout: 20_000 }); // loaded, and empty
   await expect(other.locator('main').getByText(REASON)).toHaveCount(0);
   await other.goto('/inventory/stock');

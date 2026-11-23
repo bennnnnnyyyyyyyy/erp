@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useEffect, useState } from 'react';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
@@ -94,7 +95,7 @@ export function ExpensesPage() {
 
       <FormToggle label={tr('Record an expense')}>
         <div className="form-row">
-          <label>{tr('Date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>{tr('Date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label>{tr('Category')}
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">{tr('Choose…')}</option>
@@ -257,7 +258,7 @@ export function PaymentsPage() {
           <label>{tr('Amount')}<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
         </div>
         <div className="form-row">
-          <label>{tr('Date')}<input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></label>
+          <label>{tr('Date')}<DateInput value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></label>
           <label>{tr('Method')}<select value={method} onChange={(e) => { setMethod(e.target.value); setBoxId(lastBox(e.target.value)); }}>{METHODS.map((m) => <option key={m} value={m}>{tr(m)}</option>)}</select></label>
           {needsBox ? (
             <label>{direction === 'in' ? tr('Paid into') : tr('Paid from')}

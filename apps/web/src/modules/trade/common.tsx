@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { readOrderLink } from '../../lib/orderLink';
+import { unitLabel } from '../../lib/names';
 import { demoMode } from '../../lib/demo';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -27,7 +29,7 @@ export function useCatalog() {
   const warehouses = useLoad(() => api<DemoWarehouse[]>('/v1/inventory/warehouses'));
   const itemName = (id: string) => items.data?.find((i) => i.id === id)?.name ?? id;
   const warehouseName = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? id;
-  const uomOf = (id: string) => items.data?.find((i) => i.id === id)?.uom ?? '';
+  const uomOf = (id: string) => unitLabel(items.data?.find((i) => i.id === id)?.uom);
   return { items, warehouses, itemName, warehouseName, uomOf, ready: Boolean(items.data && warehouses.data) };
 }
 
@@ -147,29 +149,24 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
   const columns: Column<Party>[] = [
     // sql/050: the code is searchable like every column (ListView searches all of them).
     ...(demoMode ? [] : [{ key: 'code', label: tr('Code'), value: (p: Party) => p.code ?? '', render: (p: Party) => <code>{p.code}</code> }]),
+    // UX audit 20 Nov: 11 columns ran off the screen and names wrapped to three lines. The list shows code, name, city and terms;
+    // contact, phone, email, tax number and currency are still searched and exported, and are seen and changed under Edit.
     { key: 'name', label: tr('Name'), value: (p) => p.name, render: (p) => <strong>{p.name}</strong> },
-    { key: 'contact', label: tr('Contact'), value: (p) => p.contact },
+    { key: 'contact', label: tr('Contact'), value: (p) => p.contact, hidden: true },
     { key: 'city', label: tr('City'), value: (p) => p.city },
-    { key: 'phone', label: tr('Phone'), value: (p) => p.phone, render: (p) => <code>{p.phone}</code> },
+    { key: 'phone', label: tr('Phone'), value: (p) => p.phone, hidden: true },
     ...(withDetails
       ? [
-          { key: 'email', label: tr('Email'), value: (p: Party) => p.email ?? '' },
-          { key: 'tax', label: tr('Tax registration no.'), value: (p: Party) => p.taxNumber ?? '', render: (p: Party) => <code>{p.taxNumber}</code> },
-          { key: 'currency', label: tr('Currency'), value: (p: Party) => p.defaultCurrency ?? '' },
+          { key: 'email', label: tr('Email'), value: (p: Party) => p.email ?? '', hidden: true },
+          { key: 'tax', label: tr('Tax registration no.'), value: (p: Party) => p.taxNumber ?? '', hidden: true },
+          { key: 'currency', label: tr('Currency'), value: (p: Party) => p.defaultCurrency ?? '', hidden: true },
         ]
       : []),
     {
       key: 'terms',
       label: tr('Payment terms'),
       value: (p) => p.paymentTermsDays ?? -1,
-      render: (p) =>
-        canSetTerms ? (
-          <TermsCell party={p} endpoint={endpoint} onSaved={parties.reload} />
-        ) : p.paymentTermsDays == null ? (
-          <span className="muted">{tr('Company default')}</span>
-        ) : (
-          trf('{n} days', { n: p.paymentTermsDays })
-        ),
+      render: (p) => (p.paymentTermsDays == null ? <span className="muted">{tr('Company default')}</span> : trf('{n} days', { n: p.paymentTermsDays })),
     },
     ...(canEdit
       ? [
@@ -212,6 +209,12 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
               </p>
             )}
             <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
+            {editing && canSetTerms ? (
+              // Saved on its own as soon as it changes (owners and admins; the database checks again), as before in the list.
+              <label>{tr('Payment terms')} <span className="muted small">{tr('(days; empty = company default)')}</span>
+                <TermsCell party={editing} endpoint={endpoint} onSaved={parties.reload} />
+              </label>
+            ) : null}
             <div className="form-row">
               <label>{tr('Contact person (optional)')}<input value={form.contact} onChange={set('contact')} /></label>
               <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
@@ -316,11 +319,13 @@ export function NewOrderForm(props: {
   const session = useSession();
   const cat = useCatalog();
   const parties = useLoad(() => api<Party[]>(props.partyEndpoint));
-  const [partyId, setPartyId] = useState('');
+  // Filled from a link (the low stock pop-up, sql/106): ?item=&qty=&supplier=. Nothing is saved until the person places the order.
+  const [link] = useState(() => readOrderLink(window.location.search));
+  const [partyId, setPartyId] = useState(link.partyId);
   const [quickAdd, setQuickAdd] = useState(false);
   const canQuickAdd = Boolean(props.partyAddPermission && hasPermission(session.permissions, props.partyAddPermission));
   const [warehouseId, setWarehouseId] = useState('');
-  const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [lines, setLines] = useState<Line[]>(() => [link.itemId ? { ...emptyLine(), itemId: link.itemId, qty: link.qty || '1' } : emptyLine()]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
@@ -425,6 +430,8 @@ export function NewOrderForm(props: {
               />
               {canQuickAdd ? <Button type="button" variant="outline" size="sm" onClick={() => setQuickAdd(true)}>{tr('+ New')}</Button> : null}
             </span>
+            {/* Ben, 23 Nov: an item with no supplier yet opens the order and asks for one. */}
+            {link.itemId && !partyId ? <span className="notice small" role="status">{trf('Choose a {party}.', { party: tr(props.partyLabel).toLowerCase() })}</span> : null}
           </label>
           <label>
             {tr('Warehouse')}

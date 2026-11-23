@@ -1,4 +1,6 @@
+import { localName } from '../../lib/names';
 import { useEffect, useState, type FormEvent } from 'react';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { hasPermission } from '@erp/shared';
 import { ConfirmButton } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
@@ -93,7 +95,7 @@ export function CountsList() {
 
   return (
     <section className="page wide">
-      <h1>{tr('Stock counts')}</h1>
+      <h1>{tr('Counts')}</h1>
       <p className="muted">{tr('Count a whole warehouse. The differences change stock only after a manager approves them.')}</p>
       {canStart && warehouses && warehouses.length > 0 && (
         <form className="form-card stack" onSubmit={start}>
@@ -102,7 +104,7 @@ export function CountsList() {
             <label>
               {tr('Warehouse')}
               <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
               </select>
             </label>
             <label>{tr('Note (optional)')}<input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder={tr('Month-end count')} /></label>
@@ -270,6 +272,7 @@ export function CountPage() {
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
           <p className="muted small">{tr('Approving changes stock by each difference. If you started or submitted this count, another owner or manager must approve it, unless you are the only one.')}</p>
+          {!mayDecide(session, count.requesterId) ? <p className="muted small">{tr(OWN_REQUEST_TEXT)}</p> : <>
           <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
             <ConfirmButton label={tr('Approve')} confirmLabel={tr('Yes, change the stock')} disabled={busy}
@@ -277,6 +280,7 @@ export function CountPage() {
               onConfirm={() => act('approve', 'Approved. The differences were applied to stock.')} />
             <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. Stock was not changed.')}>{tr('Reject')}</Button>
           </div>
+          </>}
         </div>
       )}
       {count.status === 'submitted' && !can('inventory.adjustments.approve') && <p className="notice">{tr('Waiting for a manager to approve.')}</p>}

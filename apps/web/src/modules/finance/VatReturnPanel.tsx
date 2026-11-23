@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { formatMoney, hasPermission, type Account, type VatMonth } from '@erp/shared';
 import { Button } from '../../components/ui/button';
@@ -89,7 +90,7 @@ export function VatReturnPanel({ month }: { month: string }) {
               </label>
               <label>
                 {tr('Paid on')}
-                <input type="date" value={payOn} onChange={(e) => setPayOn(e.target.value)} />
+                <DateInput value={payOn} onChange={(e) => setPayOn(e.target.value)} />
               </label>
               <Button
                 disabled={busy || !payFrom}

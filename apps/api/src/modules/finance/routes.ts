@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -52,7 +53,7 @@ financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async 
     .eq('org_id', orgOf(c))
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(300);
+    .range(...pageRange(c, 300));
   if (error) throw error;
   return ok(
     c,
@@ -237,7 +238,10 @@ financeRoutes.get('/payments', requirePermission('finance.reports.view'), async 
   const rows = column
     ? await fetchAll<PaymentRow>((from, to) => base().eq(column, m![2]!).order('paid_on', { ascending: false }).order('id').range(from, to))
     : await (async () => {
-        const { data, error } = await base().order('paid_on', { ascending: false }).order('created_at', { ascending: false }).limit(300);
+        const { data, error } = await base()
+          .order('paid_on', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(...pageRange(c, 300));
         if (error) throw error;
         return (data ?? []) as PaymentRow[];
       })();
@@ -681,4 +685,66 @@ financeRoutes.post('/payment-links/:id/cancel', requirePermission('finance.entri
   const id = idParam(c);
   await callRpc<void>(userDb(c), 'fin_cancel_payment_link', { p_link_id: id });
   return ok(c, { id, status: 'cancelled' });
+});
+
+// Sales by product (UX audit 20 Nov, phase 0: the home "Top products" tile opened the invoice list). The same rule as the tile in
+// fin_owner_insights (sql/027 onward): issued invoices dated in the last `days` days, revenue = round(qty x unit price) before VAT,
+// grouped by item. Every item, ranked by revenue, with quantity and share of the total. Read with the person's own sign-in (RLS).
+financeRoutes.get('/product-sales', requirePermission('finance.reports.view'), async (c) => {
+  const days = Math.min(Math.max(Number(c.req.query('days') ?? 90) || 90, 1), 3660);
+  const org = orgOf(c);
+  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  const invoices = await fetchAll<{ id: string }>((from, to) =>
+    userDb(c)
+      .from('sal_invoices')
+      .select('id')
+      .eq('org_id', org)
+      .eq('status', 'issued')
+      .gte('invoice_date', since)
+      .order('id')
+      .range(from, to),
+  );
+  const byItem = new Map<string, { qty: number; revenueMinor: number }>();
+  const ids = invoices.map((i) => i.id);
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const lines = await fetchAll<{ order_line_id: string; qty: number; unit_price_minor: number }>((from, to) =>
+      userDb(c)
+        .from('sal_invoice_lines')
+        .select('order_line_id, qty, unit_price_minor')
+        .eq('org_id', org)
+        .in('invoice_id', chunk)
+        .order('id')
+        .range(from, to),
+    );
+    const orderLineIds = [...new Set(lines.map((l) => l.order_line_id))];
+    const itemOf = new Map<string, string>();
+    for (let j = 0; j < orderLineIds.length; j += 200) {
+      const { data, error } = await userDb(c)
+        .from('sal_order_lines')
+        .select('id, item_id')
+        .eq('org_id', org)
+        .in('id', orderLineIds.slice(j, j + 200));
+      if (error) throw error;
+      for (const r of (data ?? []) as { id: string; item_id: string }[]) itemOf.set(r.id, r.item_id);
+    }
+    for (const l of lines) {
+      const itemId = itemOf.get(l.order_line_id);
+      if (!itemId) continue;
+      const row = byItem.get(itemId) ?? { qty: 0, revenueMinor: 0 };
+      row.qty += Number(l.qty);
+      row.revenueMinor += Math.round(Number(l.qty) * Number(l.unit_price_minor));
+      byItem.set(itemId, row);
+    }
+  }
+  const total = [...byItem.values()].reduce((n, r) => n + r.revenueMinor, 0);
+  const rows = [...byItem.entries()]
+    .map(([itemId, r]) => ({
+      itemId,
+      qty: Math.round(r.qty * 1000) / 1000,
+      revenueMinor: r.revenueMinor,
+      sharePercent: total > 0 ? Math.round((1000 * r.revenueMinor) / total) / 10 : 0,
+    }))
+    .sort((a, b) => b.revenueMinor - a.revenueMinor);
+  return ok(c, { days, since, totalMinor: total, rows });
 });

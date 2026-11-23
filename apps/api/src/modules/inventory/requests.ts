@@ -2,6 +2,7 @@ import type { Context, Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
@@ -29,7 +30,7 @@ async function loadRequests(c: Context<AppEnv>, filter?: { id: string }) {
     .select('id, number, requester_id, warehouse_id, reason, status, decided_by, decided_at, decision_comment, issued_at, created_at')
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
-    .limit(200);
+    .range(...pageRange(c, 200));
   if (filter) q = q.eq('id', filter.id);
   const { data, error } = await q;
   if (error) throw error;

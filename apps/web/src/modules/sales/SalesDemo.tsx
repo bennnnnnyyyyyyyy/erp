@@ -10,6 +10,7 @@ import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { Shipments } from './Shipments';
 import { ConfirmButton } from '../../components/FormToggle';
@@ -35,7 +36,7 @@ export function Customers() {
 
 export function SalesOrders() {
   const cat = useCatalog();
-  const orders = useLoad(() => api<SalesOrder[]>('/v1/sales/orders'));
+  const orders = usePaged<SalesOrder>('/v1/sales/orders', 200);
   const customers = useLoad(() => api<Party[]>('/v1/sales/customers'));
   const session = useSession();
   const customer = (id: string) => customers.data?.find((c) => c.id === id)?.name ?? id;
@@ -52,11 +53,12 @@ export function SalesOrders() {
   return (
     <section className="page">
       <h1>{tr('Sales orders')}</h1>
-      <p className="muted">{tr('Customer orders. Goods are issued through a manager-approved stock request.')}</p>
+      <p className="muted">{tr('Orders from customers.')}</p>
       {orders.data && customers.data && cat.ready ? (
         <ListView
           title={tr('Sales orders')}
           rows={orders.data}
+          more={{ hasMore: orders.hasMore, loading: orders.loading, onMore: orders.more }}
           columns={columns}
           rowKey={(o) => o.id}
           rowHref={(o) => `/sales/orders/${o.id}`}

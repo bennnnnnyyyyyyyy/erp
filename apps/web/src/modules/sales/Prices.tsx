@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState, type FormEvent } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
@@ -30,6 +31,8 @@ export function PricesPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openList, setOpenList] = useState<string | null>(null);
+  // UX audit 20 Nov: three tasks on one page. Each now has its own tab; price lists first, as the most used.
+  const [tab, setTab] = useState<'lists' | 'groups' | 'markup'>('lists');
 
   if (groups.loading || lists.loading || customers.loading) return <section className="page"><Loading /></section>;
   if (groups.error) return <section className="page"><h1>{tr('Prices')}</h1><p className="error">{groups.error}</p></section>;
@@ -56,10 +59,19 @@ export function PricesPage() {
   return (
     <section className="page">
       <h1>{tr('Prices')}</h1>
-      <p className="muted">{tr('A customer gets the price list of their group for the order date, otherwise the item’s own sales price. The price on an order stays editable. A new purchase price never changes a sales price; the item page shows it as a suggestion.')}</p>
+      <p className="muted">{tr('A customer gets the price list of their group; otherwise the item’s own sales price. You can still change the price on an order.')}</p>
       {notice ? <p className="notice" role="status">{notice}</p> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
+      <div className="tabs" role="tablist" aria-label={tr('Prices')}>
+        {([['lists', tr('Price lists')], ['groups', tr('Customer groups')], ...(canManage ? [['markup', tr('Markup')]] : [])] as [typeof tab, string][]).map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'tab active' : 'tab'} onClick={() => setTab(key)}>{label}</button>
+        ))}
+      </div>
+      <div role="tabpanel">
+      {tab === 'groups' && <>
 
+      {/* UX audit 20 Nov: the forms ran into the next heading (h2 has no margin). Each task now sits in its own card. */}
+      <div className="form-card stack">
       <h2>{tr('Customer groups')}</h2>
       {groupList.length === 0 ? <p className="muted">{tr('No customer groups yet.')}</p> : (
         <ul className="stack">
@@ -73,12 +85,17 @@ export function PricesPage() {
         </ul>
       )}
       {canManage ? <AddGroupForm onSave={(body) => run(() => api('/v1/sales/customer-groups', { method: 'POST', body: JSON.stringify(body) }), tr('Customer group added.'))} /> : null}
+      </div>
       {canManage && groupList.length ? (
-        <AssignCustomerForm customers={customers.data ?? []} groups={groupList}
-          onSave={(customerId, groupId) => run(() => api(`/v1/sales/customers/${customerId}/group`, { method: 'PUT', body: JSON.stringify({ groupId: groupId || null }) }), tr('Customer group saved.'))} />
+        <div className="form-card stack">
+          <h2>{tr('Put a customer in a group')}</h2>
+          <AssignCustomerForm customers={customers.data ?? []} groups={groupList}
+            onSave={(customerId, groupId) => run(() => api(`/v1/sales/customers/${customerId}/group`, { method: 'PUT', body: JSON.stringify({ groupId: groupId || null }) }), tr('Customer group saved.'))} />
+        </div>
       ) : null}
 
-      <h2>{tr('Price lists')}</h2>
+      </>}
+      {tab === 'lists' && <>
       {(lists.data ?? []).length === 0 ? <p className="muted">{tr('No price lists yet.')}</p> : (
         <table className="table">
           <thead>
@@ -111,8 +128,10 @@ export function PricesPage() {
         <AddListForm groups={groupList} onSave={(body) => run(() => api('/v1/sales/price-lists', { method: 'POST', body: JSON.stringify(body) }), tr('Price list added.'))} />
       ) : null}
       {canManage && !groupList.length ? <p className="muted small">{tr('Add a customer group first; each price list belongs to one.')}</p> : null}
+      </>}
 
-      {canManage ? <MarkupForm onSave={(markupPercent) => run(() => api('/v1/sales/price-settings', { method: 'PUT', body: JSON.stringify({ markupPercent }) }), tr('Markup saved.'))} /> : null}
+      {tab === 'markup' && canManage ? <MarkupForm onSave={(markupPercent) => run(() => api('/v1/sales/price-settings', { method: 'PUT', body: JSON.stringify({ markupPercent }) }), tr('Markup saved.'))} /> : null}
+      </div>
     </section>
   );
 }
@@ -152,7 +171,10 @@ function AssignCustomerForm({ customers, groups, onSave }: { customers: Customer
           {groups.map((g) => <option key={g.id} value={g.id}>{groupLabel(g)}</option>)}
         </select>
       </label>
-      <div className="form-actions"><Button type="button" disabled={!customerId} onClick={() => void onSave(customerId, groupId)}>{tr('Save group')}</Button></div>
+      <div className="form-actions">
+        <Button type="button" disabled={!customerId} onClick={() => void onSave(customerId, groupId)}>{tr('Save group')}</Button>
+        {!customerId ? <span className="muted small">{tr('Choose a customer first.')}</span> : null}
+      </div>
     </div>
   );
 }
@@ -175,8 +197,8 @@ function AddListForm({ groups, onSave }: { groups: CustomerGroup[]; onSave: (bod
         </label>
       </div>
       <div className="form-row">
-        <label>{tr('From')}<input type="date" required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>
-        <label>{tr('To (optional)')}<input type="date" value={form.validTo} onChange={(e) => setForm({ ...form, validTo: e.target.value })} /></label>
+        <label>{tr('From')}<DateInput required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>
+        <label>{tr('To (optional)')}<DateInput value={form.validTo} onChange={(e) => setForm({ ...form, validTo: e.target.value })} /></label>
       </div>
       <p className="muted small">{tr('One price list per customer group at a time: the dates of two lists for the same group cannot overlap.')}</p>
       <div className="form-actions"><Button type="submit">{tr('Add price list')}</Button></div>

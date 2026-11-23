@@ -1,3 +1,4 @@
+import type { WorkWeek } from '@erp/shared';
 import type { Role } from '@erp/shared';
 
 export type Bindings = {
@@ -59,6 +60,7 @@ export type Tenant = {
   blindCounts: boolean;
   /** Owners may approve their own requests, each flagged self-approved (sql/077, decision D1c). */
   ownerSelfApproval: boolean;
+  workWeek: WorkWeek;
   role: Role;
   permissions: string[];
   modules: string[];

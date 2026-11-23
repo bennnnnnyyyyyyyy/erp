@@ -59,6 +59,8 @@ const DocumentSettings = lazyNamed(() => import('./core/settings/DocumentSetting
 const PricesPage = lazyNamed(() => import('./sales/Prices'), 'PricesPage');
 const ExpensesPage = lazyNamed(() => import('./finance/Finance'), 'ExpensesPage');
 const PaymentsPage = lazyNamed(() => import('./finance/Finance'), 'PaymentsPage');
+const MoneyOwedPage = lazyNamed(() => import('./finance/HomeDetail'), 'MoneyOwedPage');
+const ProductSalesPage = lazyNamed(() => import('./finance/HomeDetail'), 'ProductSalesPage');
 const ExpensePage = lazyNamed(() => import('./finance/FinanceRecords'), 'ExpensePage');
 const PaymentPage = lazyNamed(() => import('./finance/FinanceRecords'), 'PaymentPage');
 const AlertsPage = lazyNamed(() => import('./alerts/Alerts'), 'AlertsPage');
@@ -265,6 +267,9 @@ export const APPS: AppDef[] = [
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
       { path: '/statements', label: 'Statement of account', permission: 'finance.statements.view', component: StatementsPage },
       { path: '/vat', label: 'VAT summary', permission: 'finance.reports.view', component: VatSummaryPage },
+      // Home tile targets (UX audit 20 Nov, phase 0)
+      { path: '/owed', label: 'Money owed', permission: 'finance.reports.view', component: MoneyOwedPage },
+      { path: '/product-sales', label: 'Sales by product', permission: 'finance.reports.view', component: ProductSalesPage },
     ],
   } satisfies AppDef]),
   // Accounting (documentation/plans/ACCOUNTING_PLAN.md section 6). Real API only. Owner and admin only. Set-up and the chart show

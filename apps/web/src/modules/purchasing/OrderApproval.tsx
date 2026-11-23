@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
@@ -54,13 +55,13 @@ export function OrderApproval({ order, canDecide, mine, onDone }: {
     <div className="notice stack" role="status">
       <p>{tr('This order is waiting for approval by an owner or manager. Goods cannot be received until it is approved.')}</p>
       {mine && <p className="muted small">{tr('You created this order, so someone else must approve it, unless you are the only owner or manager.')}</p>}
-      {canDecide && !rejecting && (
+      {canDecide && (!mine || session.mayApproveOwn !== false) && !rejecting && (
         <div className="form-actions">
           <Button disabled={busy} onClick={() => decide('approved')}>{tr('Approve order')}</Button>
           <Button variant="outline" disabled={busy} onClick={() => setRejecting(true)}>{tr('Reject…')}</Button>
         </div>
       )}
-      {canDecide && rejecting && (
+      {canDecide && (!mine || session.mayApproveOwn !== false) && rejecting && (
         <div className="form-row">
           <label>{tr('Reason')}<input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} /></label>
           <Button variant="destructive" disabled={busy || !reason.trim()} onClick={() => decide('rejected')}>{tr('Reject and cancel')}</Button>
@@ -117,7 +118,7 @@ export function OrderConfirmation({ order, canConfirm, late, onDone }: {
       )}
       {open && canConfirm && editing && (
         <div className="form-row">
-          <label>{tr('Promised delivery date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>{tr('Promised delivery date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label>{tr("Supplier's reference (optional)")}<input value={ref} maxLength={60} onChange={(e) => setRef(e.target.value)} /></label>
           <Button size="sm" disabled={busy || !date} onClick={save}>{tr('Save')}</Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{tr('Cancel')}</Button>

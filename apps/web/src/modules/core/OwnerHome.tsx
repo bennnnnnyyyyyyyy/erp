@@ -26,6 +26,12 @@ type Insights = {
 };
 
 type Tone = 'good' | 'watch' | 'bad';
+
+/** Keeps 'bad' on the first card that has it (the list is in order of urgency) and turns any later 'bad' into 'watch'. */
+function oneUrgent(tones: (Tone | undefined)[]): (Tone | undefined)[] {
+  const first = tones.indexOf('bad');
+  return tones.map((t, i) => (t === 'bad' && i !== first ? 'watch' : t));
+}
 const TONE: Record<Tone, { dot: string; word: string }> = {
   good: { dot: 'bg-success', word: 'On track' },
   watch: { dot: 'bg-warning', word: 'Watch' },
@@ -73,18 +79,21 @@ export function OwnerSummary() {
   // A new or empty company has twelve months of zeros. "Made EGP 0" in green with an "All good" dot reads as a verdict on nothing,
   // so a card only shows a figure's colour and a status once there is something behind it.
   const active = s.months.some((m) => m.revenue !== 0 || m.cogs !== 0 || m.expenses !== 0);
-  const profitTone: Tone | undefined = !active || !last ? undefined : last.net < 0 ? 'bad' : prev && last.net < prev.net * 0.7 ? 'watch' : 'good';
+  const rawProfitTone: Tone | undefined = !active || !last ? undefined : last.net < 0 ? 'bad' : prev && last.net < prev.net * 0.7 ? 'watch' : 'good';
   const yearNet = s.months.reduce((n, m) => n + m.net, 0);
   const oldWait = s.decisions.oldestSubmittedHours;
-  const decisionTone: Tone = s.decisions.submitted === 0 ? 'good' : oldWait >= 24 ? 'bad' : 'watch';
+  const rawDecisionTone: Tone = s.decisions.submitted === 0 ? 'good' : oldWait >= 24 ? 'bad' : 'watch';
   const expiring = s.expiry.expired.batches + s.expiry.in30.batches;
   const hasStock = s.stockValueMinor !== 0 || s.itemsLow > 0 || expiring + s.expiry.in60.batches + s.expiry.in90.batches > 0;
-  const stockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
+  const rawStockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
   const hasMoney = s.owedToMeMinor !== 0 || s.iOweMinor !== 0;
-  const moneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
+  const rawMoneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
   // Information, not a status: one big supplier is normal for a small firm and there is nothing to act on (UX audit: it was a permanent red
   // "Action required").
   const supplierTone: Tone | undefined = undefined;
+  // UX audit 20 Nov: 4 of 6 cards said "Action required" in red; when everything is urgent, nothing is. Only the most urgent card
+  // keeps it (people waiting first, then overdue money, then stock, then profit); any other is shown as "Watch".
+  const [decisionTone, moneyTone, stockTone, profitTone] = oneUrgent([rawDecisionTone, rawMoneyTone, rawStockTone, rawProfitTone]);
   const count = (n: number, one: string, many: string) => trf(n === 1 ? one : many, { n });
 
   return (
@@ -93,7 +102,8 @@ export function OwnerSummary() {
         {active && last ? (
           <>
             <span className={cn('font-semibold leading-tight tracking-tight', last.net < 0 ? 'text-destructive-foreground' : 'text-success-foreground')} style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>
-              {trf(last.net < 0 ? 'Net loss {amount}' : 'Net profit {amount}', { amount: money(Math.abs(last.net)) })}
+              {/* UX audit 20 Nov: home said "Net loss" (one month) and the profit page "Net profit" (12 months); the big figure now names its month. */}
+              {trf(last.net < 0 ? 'Net loss in {month}: {amount}' : 'Net profit in {month}: {amount}', { month: monthName(last.month), amount: money(Math.abs(last.net)) })}
             </span>
             <span className="text-sm text-muted-foreground">{trf('{month}: sales {revenue}, cost of goods sold {cogs}, running costs {expenses}.', { month: monthName(last.month), revenue: money(last.revenue), cogs: money(last.cogs), expenses: money(last.expenses) })}</span>
             <div className="flex h-12 items-end gap-1" aria-hidden="true">
@@ -106,7 +116,7 @@ export function OwnerSummary() {
         ) : <span className="text-sm text-muted-foreground">{tr('No transactions yet. Net profit appears once sales are invoiced and expenses recorded.')}</span>}
       </Card>
 
-      <Card to="/sales/invoices" title={tr('Receivables and payables')} subtitle={tr('Accounts receivable and accounts payable')} period={trf('open balances as of {date}', { date: asOfDay })} tone={moneyTone}>
+      <Card to="/finance/owed" title={tr('Receivables and payables')} subtitle={tr('Accounts receivable and accounts payable')} period={trf('open balances as of {date}', { date: asOfDay })} tone={moneyTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
         <span className="text-sm text-muted-foreground"><Rich text={s.overdueMinor > 0 ? trf('receivable from customers, of which **{late}** is more than 30 days overdue.', { late: money(s.overdueMinor) }) : tr('receivable from customers.')} /></span>
         <span className="text-sm"><Rich text={trf('Accounts payable (suppliers and expenses): **{amount}**.', { amount: money(s.iOweMinor) })} /></span>
@@ -132,7 +142,7 @@ export function OwnerSummary() {
         </ul>
       </Card>
 
-      <Card to="/sales/invoices" title={tr('Top products')} subtitle={tr('Products ranked by sales revenue')} period={tr('last 90 days')}>
+      <Card to="/finance/product-sales" title={tr('Top products')} subtitle={tr('Products ranked by sales revenue')} period={tr('last 90 days')}>
         {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">{tr('No sales yet.')}</span> : (
           <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
             {s.topProducts.map((p, i) => (

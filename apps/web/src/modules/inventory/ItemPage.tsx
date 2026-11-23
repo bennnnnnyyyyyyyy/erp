@@ -1,4 +1,5 @@
 import { formatQty } from '../../lib/numbers';
+import { localName, unitLabel } from '../../lib/names';
 import { useState, type CSSProperties } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { Loading } from '../../components/Loading';
@@ -82,7 +83,7 @@ export function ItemPage() {
       <Link to="/inventory/stock" className="back-link">{tr('← Stock on hand')}</Link>
       <div className="page-head">
         <h1>
-          <code>{item.sku}</code> {item.name}
+          <code>{item.sku}</code> {localName(item)}
           {item.nameAr ? <span className="muted" dir="rtl"> · {item.nameAr}</span> : null}
         </h1>
         <div className="form-actions">
@@ -100,7 +101,7 @@ export function ItemPage() {
       {!demoMode && <ItemPartyCodes itemId={item.id} canManage={can('inventory.party_codes.manage')} />}
 
       <div className="stats">
-        <div className="stat" style={{ '--i': 0 } as CSSProperties}><div className="stat-label">{tr('On hand')}</div><div className="stat-value">{qty(onHand)}</div><div className="stat-note">{item.uom}</div></div>
+        <div className="stat" style={{ '--i': 0 } as CSSProperties}><div className="stat-label">{tr('On hand')}</div><div className="stat-value">{qty(onHand)}</div><div className="stat-note">{unitLabel(item.uom)}</div></div>
         <div className="stat" style={{ '--i': 1 } as CSSProperties}><div className="stat-label">{tr('Reserved')}</div><div className="stat-value">{qty(reserved)}</div><div className="stat-note">{tr('for approved requests')}</div></div>
         <div className={low ? 'stat warn' : 'stat'} style={{ '--i': 2 } as CSSProperties}>
           <div className="stat-label">{tr('Available')}</div><div className="stat-value">{qty(available)}</div>
@@ -117,7 +118,7 @@ export function ItemPage() {
           <div className="stat" style={{ '--i': 4 } as CSSProperties}>
             <div className="stat-label">{tr('Average cost')}</div>
             <div className="stat-value">{formatMoney({ amountMinor: cost.avgCostMinor, currency })}</div>
-            <div className="stat-note">{trf('{unit} each', { unit: item.uom })}</div>
+            <div className="stat-note">{trf('{unit} each', { unit: unitLabel(item.uom) })}</div>
           </div>
         )}
       </div>
@@ -181,7 +182,7 @@ export function ItemPage() {
           cost ? (
             <dl className="facts">
               <div><dt>{tr('Average cost')}</dt><dd>{cost.avgCostMinor === null ? tr('Not set') : formatMoney({ amountMinor: cost.avgCostMinor, currency })}</dd></div>
-              <div><dt>{tr('On hand')}</dt><dd>{qty(cost.onHand)} {item.uom}</dd></div>
+              <div><dt>{tr('On hand')}</dt><dd>{qty(cost.onHand)} {unitLabel(item.uom)}</dd></div>
               <div><dt>{tr('Stock value')}</dt><dd>{cost.valueMinor === null ? '—' : formatMoney({ amountMinor: cost.valueMinor, currency })}</dd></div>
             </dl>
           ) : costs.data ? <p className="muted">{tr('No cost recorded for this item yet.')}</p> : <Loading />

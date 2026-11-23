@@ -11,6 +11,145 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — `sql/106` applied to live (low stock pop-up)
+
+**Objective.** Ben's yes (23 Nov) to apply the phase 1a migration.
+
+**Actions Completed.** A rolled-back dry run of `sql/106_inv_low_stock_popup.sql` on live (no error). Then applied with
+`npx supabase db query --linked -f` from the main checkout. Ran `sql/tests/103` and `sql/tests/092` on live. `sql/README.md` updated.
+
+**Database / System Result.** Live (erp-live):
+- `inv_stock_alert_states` has RLS on, and signed-in users can only read it.
+- `inv_items.max_level` is readable.
+- Anonymous users cannot call the pop-up functions.
+- `core__next_work_start` is internal.
+- No data changed. Companies without a saved work week use Sunday to Thursday, 09:00 to 17:00.
+
+**Safety Status.** Tests 103 and 092 pass on live (both roll back). The screens use it only after Ben merges and deploys the branch.
+
+## 2026-11-23 — Phase 1a: the low stock pop-up built
+
+**Objective.** Build part A of the low stock plan, following the
+[build plan](../plans/LOW_STOCK_POPUP_BUILD_PLAN.md) that Ben approved on 23 Nov. Ben's answers: "Remind me" and "Don't show again"
+are not audited; an item with no supplier opens the order and asks for one; only people who can reorder see the pop-up; the company
+sets its workdays and hours at the start ("tomorrow" = the next workday); people without purchase orders get "Ask for it".
+
+**Actions Completed.**
+- `sql/106_inv_low_stock_popup.sql`:
+  - the company work week (`core_set_work_week`, owners and admins, audited; `core__next_work_start`)
+  - `inv_items.max_level` with its read grant (`inv_set_max_level`, audited)
+  - `inv_stock_alert_states` (RLS, own rows only, select-only grant)
+  - `inv_snooze_low_stock`, `inv_mute_low_stock`, `inv_low_stock_popup` (the suggested quantity fills up to the maximum level, else
+    the forecast, minus what is on order)
+  - test `sql/tests/103_low_stock_popup.sql`
+- API (`apps/api/src/modules/inventory/lowStock.ts`):
+  - pop-up list, snooze, mute (`inventory.request.create`)
+  - maximum level (`inventory.reorder.manage`)
+  - `PUT /v1/core/org/work-week` (`core.org.manage`)
+  - the session sends the work week; the item list sends `maxLevel` (with a fallback)
+  - every new route answers 503 `not_set_up` before 106
+- Web:
+  - `components/LowStockPopup.tsx`: once each sign-in, and again on a new low stock alert in the bell
+  - "Create purchase order" opens a filled draft (`lib/orderLink.ts`); with no supplier it asks for one. "Ask for it" opens a stock
+    request.
+  - Remind me (1 hour, next workday, next week); Don't show again
+  - the work week card in Settings > General and in the company step of the setup wizard
+  - a Maximum column on Reorder levels
+  - Arabic for every new text
+
+**Database / System Result.** `sql/106` applied to live (see the entry above).
+
+**Safety Status.**
+- Local PGlite, all 103 migrations: 100 of 100 SQL tests pass (103 is new; 106 reruns cleanly).
+- typecheck is clean. Tests: shared 82, API 715 (7 skipped), web 181. biome ci shows 0 errors.
+- Not checked in a browser.
+- Not done yet:
+  - the "Suggested" reorder point column (plan: a second step)
+  - the end-to-end test pop-up → draft → save → approval (the pop-up is off in the demo build that CI uses; it needs a test on a
+    real build)
+
+## 2026-11-23 — `sql/105` applied to live (Arabic warehouse names)
+
+**Objective.** Ben's yes (23 Nov) to apply the Track A migration for Arabic warehouse names.
+
+**Actions Completed.** A rolled-back dry run of `sql/105_inv_warehouse_name_ar.sql` on live (no error). Then applied with
+`npx supabase db query --linked -f` from the main checkout. Ran `sql/tests/102` and `sql/tests/070` on live. `sql/README.md` updated.
+
+**Database / System Result.** Live (erp-live): function `inv_set_warehouse_name_ar` added. Anonymous users cannot call it. No
+data changed.
+
+**Safety Status.** Tests 102 and 070 pass on live (both roll back). The screens use it only after Ben merges and deploys the
+branch; until then nothing calls it.
+
+## 2026-11-23 — Track A, batch 2: more audit fixes (`sql/105`)
+
+**Objective.** The master chat's standing order (Ben, 23 Nov): finish the audit's P1/P2 fixes that are not invoice printing (Track B)
+or the Bellvox look (Track C), smallest first. The demo data clean-up is dropped (new demo companies come in phase 2d).
+
+**Actions Completed.**
+- Wording: plain subtitles (no FEFO, cycle counts, goods receipt posts...); the alert columns say "Send again after" and "Times
+  sent"; the page titles match the menu (Requests, Transfers, Counts, Adjustments).
+- Reorder levels: one "Save changes (n)" button; an empty level reads "Not watched".
+- Prices: tabs (Price lists, Customer groups, Markup) and one short subtitle.
+- Arabic (top-15 #10): in Arabic mode, the Arabic names of items and units show (`lib/names.ts`). Warehouses get an Arabic name
+  that can be changed: `sql/105_inv_warehouse_name_ar.sql` (`inv_set_warehouse_name_ar`, owners and admins, audited) and test 102.
+  The API sends `nameAr`; PUT returns 503 `not_set_up` before 105. The Add and Edit warehouse forms ask for the Arabic name.
+- Stock on hand: the Reorder level and Batch tracked columns are hidden (still searched and exported).
+- Home: the profit figure names its month.
+- Decisions taken with the recommended default (no plan gave another): titles follow the menu labels; on Prices the first tab is
+  Price lists; the profit card keeps one figure per month (merging the two profit screens, top-15 #15, waits for the menu work).
+
+**Database / System Result.** `sql/105` applied to live (see the entry above).
+
+**Safety Status.** Local PGlite, all 102 migrations: 99 of 99 SQL tests pass (102 is new; 105 reruns cleanly). typecheck is clean.
+Tests: shared 82, API 704 (7 skipped), web 178. biome ci shows 0 errors. The migration and doc-link checks are OK. Not checked in a
+browser. Before 105 goes to live: Ben's yes, a rolled-back dry run, then test 102 on live.
+
+## 2026-11-23 — `sql/104` applied to live (alert notifications open their page)
+
+**Objective.** Ben's yes (23 Nov) to apply the Track A migration so alert notifications (low stock, expiry, overdue invoices,
+running out, losing money) open their page.
+
+**Actions Completed.** Rolled-back dry run of `sql/104_alert_notification_target.sql` on live (no error), then applied with
+`npx supabase db query --linked -f` from the main checkout. Ran `sql/tests/101` and `sql/tests/092` on live. `sql/README.md` updated.
+
+**Database / System Result.** Live (erp-live): trigger `msg_outbox_alert_target` on; existing alert messages and notifications
+backfilled (0 alert messages left without a target); `authenticated` cannot call `msg__alert_target()`.
+
+**Safety Status.** Tests 101 and 092 pass on live (both roll back). The web change that uses the target (the bell, commit dc1e560)
+is on the branch only until Ben merges and deploys; until then the bell ignores the new target (no harm).
+
+## 2026-11-23 — Track A: audit bugs and quick fixes (branch `fix/track-a-audit-bugs`)
+
+**Objective.** Bellvox roadmap phase 0 and the Track A bug list (Ben, 23 Nov): fix the real bugs of the
+[UX audit of 20 Nov](../planning/2026-11-20-ux-audit.md) and the quick P1 items of its top 15, except invoice printing (Track B)
+and the new look (Track C, on hold).
+
+**Actions Completed.**
+- Phase 0 (earlier commits on the branch): home tiles open Money owed (`/finance/owed`) and Sales by product
+  (`/finance/product-sales`, new `GET /v1/finance/product-sales`); alert notifications open their page (`sql/104`, test 101);
+  an expired batch shows "Expired" in All batches.
+- History and audit log: money shows as money, not minor units; quantities without ".000"; one row per reminder sent to several
+  managers ("to 2 people"; the OUT-0376 "double" reminder was one per manager, checked read-only on live). Display side only
+  (`apps/web/src/lib/auditText.ts`), so old rows read right; the CSV keeps the raw text.
+- Approve and Reject hidden on one's own note, request, transfer, count, adjustment or purchase order unless the person may approve
+  their own. The session sends `mayApproveOwn` (rule of `core__sole_approver`, sql/063, 077); the database still decides.
+- Paging: list routes take `?offset=` (`apps/api/src/lib/paging.ts`); "Load more" on stock requests, stock ledger, sales and purchase
+  orders, journal and notifications.
+- Date boxes follow the company date format (`components/DateInput.tsx`), on every screen except the sales invoice form
+  (`CustomerInvoices.tsx`, Track B's file).
+- Prices page: each task in its own card (no overlap). Suppliers and customers lists: 5 columns, the rest under Edit.
+- Notifications: first line, "+ N more", money, quantities and dates formatted. Home: only the most urgent card says
+  "Action required". Arabic for every new text (`lib/i18nUxAudit.ts`, machine drafts).
+
+**Database / System Result.** `sql/104` applied to live (see the entry above). No other migration in this batch.
+One read-only query on live (reminders of OUT-0376).
+
+**Safety Status.** typecheck clean (against this worktree's own shared package: `node_modules/@erp` junctions inside the worktree
+point to its own `apps/` and `packages/`; remove them before deleting the worktree); tests: shared 82, API 704 (7 skipped), web 178;
+biome ci 0 errors; doc link and migration checks OK. Not checked in a browser. Still open: the sales invoice page (void button and
+text, its date box) waits for Track B; demo data clean-up needs Ben's yes (live data); Arabic for units and warehouse names needs a
+migration.
 ## 2026-11-23 — Invoice printing, step 1c built (`sql/103`, not applied)
 
 **Objective.** Track B of the Bellvox roadmap (Ben, 23 Nov): print, PDF and send invoices in Arabic on the company's own look.

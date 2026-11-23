@@ -17,6 +17,8 @@ export type Column<T> = {
   align?: 'left' | 'right';
   /** Extra class for the heading and every cell (for example `col-sticky-end` keeps an Actions column in view). */
   className?: string;
+  /** Not shown as a column, but still searched and exported (UX audit 20 Nov: lists with 11 columns ran off the screen). */
+  hidden?: boolean;
 };
 
 type Props<T> = {
@@ -32,6 +34,8 @@ type Props<T> = {
   actions?: (row: T) => ReactNode;
   /** Where clicking the row goes. Rows without it do not react to the pointer. */
   rowHref?: (row: T) => string;
+  /** Older rows on the server (lib/usePaged.ts): a "Load more" button under the table. Search and sort cover the loaded rows only. */
+  more?: { hasMore: boolean; loading: boolean; onMore: () => void };
 };
 
 function csvCell(v: string | number | null): string {
@@ -39,9 +43,10 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref }: Props<T>) {
+export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref, more }: Props<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
+  const visible = columns.filter((c) => !c.hidden);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -86,7 +91,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
           aria-label={trf('Search {title}', { title })}
         />
         <span className="muted list-count">
-          {trf('{shown} of {total}', { shown: shown.length, total: rows.length })}
+          {more?.hasMore ? trf('{shown} of the newest {total}', { shown: shown.length, total: rows.length }) : trf('{shown} of {total}', { shown: shown.length, total: rows.length })}
         </span>
         <span className="spacer" />
         {toolbar}
@@ -98,7 +103,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
         <table>
           <thead>
             <tr>
-              {columns.map((c) => (
+              {visible.map((c) => (
                 <th key={c.key} scope="col" className={[c.align === 'right' ? 'right' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}>
                   <button className="th-sort" onClick={() => toggleSort(c.key)} aria-label={c.label || tr('Actions')}>
                     {c.label}
@@ -114,7 +119,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
               const cells = (
                 <>
                   {/* data-label: on a phone each row becomes a card and each cell shows its column name (styles.css). */}
-                  {columns.map((c) => (
+                  {visible.map((c) => (
                     <td key={c.key} data-label={c.label} className={[c.align === 'right' ? 'right' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}>
                       {c.render ? c.render(r) : c.value(r)}
                     </td>
@@ -126,7 +131,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="muted empty">
+                <td colSpan={visible.length + (actions ? 1 : 0)} className="muted empty">
                   {rows.length === 0 ? (empty ?? tr('Nothing here yet.')) : tr('No matches.')}
                   {rows.length === 0 && emptyAction && <div className="empty-action">{emptyAction}</div>}
                 </td>
@@ -135,6 +140,11 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
           </tbody>
         </table>
       </div>
+      {more?.hasMore && (
+        <div className="form-actions list-more">
+          <Button variant="outline" disabled={more.loading} onClick={more.onMore}>{more.loading ? tr('Loading…') : tr('Load more')}</Button>
+        </div>
+      )}
     </div>
   );
 }

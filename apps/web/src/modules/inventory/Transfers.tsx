@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { localName, unitLabel } from '../../lib/names';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -76,14 +78,14 @@ export function TransfersList() {
 
   return (
     <section className="page wide">
-      <h1>{tr('Stock transfers')}</h1>
-      <p className="muted">{tr('Inter-warehouse transfers, approved before dispatch.')}</p>
+      <h1>{tr('Transfers')}</h1>
+      <p className="muted">{tr('Move stock between warehouses. A manager approves first.')}</p>
       {transit.data && transit.data.length > 0 && (
         <div className="form-card stack">
           <strong>{tr('In transit now')}</strong>
           <p className="muted small">{tr('Dispatched, not yet received. Stock in transit is not available in any warehouse.')}</p>
           <ul className="plain-list">
-            {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {r.uom} {trf(r.transfers === 1 ? 'in {n} transfer' : 'in {n} transfers', { n: r.transfers })}</li>)}
+            {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {unitLabel(r.uom)} {trf(r.transfers === 1 ? 'in {n} transfer' : 'in {n} transfers', { n: r.transfers })}</li>)}
           </ul>
         </div>
       )}
@@ -158,8 +160,8 @@ export function NewTransfer() {
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
-          <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-          <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
+          <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
         </div>
         {same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
         <strong>{tr('Items')}</strong>
@@ -268,11 +270,15 @@ export function TransferPage() {
       {t.status === 'submitted' && can('inventory.transfers.approve') && (
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
-          <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
-          <div className="form-actions">
-            <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</Button>
-            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
-          </div>
+          {!demoMode && !mayDecide(session, t.requesterId) ? <p className="muted small">{tr(OWN_REQUEST_TEXT)}</p> : (
+            <>
+              <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
+              <div className="form-actions">
+                <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</Button>
+                <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
+              </div>
+            </>
+          )}
           {demoMode && <p className="hint muted small">{tr('Try approving a transfer you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
       )}
