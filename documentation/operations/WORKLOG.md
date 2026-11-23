@@ -11,7 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-23 — Track A: audit bugs and quick fixes (branch `fix/track-a-audit-bugs`; `sql/104` not applied)
+## 2026-11-23 — `sql/104` applied to live (alert notifications open their page)
+
+**Objective.** Ben's yes (23 Nov) to apply the Track A migration so alert notifications (low stock, expiry, overdue invoices,
+running out, losing money) open their page.
+
+**Actions Completed.** Rolled-back dry run of `sql/104_alert_notification_target.sql` on live (no error), then applied with
+`npx supabase db query --linked -f` from the main checkout. Ran `sql/tests/101` and `sql/tests/092` on live. `sql/README.md` updated.
+
+**Database / System Result.** Live (erp-live): trigger `msg_outbox_alert_target` on; existing alert messages and notifications
+backfilled (0 alert messages left without a target); `authenticated` cannot call `msg__alert_target()`.
+
+**Safety Status.** Tests 101 and 092 pass on live (both roll back). The web change that uses the target (the bell, commit dc1e560)
+is on the branch only until Ben merges and deploys; until then the bell ignores the new target (no harm).
+
+## 2026-11-23 — Track A: audit bugs and quick fixes (branch `fix/track-a-audit-bugs`)
 
 **Objective.** Bellvox roadmap phase 0 and the Track A bug list (Ben, 23 Nov): fix the real bugs of the
 [UX audit of 20 Nov](../planning/2026-11-20-ux-audit.md) and the quick P1 items of its top 15, except invoice printing (Track B)
@@ -34,7 +48,7 @@ and the new look (Track C, on hold).
 - Notifications: first line, "+ N more", money, quantities and dates formatted. Home: only the most urgent card says
   "Action required". Arabic for every new text (`lib/i18nUxAudit.ts`, machine drafts).
 
-**Database / System Result.** None. `sql/104` is written and tested locally only; not applied to live. No new migration in this batch.
+**Database / System Result.** `sql/104` applied to live (see the entry above). No other migration in this batch.
 One read-only query on live (reminders of OUT-0376).
 
 **Safety Status.** typecheck clean (against this worktree's own shared package: `node_modules/@erp` junctions inside the worktree
