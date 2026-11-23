@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { unitLabel } from '../../lib/names';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
@@ -84,7 +85,7 @@ export function TransfersList() {
           <strong>{tr('In transit now')}</strong>
           <p className="muted small">{tr('Dispatched, not yet received. Stock in transit is not available in any warehouse.')}</p>
           <ul className="plain-list">
-            {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {r.uom} {trf(r.transfers === 1 ? 'in {n} transfer' : 'in {n} transfers', { n: r.transfers })}</li>)}
+            {transit.data.map((r) => <li key={r.itemId}><code>{r.sku}</code> {r.name}: <strong>{r.qty}</strong> {unitLabel(r.uom)} {trf(r.transfers === 1 ? 'in {n} transfer' : 'in {n} transfers', { n: r.transfers })}</li>)}
           </ul>
         </div>
       )}

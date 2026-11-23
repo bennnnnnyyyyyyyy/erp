@@ -1,4 +1,5 @@
 import { api } from '../../lib/api';
+import { unitLabel } from '../../lib/names';
 import { Loading } from '../../components/Loading';
 import { useLoad } from '../../lib/useLoad';
 import { Link } from '../../lib/router';
@@ -48,7 +49,7 @@ export function ForecastPage() {
         {rows.map((r) => (
           <tr key={r.itemId}>
             <td>{r.sku} · {r.name}</td>
-            <td className="right">{fmt(r.available)} {r.uom}</td>
+            <td className="right">{fmt(r.available)} {unitLabel(r.uom)}</td>
             <td className="right">{r.confidence === 'none' ? '—' : fmt(r.dailyRate)}</td>
             <td>{r.runsOutOn ? <><Pill status={tone(r.daysOfCover)} label={trf('{n} days', { n: r.daysOfCover ?? '' })} /> <span className="muted small">{formatDay(r.runsOutOn, session.org)}</span></> : <span className="muted">{tr('no usage in 90 days')}</span>}</td>
             <td>{r.confidence === 'good' ? <Pill status="received" label={tr('High')} /> : r.confidence === 'thin' ? <span title={trf('{issues} issue(s) over {days} days', { issues: r.issuesCount, days: r.historyDays })}><Pill status="submitted" label={tr('Low (limited history)')} /></span> : ''}</td>

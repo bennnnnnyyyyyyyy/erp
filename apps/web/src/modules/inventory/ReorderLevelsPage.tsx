@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { localName, unitLabel } from '../../lib/names';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
@@ -84,16 +85,16 @@ export function ReorderLevelsPage() {
               return (
                 <tr key={row.id}>
                   <td><code>{row.sku}</code></td>
-                  <td><strong>{row.name}</strong><div className="muted small">{trf('{qty} {unit} reserved', { qty: formatQty(row.reserved), unit: row.uom })}</div></td>
+                  <td><strong>{localName(row)}</strong><div className="muted small">{trf('{qty} {unit} reserved', { qty: formatQty(row.reserved), unit: unitLabel(row.uom) })}</div></td>
                   {/* Walkthrough 18 Nov: "139.029" with no unit; the quantity now reads "139.029 litre". */}
-                  <td className="right"><strong>{formatQty(row.available)}</strong> <span className="muted small">{row.uom}</span></td>
+                  <td className="right"><strong>{formatQty(row.available)}</strong> <span className="muted small">{unitLabel(row.uom)}</span></td>
                   <td className="right">
                     {canManage ? (
                       <span className="flex items-center gap-2">
                         <input className="narrow-input" type="number" min="0" step="0.001" aria-label={trf('Reorder level for {sku}', { sku: row.sku })} value={value} onChange={(e) => setDrafts((current) => ({ ...current, [row.id]: e.target.value }))} placeholder={tr('Not watched')} />
-                        <span className="muted small">{row.uom}</span>
+                        <span className="muted small">{unitLabel(row.uom)}</span>
                       </span>
-                    ) : row.reorderLevel === null ? tr('Not watched') : `${formatQty(row.reorderLevel)} ${row.uom}`}
+                    ) : row.reorderLevel === null ? tr('Not watched') : `${formatQty(row.reorderLevel)} ${unitLabel(row.uom)}`}
                   </td>
                   <td>{row.reorderLevel === null ? <span className="muted">{tr('Not watched')}</span> : row.low ? <span className="pill st-rejected">{tr('Low stock')}</span> : <span className="pill st-approved">{tr('Healthy')}</span>}</td>
                 </tr>

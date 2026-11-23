@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { unitLabel } from '../../lib/names';
 import { demoMode } from '../../lib/demo';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -27,7 +28,7 @@ export function useCatalog() {
   const warehouses = useLoad(() => api<DemoWarehouse[]>('/v1/inventory/warehouses'));
   const itemName = (id: string) => items.data?.find((i) => i.id === id)?.name ?? id;
   const warehouseName = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? id;
-  const uomOf = (id: string) => items.data?.find((i) => i.id === id)?.uom ?? '';
+  const uomOf = (id: string) => unitLabel(items.data?.find((i) => i.id === id)?.uom);
   return { items, warehouses, itemName, warehouseName, uomOf, ready: Boolean(items.data && warehouses.data) };
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { unitLabel } from '../../lib/names';
 import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
 import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
@@ -147,7 +148,7 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
       <form className="stack" onSubmit={submit}>
         <p className="muted">
           {tr('The SKU and unit stay the same, because documents and quantities depend on them. Every change is kept in the history.')}{' '}
-          <code>{item.sku}</code> · {item.uom}
+          <code>{item.sku}</code> · {unitLabel(item.uom)}
         </p>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
