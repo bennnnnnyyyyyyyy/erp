@@ -11,6 +11,30 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — PDF letterhead; cloud PDF choice and cloud deployment plan (track-b2, part 2)
+
+**Objective.** Item 4 of the track-b2 brief (a company uploads its letterhead as a PDF), after Ben installed `pdfjs-dist`; and Ben's
+decisions of 23 Nov on PDFs for on-prem and cloud.
+
+**Actions Completed.** Branch `feat/invoice-printing-2`.
+- Decisions recorded (Ben, 23 Nov): on-prem makes PDFs with **Gotenberg** on the same server (`pdf` container in
+  `documentation/planning/2026-11-19-on-prem-deployment-plan.md`); the cloud uses **Cloudflare Browser Run** (option A in
+  `documentation/plans/INVOICE_SEND_QUEUE_PLAN.md` section 6). New `documentation/planning/2026-11-23-cloud-deployment-plan.md` with
+  the Cloudflare Workers Paid plan step (Ben: a deployment plan that includes cloud must include the Cloudflare plan).
+- PDF letterhead: `apps/web/src/modules/core/settings/letterheadPdf.ts` draws page 1 of a one-page PDF with pdf.js in the browser and
+  saves it as a JPEG of the A4 page within the existing letterhead limit (tries 1240/992/827 px wide at falling quality). Refuses: more
+  than one page, more than 10 MB, a password, an unreadable file. No XFA forms. `DocumentSettings.tsx` accepts PDF for the letterhead.
+  pdf.js and its worker load only when a PDF is picked (own chunks in the build). `apps/web/package.json` and `package-lock.json`:
+  `pdfjs-dist` 6.5.438 (installed by Ben). New Arabic strings in `lib/i18nPrinting.ts`.
+- Tests: `letterheadPdf.test.ts` (size choice); `e2e/letterhead.e2e.ts` (real Chrome: a one-page PDF becomes a 1240 x 1754 JPEG with the
+  right colours, a two-page PDF is refused).
+
+**Database / System Result.** None. Nothing bought or changed on Cloudflare.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` shared 88, API 737 (7 skipped), web 188; `biome ci` 0 errors;
+`letterhead.e2e.ts` passed; production build makes the pdf.js chunks. Not checked: a real company letterhead PDF (with Arabic fonts) in
+the live app; that the live host serves the `.mjs` worker file as JavaScript (Ben's browser step).
+
 ## 2026-11-23 — Invoice printing leftovers (track-b2): invoice page fixes, layout picture tests, three print fixes
 
 **Objective.** Finish the invoice printing leftovers from the master chat's brief (`.temp/2026-11-23-track-b2-brief.md`), in its order.
