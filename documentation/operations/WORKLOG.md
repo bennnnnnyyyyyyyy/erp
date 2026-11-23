@@ -11,6 +11,48 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — Phase 1a: the low stock pop-up built (`sql/106`, not applied)
+
+**Objective.** Build part A of the low stock plan, following the
+[build plan](../plans/LOW_STOCK_POPUP_BUILD_PLAN.md) that Ben approved on 23 Nov. Ben's answers: "Remind me" and "Don't show again"
+are not audited; an item with no supplier opens the order and asks for one; only people who can reorder see the pop-up; the company
+sets its workdays and hours at the start ("tomorrow" = the next workday); people without purchase orders get "Ask for it".
+
+**Actions Completed.**
+- `sql/106_inv_low_stock_popup.sql`:
+  - the company work week (`core_set_work_week`, owners and admins, audited; `core__next_work_start`)
+  - `inv_items.max_level` with its read grant (`inv_set_max_level`, audited)
+  - `inv_stock_alert_states` (RLS, own rows only, select-only grant)
+  - `inv_snooze_low_stock`, `inv_mute_low_stock`, `inv_low_stock_popup` (the suggested quantity fills up to the maximum level, else
+    the forecast, minus what is on order)
+  - test `sql/tests/103_low_stock_popup.sql`
+- API (`apps/api/src/modules/inventory/lowStock.ts`):
+  - pop-up list, snooze, mute (`inventory.request.create`)
+  - maximum level (`inventory.reorder.manage`)
+  - `PUT /v1/core/org/work-week` (`core.org.manage`)
+  - the session sends the work week; the item list sends `maxLevel` (with a fallback)
+  - every new route answers 503 `not_set_up` before 106
+- Web:
+  - `components/LowStockPopup.tsx`: once each sign-in, and again on a new low stock alert in the bell
+  - "Create purchase order" opens a filled draft (`lib/orderLink.ts`); with no supplier it asks for one. "Ask for it" opens a stock
+    request.
+  - Remind me (1 hour, next workday, next week); Don't show again
+  - the work week card in Settings > General and in the company step of the setup wizard
+  - a Maximum column on Reorder levels
+  - Arabic for every new text
+
+**Database / System Result.** None on live. `sql/106` is written and tested locally only.
+
+**Safety Status.**
+- Local PGlite, all 103 migrations: 100 of 100 SQL tests pass (103 is new; 106 reruns cleanly).
+- typecheck is clean. Tests: shared 82, API 715 (7 skipped), web 181. biome ci shows 0 errors.
+- Not checked in a browser.
+- Not done yet:
+  - the "Suggested" reorder point column (plan: a second step)
+  - the end-to-end test pop-up → draft → save → approval (the pop-up is off in the demo build that CI uses; it needs a test on a
+    real build)
+- Before live: Ben's yes, a rolled-back dry run, then tests 103 and 092 on live.
+
 ## 2026-11-23 — `sql/105` applied to live (Arabic warehouse names)
 
 **Objective.** Ben's yes (23 Nov) to apply the Track A migration for Arabic warehouse names.
