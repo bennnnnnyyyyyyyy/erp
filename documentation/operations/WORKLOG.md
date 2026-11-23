@@ -40,7 +40,8 @@ Once someone looks at them and commits them, the smoke test compares against the
   (then the device send), and lists the sends with their status. Settings wording and Arabic strings.
 - Found: WhatsApp and email are not per company (our one number, our Resend sender). Recorded in the plan as question 4 for Ben.
 
-**Database / System Result.** None on live. `sql/107` and test 104 pass locally on PGlite (107 run twice; test 100 still passes).
+**Database / System Result.** None on live. All 102 SQL tests pass locally on PGlite (107 run twice). CI first failed on test 092:
+`msg_outbox.doc_params` is unreadable on purpose and is now listed there with its reason.
 
 **Safety Status.** `npm run typecheck` clean; `npm test` shared 88, API 742 (7 skipped), web 188; `biome ci` 0 errors; Playwright
 13 passed, 9 skipped (Windows pictures only where present; the picture tests skip on phone). Not done: apply `sql/107` to live (needs Ben's yes);
