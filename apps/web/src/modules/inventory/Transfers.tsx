@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -268,11 +269,15 @@ export function TransferPage() {
       {t.status === 'submitted' && can('inventory.transfers.approve') && (
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
-          <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
-          <div className="form-actions">
-            <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</Button>
-            <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
-          </div>
+          {!demoMode && !mayDecide(session, t.requesterId) ? <p className="muted small">{tr(OWN_REQUEST_TEXT)}</p> : (
+            <>
+              <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
+              <div className="form-actions">
+                <Button type="submit" disabled={busy} onClick={() => act('approve', 'Approval recorded.')}>{tr('Approve')}</Button>
+                <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. The reserved stock was released.')}>{tr('Reject')}</Button>
+              </div>
+            </>
+          )}
           {demoMode && <p className="hint muted small">{tr('Try approving a transfer you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
       )}

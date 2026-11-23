@@ -114,4 +114,6 @@ export const UX_AUDIT_AR: Record<string, string> = {
   '{qty} in {warehouse}': '{qty} في {warehouse}',
   // History (UX audit 20 Nov, Track A)
   'to {n} people': 'إلى {n} أشخاص',
+  // Own requests (UX audit 20 Nov, Track A)
+  'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

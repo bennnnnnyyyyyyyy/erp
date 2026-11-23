@@ -12,6 +12,7 @@ import { usePeople } from '../../lib/people';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { canCancel, canDecide, creditableLeft, noteVatTotals, type NoteForMath } from './noteMath';
 
 // Credit and debit notes on one sales invoice (sql/037, sql/043; routes in apps/api/src/modules/sales/notes.ts). A note is a request:
@@ -95,7 +96,8 @@ export function InvoiceNotes({ invoice, itemOf, onChanged }: { invoice: NoteInvo
               <td>{n.decidedBy ? <>{who(n.decidedBy)}{n.decidedAt ? <div className="muted small">{formatDateTime(n.decidedAt, session.org)}</div> : null}{n.decisionComment ? <div className="muted small">“{n.decisionComment}”</div> : null}</> : <span className="muted">—</span>}</td>
               <td>
                 <div className="form-actions">
-                  {canDecide(n, canApprove) && (
+                  {canApprove && n.status === 'submitted' && !mayDecide(session, n.requesterId) && <span className="muted small">{tr(OWN_REQUEST_TEXT)}</span>}
+                  {canDecide(n, canApprove, mayDecide(session, n.requesterId)) && (
                     <>
                       <Button size="sm" disabled={busy} onClick={() => setDecide({ note: n, decision: 'approve' })}>{tr('Approve')}</Button>
                       <Button size="sm" variant="outline" disabled={busy} onClick={() => setDecide({ note: n, decision: 'reject' })}>{tr('Reject')}</Button>

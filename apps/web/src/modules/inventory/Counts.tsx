@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { hasPermission } from '@erp/shared';
 import { ConfirmButton } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
@@ -270,6 +271,7 @@ export function CountPage() {
         <div className="form-card stack">
           <strong>{tr('Manager decision')}</strong>
           <p className="muted small">{tr('Approving changes stock by each difference. If you started or submitted this count, another owner or manager must approve it, unless you are the only one.')}</p>
+          {!mayDecide(session, count.requesterId) ? <p className="muted small">{tr(OWN_REQUEST_TEXT)}</p> : <>
           <label>{tr('Comment (optional)')}<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="form-actions">
             <ConfirmButton label={tr('Approve')} confirmLabel={tr('Yes, change the stock')} disabled={busy}
@@ -277,6 +279,7 @@ export function CountPage() {
               onConfirm={() => act('approve', 'Approved. The differences were applied to stock.')} />
             <Button variant="outline" type="submit" disabled={busy} onClick={() => act('reject', 'Rejected. Stock was not changed.')}>{tr('Reject')}</Button>
           </div>
+          </>}
         </div>
       )}
       {count.status === 'submitted' && !can('inventory.adjustments.approve') && <p className="notice">{tr('Waiting for a manager to approve.')}</p>}

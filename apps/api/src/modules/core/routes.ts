@@ -51,9 +51,25 @@ async function ownName(c: Context<AppEnv>): Promise<string | null> {
   }
 }
 
+// Whether the signed-in person may approve or reject their own requests (stock requests, notes, orders...): the same rule as the
+// database helper core__sole_approver (sql/063, 065, 077). An owner when the company lets owners approve their own (D1c); an owner or
+// admin when no other active owner or admin exists (D1). Only so screens hide buttons the database would refuse; the database still
+// decides. Not essential: on any error it is false (the buttons hide, the database is unchanged).
+async function mayApproveOwn(c: Context<AppEnv>): Promise<boolean> {
+  const { role, ownerSelfApproval } = c.var.tenant;
+  if (role !== 'owner' && role !== 'admin') return false;
+  if (role === 'owner' && ownerSelfApproval) return true;
+  try {
+    const members = await callRpc<{ user_id: string; role: string; disabled_at: string | null }[]>(userDb(c), 'core_list_members', {});
+    return !members.some((m) => m.user_id !== c.var.user.id && !m.disabled_at && (m.role === 'owner' || m.role === 'admin'));
+  } catch {
+    return false;
+  }
+}
+
 coreRoutes.get('/session', async (c) => {
   const { user, tenant } = c.var;
-  const [saved, name] = await Promise.all([savedLanguage(c), ownName(c)]);
+  const [saved, name, approveOwn] = await Promise.all([savedLanguage(c), ownName(c), mayApproveOwn(c)]);
   const session: SessionInfo = {
     userId: user.id,
     email: user.email,
@@ -73,6 +89,7 @@ coreRoutes.get('/session', async (c) => {
     },
     role: tenant.role,
     permissions: tenant.permissions,
+    mayApproveOwn: approveOwn,
     modules: tenant.modules,
     userLanguage: saved.language,
     userLanguageAsked: saved.asked,

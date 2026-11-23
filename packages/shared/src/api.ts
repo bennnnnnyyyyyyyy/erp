@@ -38,5 +38,11 @@ export type SessionInfo = {
   userLanguageAsked: boolean;
   role: Role | null;
   permissions: string[];
+  /**
+   * The person may approve or reject their own requests: the only active owner or admin (D1), or an owner while "owners may approve
+   * their own" is on (D1c); the rule of core__sole_approver (sql/063, 077). Screens hide Approve on one's own request otherwise.
+   * Optional until every API sends it.
+   */
+  mayApproveOwn?: boolean;
   modules: string[];
 };

@@ -37,10 +37,11 @@ export function netInvoiceMinor(totalMinor: number, creditedMinor: number, debit
   return totalMinor - creditedMinor + debitedMinor;
 }
 
-/** Whether a waiting note should show Approve / Reject: the person holds the approve permission and the note is still waiting.
- *  A note you requested yourself still shows them: the database refuses it unless you are the only owner or admin (sql/063, 065). */
-export function canDecide(note: { status: string }, hasApprove: boolean): boolean {
-  return hasApprove && note.status === 'submitted';
+/** Whether a waiting note should show Approve / Reject: the person holds the approve permission, the note is still waiting, and it
+ *  is not their own unless they may approve their own (`ownOk`, lib/approvals.ts: the only owner or admin, or D1c; sql/063, 065, 077).
+ *  UX audit 20 Nov: Approve showed on one's own credit note and the database refused it. */
+export function canDecide(note: { status: string }, hasApprove: boolean, ownOk = true): boolean {
+  return hasApprove && note.status === 'submitted' && ownOk;
 }
 
 /** Whether Cancel is offered: only while waiting, to the requester (owners and admins may also cancel, as the database allows). */

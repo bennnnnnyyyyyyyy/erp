@@ -27,6 +27,8 @@ describe('who sees which button', () => {
     expect(canDecide({ status: 'submitted' }, true)).toBe(true);
     expect(canDecide({ status: 'submitted' }, false)).toBe(false);
     expect(canDecide({ status: 'approved' }, true)).toBe(false);
+    // UX audit 20 Nov: not on your own note unless you may approve your own (lib/approvals.ts)
+    expect(canDecide({ status: 'submitted' }, true, false)).toBe(false);
   });
   it('offers cancel to the requester or a decider, only while waiting', () => {
     expect(canCancel({ status: 'submitted', requesterId: 'u1' }, 'u1', false)).toBe(true);
