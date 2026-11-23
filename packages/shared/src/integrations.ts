@@ -342,7 +342,7 @@ export type AiStatus = {
   serviceCapUsd: number;
   ownProviderReady: { openai: boolean; elevenlabs: boolean };
   /** The provider chosen to read bills (sql/108); null = the first one that is on. */
-  reader: AiReaderKind | null;
+  reader?: AiReaderKind | null;
 };
 
 /**
