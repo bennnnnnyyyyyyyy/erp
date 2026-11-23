@@ -1,4 +1,6 @@
 import { DateInput } from '../../components/DateInput';
+import { demoMode } from '../../lib/demo';
+import { WorkWeekCard } from '../core/settings/WorkWeekCard';
 import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
@@ -199,6 +201,8 @@ export function CompanyStep({ c, onDone }: { c: OnboardingContent; onDone: () =>
           <Saver c={c} busy={busy} error={error} />
         </div>
       </form>
+      {/* Ben, 23 Nov: the company sets its workdays and hours at the start (sql/106; "Remind me: next workday"). Saved on its own button. */}
+      {!demoMode && <div className="mt-4"><WorkWeekCard /></div>}
     </>
   );
 }

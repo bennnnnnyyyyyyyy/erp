@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { WorkWeekCard } from './WorkWeekCard';
 import { Button } from '../../../components/ui/button';
 import { Loading } from '../../../components/Loading';
 import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
@@ -203,6 +204,7 @@ export function GeneralSettings() {
           </ul>
         </div>
       )}
+      {canEdit && !demoMode ? <WorkWeekCard /> : null}
       {canEdit && !demoMode && session.modules.includes('sales') ? <VatSettingsCard /> : null}
       {canEdit && !demoMode && org.data ? <PeriodSettings org={org.data} onSaved={org.reload} /> : null}
     </section>
