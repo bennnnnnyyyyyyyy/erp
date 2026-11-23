@@ -11,6 +11,32 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — Invoice printing leftovers (track-b2): invoice page fixes, layout picture tests, three print fixes
+
+**Objective.** Finish the invoice printing leftovers from the master chat's brief (`.temp/2026-11-23-track-b2-brief.md`), in its order.
+
+**Actions Completed.** Branch `feat/invoice-printing-2` from `origin/main`; not pushed.
+- Item 1 (commit `18d47df`): `CustomerInvoices.tsx` invoice date box is now `components/DateInput` (company date format). The old
+  subtitle "A wrong invoice is voided, not edited." was already replaced by Track B; its orphan Arabic entry is removed from
+  `lib/i18nScreens.ts`, and the Guide text (`help/helpContent.ts`, English and Arabic) now says drafts, then credit or debit notes.
+  The Void button stays (Ben's decision).
+- Item 2 (commit `dc46439`): layout picture tests `apps/web/e2e/print.e2e.ts` (8 pictures: simple, detailed, ETA in Arabic and
+  English; ETA in both; a draft with its DRAFT mark) on fixed sample print data (`lib/demoPrint.ts`, served by `demo.ts` /
+  `demoTrade.ts`; the sample build's Sales app has the print page, not in its menu). Pictures are kept per system; only Windows pictures
+  exist, so CI (Linux) skips these tests until a Linux set is added.
+- Print fixes found by the pictures: (1) the ETA sheet was laid out in one row (the sheet's class `print-eta` also styled the QR box as
+  flex; the box is now `print-eta-box`); (2) the ETA line table was wider than A4 and its last columns were cut off on paper (smaller
+  type, codes may break); (3) English-only paper used the Arabic comma in addresses.
+- Item 5 plan written: `documentation/plans/INVOICE_SEND_QUEUE_PLAN.md` (draft, waiting for Ben). Item 4 (PDF letterhead) waits for
+  Ben to install `pdfjs-dist`.
+
+**Database / System Result.** None. No migration; numbers 107 and test 104 are still free.
+
+**Safety Status.** `npm run typecheck` clean; `npm test`: shared 88, API 737 (7 skipped), web 185, all pass; `biome ci` 0 errors;
+doc links OK; `print.e2e.ts` 8 passed on Windows (desktop Chrome). Not checked: the printing in a real browser against live
+(steps for Ben in `.temp/2026-11-23-track-b2-report.md`). Smoke test 4 of 4 pass with one worker (with two, two inventory pages
+timed out from dev-server load).
+
 ## 2026-11-23 — `sql/103` applied to live (invoice printing)
 
 **Objective.** Ben's yes (23 Nov) to apply the invoice printing migration, merged in PR #100. The invoice pages on live need it.

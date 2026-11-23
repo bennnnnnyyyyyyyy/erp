@@ -102,10 +102,12 @@ export function PrintDocument({ data, options }: { data: DocPrintData; options: 
 
   const c = data.customer;
   const company = data.company;
+  // The Arabic comma on Arabic paper, the Western comma on English-only paper.
+  const sep = lang === 'en' ? ', ' : '، ';
   const branchAddress = company.branch
-    ? [company.branch.buildingNumber, company.branch.street, company.branch.regionCity, company.branch.governate].filter(Boolean).join('، ')
+    ? [company.branch.buildingNumber, company.branch.street, company.branch.regionCity, company.branch.governate].filter(Boolean).join(sep)
     : '';
-  const customerAddress = c ? [c.buildingNumber, c.street, c.regionCity ?? c.city, c.governate].filter(Boolean).join('، ') : '';
+  const customerAddress = c ? [c.buildingNumber, c.street, c.regionCity ?? c.city, c.governate].filter(Boolean).join(sep) : '';
 
   return (
     <article className={`print-sheet print-${layout}`} dir={printDir(lang)} lang={lang === 'en' ? 'en' : 'ar'} style={sheetStyle} data-letterhead={s.letterhead ? 'yes' : 'no'}>
@@ -209,7 +211,7 @@ export function PrintDocument({ data, options }: { data: DocPrintData; options: 
           {s.paymentTerms ? <div><h2>{lbl('terms')}</h2><p className="print-pre">{s.paymentTerms}</p></div> : null}
           {s.bankDetails ? <div><h2>{lbl('bank')}</h2><p className="print-pre">{s.bankDetails}</p></div> : null}
           {layout === 'eta' ? (
-            <div className="print-eta">
+            <div className="print-eta-box">
               <div className="print-qr" aria-label={lbl('etaQr')} />
               <p className="print-strong">{lbl('etaNotSubmitted')}</p>
             </div>

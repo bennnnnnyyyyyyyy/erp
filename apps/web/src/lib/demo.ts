@@ -1,5 +1,6 @@
 import { handleInventory, ACTOR_NAMES } from './demoInventory';
 import { handleTrade } from './demoTrade';
+import { demoDocSettings } from './demoPrint';
 import { MODULES, type AuditEntry, type InviteResult, type Member, type ModuleStatus, type OrgSettings, type Role } from '@erp/shared';
 
 // Demo mode (`npm run dev:demo -w apps/web`): the web app runs on sample data held in memory, with no
@@ -112,6 +113,8 @@ function handle(method: string, area: string | undefined, id: string | undefined
   }
 
   if (area === 'audit') return audit;
+
+  if (area === 'doc-settings' && method === 'GET') return demoDocSettings();
 
   if (area === 'members') {
     if (method === 'GET' && !id) return members;
