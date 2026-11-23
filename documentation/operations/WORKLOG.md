@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — HR & payroll app link: live state checked (`sql/102`)
+
+**Objective.** Close the HR app link, phase 1: record what is live, since the worklog still said `sql/102` was not applied.
+
+**Actions Completed.** Read-only checks only. `sql/README.md`, the checklist and the plan now say live.
+
+**Database / System Result.** Live (ggoerp), read-only query: 4 HR tables with RLS, `hr_app` allowed in `core_integrations`,
+signed-in users cannot read `hr_employees.work_email` or call `hr__sync_due`; 0 `hr_app` connections, People switched on for 0
+companies, 0 `hr.*` audit rows. Deployed API: `POST /webhooks/hr-app` with no headers answers `{"handled":"ignored"}`;
+`GET /v1/hr/employees` without sign-in answers 401. The migration was merged in PR #93; the main chat's notes say it was applied
+23 Nov, but no worklog entry names that run or its dry run.
+
+**Safety Status.** Nothing changed on live. Still open: the first real connection (needs the HR app team's staging address and an
+ERP key), switching People on for a test company, a browser check of the People screen and the HR app card, Ben's review of the
+Arabic (`apps/web/src/lib/i18nPeople.ts`), phase 2 (payroll) plan.
+
 ## 2026-11-20 — HR & payroll app link, phase 1 built (`sql/102`, not applied)
 
 **Objective.** Ben approved the HR app plan (20 Nov): master-key files `lib/hr/hrWebhook.ts` and `jobs/hrSync.ts`, the webhook route
