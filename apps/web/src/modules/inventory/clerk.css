@@ -1,0 +1,23 @@
+/* Send goods out for the warehouse clerk (RequestPages.tsx NewRequest), new UI layouts A, B, C. Built for a thumb on a phone:
+   every control at least 48px tall; the submit bar stays at the bottom. Logical properties only. */
+.ck { max-width: 640px; }
+.ck h1 { font-size: 1.6rem; }
+.ck-q { font-size: clamp(1.6rem, 5vw, 2.4rem); line-height: 1.15; letter-spacing: -0.03em; }
+.ck-body { display: flex; flex-direction: column; gap: 0.9rem; padding-block-end: 5.5rem; }
+.ck-field { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; color: var(--muted-foreground); }
+.ck-input { margin: 0; width: 100%; min-height: 48px; font: inherit; font-size: 1rem; padding: 0.6rem 0.9rem; border-radius: var(--radius); border: 1px solid var(--input); background: var(--card); color: var(--foreground); }
+.ck-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ck-chip { font: inherit; cursor: pointer; min-height: 48px; padding: 0.55rem 1rem; border-radius: var(--radius-pill); border: 1px solid var(--input); background: var(--card); color: var(--foreground); font-weight: 500; }
+.ck-chip[aria-checked='true'], .ck-chip[aria-pressed='true'] { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-text); font-weight: 600; }
+.ck-chip:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+.ck-items { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--border); }
+.ck-items li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name qty' 'avail qty'; gap: 0.15rem 0.75rem; align-items: center; padding-block: 0.7rem; border-block-end: 1px solid var(--border); }
+.ck-items li > :first-child { grid-area: name; }
+.ck-avail { grid-area: avail; font-size: 0.82rem; color: var(--muted-foreground); }
+.ck-qty { grid-area: qty; display: inline-flex; align-items: center; border: 1px solid var(--input); border-radius: var(--radius-pill); overflow: hidden; }
+.ck-qty button { font: inherit; font-size: 1.3rem; width: 48px; height: 48px; border: 0; background: var(--card); color: var(--foreground); cursor: pointer; border-radius: 0; padding: 0; }
+.ck-qty button:hover { background: var(--accent); }
+.ck-qty input { margin: 0; width: 4.5rem; min-height: 48px; border: 0; border-inline: 1px solid var(--input); border-radius: 0; text-align: center; font: inherit; font-size: 1.1rem; font-weight: 600; background: var(--card); color: var(--foreground); }
+.ck-bar { position: sticky; inset-block-end: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 0; background: var(--card); border-block-start: 1px solid var(--border); font-size: 0.9rem; color: var(--muted-foreground); }
+.ck-send { min-height: 48px; font-size: 1rem; padding-inline: 1.5rem; }
+.ck-items li:has(> select) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name name" "avail qty"; }

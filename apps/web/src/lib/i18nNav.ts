@@ -171,4 +171,5 @@ export const NAV_AR: Record<string, string> = {
   'Search for a page': 'ابحث عن صفحة',
   'All settings': 'كل الإعدادات',
   Approvals: 'الموافقات',
+  More: 'المزيد',
 };

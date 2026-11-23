@@ -677,3 +677,10 @@ tr.statement-subtotal td {
 .date-input-pick:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 .date-input-native { position: absolute; inset-inline-end: 0; inset-block-end: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
 .table-wrap td .date-input { min-width: 9rem; }
+
+/* Undo bar (ConfirmButton version C): the action waits a few seconds and can be taken back. */
+.undo-bar { display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0.4rem 0.35rem 0.9rem; border-radius: var(--radius-pill); background: var(--foreground); color: var(--card); font-size: 0.9rem; }
+.undo-bar .muted { color: color-mix(in srgb, var(--card) 70%, transparent); }
+.undo-bar button { background: var(--card); color: var(--foreground); }
+/* Ask in place (version A), seamless: no tinted box, a hairline and the question. */
+.confirm-row { background: none; border: 0; border-block: 1px solid var(--border); border-radius: 0; padding-inline: 0; }

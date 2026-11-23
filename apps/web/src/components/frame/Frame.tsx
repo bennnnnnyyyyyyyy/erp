@@ -4,6 +4,7 @@ import { tr } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { allLinks, pinnedPaths, recentPaths, togglePinned, type Section, type SectionKey, type SectionLink } from '../../lib/sections';
 import { AppIcon, PageIcon } from '../icons';
+import { useLabChoice } from '../../lib/labChoice';
 import './frame.css';
 
 // The new app frame (new UI plan, 23 Nov 2026; Dynamics 365 way of working). Three versions being decided by Ben and Grant, switched in
@@ -282,17 +283,72 @@ function Rail({ sections, current, path }: { sections: Section[]; current: Secti
   );
 }
 
+/* Phones (new UI, versions being decided: Design Lab "Phone menu"). A is the drawer from the ☰ button (above). */
+/* B: a bottom tab bar under the thumb; a tab opens a sheet with that section's pages. */
+function BottomBar({ sections, current, path }: { sections: Section[]; current: SectionKey; path: string }) {
+  const [open, setOpen] = useState<SectionKey | null>(null);
+  const ref = useRef<HTMLElement>(null);
+  useDismiss(open !== null, () => setOpen(null), ref);
+  useEffect(() => setOpen(null), [path]);
+  const main = sections.filter((s) => s.key !== 'money' && s.key !== 'settings').slice(0, 4);
+  const more = sections.filter((s) => !main.includes(s));
+  const sheet = open === ('more' as SectionKey) ? null : sections.find((s) => s.key === open);
+  return (
+    <nav className="fr-bottom" ref={ref} aria-label={tr('Menu')}>
+      {(sheet || open === ('more' as SectionKey)) && (
+        <div className="fr-sheet">
+          {sheet ? <><p className="fr-flyout-title">{tr(sheet.label)}</p><SectionPanel section={sheet} current={path} onPick={() => setOpen(null)} /></> : (
+            more.map((s) => <div key={s.key}><p className="fr-flyout-title">{tr(s.label)}</p><SectionPanel section={s} current={path} onPick={() => setOpen(null)} /></div>)
+          )}
+        </div>
+      )}
+      {main.map((s) => (
+        <button key={s.key} type="button" className={current === s.key ? 'fr-tab active' : 'fr-tab'} onClick={() => (s.key === 'home' ? navigate('/') : setOpen(open === s.key ? null : s.key))}>
+          <span className="fr-rail-icon"><SectionIcon k={s.key} /></span>{tr(s.label)}
+        </button>
+      ))}
+      {more.length > 0 && (
+        <button type="button" className={more.some((s) => s.key === current) ? 'fr-tab active' : 'fr-tab'} onClick={() => setOpen(open === ('more' as SectionKey) ? null : ('more' as SectionKey))}>
+          <span className="fr-rail-icon fr-more" aria-hidden="true">•••</span>{tr('More')}
+        </button>
+      )}
+    </nav>
+  );
+}
+
+/* C: two rows that scroll sideways: the sections, then the pages of the current section. */
+function SwipeRows({ sections, current, path }: { sections: Section[]; current: SectionKey; path: string }) {
+  const cur = sections.find((s) => s.key === current);
+  const pages = cur && cur.key !== 'home' ? cur.groups.flatMap((g) => g.links) : [];
+  return (
+    <nav className="fr-swipe" aria-label={tr('Menu')}>
+      <div className="fr-swipe-row">
+        {sections.map((s) => <Link key={s.key} to={s.first} className={current === s.key ? 'fr-schip active' : 'fr-schip'}>{tr(s.label)}</Link>)}
+      </div>
+      {pages.length > 0 && (
+        <div className="fr-swipe-row fr-swipe-pages">
+          {pages.map((l) => <Link key={l.to} to={l.to} className={l.to === path ? 'fr-pchip active' : 'fr-pchip'}>{tr(l.page.label)}</Link>)}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+
 export function Frame({ version, sections, current, path, end, children }: FrameProps) {
   const [drawer, setDrawer] = useState(false);
   const [folded, setFolded] = useState(false);
+  const phone = useLabChoice('phone', ['A', 'B', 'C'] as const, 'A');
   useEffect(() => setDrawer(false), [path]);
   return (
-    <div className={`fr fr-${version.toLowerCase()}${drawer ? ' fr-drawer-open' : ''}${folded ? ' fr-folded' : ''}`}>
+    <div className={`fr fr-${version.toLowerCase()} fr-phone-${phone.toLowerCase()}${drawer ? ' fr-drawer-open' : ''}${folded ? ' fr-folded' : ''}`}>
       <AppBar sections={sections} end={end} big={version === 'C'} onMenu={() => setDrawer((d) => !d)} menuOpen={drawer} />
       {version === 'A' && <AreasTop sections={sections} current={current} path={path} onPick={() => setDrawer(false)} />}
       {version === 'B' && <LeftMenu sections={sections} current={current} path={path} folded={folded} onFold={() => setFolded((f) => !f)} />}
       {version === 'C' && <Rail sections={sections} current={current} path={path} />}
+      {phone === 'C' && <SwipeRows sections={sections} current={current} path={path} />}
       <div className="fr-main">{children}</div>
+      {phone === 'B' && <BottomBar sections={sections} current={current} path={path} />}
     </div>
   );
 }
