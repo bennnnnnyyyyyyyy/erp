@@ -8,7 +8,13 @@ import {
   chatOpenAI,
   ELEVENLABS_STT_MICRO_PER_SECOND,
   estimateSeconds,
+  type DocFile,
   OPENAI_STT_MICRO_PER_SECOND,
+  READER_DEFAULT_MODEL,
+  READER_NAMES,
+  READER_READS_PDF,
+  type ReaderKind,
+  readDocument,
   realAiDeps,
   transcribeElevenLabs,
   transcribeOpenAI,
@@ -36,7 +42,12 @@ export type AiAnswer = { text: string; provider: 'openai' | 'ollama' | 'elevenla
 
 // sql/082: no test mode; the state's 'simulated' flag is always false once 082 is applied and is not read here.
 type ProviderState = { enabled: boolean; credentials: Record<string, string> };
-type State = { consent: boolean; providers: { openai: ProviderState; elevenlabs: ProviderState; ollama: ProviderState } };
+type State = {
+  consent: boolean;
+  providers: { openai: ProviderState; elevenlabs: ProviderState; ollama: ProviderState } & Partial<Record<ReaderKind, ProviderState>>;
+  /** sql/108: the provider the company chose to read documents; absent before 108. */
+  reader?: ReaderKind | null;
+};
 
 async function state(env: Bindings, orgId: string): Promise<State> {
   const { data, error } = await adminDb(env).rpc('ai__provider_state', { p_org: orgId });
@@ -54,7 +65,7 @@ async function record(
   env: Bindings,
   who: AiCaller,
   p: {
-    provider: AiAnswer['provider'];
+    provider: AiAnswer['provider'] | ReaderKind;
     feature: string;
     model: string | null;
     inTok?: number;
@@ -195,5 +206,78 @@ export async function transcribeAudio(
   } catch (e) {
     await record(env, who, { provider, feature: 'transcribe', model: null, seconds, cost: 0, ownKey, ok: false });
     throw new HttpError(502, e instanceof Error ? e.message : 'The speech provider could not be reached', 'provider_error');
+  }
+}
+
+// ------------------------------------------------------------------ reading a document (sql/108, scanning step 0)
+// Only the company's own key (Ben, 23 Nov 2026): our keys are never used here, so there is no cap to check. No provider that can read
+// documents → 503 not_set_up. The answer is a suggestion for a person to check; nothing is saved here.
+
+/** Order used when the company chose no reader, or its choice is not usable. */
+const READER_ORDER: ReaderKind[] = ['anthropic', 'openai', 'gemini', 'openrouter', 'grok', 'ollama'];
+
+type Reader = { kind: ReaderKind; apiKey: string; model: string; baseUrl?: string };
+
+function usableReader(kind: ReaderKind, p: ProviderState | undefined): Reader | null {
+  if (!p?.enabled) return null;
+  const c = p.credentials ?? {};
+  const model = c.model || READER_DEFAULT_MODEL[kind] || '';
+  if (!model) return null;
+  if (kind === 'ollama') return c.base_url ? { kind, apiKey: c.api_key ?? '', model, baseUrl: c.base_url } : null;
+  return c.api_key ? { kind, apiKey: c.api_key, model } : null;
+}
+
+/** The provider that reads for this company, or null. Exported for tests. */
+export function chooseReader(s: State): Reader | null {
+  const chosen = s.reader ? usableReader(s.reader, s.providers[s.reader]) : null;
+  if (chosen) return chosen;
+  for (const k of READER_ORDER) {
+    const r = usableReader(k, s.providers[k]);
+    if (r) return r;
+  }
+  return null;
+}
+
+export type ReadAnswer = { data: unknown; provider: ReaderKind; model: string };
+
+export async function readWithAi(
+  env: Bindings,
+  who: AiCaller,
+  feature: string,
+  file: DocFile,
+  req: { instructions: string; schemaName: string; schema: Record<string, unknown>; maxTokens?: number },
+  deps: AiDeps = realAiDeps,
+): Promise<ReadAnswer> {
+  const s = await state(env, who.orgId);
+  if (!s.consent) throw new HttpError(503, 'The owner must accept the AI notice first (Settings → Integrations).', 'not_set_up');
+  const r = chooseReader(s);
+  if (!r)
+    throw new HttpError(
+      503,
+      'No AI that reads documents is set up. Add your own key for OpenAI, Gemini, Claude, Grok, OpenRouter or Ollama in Settings → Integrations, and switch it on.',
+      'not_set_up',
+    );
+  if (file.mime === 'application/pdf' && !READER_READS_PDF[r.kind])
+    throw new HttpError(
+      415,
+      `${READER_NAMES[r.kind]} cannot read PDF files. Take a photo of the document instead, or choose another AI in Settings → Integrations.`,
+      'pdf_not_supported',
+    );
+  try {
+    const out = await readDocument({ ...r, file, ...req }, deps);
+    await record(env, who, {
+      provider: r.kind,
+      feature,
+      model: r.model,
+      inTok: out.inputTokens,
+      outTok: out.outputTokens,
+      cost: r.kind === 'openai' ? chatCostMicro(out.inputTokens, out.outputTokens) : 0,
+      ownKey: true,
+      ok: true,
+    });
+    return { data: out.data, provider: r.kind, model: r.model };
+  } catch (e) {
+    await record(env, who, { provider: r.kind, feature, model: r.model, cost: 0, ownKey: true, ok: false });
+    throw new HttpError(502, e instanceof Error ? e.message : `${READER_NAMES[r.kind]} could not be reached`, 'provider_error');
   }
 }

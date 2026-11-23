@@ -55,7 +55,7 @@ describe('database client boundaries (ADR-0003)', () => {
       .map((rel) => ({ rel, text: readFileSync(join(srcDir, rel), 'utf8') }));
 
   /** Master-key entry points that take a company: every call from a route must pass the company of the signed-in person. */
-  const COMPANY_ENTRY_POINTS = ['runOutboxPass', 'askAi', 'transcribeAudio', 'checkIntegration'];
+  const COMPANY_ENTRY_POINTS = ['runOutboxPass', 'askAi', 'transcribeAudio', 'checkIntegration', 'readWithAi'];
 
   it('routes call master-key entry points only with the signed-in company', () => {
     const offenders: string[] = [];

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import {
   AI_NOTICE_VERSION,
+  AI_READER_KINDS,
   findProvider,
   INTEGRATION_KINDS,
   INTEGRATION_MESSAGE_KINDS,
@@ -213,36 +214,71 @@ integrationRoutes.put('/providers/:kind/fields', requirePermission('core.integra
     if (!allowed.has(k) || typeof v !== 'string' || v.length > 4000) invalid(`Invalid field ${k}`);
     clean[k] = v;
   }
-  return ok(
-    c,
-    await callRpc<{ kind: string; savedFields: string[] }>(userDb(c), 'core_save_provider_fields', { p_kind: kind, p_values: clean }),
-  );
+  try {
+    return ok(
+      c,
+      await callRpc<{ kind: string; savedFields: string[] }>(userDb(c), 'core_save_provider_fields', { p_kind: kind, p_values: clean }),
+    );
+  } catch (e) {
+    throw notYetInDatabase(e, kind);
+  }
 });
 
 integrationRoutes.put('/providers/:kind', requirePermission('core.integrations.manage'), async (c) => {
   const kind = providerParam(c.req.param('kind'));
   const b = await jsonBody(c);
   if (typeof b.enabled !== 'boolean') invalid('enabled is required');
-  await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: 'live', p_kinds: [] });
+  try {
+    await callRpc<string>(userDb(c), 'core_save_integration', { p_kind: kind, p_enabled: b.enabled, p_mode: 'live', p_kinds: [] });
+  } catch (e) {
+    throw notYetInDatabase(e, kind);
+  }
   return ok(c, { kind });
 });
 
+/** sql/108 adds these kinds. Before it is applied the database calls them unknown: say "not set up", not "not valid". */
+const SQL_108_KINDS = new Set(['gemini', 'anthropic', 'grok', 'openrouter']);
+function notYetInDatabase(e: unknown, kind: string): unknown {
+  if (SQL_108_KINDS.has(kind) && e instanceof HttpError && e.code === 'invalid_input')
+    return new HttpError(503, 'This AI provider needs a database update (sql/108) first.', 'not_set_up');
+  return e;
+}
+
 // AI: consent (owner only, in the database), this month's use, our cap.
 integrationRoutes.get('/ai', requirePermission('core.integrations.view'), async (c) => {
-  const s = await callRpc<{ consent: AiStatus['consent']; monthCalls: number; monthSpendMicroUsd: number }>(userDb(c), 'core_ai_status');
+  const s = await callRpc<{ consent: AiStatus['consent']; monthCalls: number; monthSpendMicroUsd: number; reader?: AiStatus['reader'] }>(
+    userDb(c),
+    'core_ai_status',
+  );
   return ok<AiStatus>(c, {
     consent: s.consent,
     monthCalls: Number(s.monthCalls),
     monthSpendMicroUsd: Number(s.monthSpendMicroUsd),
     serviceCapUsd: aiCapUsd(c.env),
     ownProviderReady: { openai: Boolean(c.env.OPENAI_API_KEY), elevenlabs: Boolean(c.env.ELEVENLABS_API_KEY) },
+    reader: s.reader ?? null,
   });
+});
+
+// sql/108: which AI reads bills (null = the first one that is on). Owners and admins; the database checks again and audits.
+integrationRoutes.put('/ai/reader', requirePermission('core.integrations.manage'), async (c) => {
+  const kind = (await jsonBody(c)).kind;
+  if (kind !== null && !(AI_READER_KINDS as readonly unknown[]).includes(kind)) invalid('kind must be an AI that reads documents, or null');
+  await callRpc<void>(userDb(c), 'core_set_ai_reader', { p_kind: kind });
+  return ok(c, { reader: kind });
 });
 
 integrationRoutes.put('/ai/consent', requirePermission('core.integrations.manage'), async (c) => {
   const accept = (await jsonBody(c)).accept;
   if (typeof accept !== 'boolean') invalid('accept must be true or false');
-  await callRpc<void>(userDb(c), 'core_set_ai_consent', { p_accept: accept, p_notice_version: AI_NOTICE_VERSION });
+  try {
+    await callRpc<void>(userDb(c), 'core_set_ai_consent', { p_accept: accept, p_notice_version: AI_NOTICE_VERSION });
+  } catch (e) {
+    // This build shows notice v3 (sql/108); a database without 108 still knows only v2. Consent to text it does not have is refused.
+    if (e instanceof HttpError && e.code === 'invalid_input' && /current AI notice is v2(?![0-9])/.test(e.message))
+      throw new HttpError(503, 'The new AI notice needs a database update (sql/108) first.', 'not_set_up');
+    throw e;
+  }
   return ok(c, { accepted: accept });
 });
 
