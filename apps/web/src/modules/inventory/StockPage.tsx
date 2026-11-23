@@ -159,7 +159,7 @@ export function StockPage() {
             <>
               <select className="narrow-select" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} aria-label={tr('Warehouse')}>
                 <option value="all">{tr('All warehouses')}</option>
-                {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
               </select>
               {canAddWarehouse && warehouseId !== 'all' && <Button variant="outline" type="submit" onClick={() => setEditingWarehouse(true)}>{tr('Edit warehouse')}</Button>}
               {canAddWarehouse && <Button variant="outline" type="submit" onClick={() => setAddingWarehouse(true)}>{tr('Add warehouse')}</Button>}

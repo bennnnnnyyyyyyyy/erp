@@ -1,3 +1,4 @@
+import { localName } from '../../lib/names';
 import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { FormToggle } from '../../components/FormToggle';
@@ -44,7 +45,7 @@ export function ReceiveBatchForm({ items, warehouses, open, onOpenChange, onRece
         )}
         <div className="form-row">
           <label>{tr('Item')}<select value={f.itemId} onChange={(e) => setF({ ...f, itemId: e.target.value })}><option value="">{tr('Choose…')}</option>{tracked.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
-          <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('Batch number')}<input value={f.batchNo} onChange={(e) => setF({ ...f, batchNo: e.target.value })} /></label>
           <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
           <label>{tr('Made on (optional)')}<DateInput value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>

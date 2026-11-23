@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { unitLabel } from '../../lib/names';
+import { localName, unitLabel } from '../../lib/names';
 import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
 import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
@@ -98,7 +98,7 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
           <label>
             {tr('Warehouse')}
             <select value={form.warehouseId} onChange={set('warehouseId')}>
-              {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              {warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
             </select>
           </label>
         </div>
@@ -178,7 +178,7 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
 
 export function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   // No Arabic name asked (Ben, 10 Nov 2026 walkthrough); the column stays in the database.
-  const [form, setForm] = useState({ code: '', name: '' });
+  const [form, setForm] = useState({ code: '', name: '', nameAr: '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -201,6 +201,7 @@ export function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; on
           <label>{tr('Short code')}<input required maxLength={32} placeholder="MAIN" value={form.code} onChange={set('code')} /></label>
           <label>{tr('Name')}<input required placeholder={tr('Main warehouse')} value={form.name} onChange={set('name')} /></label>
         </div>
+        <label>{tr('Name in Arabic (optional)')}<input dir="rtl" maxLength={200} value={form.nameAr} onChange={set('nameAr')} /></label>
         {error && <p className="error">{error}</p>}
         <div className="form-actions"><Button type="submit">{tr('Add warehouse')}</Button></div>
       </form>
@@ -209,8 +210,8 @@ export function AddWarehouseModal({ onClose, onDone }: { onClose: () => void; on
 }
 
 /** Fix a warehouse's name or short code (sql/074). Owners and admins; stock history is unaffected. */
-export function EditWarehouseModal({ warehouse, onClose, onDone }: { warehouse: { id: string; code?: string; name: string }; onClose: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ code: warehouse.code ?? '', name: warehouse.name });
+export function EditWarehouseModal({ warehouse, onClose, onDone }: { warehouse: { id: string; code?: string; name: string; nameAr?: string }; onClose: () => void; onDone: () => void }) {
+  const [form, setForm] = useState({ code: warehouse.code ?? '', name: warehouse.name, nameAr: warehouse.nameAr ?? '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -218,7 +219,10 @@ export function EditWarehouseModal({ warehouse, onClose, onDone }: { warehouse: 
     e.preventDefault();
     setError(null);
     try {
-      await api(`/v1/inventory/warehouses/${warehouse.id}`, { method: 'PUT', body: JSON.stringify(form) });
+      // The Arabic name only when it changed (sql/105), so a plain rename works before that database update.
+      const { nameAr, ...rest } = form;
+      const body = nameAr.trim() !== (warehouse.nameAr ?? '').trim() ? { ...rest, nameAr } : rest;
+      await api(`/v1/inventory/warehouses/${warehouse.id}`, { method: 'PUT', body: JSON.stringify(body) });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -232,6 +236,7 @@ export function EditWarehouseModal({ warehouse, onClose, onDone }: { warehouse: 
           <label>{tr('Short code')}<input maxLength={32} value={form.code} onChange={set('code')} /></label>
           <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         </div>
+        <label>{tr('Name in Arabic (optional)')}<input dir="rtl" maxLength={200} value={form.nameAr} onChange={set('nameAr')} /></label>
         <p className="muted small">{tr('Changing the name or code does not change any stock or history.')}</p>
         {error && <p className="error">{error}</p>}
         <div className="form-actions"><Button type="submit">{tr('Save changes')}</Button></div>

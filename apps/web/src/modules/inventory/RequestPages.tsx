@@ -1,3 +1,4 @@
+import { localName } from '../../lib/names';
 import { useState, type FormEvent } from 'react';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
@@ -140,7 +141,7 @@ export function NewRequest() {
           <label>
             {tr('Issue from warehouse')}
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-              {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
             </select>
           </label>
           <label>{tr('Reason')}<input required value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tr('Customer order, internal use…')} /></label>

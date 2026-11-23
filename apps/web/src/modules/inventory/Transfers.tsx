@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { unitLabel } from '../../lib/names';
+import { localName, unitLabel } from '../../lib/names';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
@@ -160,8 +160,8 @@ export function NewTransfer() {
       {error && <p className="error notice">{error}</p>}
       <form className="form-card stack" onSubmit={submit}>
         <div className="form-row">
-          <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-          <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
+          <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
         </div>
         {same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
         <strong>{tr('Items')}</strong>

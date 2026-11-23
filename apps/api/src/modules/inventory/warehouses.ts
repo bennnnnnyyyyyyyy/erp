@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
@@ -11,17 +12,18 @@ export function registerWarehouseRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/warehouses', requirePermission('inventory.items.read'), async (c) => {
     const { data, error } = await userDb(c)
       .from('inv_warehouses')
-      .select('id, code, name, branch_id')
+      .select('id, code, name, name_ar, branch_id')
       .eq('org_id', orgOf(c))
       .is('deleted_at', null)
       .order('code');
     if (error) throw error;
     return ok(
       c,
-      (data ?? []).map((w: { id: string; code: string; name: string; branch_id: string | null }) => ({
+      (data ?? []).map((w: { id: string; code: string; name: string; name_ar: string | null; branch_id: string | null }) => ({
         id: w.id,
         code: w.code,
         name: w.name,
+        nameAr: w.name_ar ?? '',
         branchId: w.branch_id,
       })),
     );
@@ -42,8 +44,19 @@ export function registerWarehouseRoutes(inventoryRoutes: Hono<AppEnv>) {
     const name = text(body.name);
     const code = text(body.code);
     if (!name) invalid('A name is required');
+    // The Arabic name (sql/105) is sent only when it was changed, so editing the name still works before 105 is applied.
+    const nameAr = body.nameAr === undefined ? undefined : text(body.nameAr);
+    if (nameAr !== undefined && nameAr.length > 200) invalid('The Arabic name is up to 200 characters');
+    if (nameAr !== undefined) {
+      try {
+        await callRpc<void>(userDb(c), 'inv_set_warehouse_name_ar', { p_warehouse_id: id, p_name_ar: nameAr });
+      } catch (err) {
+        if (isMissingSchema(err)) throw new HttpError(503, 'Arabic warehouse names need a database update (sql/105).', 'not_set_up');
+        throw err;
+      }
+    }
     await callRpc<void>(userDb(c), 'inv_update_warehouse', { p_warehouse_id: id, p_name: name, p_code: code || null });
-    return ok(c, { id, name, ...(code ? { code } : {}) });
+    return ok(c, { id, name, ...(code ? { code } : {}), ...(nameAr !== undefined ? { nameAr } : {}) });
   });
 
   inventoryRoutes.post('/warehouses', requirePermission('inventory.warehouses.manage'), async (c) => {

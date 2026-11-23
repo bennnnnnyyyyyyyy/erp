@@ -1,3 +1,4 @@
+import { localName } from '../../lib/names';
 import { useState, type FormEvent } from 'react';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { Button } from '../../components/ui/button';
@@ -69,7 +70,7 @@ export function AdjustmentsPage() {
         <p className="muted small">{tr('The books say one number; type what is really there. Your manager will be asked to approve the difference, and stock changes only after they do.')}</p>
         <div className="form-row">
           <label>{tr('Item')}<select required value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}><option value="">{tr('Choose an item…')}</option>{cat.items.data?.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></label>
-          <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+          <label>{tr('Warehouse')}<select required value={form.warehouseId} onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}><option value="">{tr('Choose a warehouse…')}</option>{cat.warehouses.data.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('Counted quantity')}<input required type="number" min="0" step="0.001" value={form.countedQty} onChange={(e) => setForm((f) => ({ ...f, countedQty: e.target.value }))} />{expected !== null && <span className="muted small">{tr('System quantity:')} {expected}</span>}</label>
         </div>
         <label>{tr('Reason')}<input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={tr('Physical count, damaged stock…')} /></label>

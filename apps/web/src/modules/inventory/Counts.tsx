@@ -1,3 +1,4 @@
+import { localName } from '../../lib/names';
 import { useEffect, useState, type FormEvent } from 'react';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { hasPermission } from '@erp/shared';
@@ -103,7 +104,7 @@ export function CountsList() {
             <label>
               {tr('Warehouse')}
               <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-                {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}
               </select>
             </label>
             <label>{tr('Note (optional)')}<input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder={tr('Month-end count')} /></label>
