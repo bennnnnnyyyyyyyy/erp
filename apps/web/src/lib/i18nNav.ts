@@ -169,4 +169,6 @@ export const NAV_AR: Record<string, string> = {
   Recent: 'الأخيرة',
   Pinned: 'المثبتة',
   'Search for a page': 'ابحث عن صفحة',
+  'All settings': 'كل الإعدادات',
+  Approvals: 'الموافقات',
 };

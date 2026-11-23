@@ -52,6 +52,9 @@ export const GROUPS: Group[] = [
   { key: 'record', section: 'Screens being decided', label: 'Record page (shown on a customer)', default: 'A', options: [c('A', 'A: Dynamics card + statistics'), c('B', 'B: Overview with tabs'), c('C', 'C: Sheet + related lists')] },
   { key: 'form', section: 'Screens being decided', label: 'Form page (shown on a new order)', default: 'A', options: [c('A', 'A: Document entry (Dynamics)'), c('B', 'B: Guided steps'), c('C', 'C: Quick entry + running total')] },
   { key: 'report', section: 'Screens being decided', label: 'Report page (Stock > Stock report)', default: 'A', options: [c('A', 'A: Dynamics report, folding groups'), c('B', 'B: Read first, plain sentences'), c('C', 'C: Chart first')] },
+  { key: 'approvals', section: 'Screens being decided', label: 'Approvals (Stock > Approvals)', default: 'A', options: [c('A', 'A: Workspace, request beside the list'), c('B', 'B: One at a time'), c('C', 'C: Decide in the list')] },
+  { key: 'settings', section: 'Screens being decided', label: 'Settings (Settings > All settings)', default: 'A', options: [c('A', 'A: Grouped list'), c('B', 'B: Two panes'), c('C', 'C: Search first')] },
+  { key: 'empty', section: 'Screens being decided', label: 'Empty start (open /sales/empty-preview)', default: 'A', options: [c('A', 'A: Numbered steps'), c('B', 'B: One sentence, one button'), c('C', 'C: Show the shape')] },
   { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------

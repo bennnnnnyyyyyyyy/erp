@@ -52,6 +52,9 @@ const NewSalesOrder = lazyNamed(() => import('./sales/SalesDemo'), 'NewSalesOrde
 // New UI versions being decided (modules/sales/SalesNew.tsx); the old screens stay in SalesDemo.tsx until Ben and Grant pick.
 const SalesOrderPage = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrderNew');
 const SalesOrders = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrdersNew');
+const Approvals = lazyNamed(() => import('./inventory/ApprovalsNew'), 'ApprovalsNew');
+const SettingsAll = lazyNamed(() => import('./core/SettingsNew'), 'SettingsNew');
+const EmptyPreview = lazyNamed(() => import('../components/EmptyStart'), 'EmptyStartPreview');
 const StockReport = lazyNamed(() => import('./inventory/StockReportNew'), 'StockReportNew');
 const CustomerPage = lazyNamed(() => import('./sales/SalesNew'), 'CustomerNew');
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
@@ -147,6 +150,8 @@ const INVENTORY_APP: AppDef = {
     // New UI: the report page in versions being decided (Design Lab 'Report page'); read only, existing endpoints.
     { path: '/report', label: 'Stock report', permission: READ, component: StockReport },
     { path: '/items/:id', label: 'Item', permission: READ, component: ItemPage, nav: false, parent: '/stock' },
+    // New UI: the approvals workspace in versions being decided (Design Lab 'Approvals'); same approve/reject calls as the request page.
+    { path: '/approvals', label: 'Approvals', permission: READ, component: Approvals },
     { path: '/requests', label: 'Requests', permission: READ, component: RequestsList },
     { path: '/requests/new', label: 'Send goods out', permission: 'inventory.request.create', component: NewRequest },
     { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },
@@ -208,6 +213,7 @@ const DEMO_SALES_APP: AppDef = {
     { path: '/orders/:id', label: 'Sales order', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', component: Customers },
     { path: '/customers/:id', label: 'Customer', component: CustomerPage, nav: false, parent: '/customers' },
+    ...(import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1' ? [{ path: '/empty-preview', label: 'Sales orders', component: EmptyPreview, nav: false, parent: '' }] : []),
   ],
 };
 
@@ -219,6 +225,8 @@ const SALES_APP: AppDef = {
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
     { path: '/customers/:id', label: 'Customer', permission: 'sales.customers.read', component: CustomerPage, nav: false, parent: '/customers' },
+    // Dev server and Design Lab previews only: the empty start of a list, to compare its versions (the demo always has data).
+    ...(import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1' ? [{ path: '/empty-preview', label: 'Sales orders', component: EmptyPreview, nav: false, parent: '' }] : []),
     // Customer groups, price lists and the markup (sql/097).
     { path: '/prices', label: 'Prices', permission: 'sales.prices.read', component: PricesPage },
     // Moved from Settings (Ben, 9 Nov 2026): Settings connects an integration, the apps use it. Same permission as its API route.
@@ -356,6 +364,8 @@ export const APPS: AppDef[] = [
     // Staff see only "My settings"; company pages need the matching manage permission (decision D10, 9 Nov 2026: staff used to see
     // greyed-out company, user, app and audit pages). /settings opens the first page a person can see (resolveRoute).
     pages: [
+      // New UI: the settings overview in versions being decided (Design Lab 'Settings'); lists only the pages the person may open.
+      { path: '/all', label: 'All settings', component: SettingsAll },
       { path: '', label: 'General', permission: 'core.org.manage', component: GeneralSettings },
       { path: '/me', label: 'My settings', component: MySettings },
       { path: '/users', label: 'Users', permission: 'core.users.manage', component: UsersSettings },
