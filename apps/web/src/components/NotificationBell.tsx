@@ -8,10 +8,21 @@ import { useSession } from '../session';
 import { tr, trf } from '../lib/i18n';
 export type AppNotification = { id: string; title: string; body: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string };
 
+/** The page each kind of alert rule opens. */
+const ALERT_TARGET: Record<string, string> = {
+  stock_below: '/inventory/reorder-levels',
+  forecast_stockout: '/inventory/forecast',
+  expiry_within: '/inventory/batches',
+  receivable_overdue: '/finance/owed',
+  profit_negative: '/finance/overview',
+};
+
 /** Where a notification leads when clicked. */
 export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId'>): string | null {
   if (n.entityType === 'stock_request' && n.entityId) return `/inventory/requests/${n.entityId}`;
   if (n.entityType === 'task' && n.entityId) return `/tasks/${n.entityId}`;
+  // Alerts (sql/104 gives them "alert:<rule kind>"; UX audit 20 Nov: they opened nothing).
+  if (n.entityType?.startsWith('alert:')) return ALERT_TARGET[n.entityType.slice(6)] ?? '/alerts';
   return null;
 }
 
