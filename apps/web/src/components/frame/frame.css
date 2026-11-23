@@ -109,3 +109,10 @@
 .fr-drop .fr-panel-group:only-child, .fr-flyout .fr-panel-group:only-child { columns: 3 200px; column-gap: 1.5rem; }
 .fr-panel-group:only-child .fr-plink { break-inside: avoid; }
 .fr-drop .fr-panel-groups:has(> .fr-panel-group:only-child), .fr-flyout .fr-panel-groups:has(> .fr-panel-group:only-child) { grid-template-columns: 1fr; }
+
+/* Seamless (Ben, 23 Nov 2026: "a seamless app", no tiles and boxes everywhere): the bar, the menu and the page are one white surface,
+   joined by hairlines only. Pages built on the new kit use dividers, not cards. */
+.fr { background: var(--card); }
+.fr-main { background: var(--card); }
+.fr-main .content { padding: 1.5rem 2rem 4rem; }
+.fr-left, .fr-rail, .fr-areas { box-shadow: none; }

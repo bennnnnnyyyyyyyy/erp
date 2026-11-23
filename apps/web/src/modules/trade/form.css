@@ -1,0 +1,37 @@
+/* Order form (modules/trade/common.tsx NewOrderForm), new UI layouts A, B, C. Seamless: fields sit on the page, hairlines separate parts. */
+.fm .fm-body { display: flex; flex-direction: column; gap: 1.1rem; }
+.fm-field { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; font-size: 0.85rem; font-weight: 500; color: var(--muted-foreground); }
+.fm-label { color: var(--muted-foreground); }
+.fm-field select, .fm-field input { margin: 0; }
+.fm-inline { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.fm-inline > :first-child { flex: 1; min-width: 0; }
+.fm-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 1rem 1.5rem; }
+
+/* the lines as one grid */
+.fm-grid { display: flex; flex-direction: column; border-block-start: 1px solid var(--border); }
+.fm-grow { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(90px, 0.8fr) 36px; gap: 0.75rem; align-items: center; padding-block: 0.5rem; border-block-end: 1px solid var(--border); }
+.fm-ghead { font-size: 0.78rem; font-weight: 600; color: var(--muted-foreground); padding-block: 0.45rem; }
+.fm-grow input { margin: 0; width: 100%; min-width: 0 !important; }
+.fm-grow .unit-select { width: auto; margin: 0; }
+.fm-extras { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.8rem; }
+.fm-extras:empty { display: none; }
+.fm-remove { background: none; border: 0; cursor: pointer; color: var(--muted-foreground); padding: 0.35rem; border-radius: 6px; }
+.fm-remove:hover { background: var(--accent); color: var(--foreground); }
+.fm-add { align-self: flex-start; background: none; border: 0; cursor: pointer; font: inherit; font-weight: 600; color: var(--primary-text); padding: 0.35rem 0; }
+.fm-add:hover { text-decoration: underline; }
+
+/* B: guided */
+.fm-steps { margin-block: 0.25rem 0.5rem; }
+.fm-foot { display: flex; gap: 0.5rem; justify-content: flex-end; padding-block-start: 1rem; border-block-start: 1px solid var(--border); }
+
+/* C: quick entry */
+.fm-quick { padding: 0.9rem 0; border-block: 1px solid var(--border); }
+.fm-c .fm-body { padding-block-end: 5rem; }
+.fm-sticky { position: sticky; inset-block-end: 0; z-index: 5; display: flex; align-items: center; gap: 1.25rem; padding: 0.75rem 0; background: var(--card); border-block-start: 2px solid var(--foreground); }
+.fm-sticky-total { margin-inline-start: auto; font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 760px) {
+  .fm-grow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; }
+  .fm-ghead { display: none; }
+  .fm-grow > [role='cell']:first-child { grid-column: 1 / -1; }
+}

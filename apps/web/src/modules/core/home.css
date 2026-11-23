@@ -59,3 +59,22 @@
 
 @media (max-width: 860px) { .hm-attn, .hm-split { grid-template-columns: 1fr; } }
 .hm > [data-tour] { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Seamless: no boxes. Lists are rows with hairlines; figures are one quiet strip of text. */
+.hm-todos { border: 0; border-radius: 0; background: none; border-block: 1px solid var(--border); }
+.hm-todo { padding-inline: 0; }
+.hm-figs, .hm-figs-compact { display: flex; flex-wrap: wrap; gap: 0; border-block: 1px solid var(--border); }
+.hm-fig { flex: 1 1 160px; border: 0; border-radius: 0; background: none !important; padding: 0.85rem 1.25rem 0.85rem 0; border-inline-end: 1px solid var(--border); margin-inline-end: 1.25rem; }
+.hm-fig:last-child { border-inline-end: 0; margin-inline-end: 0; }
+.hm-fig:hover .hm-fig-value { color: var(--primary-text); }
+.hm-figs-compact { flex-direction: column; border-block: 0; }
+.hm-figs-compact .hm-fig { flex: none; border-inline-end: 0; margin: 0; padding: 0.75rem 0; border-block-end: 1px solid var(--border); }
+.hm-figs-compact .hm-fig:last-child { border-block-end: 0; }
+.hm-box, .hm-col-side { border: 0; border-radius: 0; background: none; padding: 0; }
+.hm-attn-side, .hm-col-side { border-inline-start: 1px solid var(--border); padding-inline-start: 1.5rem; }
+.hm-qbtn { border-color: var(--border); }
+.hm-counts-group { display: flex; flex-direction: column; }
+.hm-counts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); column-gap: 2rem; border-block-start: 1px solid var(--border); }
+.hm-count { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.7rem 0; border-block-end: 1px solid var(--border); color: var(--foreground); text-decoration: none; }
+.hm-count:hover { color: var(--primary-text); }
+.hm-count-n { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }

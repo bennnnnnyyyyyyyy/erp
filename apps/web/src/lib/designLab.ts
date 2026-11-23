@@ -46,9 +46,12 @@ const range = (key: string, section: string, label: string, min: number, max: nu
 export const GROUPS: Group[] = [
   // ---------- Screens being decided (new UI v2): each screen in 2 or 3 versions; Ben and Grant pick one, then the others are deleted ----------
   { key: 'frame', section: 'Screens being decided', label: 'Menu (app frame)', default: 'B', options: [c('A', 'A: Areas on top (Business Central)'), c('B', 'B: Left menu, Home / Recent / Pinned'), c('C', 'C: Search first + icon rail')] },
-  { key: 'home', section: 'Screens being decided', label: 'Home page', default: 'A', options: [c('A', 'A: Attention list (things that need you)'), c('B', 'B: Role center (actions, figures, count tiles)'), c('C', 'C: My work + figures, split')] },
-  { key: 'list', section: 'Screens being decided', label: 'List page (shown on Sales orders)', default: 'A', options: [c('A', 'A: Dynamics list + side panel'), c('B', 'B: List and detail side by side'), c('C', 'C: Status lanes')] },
+  { key: 'home', section: 'Screens being decided', label: 'Home page', default: 'A', options: [c('A', 'A: Attention list (things that need you)'), c('B', 'B: Role center (actions, figures, counts)'), c('C', 'C: My work + figures, split')] },
+  { key: 'list', section: 'Screens being decided', label: 'List page (shown on Sales orders)', default: 'A', options: [c('A', 'A: Dynamics list + side panel'), c('B', 'B: List and detail side by side'), c('C', 'C: One list grouped by status')] },
   { key: 'doc', section: 'Screens being decided', label: 'Document page (shown on a sales order)', default: 'A', options: [c('A', 'A: Dynamics document'), c('B', 'B: Paper + action column'), c('C', 'C: Next step first')] },
+  { key: 'record', section: 'Screens being decided', label: 'Record page (shown on a customer)', default: 'A', options: [c('A', 'A: Dynamics card + statistics'), c('B', 'B: Overview with tabs'), c('C', 'C: Sheet + related lists')] },
+  { key: 'form', section: 'Screens being decided', label: 'Form page (shown on a new order)', default: 'A', options: [c('A', 'A: Document entry (Dynamics)'), c('B', 'B: Guided steps'), c('C', 'C: Quick entry + running total')] },
+  { key: 'report', section: 'Screens being decided', label: 'Report page (Stock > Stock report)', default: 'A', options: [c('A', 'A: Dynamics report, folding groups'), c('B', 'B: Read first, plain sentences'), c('C', 'C: Chart first')] },
   { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------

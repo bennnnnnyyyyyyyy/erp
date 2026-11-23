@@ -187,13 +187,13 @@ export function Home({ apps }: { apps: AppDef[] }) {
         {quick && <section className="hm-box"><h2 className="hm-h2">{tr('Actions')}</h2>{quick}</section>}
         {d.s && <section className="hm-box"><h2 className="hm-h2">{tr('Activities')}</h2><Figures figures={d.figures} /></section>}
         {tiles.map((g) => (
-          <section key={g.group} className="hm-tiles-group">
+          <section key={g.group} className="hm-counts-group">
             <h2 className="hm-h2">{g.group}</h2>
-            <div className="hm-tiles">
+            <ul className="hm-counts">
               {g.items.map((i) => (
-                <Link key={i.label} to={i.to} className="hm-tile"><span className="hm-tile-label">{i.label}</span><span className="hm-tile-n">{i.n}</span></Link>
+                <li key={i.label}><Link to={i.to} className="hm-count"><span>{i.label}</span><span className="hm-count-n">{i.n}</span></Link></li>
               ))}
-            </div>
+            </ul>
           </section>
         ))}
         {noMoney}

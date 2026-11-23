@@ -52,6 +52,8 @@ const NewSalesOrder = lazyNamed(() => import('./sales/SalesDemo'), 'NewSalesOrde
 // New UI versions being decided (modules/sales/SalesNew.tsx); the old screens stay in SalesDemo.tsx until Ben and Grant pick.
 const SalesOrderPage = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrderNew');
 const SalesOrders = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrdersNew');
+const StockReport = lazyNamed(() => import('./inventory/StockReportNew'), 'StockReportNew');
+const CustomerPage = lazyNamed(() => import('./sales/SalesNew'), 'CustomerNew');
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
 const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
 const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
@@ -142,6 +144,8 @@ const INVENTORY_APP: AppDef = {
     { path: '', label: 'Overview', permission: READ, component: InventoryOverview },
     { path: '/receive', label: 'Receive goods', permission: READ, component: ReceiveGoods },
     { path: '/stock', label: 'Stock on hand', permission: READ, component: StockPage },
+    // New UI: the report page in versions being decided (Design Lab 'Report page'); read only, existing endpoints.
+    { path: '/report', label: 'Stock report', permission: READ, component: StockReport },
     { path: '/items/:id', label: 'Item', permission: READ, component: ItemPage, nav: false, parent: '/stock' },
     { path: '/requests', label: 'Requests', permission: READ, component: RequestsList },
     { path: '/requests/new', label: 'Send goods out', permission: 'inventory.request.create', component: NewRequest },
@@ -203,6 +207,7 @@ const DEMO_SALES_APP: AppDef = {
     { path: '/orders/new', label: 'New sales order', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', component: Customers },
+    { path: '/customers/:id', label: 'Customer', component: CustomerPage, nav: false, parent: '/customers' },
   ],
 };
 
@@ -213,6 +218,7 @@ const SALES_APP: AppDef = {
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
+    { path: '/customers/:id', label: 'Customer', permission: 'sales.customers.read', component: CustomerPage, nav: false, parent: '/customers' },
     // Customer groups, price lists and the markup (sql/097).
     { path: '/prices', label: 'Prices', permission: 'sales.prices.read', component: PricesPage },
     // Moved from Settings (Ben, 9 Nov 2026): Settings connects an integration, the apps use it. Same permission as its API route.

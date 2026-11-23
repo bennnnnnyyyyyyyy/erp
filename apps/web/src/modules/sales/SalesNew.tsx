@@ -23,7 +23,7 @@ import './pagekit.css';
 // the old screens (GET /v1/sales/orders, POST .../request-stock and .../cancel); only the layout differs.
 //   List  A  Dynamics list: action bar, a view picker as the title, search, a side panel with the selected row's facts.
 //         B  List and detail side by side: pick a row, its order shows beside the list.
-//         C  Status lanes: one column per status, a card per order.
+//         C  Grouped by status: one list, a heading row per status (no cards).
 //   Order A  Dynamics document: action bar, General section, lines, totals under the lines, a side panel with the customer.
 //         B  Paper: the order drawn like the printed document, the actions in a column beside it.
 //         C  Next step first: the progress and one big "what to do now" card, then the lines.
@@ -137,23 +137,27 @@ export function SalesOrdersNew() {
       <section className="page pk pk-wide">
         <div className="pk-head"><h1>{tr('Sales orders')}</h1></div>
         {actionBar}
-        <div className="pk-lanes">
-          {ORDER.filter((s) => s !== 'cancelled').map((s) => {
-            const lane = rows.filter((o) => o.status === s);
-            return (
-              <section key={s} className="pk-lane" aria-label={tr(STATUS[s])}>
-                <h2 className="pk-lane-head">{tr(STATUS[s])} <span className="pk-lane-n">{lane.length}</span></h2>
-                {lane.map((o) => (
-                  <Link key={o.id} to={`/sales/orders/${o.id}`} className="pk-card">
-                    <span className="pk-card-top"><code>{o.number}</code><span className="pk-num">{money(o.totalMinor, o.currency)}</span></span>
-                    <span className="pk-card-name">{customer(o.customerId)?.name}</span>
-                    <span className="pk-card-meta">{cat.warehouseName(o.warehouseId)} · {formatDateTime(o.createdAt, session.org)}</span>
-                  </Link>
-                ))}
-                {lane.length === 0 && <p className="pk-empty">{tr('None')}</p>}
-              </section>
-            );
-          })}
+        <div className="pk-table-wrap">
+          <table className="pk-table pk-grouped">
+            {ORDER.map((s) => {
+              const group = rows.filter((o) => o.status === s);
+              if (!group.length) return null;
+              return (
+                <tbody key={s}>
+                  <tr className="pk-group-row"><th colSpan={4} scope="colgroup">{tr(STATUS[s])} <span className="pk-group-n">{group.length}</span></th></tr>
+                  {group.map((o) => (
+                    <tr key={o.id} onClick={() => navigate(`/sales/orders/${o.id}`)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/sales/orders/${o.id}`)}>
+                      <td><Link to={`/sales/orders/${o.id}`} onClick={(e) => e.stopPropagation()}><code>{o.number}</code></Link></td>
+                      <td>{customer(o.customerId)?.name}</td>
+                      <td className="pk-muted-cell">{cat.warehouseName(o.warehouseId)} · {formatDateTime(o.createdAt, session.org)}</td>
+                      <td className="pk-num">{money(o.totalMinor, o.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              );
+            })}
+          </table>
+          {rows.length === 0 && <p className="pk-empty">{tr('No orders in this view.')}</p>}
         </div>
       </section>
     );
@@ -367,6 +371,169 @@ export function SalesOrderNew() {
         </aside>
       </div>
       {tail}
+    </section>
+  );
+}
+
+/* ======================= RECORD (shown on a customer) ======================= */
+// A record page in three versions (Design Lab "Record page"). Reads the existing endpoints only (the customer list and the orders).
+//   A  Dynamics card: folding sections with the important fields first ("Show more"), a statistics side panel, previous / next.
+//   B  Overview with tabs: Overview (figures and recent orders), Orders, Details.
+//   C  Sheet with related lists: the details as one sheet; the customer's orders beside it.
+export function CustomerNew() {
+  const version = useLabChoice('record', VERSIONS, 'A');
+  const id = useParam('id');
+  const session = useSession();
+  const cat = useCatalog();
+  const customers = useLoad(() => api<Party[]>('/v1/sales/customers'));
+  const orders = usePaged<SalesOrder>('/v1/sales/orders', 200);
+  const [more, setMore] = useState(false);
+  const [tab, setTab] = useState<'overview' | 'orders' | 'details'>('overview');
+  if (customers.error) return <section className="page"><p className="error">{customers.error}</p></section>;
+  if (!customers.data || !orders.data || !cat.ready) return <section className="page"><Loading /></section>;
+  const list = customers.data;
+  const at = list.findIndex((c) => c.id === id);
+  const c = list[at];
+  if (!c) return <section className="page"><p className="muted">{tr('This customer was not found.')}</p></section>;
+  const prev = list[at - 1];
+  const next = list[at + 1];
+  const mine = orders.data.filter((o) => o.customerId === c.id);
+  const currency = mine[0]?.currency ?? session.org?.defaultCurrency ?? 'EGP';
+  const totalOrdered = mine.filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.totalMinor, 0);
+  const open = mine.filter((o) => o.status === 'open' || o.status === 'stock_requested' || o.status === 'approved');
+  const last = mine[0];
+  const terms = c.paymentTermsDays === null || c.paymentTermsDays === undefined ? tr('Company default') : trf('{n} days', { n: c.paymentTermsDays });
+  const title = c.code ? `${c.code} · ${c.name}` : c.name;
+  const field = (label: string, value: string | undefined | null) => (value ? <div key={label}><dt>{label}</dt><dd>{value}</dd></div> : null);
+  const orderRows = (rows: SalesOrder[]) =>
+    rows.length ? (
+      <table className="pk-table">
+        <thead><tr><th scope="col">{tr('Order')}</th><th scope="col">{tr('Status')}</th><th scope="col">{tr('Ordered')}</th><th scope="col" className="pk-num">{tr('Total')}</th></tr></thead>
+        <tbody>
+          {rows.map((o) => (
+            <tr key={o.id} onClick={() => navigate(`/sales/orders/${o.id}`)}>
+              <td><Link to={`/sales/orders/${o.id}`} onClick={(e) => e.stopPropagation()}><code>{o.number}</code></Link></td>
+              <td><Pill status={o.status} label={tr(STATUS[o.status])} /></td>
+              <td className="nowrap">{formatDateTime(o.createdAt, session.org)}</td>
+              <td className="pk-num">{money(o.totalMinor, o.currency)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : <p className="pk-empty">{tr('No orders from this customer yet.')}</p>;
+  const stats = (
+    <dl className="pk-dl">
+      <div><dt>{tr('Orders')}</dt><dd>{mine.length}</dd></div>
+      <div><dt>{tr('Open orders')}</dt><dd>{open.length}</dd></div>
+      <div><dt>{tr('Total ordered')}</dt><dd className="pk-num">{money(totalOrdered, currency)}</dd></div>
+      <div><dt>{tr('Last order')}</dt><dd>{last ? formatDateTime(last.createdAt, session.org) : '—'}</dd></div>
+    </dl>
+  );
+  const details = (
+    <dl className="pk-grid">
+      {field(tr('Name'), c.name)}
+      {field(tr('Code'), c.code)}
+      {field(tr('Contact'), c.contact)}
+      {field(tr('Phone'), c.phone)}
+      {field(tr('City'), c.city)}
+      {field(tr('Payment terms'), terms)}
+      {field(tr('Email'), c.email)}
+      {field(tr('Address'), c.address)}
+      {field(tr('Tax registration no.'), c.taxNumber)}
+      {field(tr('Commercial registry'), c.commercialRegistry)}
+      {field(tr('Notes'), c.notes)}
+    </dl>
+  );
+  const newOrder = hasPermission(session.permissions, 'sales.orders.create') && (
+    <button type="button" className="pk-act pk-act-main" onClick={() => navigate('/sales/orders/new')}>+ {tr('New sales order')}</button>
+  );
+  const prevNext = (
+    <span className="pk-prevnext">
+      <button type="button" className="pk-act" disabled={!prev} onClick={() => prev && navigate(`/sales/customers/${prev.id}`)} aria-label={tr('Previous')}>‹</button>
+      <span className="pk-muted">{trf('{n} of {total}', { n: at + 1, total: list.length })}</span>
+      <button type="button" className="pk-act" disabled={!next} onClick={() => next && navigate(`/sales/customers/${next.id}`)} aria-label={tr('Next')}>›</button>
+    </span>
+  );
+
+  if (version === 'B') {
+    return (
+      <section className="page pk pk-wide">
+        <Link to="/sales/customers" className="back-link">← {tr('Customers')}</Link>
+        <div className="pk-head"><div><p className="pk-kind">{tr('Customer')}</p><h1>{title}</h1><p className="pk-muted">{[c.city, c.phone, c.contact].filter(Boolean).join(' · ')}</p></div>{newOrder}</div>
+        <div className="pk-tabs" role="tablist">
+          {(['overview', 'orders', 'details'] as const).map((t) => (
+            <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? 'pk-tab active' : 'pk-tab'} onClick={() => setTab(t)}>
+              {t === 'overview' ? tr('Overview') : t === 'orders' ? `${tr('Orders')} (${mine.length})` : tr('Details')}
+            </button>
+          ))}
+        </div>
+        {tab === 'overview' && (
+          <>
+            <div className="pk-strip">
+              <div><span>{tr('Total ordered')}</span><strong>{money(totalOrdered, currency)}</strong></div>
+              <div><span>{tr('Open orders')}</span><strong>{open.length}</strong></div>
+              <div><span>{tr('Payment terms')}</span><strong>{terms}</strong></div>
+              <div><span>{tr('Last order')}</span><strong>{last ? formatDateTime(last.createdAt, session.org) : '—'}</strong></div>
+            </div>
+            <h2 className="pk-h2">{tr('Recent orders')}</h2>
+            {orderRows(mine.slice(0, 5))}
+          </>
+        )}
+        {tab === 'orders' && orderRows(mine)}
+        {tab === 'details' && details}
+      </section>
+    );
+  }
+  if (version === 'C') {
+    return (
+      <section className="page pk pk-wide">
+        <Link to="/sales/customers" className="back-link">← {tr('Customers')}</Link>
+        <div className="pk-head"><h1>{title}</h1>{newOrder}</div>
+        <div className="pk-sheet">
+          <div className="pk-sheet-main"><dl className="pk-rows">
+            {[[tr('Code'), c.code], [tr('Contact'), c.contact], [tr('Phone'), c.phone], [tr('City'), c.city], [tr('Address'), c.address], [tr('Email'), c.email], [tr('Payment terms'), terms], [tr('Tax registration no.'), c.taxNumber], [tr('Notes'), c.notes]]
+              .map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v || '—'}</dd></div>)}
+          </dl></div>
+          <div className="pk-sheet-side">
+            <h2 className="pk-h2">{trf('Open orders ({n})', { n: open.length })}</h2>
+            {orderRows(open)}
+            <h2 className="pk-h2">{trf('All orders ({n})', { n: mine.length })}</h2>
+            {orderRows(mine.slice(0, 8))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+  return (
+    <section className="page pk pk-wide">
+      <div className="pk-head">
+        <div><p className="pk-kind">{tr('Customer')}</p><h1>{title}</h1></div>
+        {prevNext}
+      </div>
+      <div className="pk-bar" role="toolbar" aria-label={tr('Actions')}>
+        <button type="button" className="pk-act" onClick={() => navigate('/sales/customers')}>← {tr('Back')}</button>
+        {newOrder}
+      </div>
+      <div className="pk-with-side">
+        <div className="pk-doc">
+          <section className="pk-section">
+            <h2>{tr('General')}<button type="button" className="pk-link" onClick={() => setMore((m) => !m)}>{more ? tr('Show less') : tr('Show more')}</button></h2>
+            <dl className="pk-grid">
+              {field(tr('Name'), c.name)}
+              {field(tr('Phone'), c.phone)}
+              {field(tr('City'), c.city)}
+              {field(tr('Payment terms'), terms)}
+              {more && field(tr('Contact'), c.contact)}
+              {more && field(tr('Email'), c.email)}
+              {more && field(tr('Address'), c.address)}
+              {more && field(tr('Tax registration no.'), c.taxNumber)}
+              {more && field(tr('Notes'), c.notes)}
+            </dl>
+          </section>
+          <section className="pk-section"><h2>{tr('Orders')}</h2>{orderRows(mine.slice(0, 10))}</section>
+        </div>
+        <aside className="pk-side"><p className="pk-side-title">{tr('Statistics')}</p>{stats}</aside>
+      </div>
     </section>
   );
 }

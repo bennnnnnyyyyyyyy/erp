@@ -95,3 +95,12 @@ html:lang(ar) .cc-b-stage h1 { letter-spacing: 0; line-height: 1.25; }
 .cc-c-total span:first-child { color: #0b0b0b; }
 .cc-c-pnote { margin: 0; font-size: 0.8rem; color: rgb(255 255 255 / 0.6); }
 @media (max-width: 820px) { .cc-c-grid { grid-template-columns: 1fr; } .cc-c-preview { position: static; } }
+
+/* Seamless: one white page; the wizard is steps and content split by a hairline, not a card. */
+.cc { background: var(--card); }
+.cc-top { border-block-end: 1px solid var(--border); }
+.cc-a-box { border: 0; border-radius: 0; background: none; margin-block-start: 2rem; }
+.cc-a-head { padding-inline: 0; }
+.cc-a-steps { background: none; padding-inline-start: 0; }
+.cc-a-foot { padding-inline-end: 0; }
+.cc-c-preview { border-radius: var(--radius); }

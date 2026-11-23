@@ -158,4 +158,15 @@ export const NAV_AR: Record<string, string> = {
   // Home tile pages (UX audit 20 Nov, phase 0)
   'Money owed': 'المبالغ المستحقة',
   'Sales by product': 'المبيعات حسب الصنف',
+  // new UI (23 Nov 2026): sections, menu and new pages
+  'Stock report': 'تقرير المخزون',
+  Customer: 'العميل',
+  Sections: 'الأقسام',
+  Sell: 'البيع',
+  Buy: 'الشراء',
+  Money: 'الأموال',
+  Home: 'الرئيسية',
+  Recent: 'الأخيرة',
+  Pinned: 'المثبتة',
+  'Search for a page': 'ابحث عن صفحة',
 };
