@@ -26,6 +26,12 @@ type Insights = {
 };
 
 type Tone = 'good' | 'watch' | 'bad';
+
+/** Keeps 'bad' on the first card that has it (the list is in order of urgency) and turns any later 'bad' into 'watch'. */
+function oneUrgent(tones: (Tone | undefined)[]): (Tone | undefined)[] {
+  const first = tones.indexOf('bad');
+  return tones.map((t, i) => (t === 'bad' && i !== first ? 'watch' : t));
+}
 const TONE: Record<Tone, { dot: string; word: string }> = {
   good: { dot: 'bg-success', word: 'On track' },
   watch: { dot: 'bg-warning', word: 'Watch' },
@@ -73,18 +79,21 @@ export function OwnerSummary() {
   // A new or empty company has twelve months of zeros. "Made EGP 0" in green with an "All good" dot reads as a verdict on nothing,
   // so a card only shows a figure's colour and a status once there is something behind it.
   const active = s.months.some((m) => m.revenue !== 0 || m.cogs !== 0 || m.expenses !== 0);
-  const profitTone: Tone | undefined = !active || !last ? undefined : last.net < 0 ? 'bad' : prev && last.net < prev.net * 0.7 ? 'watch' : 'good';
+  const rawProfitTone: Tone | undefined = !active || !last ? undefined : last.net < 0 ? 'bad' : prev && last.net < prev.net * 0.7 ? 'watch' : 'good';
   const yearNet = s.months.reduce((n, m) => n + m.net, 0);
   const oldWait = s.decisions.oldestSubmittedHours;
-  const decisionTone: Tone = s.decisions.submitted === 0 ? 'good' : oldWait >= 24 ? 'bad' : 'watch';
+  const rawDecisionTone: Tone = s.decisions.submitted === 0 ? 'good' : oldWait >= 24 ? 'bad' : 'watch';
   const expiring = s.expiry.expired.batches + s.expiry.in30.batches;
   const hasStock = s.stockValueMinor !== 0 || s.itemsLow > 0 || expiring + s.expiry.in60.batches + s.expiry.in90.batches > 0;
-  const stockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
+  const rawStockTone: Tone | undefined = !hasStock ? undefined : s.expiry.expired.batches > 0 || s.itemsLow >= 5 ? 'bad' : expiring + s.expiry.in60.batches + s.itemsLow > 0 ? 'watch' : 'good';
   const hasMoney = s.owedToMeMinor !== 0 || s.iOweMinor !== 0;
-  const moneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
+  const rawMoneyTone: Tone | undefined = !hasMoney ? undefined : s.overdueMinor > 0 ? (s.overdueMinor > s.owedToMeMinor * 0.5 ? 'bad' : 'watch') : 'good';
   // Information, not a status: one big supplier is normal for a small firm and there is nothing to act on (UX audit: it was a permanent red
   // "Action required").
   const supplierTone: Tone | undefined = undefined;
+  // UX audit 20 Nov: 4 of 6 cards said "Action required" in red; when everything is urgent, nothing is. Only the most urgent card
+  // keeps it (people waiting first, then overdue money, then stock, then profit); any other is shown as "Watch".
+  const [decisionTone, moneyTone, stockTone, profitTone] = oneUrgent([rawDecisionTone, rawMoneyTone, rawStockTone, rawProfitTone]);
   const count = (n: number, one: string, many: string) => trf(n === 1 ? one : many, { n });
 
   return (
