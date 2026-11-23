@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import type { FiscalYear, SwitchOnPreview, SwitchOnResult } from '@erp/shared';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
@@ -70,7 +71,7 @@ export function AccountingSetupPage() {
         {first ? <p>{trf('Your books start on {date}.', { date: formatDay(first, session.org) })}</p> : null}
         {!list.length && canManage ? (
           <div className="form-row">
-            <label>{tr('Books start on')}<input type="date" value={start} onChange={(e) => setStart(e.target.value)} /></label>
+            <label>{tr('Books start on')}<DateInput value={start} onChange={(e) => setStart(e.target.value)} /></label>
             <Button disabled={busy || !plan} onClick={() => plan && run(async () => {
               await api('/v1/accounting/fiscal-years', { method: 'POST', body: JSON.stringify(plan) });
               return trf('Fiscal year {name} added.', { name: plan.name });
@@ -87,8 +88,8 @@ export function AccountingSetupPage() {
               <FormToggle label={tr('Add another fiscal year')}>
                 <div className="form-row">
                   <label>{tr('Name')}<input value={more.name} onChange={(e) => setMore({ ...more, name: e.target.value })} /></label>
-                  <label>{tr('Starts')}<input type="date" value={more.startsOn} onChange={(e) => setMore({ ...more, startsOn: e.target.value })} /></label>
-                  <label>{tr('Ends')}<input type="date" value={more.endsOn} onChange={(e) => setMore({ ...more, endsOn: e.target.value })} /></label>
+                  <label>{tr('Starts')}<DateInput value={more.startsOn} onChange={(e) => setMore({ ...more, startsOn: e.target.value })} /></label>
+                  <label>{tr('Ends')}<DateInput value={more.endsOn} onChange={(e) => setMore({ ...more, endsOn: e.target.value })} /></label>
                   <Button variant="outline" disabled={busy || !more.name.trim() || !more.startsOn || !more.endsOn || more.endsOn < more.startsOn} onClick={() => run(async () => {
                     await api('/v1/accounting/fiscal-years', { method: 'POST', body: JSON.stringify(more) });
                     return trf('Fiscal year {name} added.', { name: more.name.trim() });

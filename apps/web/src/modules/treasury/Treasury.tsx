@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { hasPermission, type AccountLine, type Branch, type TreasuryAccount, type TreasuryKind, type TreasuryTransfer } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
@@ -188,8 +189,8 @@ export function TreasuryAccountPage() {
       ) : null}
 
       <div className="form-row">
-        <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>{tr('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>{tr('To')}<DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <Button variant="outline" disabled={!from || !to || to < from} onClick={() => { setShown({ from, to }); lines.reload(); }}>{tr('Show')}</Button>
         <Button variant="ghost" disabled={busy} onClick={() => run(async () => {
           await apiDownload(`/v1/treasury/accounts/${a.id}/lines?from=${shown.from}&to=${shown.to}&format=csv`, `${a.code}-${shown.from}-to-${shown.to}.csv`);
@@ -256,7 +257,7 @@ export function TransfersPage() {
               </select>
             </label>
             <label>{tr('Amount')}<input inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
-            <label>{tr('Date')}<input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
+            <label>{tr('Date')}<DateInput value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
           </div>
           <label>{tr('Note (optional)')}<input value={form.note} maxLength={500} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
           <div><Button disabled={busy || !form.fromAccountId || !form.toAccountId || toMinor(form.amount) <= 0 || !form.date} onClick={() => run(async () => {

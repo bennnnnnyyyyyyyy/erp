@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
@@ -253,7 +254,7 @@ export function VatStep({ c, onDone }: { c: OnboardingContent; onDone: () => voi
         <>
           <p className="m-0 text-sm text-muted-foreground sm:col-span-2">{c.vat.creates}</p>
           <Field label={c.vat.from} hint={c.vat.fromHint}>
-            <input className={inputClass} type="date" required value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput className={inputClass} required value={from} onChange={(e) => setFrom(e.target.value)} />
           </Field>
         </>
       ) : null}

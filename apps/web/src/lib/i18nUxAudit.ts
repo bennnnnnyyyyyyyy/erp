@@ -118,6 +118,9 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Load more': 'عرض المزيد',
   'Every entry in the books, newest first. Entries cannot be changed; a correction is a reversing entry.': 'كل القيود في الدفاتر، الأحدث أولًا. لا يمكن تعديل القيود؛ التصحيح يكون بقيد عكسي.',
   '{shown} of the newest {total}': '{shown} من أحدث {total}',
+  // Date boxes (UX audit 20 Nov, Track A)
+  'Pick a date': 'اختر تاريخًا',
+  'Type a date like {pattern}': 'اكتب التاريخ بهذا الشكل {pattern}',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

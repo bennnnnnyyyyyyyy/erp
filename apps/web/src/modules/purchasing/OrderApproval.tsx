@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
@@ -117,7 +118,7 @@ export function OrderConfirmation({ order, canConfirm, late, onDone }: {
       )}
       {open && canConfirm && editing && (
         <div className="form-row">
-          <label>{tr('Promised delivery date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>{tr('Promised delivery date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label>{tr("Supplier's reference (optional)")}<input value={ref} maxLength={60} onChange={(e) => setRef(e.target.value)} /></label>
           <Button size="sm" disabled={busy || !date} onClick={save}>{tr('Save')}</Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{tr('Cancel')}</Button>

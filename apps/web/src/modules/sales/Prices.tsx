@@ -1,3 +1,4 @@
+import { DateInput } from '../../components/DateInput';
 import { useState, type FormEvent } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
@@ -175,8 +176,8 @@ function AddListForm({ groups, onSave }: { groups: CustomerGroup[]; onSave: (bod
         </label>
       </div>
       <div className="form-row">
-        <label>{tr('From')}<input type="date" required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>
-        <label>{tr('To (optional)')}<input type="date" value={form.validTo} onChange={(e) => setForm({ ...form, validTo: e.target.value })} /></label>
+        <label>{tr('From')}<DateInput required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>
+        <label>{tr('To (optional)')}<DateInput value={form.validTo} onChange={(e) => setForm({ ...form, validTo: e.target.value })} /></label>
       </div>
       <p className="muted small">{tr('One price list per customer group at a time: the dates of two lists for the same group cannot overlap.')}</p>
       <div className="form-actions"><Button type="submit">{tr('Add price list')}</Button></div>
