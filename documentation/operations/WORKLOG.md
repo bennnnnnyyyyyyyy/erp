@@ -11,7 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-23 — Track A, batch 2: more audit fixes (`sql/105` written, not applied)
+## 2026-11-23 — `sql/105` applied to live (Arabic warehouse names)
+
+**Objective.** Ben's yes (23 Nov) to apply the Track A migration for Arabic warehouse names.
+
+**Actions Completed.** A rolled-back dry run of `sql/105_inv_warehouse_name_ar.sql` on live (no error). Then applied with
+`npx supabase db query --linked -f` from the main checkout. Ran `sql/tests/102` and `sql/tests/070` on live. `sql/README.md` updated.
+
+**Database / System Result.** Live (erp-live): function `inv_set_warehouse_name_ar` added. Anonymous users cannot call it. No
+data changed.
+
+**Safety Status.** Tests 102 and 070 pass on live (both roll back). The screens use it only after Ben merges and deploys the
+branch; until then nothing calls it.
+
+## 2026-11-23 — Track A, batch 2: more audit fixes (`sql/105`)
 
 **Objective.** The master chat's standing order (Ben, 23 Nov): finish the audit's P1/P2 fixes that are not invoice printing (Track B)
 or the Bellvox look (Track C), smallest first. The demo data clean-up is dropped (new demo companies come in phase 2d).
@@ -29,7 +42,7 @@ or the Bellvox look (Track C), smallest first. The demo data clean-up is dropped
 - Decisions taken with the recommended default (no plan gave another): titles follow the menu labels; on Prices the first tab is
   Price lists; the profit card keeps one figure per month (merging the two profit screens, top-15 #15, waits for the menu work).
 
-**Database / System Result.** None on live. `sql/105` is written and tested locally only.
+**Database / System Result.** `sql/105` applied to live (see the entry above).
 
 **Safety Status.** Local PGlite, all 102 migrations: 99 of 99 SQL tests pass (102 is new; 105 reruns cleanly). typecheck is clean.
 Tests: shared 82, API 704 (7 skipped), web 178. biome ci shows 0 errors. The migration and doc-link checks are OK. Not checked in a
