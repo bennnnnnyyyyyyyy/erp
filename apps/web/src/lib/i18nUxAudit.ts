@@ -147,6 +147,8 @@ export const UX_AUDIT_AR: Record<string, string> = {
   Markup: 'هامش الربح',
   'Net loss in {month}: {amount}': 'صافي الخسارة في {month}: {amount}',
   'Net profit in {month}: {amount}': 'صافي الربح في {month}: {amount}',
+  // Low stock pop-up (phase 1a, sql/106)
+  'Choose a {party}.': 'اختر {party}.',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

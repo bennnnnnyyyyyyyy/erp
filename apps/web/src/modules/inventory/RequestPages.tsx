@@ -1,4 +1,5 @@
 import { localName } from '../../lib/names';
+import { readOrderLink } from '../../lib/orderLink';
 import { useState, type FormEvent } from 'react';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { RecordHistory } from '../../components/RecordHistory';
@@ -104,7 +105,11 @@ export function NewRequest() {
   const lastKey = `erp.request.warehouse.${session.org?.id ?? ''}`;
   const warehouseId = chosenWarehouse || defaultWarehouse(cat.warehouses.data ?? [], stock.data ?? [], past.data ?? [], lastKey);
   const [reason, setReason] = useState('');
-  const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
+  // "Ask for it" in the low stock pop-up (sql/106) opens this form with ?item=&qty=.
+  const [lines, setLines] = useState(() => {
+    const link = readOrderLink(window.location.search);
+    return [{ itemId: link.itemId, qty: link.qty || '1' }];
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { readOrderLink } from '../../lib/orderLink';
 import { unitLabel } from '../../lib/names';
 import { demoMode } from '../../lib/demo';
 import { Button } from '../../components/ui/button';
@@ -318,11 +319,13 @@ export function NewOrderForm(props: {
   const session = useSession();
   const cat = useCatalog();
   const parties = useLoad(() => api<Party[]>(props.partyEndpoint));
-  const [partyId, setPartyId] = useState('');
+  // Filled from a link (the low stock pop-up, sql/106): ?item=&qty=&supplier=. Nothing is saved until the person places the order.
+  const [link] = useState(() => readOrderLink(window.location.search));
+  const [partyId, setPartyId] = useState(link.partyId);
   const [quickAdd, setQuickAdd] = useState(false);
   const canQuickAdd = Boolean(props.partyAddPermission && hasPermission(session.permissions, props.partyAddPermission));
   const [warehouseId, setWarehouseId] = useState('');
-  const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [lines, setLines] = useState<Line[]>(() => [link.itemId ? { ...emptyLine(), itemId: link.itemId, qty: link.qty || '1' } : emptyLine()]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
@@ -427,6 +430,8 @@ export function NewOrderForm(props: {
               />
               {canQuickAdd ? <Button type="button" variant="outline" size="sm" onClick={() => setQuickAdd(true)}>{tr('+ New')}</Button> : null}
             </span>
+            {/* Ben, 23 Nov: an item with no supplier yet opens the order and asks for one. */}
+            {link.itemId && !partyId ? <span className="notice small" role="status">{trf('Choose a {party}.', { party: tr(props.partyLabel).toLowerCase() })}</span> : null}
           </label>
           <label>
             {tr('Warehouse')}
