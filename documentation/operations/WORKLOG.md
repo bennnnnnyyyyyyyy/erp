@@ -36,6 +36,11 @@ and one SQL test, 105).
   invoices (photo and draft side by side, differences in colour, Save through the normal bill function, then the photo is attached).
   A bill with no received goods: blocking warning and "Receive the goods" (master accepted this instead of a 409, on the condition
   that the database still refuses it: proved by test 105 B4). Tests: `apps/api/test/bill_scan.test.ts`, test 105 B1-B5.
+- Step 3, attachments panel (`apps/web/src/components/Attachments.tsx`) on the purchase invoice, purchase order, sales invoice, sales
+  order, expense and item pages (item: an "Attachments" tab) and in the customer and supplier Edit window. Camera or file; open (five-
+  minute link); remove (the person who added it, or an owner or admin; soft delete). Hidden while `sql/108` is missing and in the
+  sample build. Receipts have no page of their own: their papers go on the purchase order.
+- Step 2 (barcodes) and step 4 (QR codes) not started: waiting for Ben to install `@zxing/browser` in the main checkout.
 
 **Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new AI cards, bill scanning and attachments answer
 503 `not_set_up`, and accepting the AI notice answers 503 (this build shows notice v3).

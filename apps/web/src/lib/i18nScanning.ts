@@ -84,4 +84,16 @@ export const SCANNING_AR: Record<string, string> = {
   'The file store did not accept the file. Try again.': 'لم يقبل مخزن الملفات الملف. حاول مرة أخرى.',
   'This AI provider needs a database update (sql/108) first.': 'مزوّد الذكاء الاصطناعي هذا يحتاج تحديثًا لقاعدة البيانات (sql/108) أولًا.',
   'The new AI notice needs a database update (sql/108) first.': 'إشعار الذكاء الاصطناعي الجديد يحتاج تحديثًا لقاعدة البيانات (sql/108) أولًا.',
+  // step 3: attachments
+  Attachments: 'المرفقات',
+  'File attached.': 'تم إرفاق الملف.',
+  'File removed.': 'تمت إزالة الملف.',
+  'Uploading…': 'جارٍ الرفع…',
+  'Open {name}': 'فتح {name}',
+  'the file': 'الملف',
+  File: 'ملف',
+  Remove: 'إزالة',
+  'Yes, remove': 'نعم، أزل',
+  'Remove this file from the record? It is kept in the history.': 'إزالة هذا الملف من السجل؟ يبقى محفوظًا في السجل التاريخي.',
+  'No files attached yet.': 'لا توجد ملفات مرفقة بعد.',
 };

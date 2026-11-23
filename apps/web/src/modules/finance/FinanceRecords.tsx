@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Attachments } from '../../components/Attachments';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
@@ -163,6 +164,7 @@ export function ExpensePage() {
       </dl>
       {canVoid && <div className="form-actions"><ConfirmButton label={tr('Void expense')} confirmLabel={tr('Yes, void it')} question={tr('Void this expense? It can not be undone.')} disabled={voiding.busy} onConfirm={() => voiding.run(e.number)} /></div>}
       {e.status === 'recorded' && <PaymentsAgainst field="expenseId" id={e.id} totalMinor={e.amountMinor} currency={e.currency} />}
+      <Attachments entityType="expense" entityId={e.id} />
       <RecordHistory key={e.id} id={e.id} currency={e.currency} />
     </section>
   );

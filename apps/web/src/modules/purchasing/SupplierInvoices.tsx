@@ -1,4 +1,5 @@
 import { DateInput } from '../../components/DateInput';
+import { Attachments } from '../../components/Attachments';
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission, type VatSettings } from '@erp/shared';
@@ -143,6 +144,7 @@ export function SupplierInvoicePage() {
       </table></div>
       <SupplierNotes billId={inv.id} currency={inv.currency} lines={inv.lines} itemOf={itemOf} onChanged={invoice.reload} />
       <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={due} currency={inv.currency} />
+      <Attachments entityType="supplier_bill" entityId={inv.id} />
       <RecordHistory key={inv.id} id={inv.id} currency={inv.currency} />
     </section>
   );

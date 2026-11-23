@@ -201,6 +201,6 @@ describe('the scan and attachment routes (source guards)', () => {
   it('the scan asks the database before spending AI money', () => {
     const scan = src('modules/purchasing/billScan.ts');
     expect(scan.indexOf('await candidates(c, null, null, null)')).toBeGreaterThan(0);
-    expect(scan.indexOf('await candidates(c, null, null, null)')).toBeLessThan(scan.indexOf('readWithAi(c.env'));
+    expect(scan.indexOf('await candidates(c, null, null, null)')).toBeLessThan(scan.indexOf('await readWithAi('));
   });
 });
