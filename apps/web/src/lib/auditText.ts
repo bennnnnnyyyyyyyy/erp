@@ -1,4 +1,4 @@
-import { formatMoney } from '@erp/shared';
+import { type AuditEntry, formatMoney } from '@erp/shared';
 import { formatQty } from './numbers';
 
 // Audit-log summaries are written by database functions as plain English with raw numbers: money as minor units ("200000 minor units
@@ -33,4 +33,22 @@ export function readableSummary(summary: string | null | undefined, currency: st
   s = s.replace(/(-?\d+\.\d{3})(?=\D|$)/g, (n: string) => formatQty(n));
   s = s.replace(/(\d) x /g, '$1 × ');
   return s;
+}
+
+/**
+ * Rows that say the same thing at the same moment become one row with a count. A reminder or escalation is queued once for each
+ * manager and the database writes one audit row for each, without the person's name: OUT-0376 showed "Reminder queued" twice at
+ * 16:15 (UX audit, 20 Nov). It was two people, not a double send; the row now says "to 2 people".
+ */
+export function collapseSame(rows: AuditEntry[]): (AuditEntry & { times: number })[] {
+  const out: (AuditEntry & { times: number })[] = [];
+  for (const e of rows) {
+    const last = out[out.length - 1];
+    if (last && last.occurred_at === e.occurred_at && last.action === e.action && last.summary === e.summary && last.actor_user_id === e.actor_user_id) {
+      last.times += 1;
+    } else {
+      out.push({ ...e, times: 1 });
+    }
+  }
+  return out;
 }

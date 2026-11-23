@@ -98,7 +98,6 @@ export const UX_AUDIT_AR: Record<string, string> = {
   // Home tile pages (UX audit 20 Nov, phase 0): Money owed, Sales by product
   'Customer or supplier': 'العميل أو المورّد',
   'Still owed': 'المتبقي',
-  'Money owed': 'المبالغ المستحقة',
   'What customers still owe us, and what we still owe suppliers and for expenses. The most overdue come first.':
     'ما يدين به العملاء لنا، وما ندين به للمورّدين والمصروفات. الأكثر تأخرًا أولًا.',
   'Customers owe us': 'مستحق لنا من العملاء',
@@ -106,7 +105,6 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Nothing is owed to us.': 'لا توجد مبالغ مستحقة لنا.',
   'We owe nothing.': 'لا ندين بشيء.',
   'Total {total} · of which overdue {late}': 'الإجمالي {total} · منها متأخر {late}',
-  'Sales by product': 'المبيعات حسب الصنف',
   'Last {days} days, issued invoices, before VAT. Total {total}.': 'آخر {days} يومًا، الفواتير الصادرة، قبل الضريبة. الإجمالي {total}.',
   'Quantity sold': 'الكمية المباعة',
   'Sales before VAT': 'المبيعات قبل الضريبة',
@@ -114,4 +112,6 @@ export const UX_AUDIT_AR: Record<string, string> = {
   // Batches (UX audit 20 Nov)
   'Expired, or expiring in the next 90 days': 'منتهية الصلاحية، أو تنتهي خلال 90 يومًا',
   '{qty} in {warehouse}': '{qty} في {warehouse}',
+  // History (UX audit 20 Nov, Track A)
+  'to {n} people': 'إلى {n} أشخاص',
 };
