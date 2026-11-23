@@ -2,6 +2,7 @@ import { hasPermission, type AuditEntry, type Member } from '@erp/shared';
 import { Loading } from '../../../components/Loading';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
+import { readableSummary } from '../../../lib/auditText';
 import { formatDateTime } from '../../../lib/format';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
@@ -47,7 +48,8 @@ export function AuditLog() {
       },
     },
     { key: 'action', label: tr('Action'), value: (e) => e.action, render: (e) => <span title={e.action}>{readableAction(e.action)}</span> },
-    { key: 'summary', label: tr('Details'), value: (e) => e.summary },
+    // The CSV keeps the raw text; the screen shows money and quantities as people read them.
+    { key: 'summary', label: tr('Details'), value: (e) => e.summary, render: (e) => readableSummary(e.summary, session.org?.defaultCurrency ?? 'EGP') },
   ];
 
   return (
