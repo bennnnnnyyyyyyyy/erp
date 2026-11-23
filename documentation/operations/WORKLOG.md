@@ -11,6 +11,38 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — Track A: audit bugs and quick fixes (branch `fix/track-a-audit-bugs`; `sql/104` not applied)
+
+**Objective.** Bellvox roadmap phase 0 and the Track A bug list (Ben, 23 Nov): fix the real bugs of the
+[UX audit of 20 Nov](../planning/2026-11-20-ux-audit.md) and the quick P1 items of its top 15, except invoice printing (Track B)
+and the new look (Track C, on hold).
+
+**Actions Completed.**
+- Phase 0 (earlier commits on the branch): home tiles open Money owed (`/finance/owed`) and Sales by product
+  (`/finance/product-sales`, new `GET /v1/finance/product-sales`); alert notifications open their page (`sql/104`, test 101);
+  an expired batch shows "Expired" in All batches.
+- History and audit log: money shows as money, not minor units; quantities without ".000"; one row per reminder sent to several
+  managers ("to 2 people"; the OUT-0376 "double" reminder was one per manager, checked read-only on live). Display side only
+  (`apps/web/src/lib/auditText.ts`), so old rows read right; the CSV keeps the raw text.
+- Approve and Reject hidden on one's own note, request, transfer, count, adjustment or purchase order unless the person may approve
+  their own. The session sends `mayApproveOwn` (rule of `core__sole_approver`, sql/063, 077); the database still decides.
+- Paging: list routes take `?offset=` (`apps/api/src/lib/paging.ts`); "Load more" on stock requests, stock ledger, sales and purchase
+  orders, journal and notifications.
+- Date boxes follow the company date format (`components/DateInput.tsx`), on every screen except the sales invoice form
+  (`CustomerInvoices.tsx`, Track B's file).
+- Prices page: each task in its own card (no overlap). Suppliers and customers lists: 5 columns, the rest under Edit.
+- Notifications: first line, "+ N more", money, quantities and dates formatted. Home: only the most urgent card says
+  "Action required". Arabic for every new text (`lib/i18nUxAudit.ts`, machine drafts).
+
+**Database / System Result.** None. `sql/104` is written and tested locally only; not applied to live. No new migration in this batch.
+One read-only query on live (reminders of OUT-0376).
+
+**Safety Status.** typecheck clean (against this worktree's own shared package: `node_modules/@erp` junctions inside the worktree
+point to its own `apps/` and `packages/`; remove them before deleting the worktree); tests: shared 82, API 704 (7 skipped), web 178;
+biome ci 0 errors; doc link and migration checks OK. Not checked in a browser. Still open: the sales invoice page (void button and
+text, its date box) waits for Track B; demo data clean-up needs Ben's yes (live data); Arabic for units and warehouse names needs a
+migration.
+
 ## 2026-11-20 — HR & payroll app link, phase 1 built (`sql/102`, not applied)
 
 **Objective.** Ben approved the HR app plan (20 Nov): master-key files `lib/hr/hrWebhook.ts` and `jobs/hrSync.ts`, the webhook route
