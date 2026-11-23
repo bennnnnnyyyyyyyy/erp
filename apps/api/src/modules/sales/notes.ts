@@ -44,7 +44,12 @@ async function loadNotes(c: Context<AppEnv>, id?: string, invoiceId?: string) {
   const client = userDb(c);
   const org = orgOf(c);
   // '*' so that code shipped before sql/086 still reads notes (net, VAT and gross then come from total_minor; see vatRows.ts).
-  let q = client.from('sal_notes').select('*').eq('org_id', org).order('created_at', { ascending: false }).range(...pageRange(c, 200));
+  let q = client
+    .from('sal_notes')
+    .select('*')
+    .eq('org_id', org)
+    .order('created_at', { ascending: false })
+    .range(...pageRange(c, 200));
   if (id) q = q.eq('id', id);
   if (invoiceId) q = q.eq('invoice_id', invoiceId);
   const { data, error } = await q;
