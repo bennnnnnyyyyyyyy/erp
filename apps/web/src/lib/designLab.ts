@@ -44,6 +44,8 @@ const range = (key: string, section: string, label: string, min: number, max: nu
   ({ key, section, label, kind: 'range', options: [], default: '', min, max, step, unit, ...(help ? { help } : {}) });
 
 export const GROUPS: Group[] = [
+  // ---------- Screens being decided (new UI v2): each screen in 2 or 3 versions; Ben picks one, then the others are deleted ----------
+
   // ---------- Colour ----------
   { key: 'palette', section: 'Colour', label: 'Palette', kind: 'swatches', default: 'bellvox', help: 'Brand colour, accent, background tint and sidebar all follow this. "Bellvox" is the baked-in look (theme.css). "Custom" uses the four sliders below.', options: [
     { value: 'bellvox', label: 'Bellvox (baked in)', swatch: ['#c9222e', '#0b0b0b', '#f6f6f4'] },

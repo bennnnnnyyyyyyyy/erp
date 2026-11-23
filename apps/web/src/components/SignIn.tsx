@@ -1,24 +1,49 @@
-import { useState, type FormEvent } from 'react';
-import { Button } from './ui/button';
-import { ProductLogo } from './Brand';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { authLinkError, googleSignInEnabled, supabase, supabaseConfigured } from '../lib/supabase';
-
-import { tr, trf } from '../lib/i18n';
+import { BRAND } from '../lib/brand';
+import { tr, trf, useI18n } from '../lib/i18n';
 import { authErrorMessage } from '../lib/authErrors';
+import './signin.css';
+
+// Sign in, create an account, reset the password. New UI (Ben's pick, 23 Nov 2026: "B, one step at a time"): a full page with one big
+// question per step. Sign in and create an account: email, then password. Reset: email only. No card, no box.
+
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
-const TITLE: Record<Mode, string> = { 'sign-in': 'Sign in', 'sign-up': 'Create your account', forgot: 'Reset your password' };
+
+/** English / العربية. Each name is written in its own language, so it is not translated. Saved on this device until sign-in. */
+function LanguageSwitch() {
+  const { lang, setPersonalLang } = useI18n();
+  return (
+    <div className="si-lang" role="group" aria-label={tr('Language')}>
+      <button type="button" lang="en" aria-pressed={lang === 'en'} onClick={() => setPersonalLang('en')}>English</button>
+      <button type="button" lang="ar" aria-pressed={lang === 'ar'} onClick={() => setPersonalLang('ar')}>العربية</button>
+    </div>
+  );
+}
 
 export function SignIn() {
   const [mode, setMode] = useState<Mode>('sign-in');
+  const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [again, setAgain] = useState('');
+  const [shown, setShown] = useState(false);
   const [error, setError] = useState<string | null>(authLinkError);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+
+  const twoSteps = mode !== 'forgot';
+  // Keyboard: the cursor is always in the one box of the step.
+  useEffect(() => {
+    field.current?.focus();
+  }, [step, mode]);
 
   function switchMode(next: Mode) {
     setMode(next);
+    setStep(1);
+    setPassword('');
+    setAgain('');
     setError(null);
     setNotice(null);
   }
@@ -29,8 +54,7 @@ export function SignIn() {
     if (error) setError(authErrorMessage(error));
   }
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function finish() {
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -47,10 +71,11 @@ export function SignIn() {
         if (error) setError(authErrorMessage(error));
         else if (!data.session) {
           // Same message whether or not the address already has an account, so the form can't be used to probe emails.
-          setNotice(trf('We sent a confirmation link to {email}. Open it, then come back here and sign in to set up your company.', { email }));
           setMode('sign-in');
+          setStep(1);
           setPassword('');
           setAgain('');
+          setNotice(trf('We sent a confirmation link to {email}. Open it, then come back here and sign in to set up your company.', { email }));
         }
       }
     } else {
@@ -58,69 +83,116 @@ export function SignIn() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
       if (error) setError(authErrorMessage(error));
       // Same message whether or not the account exists, so the form can't be used to probe emails.
-      else setNotice('If an account exists for that email, a reset link is on its way. Check your inbox.');
+      else setNotice(tr('If an account exists for that email, a reset link is on its way. Check your inbox.'));
     }
     setBusy(false);
   }
 
+  function next(e: FormEvent) {
+    e.preventDefault();
+    if (step === 1 && twoSteps) {
+      setError(null);
+      setNotice(null);
+      setStep(2);
+    } else void finish();
+  }
+
+  const question =
+    step === 1
+      ? mode === 'forgot' ? tr('Which email should get the reset link?') : mode === 'sign-up' ? tr('What is your work email?') : tr('Welcome back. What is your email?')
+      : mode === 'sign-up' ? tr('Choose a password') : tr('Your password');
+  const action =
+    step === 1 && twoSteps ? tr('Continue')
+      : mode === 'sign-in' ? (busy ? tr('Signing in…') : tr('Sign in'))
+      : mode === 'sign-up' ? (busy ? tr('Creating…') : tr('Create account'))
+      : busy ? tr('Sending…') : tr('Send reset link');
+
   return (
-    <main className="center">
-      <ProductLogo size="lg" />
-      <form className="card stack" onSubmit={submit}>
-        <h1>{tr(TITLE[mode])}</h1>
-        {mode === 'sign-up' && <p className="muted small">{tr('Start with your own login. Next you will set up your company, which takes about a minute.')}</p>}
-        {!supabaseConfigured && (
-          <p className="error">
-            {tr('Supabase isn\'t configured. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY to the .env at the repo root, then restart the web app.')}
-          </p>
-        )}
-        {mode !== 'forgot' && googleSignInEnabled && (
+    <main className="si">
+      <header className="si-top">
+        <span className="si-logo">
+          <img src={BRAND.logo} alt={BRAND.name} />
+          <span aria-hidden="true">{BRAND.suffix}</span>
+        </span>
+        <LanguageSwitch />
+      </header>
+
+      <form className="si-stage" onSubmit={next}>
+        <p className="si-step">{twoSteps ? trf('Step {n} of 2', { n: step }) : tr('Reset your password')}</p>
+        <h1>{question}</h1>
+
+        {step === 1 ? (
+          <input
+            ref={field}
+            className="si-big"
+            type="email"
+            autoComplete="email"
+            required
+            aria-label={tr('Email')}
+            placeholder={tr('name@company.com')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        ) : (
           <>
-            <Button variant="outline" type="button" onClick={signInWithGoogle}>
-              {tr('Continue with Google')}
-            </Button>
-            <div className="divider muted small">or</div>
+            <p className="si-who">
+              <bdi>{email}</bdi>
+              <button type="button" className="si-link" onClick={() => setStep(1)}>{tr('Change')}</button>
+            </p>
+            <span className="si-pass">
+              <input
+                ref={field}
+                className="si-big"
+                type={shown ? 'text' : 'password'}
+                autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
+                required
+                minLength={mode === 'sign-up' ? 8 : undefined}
+                aria-label={tr('Password')}
+                aria-describedby={mode === 'sign-up' ? 'si-hint' : undefined}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button type="button" className="si-eye" onClick={() => setShown((s) => !s)} aria-pressed={shown}>{shown ? tr('Hide') : tr('Show')}</button>
+            </span>
+            {mode === 'sign-up' && (
+              <>
+                <span id="si-hint" className="si-hint">{tr('At least 8 characters.')}</span>
+                <input
+                  className="si-big si-big-2"
+                  type={shown ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  aria-label={tr('Repeat the password')}
+                  placeholder={tr('Repeat the password')}
+                  value={again}
+                  onChange={(e) => setAgain(e.target.value)}
+                />
+              </>
+            )}
           </>
         )}
-        <label>
-          {tr('Email')}
-          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        {mode !== 'forgot' && (
-          <label>
-            {tr('Password')}
-            <input
-              type="password"
-              autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
-              required
-              minLength={mode === 'sign-up' ? 8 : undefined}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {mode === 'sign-up' && <span className="hint muted">{tr('At least 8 characters.')}</span>}
-          </label>
-        )}
-        {mode === 'sign-up' && (
-          <label>
-            {tr('Repeat the password')}
-            <input type="password" autoComplete="new-password" required value={again} onChange={(e) => setAgain(e.target.value)} />
-          </label>
-        )}
-        {error && <p className="error" role="alert">{error}</p>}
-        {notice && <p className="notice" role="status">{notice}</p>}
-        <Button type="submit" disabled={busy}>
-          {mode === 'sign-in' ? (busy ? tr('Signing in…') : tr('Sign in')) : mode === 'sign-up' ? (busy ? tr('Creating…') : tr('Create account')) : busy ? tr('Sending…') : tr('Send reset link')}
-        </Button>
-        {mode === 'sign-in' && (
-          <>
-            <Button variant="outline" type="button" onClick={() => switchMode('sign-up')}>{tr('New here? Create an account')}</Button>
-            <Button variant="outline" type="button" onClick={() => switchMode('forgot')}>{tr('Forgot password?')}</Button>
-          </>
-        )}
-        {mode !== 'sign-in' && (
-          <Button variant="outline" type="button" onClick={() => switchMode('sign-in')}>{tr('Back to sign in')}</Button>
-        )}
+
+        {!supabaseConfigured && <p className="si-msg si-msg-error">{tr('Supabase isn\'t configured. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY to the .env at the repo root, then restart the web app.')}</p>}
+        {error && <p className="si-msg si-msg-error" role="alert">{error}</p>}
+        {notice && <p className="si-msg si-msg-ok" role="status">{notice}</p>}
+
+        <div className="si-actions">
+          <button type="submit" className="si-go" disabled={busy}>
+            <span>{action}</span>
+            <span className="si-arrow" aria-hidden="true">→</span>
+          </button>
+          {step === 2 && mode === 'sign-in' && <button type="button" className="si-link" onClick={() => switchMode('forgot')}>{tr('Forgot password?')}</button>}
+        </div>
       </form>
+
+      <footer className="si-foot">
+        {mode === 'sign-in' ? (
+          <span>{tr('New here?')} <button type="button" className="si-link" onClick={() => switchMode('sign-up')}>{tr('Create an account')}</button></span>
+        ) : (
+          <button type="button" className="si-link" onClick={() => switchMode('sign-in')}>{tr('Back to sign in')}</button>
+        )}
+        {googleSignInEnabled && mode !== 'forgot' && <button type="button" className="si-link" onClick={signInWithGoogle}>{tr('Continue with Google')}</button>}
+      </footer>
     </main>
   );
 }

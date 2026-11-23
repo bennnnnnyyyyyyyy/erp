@@ -1,0 +1,76 @@
+/* Sign in (components/SignIn.tsx), new UI: "one step at a time" (Ben's pick, 23 Nov 2026). Logical properties only (RTL-safe);
+   colours from the tokens in theme.css, so light and dark both work. */
+.si { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; background: var(--background); color: var(--foreground); font-family: var(--font); }
+.si h1 { margin: 0; }
+.si input { margin: 0; }
+
+.si-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.5rem clamp(1.25rem, 4vw, 3rem); }
+/* A Latin brand lock-up: it keeps its order ("Bellvox ERP") in Arabic too. */
+.si-logo { display: inline-flex; align-items: center; gap: 0.5rem; direction: ltr; }
+.si-logo img { height: 30px; width: auto; display: block; }
+.si-logo span { font-weight: 600; font-size: 0.85rem; letter-spacing: 0.1em; color: var(--muted-foreground); padding-block-start: 0.25rem; }
+
+.si-lang { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--foreground) 7%, transparent); }
+.si-lang button { all: unset; cursor: pointer; padding: 0.35rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.85rem; font-weight: 500; color: var(--muted-foreground); }
+.si-lang button[aria-pressed='true'] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.si-lang button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.si-stage {
+  align-self: center; width: min(760px, 100%); margin-inline: auto; padding: 1rem clamp(1.25rem, 4vw, 3rem) 3rem;
+  display: flex; flex-direction: column; gap: 1.25rem; animation: si-in 0.5s var(--ease) both;
+}
+@keyframes si-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.si-step { margin: 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary-text); }
+.si-stage h1 { font-size: clamp(2rem, 5.5vw, 4rem); font-weight: 600; line-height: 1.08; letter-spacing: -0.04em; }
+html:lang(ar) .si-stage h1 { letter-spacing: 0; line-height: 1.25; }
+
+.si-big {
+  font: inherit; font-size: clamp(1.35rem, 3vw, 2rem); width: 100%; padding: 0.5rem 0; border: 0; border-block-end: 2px solid var(--foreground);
+  border-radius: 0; background: transparent; color: var(--foreground); transition: border-color 0.2s var(--ease);
+}
+.si-big::placeholder { color: color-mix(in srgb, var(--foreground) 30%, transparent); }
+.si-big:focus { outline: none; box-shadow: none; border-block-end-color: var(--primary); }
+.si-big-2 { font-size: clamp(1.1rem, 2.2vw, 1.4rem); }
+.si-pass { position: relative; display: block; }
+.si-pass .si-big { padding-inline-end: 4.5rem; }
+.si-eye {
+  all: unset; cursor: pointer; position: absolute; inset-inline-end: 0; inset-block-end: 0.7rem; padding: 0.25rem 0.5rem; border-radius: 6px;
+  font-size: 0.85rem; font-weight: 600; color: var(--muted-foreground);
+}
+.si-eye:hover { color: var(--foreground); }
+.si-eye:focus-visible { outline: 2px solid var(--ring); }
+.si-hint { margin-block-start: -0.75rem; font-size: 0.85rem; color: var(--muted-foreground); }
+.si-who { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 1rem; color: var(--muted-foreground); }
+.si-who bdi { padding: 0.3rem 0.8rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--foreground) 7%, transparent); color: var(--foreground); overflow-wrap: anywhere; }
+
+.si-msg { margin: 0; padding: 0.75rem 1rem; border-radius: var(--radius); font-size: 0.95rem; line-height: 1.45; }
+.si-msg-error { background: color-mix(in srgb, var(--destructive) 10%, var(--card)); color: var(--destructive-foreground); border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent); }
+.si-msg-ok { background: color-mix(in srgb, var(--success) 12%, var(--card)); color: var(--success-foreground); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent); }
+
+.si-actions { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-block-start: 0.5rem; }
+.si-go {
+  font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.9rem; padding-block: 0.55rem; padding-inline: 1.6rem 0.6rem;
+  border: 0; border-radius: var(--radius-pill); background: var(--primary); color: var(--primary-foreground); font-size: 1.1rem; font-weight: 600;
+  transition: background 0.2s var(--ease);
+}
+.si-go:hover:not(:disabled) { background: var(--primary-hover); }
+.si-go:disabled { opacity: 0.6; cursor: default; }
+.si-go:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.si-arrow { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; background: #fff; color: var(--bv-red); font-size: 1.25rem; transition: transform 0.3s var(--ease); }
+.si-go:hover .si-arrow { transform: translateX(4px); }
+[dir='rtl'] .si-arrow { transform: scaleX(-1); }
+[dir='rtl'] .si-go:hover .si-arrow { transform: scaleX(-1) translateX(4px); }
+
+.si-link { all: unset; cursor: pointer; color: var(--primary-text); font-weight: 600; font-size: 0.95rem; }
+.si-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.si-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.si-foot { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; justify-content: center; padding: 1.5rem; font-size: 0.95rem; color: var(--muted-foreground); border-block-start: 1px solid var(--border); }
+
+@media (max-width: 560px) {
+  .si-top { padding-block: 1rem; }
+  .si-logo img { height: 24px; }
+  .si-stage { align-self: start; padding-block-start: 2.5rem; }
+  .si-go { width: 100%; justify-content: space-between; }
+  .si-actions { gap: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) { .si-stage { animation: none; } }
