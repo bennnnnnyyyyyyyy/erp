@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Loading } from './components/Loading';
 import type { Session } from '@supabase/supabase-js';
 import type { SessionInfo } from '@erp/shared';
@@ -12,6 +12,11 @@ import {useI18n, tr } from './lib/i18n';
 import { SetPassword } from './components/SetPassword';
 import { OrgPicker } from './components/OrgPicker';
 import { Shell } from './components/Shell';
+import { newUi } from './lib/uiMode';
+
+// The new UI (lib/uiMode.ts) loads as separate chunks, only when it is switched on; the live build only runs the old UI.
+const SignInNew = lazy(() => import('./components/SignInNew').then((m) => ({ default: m.SignInNew })));
+const ShellNew = lazy(() => import('./components/ShellNew').then((m) => ({ default: m.ShellNew })));
 
 export function App() {
   const { lang } = useI18n();
@@ -58,7 +63,7 @@ export function App() {
   }
 
   if (auth === undefined) return null;
-  if (!auth) return <SignIn key={lang} />;
+  if (!auth) return newUi ? <Suspense fallback={null}><SignInNew key={lang} /></Suspense> : <SignIn key={lang} />;
   if (recovering) return <SetPassword key={lang} invited={arrivedFromInvite} onDone={() => setRecovering(false)} />;
   if (!orgId) {
     return (
@@ -74,15 +79,18 @@ export function App() {
 
   return (
     <SessionContext.Provider value={{ session, reload: () => setSessionTick((t) => t + 1) }}>
-      <Shell
-        onSwitchOrg={() => chooseOrg(null)}
-        onSignOut={() => {
-          chooseOrg(null);
-          // The low stock pop-up shows once each sign-in (components/LowStockPopup.tsx): forget that it was shown.
-          for (const k of Object.keys(sessionStorage)) if (k.startsWith('lowStockShown:')) sessionStorage.removeItem(k);
-          supabase.auth.signOut();
-        }}
-      />
+      {(() => {
+        const props = {
+          onSwitchOrg: () => chooseOrg(null),
+          onSignOut: () => {
+            chooseOrg(null);
+            // The low stock pop-up shows once each sign-in (components/LowStockPopup.tsx): forget that it was shown.
+            for (const k of Object.keys(sessionStorage)) if (k.startsWith('lowStockShown:')) sessionStorage.removeItem(k);
+            supabase.auth.signOut();
+          },
+        };
+        return newUi ? <Suspense fallback={<main className="center"><Loading /></main>}><ShellNew {...props} /></Suspense> : <Shell {...props} />;
+      })()}
     </SessionContext.Provider>
   );
 }

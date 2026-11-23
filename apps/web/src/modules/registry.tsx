@@ -1,6 +1,7 @@
 import { lazy, type ComponentType } from 'react';
 import { hasPermission, type SessionInfo } from '@erp/shared';
 import { demoMode } from '../lib/demo';
+import { newUi } from '../lib/uiMode';
 
 // Each screen file is its own chunk, fetched the first time one of its pages is opened (system audit 2026-11-03, finding 11:
 // the app shipped as a single 627 kB file). The Shell shows the loading skeleton while a chunk arrives.
@@ -49,14 +50,19 @@ const TaskPage = lazyNamed(() => import('./tasks/Tasks'), 'TaskPage');
 const TasksPage = lazyNamed(() => import('./tasks/Tasks'), 'TasksPage');
 const Customers = lazyNamed(() => import('./sales/SalesDemo'), 'Customers');
 const NewSalesOrder = lazyNamed(() => import('./sales/SalesDemo'), 'NewSalesOrder');
-// New UI versions being decided (modules/sales/SalesNew.tsx); the old screens stay in SalesDemo.tsx until Ben and Grant pick.
-const SalesOrderPage = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrderNew');
-const SalesOrders = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrdersNew');
-const Approvals = lazyNamed(() => import('./inventory/ApprovalsNew'), 'ApprovalsNew');
-const SettingsAll = lazyNamed(() => import('./core/SettingsNew'), 'SettingsNew');
-const EmptyPreview = lazyNamed(() => import('../components/EmptyStart'), 'EmptyStartPreview');
-const StockReport = lazyNamed(() => import('./inventory/StockReportNew'), 'StockReportNew');
-const CustomerPage = lazyNamed(() => import('./sales/SalesNew'), 'CustomerNew');
+const SalesOrderPage = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrderPage');
+const SalesOrders = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrders');
+// New UI screens (lib/uiMode.ts). Lazy, so the old UI never loads them. Their versions are decided by Ben and Grant (Design Lab).
+const SalesOrdersNew = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrdersNew');
+const SalesOrderNew = lazyNamed(() => import('./sales/SalesNew'), 'SalesOrderNew');
+const CustomerNew = lazyNamed(() => import('./sales/SalesNew'), 'CustomerNew');
+const ApprovalsNew = lazyNamed(() => import('./inventory/ApprovalsNew'), 'ApprovalsNew');
+const StockReportNew = lazyNamed(() => import('./inventory/StockReportNew'), 'StockReportNew');
+const SettingsNew = lazyNamed(() => import('./core/SettingsNew'), 'SettingsNew');
+const EmptyStartPreview = lazyNamed(() => import('../components/EmptyStart'), 'EmptyStartPreview');
+// Dev server and Design Lab previews only: the empty start of a list, to compare its versions (the demo always has data).
+const EMPTY_PREVIEW: AppPage[] = import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1'
+  ? [{ path: '/empty-preview', label: 'Sales orders', component: EmptyStartPreview, nav: false, parent: '', newOnly: true }] : [];
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
 const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
 const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
@@ -116,6 +122,11 @@ export type AppPage = {
   parent?: string;
   /** Shown even before the app's module is switched on (its set-up pages; the module must list them in `openBeforeEnabled`). */
   beforeEnabled?: boolean;
+  /** New UI (lib/uiMode.ts): this page's screen in the new UI. Without it the new UI shows `component` (the old screen) inside the new
+   *  frame, so every page works in both UIs. The old UI never reads this field. */
+  newComponent?: ComponentType;
+  /** New UI only: a page that exists only in the new UI (it is left out of the page list when the new UI is off). */
+  newOnly?: boolean;
 };
 
 export type AppDef = {
@@ -147,13 +158,12 @@ const INVENTORY_APP: AppDef = {
     { path: '', label: 'Overview', permission: READ, component: InventoryOverview },
     { path: '/receive', label: 'Receive goods', permission: READ, component: ReceiveGoods },
     { path: '/stock', label: 'Stock on hand', permission: READ, component: StockPage },
-    // New UI: the report page in versions being decided (Design Lab 'Report page'); read only, existing endpoints.
-    { path: '/report', label: 'Stock report', permission: READ, component: StockReport },
+    { path: '/report', label: 'Stock report', permission: READ, component: StockReportNew, newOnly: true },
     { path: '/items/:id', label: 'Item', permission: READ, component: ItemPage, nav: false, parent: '/stock' },
-    // New UI: the approvals workspace in versions being decided (Design Lab 'Approvals'); same approve/reject calls as the request page.
-    { path: '/approvals', label: 'Approvals', permission: READ, component: Approvals },
+    { path: '/approvals', label: 'Approvals', permission: READ, component: ApprovalsNew, newOnly: true },
     { path: '/requests', label: 'Requests', permission: READ, component: RequestsList },
-    { path: '/requests/new', label: 'Send goods out', permission: 'inventory.request.create', component: NewRequest },
+    // newComponent is the same component on the form pages below: the form shows its new-UI layouts itself (shared logic, lib/uiMode.ts).
+    { path: '/requests/new', label: 'Send goods out', permission: 'inventory.request.create', component: NewRequest, newComponent: NewRequest },
     { path: '/requests/:id', label: 'Request', permission: READ, component: RequestPage, nav: false, parent: '/requests' },
     { path: '/transfers', label: 'Transfers', permission: 'inventory.transfers.read', component: TransfersList },
     { path: '/transfers/new', label: 'Move between warehouses', permission: 'inventory.transfers.create', component: NewTransfer },
@@ -188,7 +198,7 @@ const PURCHASING_APP: AppDef = {
   pages: [
     { path: '', label: 'Purchase orders', component: PurchaseOrders },
     { path: '/orders', label: 'Purchase orders', component: PurchaseOrders, nav: false, parent: '' },
-    { path: '/orders/new', label: 'New purchase order', component: NewPurchaseOrder, nav: false, parent: '' },
+    { path: '/orders/new', label: 'New purchase order', component: NewPurchaseOrder, newComponent: NewPurchaseOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Purchase order', component: PurchaseOrderPage, nav: false, parent: '' },
     { path: '/suppliers', label: 'Suppliers', component: Suppliers },
     // Real API only: the sample build has no purchase-invoice data (its page stayed on "Loading…"; found by the smoke test).
@@ -207,26 +217,25 @@ const DEMO_SALES_APP: AppDef = {
   suite: 'Sales & Purchasing',
   basePath: '/sales',
   pages: [
-    { path: '', label: 'Sales orders', component: SalesOrders },
-    { path: '/orders', label: 'Sales orders', component: SalesOrders, nav: false, parent: '' },
-    { path: '/orders/new', label: 'New sales order', component: NewSalesOrder, nav: false, parent: '' },
-    { path: '/orders/:id', label: 'Sales order', component: SalesOrderPage, nav: false, parent: '' },
+    { path: '', label: 'Sales orders', component: SalesOrders, newComponent: SalesOrdersNew },
+    { path: '/orders', label: 'Sales orders', component: SalesOrders, newComponent: SalesOrdersNew, nav: false, parent: '' },
+    { path: '/orders/new', label: 'New sales order', component: NewSalesOrder, newComponent: NewSalesOrder, nav: false, parent: '' },
+    { path: '/orders/:id', label: 'Sales order', component: SalesOrderPage, newComponent: SalesOrderNew, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', component: Customers },
-    { path: '/customers/:id', label: 'Customer', component: CustomerPage, nav: false, parent: '/customers' },
-    ...(import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1' ? [{ path: '/empty-preview', label: 'Sales orders', component: EmptyPreview, nav: false, parent: '' }] : []),
+    { path: '/customers/:id', label: 'Customer', component: CustomerNew, nav: false, parent: '/customers', newOnly: true },
+    ...EMPTY_PREVIEW,
   ],
 };
 
 const SALES_APP: AppDef = {
   key: 'sales', module: 'sales', name: 'Sales', description: 'Sales orders, invoicing and customers',
   suite: 'Sales & Purchasing', basePath: '/sales', pages: [
-    { path: '', label: 'Sales orders', permission: 'sales.orders.read', component: SalesOrders },
-    { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
-    { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
+    { path: '', label: 'Sales orders', permission: 'sales.orders.read', component: SalesOrders, newComponent: SalesOrdersNew },
+    { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, newComponent: NewSalesOrder, nav: false, parent: '' },
+    { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, newComponent: SalesOrderNew, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
-    { path: '/customers/:id', label: 'Customer', permission: 'sales.customers.read', component: CustomerPage, nav: false, parent: '/customers' },
-    // Dev server and Design Lab previews only: the empty start of a list, to compare its versions (the demo always has data).
-    ...(import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1' ? [{ path: '/empty-preview', label: 'Sales orders', component: EmptyPreview, nav: false, parent: '' }] : []),
+    { path: '/customers/:id', label: 'Customer', permission: 'sales.customers.read', component: CustomerNew, nav: false, parent: '/customers', newOnly: true },
+    ...EMPTY_PREVIEW,
     // Customer groups, price lists and the markup (sql/097).
     { path: '/prices', label: 'Prices', permission: 'sales.prices.read', component: PricesPage },
     // Moved from Settings (Ben, 9 Nov 2026): Settings connects an integration, the apps use it. Same permission as its API route.
@@ -364,8 +373,7 @@ export const APPS: AppDef[] = [
     // Staff see only "My settings"; company pages need the matching manage permission (decision D10, 9 Nov 2026: staff used to see
     // greyed-out company, user, app and audit pages). /settings opens the first page a person can see (resolveRoute).
     pages: [
-      // New UI: the settings overview in versions being decided (Design Lab 'Settings'); lists only the pages the person may open.
-      { path: '/all', label: 'All settings', component: SettingsAll },
+      { path: '/all', label: 'All settings', component: SettingsNew, newOnly: true },
       { path: '', label: 'General', permission: 'core.org.manage', component: GeneralSettings },
       { path: '/me', label: 'My settings', component: MySettings },
       { path: '/users', label: 'Users', permission: 'core.users.manage', component: UsersSettings },
@@ -420,7 +428,7 @@ export function visibleApps(session: SessionInfo): AppDef[] {
   return APPS.filter((a) => (session.modules.includes(a.module) || a.pages.some((p) => p.beforeEnabled)) && (a.visible?.(session) ?? true))
     .map((a) => {
       const on = session.modules.includes(a.module);
-      return { ...a, pages: a.pages.filter((p) => (on || p.beforeEnabled) && (!p.permission || hasPermission(session.permissions, p.permission)) && (!p.anyPermission || p.anyPermission.some((k) => hasPermission(session.permissions, k)))) };
+      return { ...a, pages: a.pages.filter((p) => (newUi || !p.newOnly) && (on || p.beforeEnabled) && (!p.permission || hasPermission(session.permissions, p.permission)) && (!p.anyPermission || p.anyPermission.some((k) => hasPermission(session.permissions, k)))) };
     })
     .filter((a) => a.pages.length > 0);
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLabChoice } from '../lib/labChoice';
+import { newUi } from '../lib/uiMode';
 import { Modal } from './Modal';
 import { Button } from './ui/button';
 import { tr, trf } from '../lib/i18n';
@@ -34,7 +35,9 @@ export function FormToggle({ label, children, open: controlled, onOpenChange }: 
 export function ConfirmButton({ label, confirmLabel, question, onConfirm, disabled, size }: { label: string; confirmLabel: string; question: string; onConfirm: () => void; disabled?: boolean; size?: 'sm' }) {
   const [asking, setAsking] = useState(false);
   const [pending, setPending] = useState(0);
-  const version = useLabChoice('confirm', ['A', 'B', 'C'] as const, 'A');
+  // The old UI always asks in place (its behaviour on main); only the new UI (lib/uiMode.ts) uses the versions being decided.
+  const choice = useLabChoice('confirm', ['A', 'B', 'C'] as const, 'A');
+  const version = newUi ? choice : 'A';
   const fire = useRef(onConfirm);
   fire.current = onConfirm;
   const pendingRef = useRef(0);

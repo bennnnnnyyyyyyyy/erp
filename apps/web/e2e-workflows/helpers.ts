@@ -17,15 +17,13 @@ export async function signIn(browser: Browser, email: string): Promise<Page> {
     await dialog.getByRole('button', { name: 'English', exact: true }).click();
   });
   await page.goto('/');
-  // The sign-in screen asks one thing per step (new UI, 23 Nov 2026): the email, then the password.
   await page.getByLabel('Email').fill(email);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   // Signed in only once the sign-in screen has gone and another page heading shows (the sign-in screen has an h1 of its own).
-  const signInScreen = page.locator('main.si');
+  const signInHeading = page.getByRole('heading', { name: 'Sign in', exact: true });
   try {
-    await expect(signInScreen).toHaveCount(0, { timeout: 30_000 });
+    await expect(signInHeading).toHaveCount(0, { timeout: 30_000 });
   } catch (e) {
     console.log(`[${email}] still on the sign-in screen: ${await page.locator('main').innerText().catch(() => '')}`);
     throw e;

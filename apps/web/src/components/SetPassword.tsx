@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 
 import { tr } from '../lib/i18n';
 import { authErrorMessage } from '../lib/authErrors';
-import { ProductLogo } from './Brand';
 // Shown after the user follows a password-reset or invite link. Supabase has already signed them in
 // with a short-lived recovery session; this sets the new password on that session.
 export function SetPassword({ invited = false, onDone }: { invited?: boolean; onDone: () => void }) {
@@ -29,7 +28,6 @@ export function SetPassword({ invited = false, onDone }: { invited?: boolean; on
 
   return (
     <main className="center">
-      <ProductLogo size="lg" />
       <form className="card stack" onSubmit={submit}>
         <h1>{invited ? tr('Welcome! Choose a password') : tr('Set a new password')}</h1>
         <label>

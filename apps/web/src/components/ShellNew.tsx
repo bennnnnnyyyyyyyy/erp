@@ -1,0 +1,165 @@
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Loading } from './Loading';
+import { api } from '../lib/api';
+import { demoMode } from '../lib/demo';
+import { useI18n } from '../lib/i18n';
+import { Link, ParamsContext, usePath } from '../lib/router';
+import { useTheme } from '../lib/theme';
+import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
+import { CompanyLogo } from './Brand';
+import { Frame, type FrameVersion } from './frame/Frame';
+import { useLabChoice } from '../lib/labChoice';
+import { buildSections, pushRecent, sectionOf } from '../lib/sections';
+import { BRAND } from '../lib/brand';
+import { HomeNew as Home } from '../modules/core/HomeNew';
+import { TourHost } from '../modules/help/TourHost';
+import { TableLabels } from './TableLabels';
+import { useSession } from '../session';
+import { FirstRunLanguage } from './LanguageChooser';
+import { LowStockPopup } from './LowStockPopup';
+import { NotificationBell } from './NotificationBell';
+
+/** Two letters for the avatar: from the person's name when there is one ("Chris Johnson" -> CJ), else from the email. */
+function initials(email: string, name?: string | null): string {
+  const source = name?.trim() || (email.split('@')[0] ?? '');
+  const bits = source.split(/[\s._-]+/).filter(Boolean);
+  return ((bits[0]?.[0] ?? '') + (bits[1]?.[0] ?? '')).toUpperCase() || source.slice(0, 2).toUpperCase();
+}
+
+function UserMenu({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
+  const session = useSession();
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  return (
+    <div className="user-menu" ref={ref}>
+      <button ref={button} className="avatar" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={open ? menuId : undefined} title={session.name ?? session.email}>
+        {initials(session.email, session.name)}
+      </button>
+      {open && (
+        <div className="menu" id={menuId}>
+          <div className="menu-head">
+            {session.name && <div className="font-semibold"><bdi>{session.name}</bdi></div>}
+            <div className={session.name ? 'muted small' : undefined}>{session.email}</div>
+            <div className="muted small">
+              <bdi>{session.org?.name}</bdi> · {session.role ? t(session.role) : ''}
+            </div>
+          </div>
+          <button className="menu-item" onClick={onSwitchOrg}>
+            {t('Switch organization')}
+          </button>
+          <button className="menu-item" onClick={onSignOut}>
+            {t('Sign out')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ShellNew({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onSignOut: () => void }) {
+  const session = useSession();
+  const { t, lang, setOrgLang, syncAccountLang, setAccountSaver, asked, ready } = useI18n();
+  const { dark, toggle } = useTheme();
+  // The company language (Settings > General) is only the default. A person's own choice (Settings > General > My language) wins.
+  const orgLanguage = session.org?.language;
+  useEffect(() => {
+    if (!demoMode && orgLanguage) setOrgLang(orgLanguage);
+  }, [orgLanguage, setOrgLang]);
+  // The person's own language is saved on their account (sql/038): saves go to the API, and what the account holds is applied on sign-in.
+  useEffect(() => {
+    if (demoMode) return;
+    setAccountSaver((l) => api('/v1/core/me/language', { method: 'POST', body: JSON.stringify({ language: l }) }).then(() => undefined));
+    return () => setAccountSaver(null);
+  }, [setAccountSaver]);
+  const userLanguage = session.userLanguage ?? null;
+  useEffect(() => {
+    if (!demoMode) syncAccountLang(userLanguage, session.userLanguageAsked ?? false);
+  }, [session.userId, userLanguage, session.userLanguageAsked, syncAccountLang]);
+  const path = usePath();
+  const apps = visibleApps(session);
+  const route = resolveRoute(path, apps);
+  const frame = useLabChoice<FrameVersion>('frame', ['A', 'B', 'C'], 'B');
+  const sections = useMemo(() => buildSections(apps), [apps]);
+  // Recent pages (on this device) for the menu and the home page.
+  useEffect(() => {
+    if (route?.page && route.page.nav !== false) pushRecent(route.app.basePath + route.page.path);
+  }, [route?.app, route?.page]);
+  // Fetch every screen's code once the browser is idle after sign-in, so no page (and no tour step) waits for a download later.
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    // Production only: the dev server serves every module unbundled, where preloading means hundreds of requests per page load.
+    if (!import.meta.env.PROD) return;
+    const run = () => preloadScreens();
+    if (w.requestIdleCallback) w.requestIdleCallback(run); else setTimeout(run, 1500);
+  }, []);
+  useEffect(() => {
+    const where = route?.page ? `${t(route.page.label)} · ${t(route.app.name)}` : route ? t(route.app.name) : undefined;
+    document.title = [where, session.org?.name, BRAND.name].filter(Boolean).join(' · ');
+  }, [route, session.org?.name]);
+
+  const atHome = path === '/' || path === '';
+  const Page = route?.page?.newComponent ?? route?.page?.component;
+
+  // New frame (new UI plan, 23 Nov 2026): app bar with one search, and the menu in one of three versions being decided (Design Lab).
+  const end = (
+    <>
+      <span className="company-name fr-company"><CompanyLogo /><bdi>{session.org?.name}</bdi></span>
+      <button className="icon-btn fr-icon" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
+        {dark ? '☀' : '☾'}
+      </button>
+      <NotificationBell />
+      <LowStockPopup />
+      <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
+    </>
+  );
+  return (
+    <>
+      <TourHost />
+      <TableLabels />
+      {!demoMode && ready && !asked && <FirstRunLanguage />}
+      {/* Keyboard users jump past the app bar and the menu straight to the page (visible only when focused). */}
+      <a href="#main" className="skip-link">{t('Skip to content')}</a>
+      <Frame version={frame} sections={sections} current={sectionOf(route?.app.key, sections)} path={path || '/'} end={end}>
+        <main className="content" id="main" tabIndex={-1}>
+          {atHome ? (
+            <Home apps={apps} />
+          ) : Page ? (
+            <ParamsContext.Provider value={route?.params ?? {}}>
+              {/* Pages are lazy chunks (modules/registry.tsx): the skeleton shows while one is fetched the first time. */}
+              <Suspense fallback={<section className="page"><Loading /></section>}>
+                <Page key={`${lang}:${path}`} />
+              </Suspense>
+            </ParamsContext.Provider>
+          ) : (
+            <section>
+              <h1>{t('Page not found')}</h1>
+              <p className="muted">
+                {t("This page doesn't exist or you don't have access to it.")} <Link to="/">{t('Back to apps')}</Link>
+              </p>
+            </section>
+          )}
+        </main>
+      </Frame>
+    </>
+  );
+}

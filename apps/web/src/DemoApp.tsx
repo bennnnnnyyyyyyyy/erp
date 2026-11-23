@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from './components/ui/button';
 import { defaultPermissionsFor, type ModuleStatus, type Role, type SessionInfo } from '@erp/shared';
 import { Shell } from './components/Shell';
+import { newUi } from './lib/uiMode';
+
+const ShellNew = lazy(() => import('./components/ShellNew').then((m) => ({ default: m.ShellNew })));
 import { demoActor, demoApi } from './lib/demo';
 import { ACTOR_NAMES } from './lib/demoInventory';
 import { tr } from './lib/i18n';
@@ -67,7 +70,11 @@ export function DemoApp() {
           {rtl ? tr('LTR · English layout') : tr('RTL · Arabic layout')}
         </Button>
       </div>
-      <Shell key={role} onSwitchOrg={() => undefined} onSignOut={() => undefined} />
+      {newUi ? (
+        <Suspense fallback={null}><ShellNew key={role} onSwitchOrg={() => undefined} onSignOut={() => undefined} /></Suspense>
+      ) : (
+        <Shell key={role} onSwitchOrg={() => undefined} onSignOut={() => undefined} />
+      )}
     </SessionContext.Provider>
   );
 }

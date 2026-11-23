@@ -3,11 +3,15 @@ import { Button } from './ui/button';
 import type { MyInvitation } from '@erp/shared';
 import { supabase } from '../lib/supabase';
 import { CreateCompany } from './CreateCompany';
+import { lazy, Suspense } from 'react';
+import { newUi } from '../lib/uiMode';
+
+// The new UI's version of the screen (lib/uiMode.ts); never loaded in the live build.
+const CreateCompanyNew = lazy(() => import('./CreateCompanyNew').then((m) => ({ default: m.CreateCompanyNew })));
 
 import { tr, trf } from '../lib/i18n';
 import { authErrorMessage } from '../lib/authErrors';
 import { Rich } from './Rich';
-import { ProductLogo } from './Brand';
 type OrgOption = { id: string; name: string };
 type InvitationRow = { id: string; org_id: string; org_name: string; role: MyInvitation['role']; invited_by_name: string | null; created_at: string };
 
@@ -64,12 +68,13 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
 
   // Brand-new account with nothing waiting for them: this is sign-up step two, so ask for the company right away.
   if (creating || (orgs.length === 0 && invitations.length === 0 && !invitesFailed)) {
-    return <CreateCompany first={orgs.length === 0} onCreated={onPick} onCancel={orgs.length > 0 ? () => setCreating(false) : undefined} />;
+    return newUi ? (
+      <Suspense fallback={null}><CreateCompanyNew first={orgs.length === 0} onCreated={onPick} onCancel={orgs.length > 0 ? () => setCreating(false) : undefined} /></Suspense>
+    ) : <CreateCompany first={orgs.length === 0} onCreated={onPick} onCancel={orgs.length > 0 ? () => setCreating(false) : undefined} />;
   }
 
   return (
     <main className="center">
-      <ProductLogo size="lg" />
       <div className="card stack">
         {invitations.length > 0 && (
           <>
