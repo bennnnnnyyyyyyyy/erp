@@ -98,8 +98,10 @@ export function makeIntegrationAdapters(deps: IntegrationDeps = realDeps): Chann
     send: (message, env) =>
       deliver('email', message, env, deps, async () => {
         if (!env.RESEND_API_KEY || !env.EMAIL_FROM) throw new Error('Email sending is not configured on this server');
-        if (!message.recipient_id) throw new Error('An email needs a recipient');
-        const to = await deps.email(env, message.id);
+        // A document (sql/107) goes to the customer's address, checked by the database when it was queued; anything else to a member.
+        const toCustomer = message.kind === 'document';
+        if (!toCustomer && !message.recipient_id) throw new Error('An email needs a recipient');
+        const to = toCustomer ? (message.to_address ?? null) : await deps.email(env, message.id);
         if (!to) throw new Error('The recipient has no email address');
         const text = message.secret_body ?? plainText(message);
         const res = await deps.fetch('https://api.resend.com/emails', {

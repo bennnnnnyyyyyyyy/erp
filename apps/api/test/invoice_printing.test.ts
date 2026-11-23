@@ -17,6 +17,8 @@ describe('invoice printing routes need a signed-in user', () => {
     ['POST', `/v1/sales/documents/invoice/${ID}/link/revoke`],
     ['GET', `/v1/sales/documents/invoice/${ID}/sends`],
     ['POST', `/v1/sales/documents/invoice/${ID}/sends`],
+    ['GET', `/v1/sales/documents/invoice/${ID}/queue`],
+    ['POST', `/v1/sales/documents/invoice/${ID}/queue`],
     ['GET', '/v1/core/doc-settings'],
     ['PUT', '/v1/core/doc-settings'],
   ];

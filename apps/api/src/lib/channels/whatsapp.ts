@@ -1,6 +1,7 @@
 import type { Bindings } from '../../env';
 import { adminDb } from '../db.admin';
-import { sendText } from '../whatsapp';
+import { formatAmount } from '@erp/shared';
+import { sendDocTemplate, sendText } from '../whatsapp';
 import type { ChannelAdapter, OutboxMessage } from './index';
 
 // The real WhatsApp channel. It only DELIVERS a message to the recipient's number; it decides nothing.
@@ -24,6 +25,20 @@ export function makeWhatsAppAdapter(lookup: AddressLookup = lookupFromDatabase):
   return {
     kind: 'whatsapp',
     async send(message, env) {
+      // A document to a customer (sql/107): the address was checked when it was queued; always the approved template.
+      if (message.kind === 'document') {
+        const p = message.doc_params;
+        if (!message.to_address || !p) throw new Error('The document message has no address');
+        const language = p.language === 'en' ? 'en' : 'ar';
+        await sendDocTemplate(env, message.to_address, {
+          company: p.company,
+          document: language === 'en' ? p.documentEn : p.documentAr,
+          amount: `${formatAmount(p.grossMinor, p.currency)} ${p.currency}`,
+          url: p.url,
+          language,
+        });
+        return 'whatsapp-template';
+      }
       const address = await lookup(env, message);
       if (!address) throw new Error('The recipient has no verified WhatsApp number');
       // The secret part (a code or a one-time decision token) is only ever sent, never stored in readable form.

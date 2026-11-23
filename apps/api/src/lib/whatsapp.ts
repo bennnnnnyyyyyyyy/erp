@@ -6,7 +6,9 @@ import type { Bindings } from '../env';
 //   secrets:  WHATSAPP_ACCESS_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN
 //   plain:    WHATSAPP_PHONE_NUMBER_ID, optional WHATSAPP_GRAPH_VERSION (default below), optional WHATSAPP_TEMPLATE_NAME
 //             (an approved template with one body variable, used when a free-text message is refused outside the
-//             24-hour window) and WHATSAPP_TEMPLATE_LANG (default "en").
+//             24-hour window) and WHATSAPP_TEMPLATE_LANG (default "en"); optional WHATSAPP_DOC_TEMPLATE (sql/107: the approved
+//             invoice template, in Arabic "ar" and English "en" under the same name, with four body values: company, document,
+//             amount, link). Without it, sending a document from the company by WhatsApp is refused (409) and the device send stays.
 
 const DEFAULT_GRAPH_VERSION = 'v21.0'; // Unverified against Meta's current default: override with WHATSAPP_GRAPH_VERSION.
 
@@ -54,6 +56,38 @@ export async function sendText(env: Bindings, address: string, text: string): Pr
       },
     });
   }
+}
+
+/** A company may send a document by WhatsApp from the server only when WhatsApp and the invoice template are set up here (sql/107). */
+export function whatsappDocReady(env: Bindings): boolean {
+  return whatsappConfigured(env) && Boolean(env.WHATSAPP_DOC_TEMPLATE);
+}
+
+/**
+ * A document to a customer (sql/107): always the approved template, because the company starts the chat (Meta refuses free text
+ * outside the 24-hour window). Values in order: {{1}} company, {{2}} document ("Invoice INV-2026-00001"), {{3}} amount, {{4}} link.
+ */
+export function docTemplatePayload(
+  template: string,
+  to: string,
+  p: { company: string; document: string; amount: string; url: string; language: 'ar' | 'en' },
+): unknown {
+  const value = (text: string) => ({ type: 'text', text: text.slice(0, 1000) });
+  return {
+    messaging_product: 'whatsapp',
+    to: toGraphNumber(to),
+    type: 'template',
+    template: {
+      name: template,
+      language: { code: p.language },
+      components: [{ type: 'body', parameters: [value(p.company), value(p.document), value(p.amount), value(p.url)] }],
+    },
+  };
+}
+
+export async function sendDocTemplate(env: Bindings, to: string, p: Parameters<typeof docTemplatePayload>[2]): Promise<void> {
+  if (!whatsappDocReady(env) || !env.WHATSAPP_DOC_TEMPLATE) throw new Error('WhatsApp invoice sending is not set up on this server');
+  await post(env, docTemplatePayload(env.WHATSAPP_DOC_TEMPLATE, to, p));
 }
 
 /** Checks Meta's `X-Hub-Signature-256` header (HMAC-SHA256 of the raw body with the app secret), in constant time. */

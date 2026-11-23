@@ -142,6 +142,46 @@ export type DocPrintData = {
   settings: DocSettings;
 };
 
+/**
+ * A phone number as WhatsApp wants it: digits only, with the country code. An Egyptian mobile typed the local way (01xxxxxxxxx) gets 20
+ * in front. A number that starts with + or 00 keeps its own country code. Anything too short to be a phone number gives null.
+ * Used by the device send (wa.me) and the company send (sql/107), so both reach the same number.
+ */
+export function waPhone(raw: string | null | undefined, defaultCountry = '20'): string | null {
+  if (!raw) return null;
+  const t = raw.trim().replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  let digits = t.replace(/[^\d+]/g, '');
+  if (digits.startsWith('+')) digits = digits.slice(1);
+  else if (digits.startsWith('00')) digits = digits.slice(2);
+  else if (digits.startsWith('0')) digits = defaultCountry + digits.slice(1);
+  digits = digits.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15 ? digits : null;
+}
+
+/** A plain check that a typed email address looks like one (the database checks again). */
+export const looksLikeEmail = (s: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+
+/** Sending from the company (sql/107): what the print page needs to know. */
+export type DocQueueSend = {
+  id: string;
+  channel: 'email' | 'whatsapp';
+  recipient: string;
+  queuedAt: string;
+  /** The message's state in the queue: pending, sending, sent, failed, expired, cancelled; unknown once old messages are cleaned up. */
+  status: string;
+  error: string | null;
+  deliveredAt: string | null;
+};
+export type DocQueueStatus = {
+  sendMode: DocSendMode;
+  emailConnected: boolean;
+  /** Set by the API: WhatsApp is set up on this server, with the approved invoice template. */
+  whatsappReady: boolean;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  sends: DocQueueSend[];
+};
+
 /** A printout is a draft (DRAFT mark) unless it is an issued or void invoice, or an approved note. */
 export function isDraftPrint(d: PrintDocument): boolean {
   if (d.type === 'draft') return true;

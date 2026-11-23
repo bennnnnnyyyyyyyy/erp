@@ -1,7 +1,18 @@
 # Invoice sending from the company's own WhatsApp and email ("queue" mode): plan
 
 **Module:** `sales` (send) and `core` (message queue). **Part of:** [INVOICE_PRINTING_PLAN.md](INVOICE_PRINTING_PLAN.md), step 1c, "Not built yet" item 1.
-**Status:** Draft, 23 Nov 2026. **Waiting for Ben's approval.** Nothing is built.
+**Status:** **Approved by Ben, 23 Nov 2026** (with the suggestions: one template in Arabic and English, made by Ben or Grant; one email per
+customer). **Built 23 Nov** on branch `feat/invoice-send-queue`: `sql/107`, SQL test 104 (not applied to live yet).
+
+**What the build found and changed (23 Nov):**
+- Customers already have an email (`sql/081`), so step 2.1 needed no change.
+- **WhatsApp and email are not per company today.** WhatsApp sends from **our one WhatsApp Business number** (Worker settings), and email
+  from **our Resend sender** (`EMAIL_FROM`), for every company. So a company's invoice reaches its customer from our number and our
+  sender address, with the company's name in the text. The template name is therefore a server setting (`WHATSAPP_DOC_TEMPLATE`), not a
+  company setting (step 2.4). Sending from each company's own WhatsApp number needs Meta's "Tech Provider" set-up (embedded sign-up):
+  a separate decision for Ben (see section 4, question 4).
+- The PDF is not attached yet (section 5): the message carries the link. Attaching it comes with the PDF maker (Gotenberg on-prem,
+  Browser Run in the cloud).
 
 > **In short**
 > - Today "Send" opens WhatsApp or email **on the person's own device**. The company setting "send from the company" exists, but it does nothing yet.
@@ -52,11 +63,13 @@
 
 ## 4. Questions for Ben
 
-1. **Meta template.** Who makes and submits the invoice template in Meta Business Manager, and in which languages (Arabic, English, both)?
+1. ~~**Meta template.**~~ **Answered 23 Nov: Ben or Grant submits one template, Arabic and English.** Who makes and submits the invoice template in Meta Business Manager, and in which languages (Arabic, English, both)?
    Suggested text: "{{1}} sent you invoice {{2}} for {{3}}. View it here: {{4}}". Until it is approved, WhatsApp "send from the company"
    stays off and the device send stays.
-2. **Customer email.** Add one email per customer (suggested), or several contacts per customer (bigger, later)?
+2. ~~**Customer email.**~~ **Answered 23 Nov: one email per customer** (it already exists, sql/081).
 3. ~~**Cloud PDF maker:** which option in section 6?~~ **Decided 23 Nov (Ben): A, Browser Run.** On-prem: Gotenberg.
+4. **(New, 23 Nov.) Whose WhatsApp number and email sender?** Today: ours, shared by every company (above). Is that acceptable for the
+   first customers, or must each company send from its own WhatsApp number (Meta Tech Provider set-up) and its own email domain?
 
 ## 5. Attaching the PDF
 

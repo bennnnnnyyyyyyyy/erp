@@ -10,7 +10,7 @@ import { makeWhatsAppAdapter } from './whatsapp';
 export type OutboxMessage = {
   id: string;
   org_id: string;
-  /** Empty only for a company-channel post (Slack, Teams, Google Chat: sql/053, sql/071). */
+  /** Empty only for a company-channel post (Slack, Teams, Google Chat: sql/053, sql/071) and a document to a customer (sql/107). */
   recipient_id: string | null;
   channel: string;
   kind: string;
@@ -20,6 +20,23 @@ export type OutboxMessage = {
   entity_id: string | null;
   secret_body: string | null;
   attempts: number;
+  /** kind 'document' only (sql/107): the customer's email, or WhatsApp number as digits. */
+  to_address?: string | null;
+  /** kind 'document' only (sql/107): the values of the WhatsApp invoice template. */
+  doc_params?: DocParams | null;
+};
+
+/** What sal_queue_doc_send stores for a document message (sql/107). */
+export type DocParams = {
+  company: string;
+  /** "فاتورة INV-2026-00001" or "Invoice INV-2026-00001", in the document's language (Arabic for "both"). */
+  document: string;
+  documentEn: string;
+  documentAr: string;
+  grossMinor: number;
+  currency: string;
+  url: string;
+  language: 'ar' | 'en' | 'both';
 };
 
 export interface ChannelAdapter {
