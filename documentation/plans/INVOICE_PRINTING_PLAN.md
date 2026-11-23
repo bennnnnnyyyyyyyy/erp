@@ -250,7 +250,7 @@ After one sign-up, everything works through the API. Levels 1 and 2 need nothing
 
 **Not built yet (next parts of this step):**
 - Sending from the company's connected WhatsApp or email (the "server" choice). WhatsApp needs an approved Meta message template
-  before a business can start a chat. Until then the screen says so and sends from the device.
+  before a business can start a chat. Until then the screen says so and sends from the device. Plan: [INVOICE_SEND_QUEUE_PLAN.md](INVOICE_SEND_QUEUE_PLAN.md) (draft, waiting for Ben).
 - A letterhead as a one-page PDF (needs one more library, `pdfjs-dist`). Only pictures for now.
 - The PDF fingerprint in `core_doc_sends` (needs the server converter).
-- Saved pictures of each layout for comparison tests (section 9).
+- ~~Saved pictures of each layout for comparison tests (section 9).~~ Done 23 Nov (track-b2): `apps/web/e2e/print.e2e.ts`, Windows pictures only; CI (Linux) skips them until a Linux set is added.
