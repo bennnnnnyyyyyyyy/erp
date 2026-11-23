@@ -24,12 +24,12 @@ test('a credit note is raised, waits for approval, and once approved lowers what
   await expect(form).toHaveCount(0, { timeout: 20_000 });
 
   // Waiting: it does not count yet.
-  const row = owner.getByRole('row').filter({ hasText: 'CN-0001' });
+  const row = owner.getByRole('row').filter({ hasText: /CN-\d{4}-00001/ });
   await expect(row).toContainText('Waiting for approval', { timeout: 20_000 });
   await expect(owner.getByText('Amount owed after notes')).toHaveCount(0);
 
   await row.getByRole('button', { name: 'Approve', exact: true }).click();
-  const decide = owner.getByRole('dialog', { name: 'Approve CN-0001' });
+  const decide = owner.getByRole('dialog', { name: /^Approve CN-\d{4}-00001$/ });
   await decide.getByRole('button', { name: 'Approve', exact: true }).click();
   await expect(decide).toHaveCount(0, { timeout: 20_000 });
   await expect(row).toContainText('Approved', { timeout: 20_000 });

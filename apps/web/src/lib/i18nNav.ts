@@ -94,6 +94,8 @@ export const NAV_AR: Record<string, string> = {
   'My settings': 'إعداداتي',
   'Stock value': 'قيمة المخزون',
   'Sales invoice': 'فاتورة مبيعات',
+  'Print or send': 'طباعة أو إرسال',
+  'Invoices and documents': 'الفواتير والمستندات',
   Task: 'مهمة',
   Notifications: 'الإشعارات',
   'Connect WhatsApp': 'ربط واتساب',

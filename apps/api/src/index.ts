@@ -18,6 +18,7 @@ import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
 import { KB, MB, limitBody } from './middleware/bodyLimit';
 import { reportLinkCsv } from './lib/reportLinks';
+import { invoiceLinkData } from './lib/invoiceLinks';
 import { rateLimit } from './middleware/rateLimit';
 import { requireModule, requireTenant } from './middleware/tenant';
 import { MODULE_ROUTES } from './modules/registry';
@@ -57,6 +58,19 @@ app.get('/r/:token', async (c) => {
   const csv = await reportLinkCsv(c.env, c.req.param('token'));
   if (csv === null) return c.body(null, 404, { 'Cache-Control': 'no-store' });
   return c.body(csv, 200, { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+});
+// Customer invoice links (sql/103): the same rules as /r. No user; the token is the only credential; it reads with the publishable key, so
+// the database treats the caller as anon (never the secret key). JSON for the public invoice page of the web app (/i/<token> there).
+// Every refusal (missing, switched off, voided, module off) is the same bare 404.
+app.use('/i/*', rateLimit('webhook'));
+app.get('/i/:token', async (c) => {
+  const data = await invoiceLinkData(c.env, c.req.param('token'));
+  if (data === null) return c.body(null, 404, { 'Cache-Control': 'no-store' });
+  return c.json({ success: true, data }, 200, {
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+  });
 });
 
 app.get('/webhooks/whatsapp', (c) => {

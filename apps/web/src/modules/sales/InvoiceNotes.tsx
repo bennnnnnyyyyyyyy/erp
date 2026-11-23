@@ -10,6 +10,7 @@ import { tr, trf } from '../../lib/i18n';
 import { formatQty, isBadAmount, parseAmount, toMinor } from '../../lib/numbers';
 import { usePeople } from '../../lib/people';
 import { useLoad } from '../../lib/useLoad';
+import { Link } from '../../lib/router';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
@@ -103,6 +104,7 @@ export function InvoiceNotes({ invoice, itemOf, onChanged }: { invoice: NoteInvo
                       <Button size="sm" variant="outline" disabled={busy} onClick={() => setDecide({ note: n, decision: 'reject' })}>{tr('Reject')}</Button>
                     </>
                   )}
+                  {n.status === 'approved' || n.status === 'submitted' ? <Link to={`/sales/print/note/${n.id}`} className="small">{tr('Print or send')}</Link> : null}
                   {canCancel(n, session.userId ?? '', canApprove) && (
                     <ConfirmButton label={tr('Cancel note')} confirmLabel={tr('Yes, cancel it')} question={tr('Cancel this note? It is no longer waiting for approval.')} disabled={busy} onConfirm={() => cancel(n)} />
                   )}

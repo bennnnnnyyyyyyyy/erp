@@ -1,7 +1,7 @@
 # HR app integration Plan
 
 **Module key:** `hr` (new; lowercase, to be added to `packages/shared/src/modules.ts`)
-**Status:** `[✅ Approved, built]` 20 Nov 2026 (Ben: D1 master-key files, D2 webhook route, v1 ERP key; People for every member; sync every 15 minutes). Phase 1 built on branch `feat/hr-app-contract`; `sql/102` written and tested locally, **not applied to live** until Ben says so. Phase 2 (payroll) not built.
+**Status:** `[✅ Approved, built]` 20 Nov 2026 (Ben: D1 master-key files, D2 webhook route, v1 ERP key; People for every member; sync every 15 minutes). Phase 1 built and merged (PR #93); `sql/102` live and the API deployed (checked 23 Nov 2026). Phase 2 (payroll) not built.
 **Owner:** Claude · **Reviewers:** Ben; the HR app team (for the contract only)
 **Contract for the HR app team:** [hr-app/CONTRACT.md](hr-app/CONTRACT.md) (with [openapi.yaml](hr-app/openapi.yaml)) (v1)
 **Depends on modules:** core (organizations, memberships, `core_branches`, `core_integrations`, Vault, outbox / 5-minute job)

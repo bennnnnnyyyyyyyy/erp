@@ -53,7 +53,7 @@ begin
   set local role authenticated;
   j := public.sal_submit_note(inv1, 'credit', 'Damaged on arrival', jsonb_build_array(jsonb_build_object('invoiceLineId', il1, 'qty', 2)));
   c1 := (j ->> 'id')::uuid;
-  if j ->> 'number' <> 'CN-0001' then raise exception 'FAIL S1a: first credit note is %, expected CN-0001', j ->> 'number'; end if;
+  if j ->> 'number' !~ '^CN-[0-9]{4}-00001$' then raise exception 'FAIL S1a: first credit note is %, expected CN-<year>-00001 (sql/103)', j ->> 'number'; end if;
   select total_minor, status into amt, s from public.sal_notes where id = c1;
   if amt <> 25100 or s <> 'submitted' then raise exception 'FAIL S1b: total % status %, expected 25100 and submitted', amt, s; end if;
 
@@ -91,7 +91,7 @@ begin
   -- ---- S4: a debit note may exceed the invoiced figures
   j := public.sal_submit_note(inv1, 'debit', 'Delivery surcharge', jsonb_build_array(jsonb_build_object('invoiceLineId', il2, 'qty', 1, 'unitPriceMinor', 150000)));
   d1 := (j ->> 'id')::uuid;
-  if j ->> 'number' <> 'DN-0001' then raise exception 'FAIL S4a: first debit note is %, expected DN-0001', j ->> 'number'; end if;
+  if j ->> 'number' !~ '^DN-[0-9]{4}-00001$' then raise exception 'FAIL S4a: first debit note is %, expected DN-<year>-00001 (sql/103)', j ->> 'number'; end if;
 
   -- ---- S5: approval
   perform set_config('request.jwt.claims', json_build_object('sub', uc, 'role', 'authenticated')::text, true);

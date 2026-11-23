@@ -150,6 +150,50 @@ point to its own `apps/` and `packages/`; remove them before deleting the worktr
 biome ci 0 errors; doc link and migration checks OK. Not checked in a browser. Still open: the sales invoice page (void button and
 text, its date box) waits for Track B; demo data clean-up needs Ben's yes (live data); Arabic for units and warehouse names needs a
 migration.
+## 2026-11-23 — Invoice printing, step 1c built (`sql/103`, not applied)
+
+**Objective.** Track B of the Bellvox roadmap (Ben, 23 Nov): print, PDF and send invoices in Arabic on the company's own look.
+Ben's decisions: PDF made in the browser for now; digits a company choice (Western by default); links work until the invoice is
+voided and can be switched off; the company chooses how "Send" works; Arabic by default; DRAFT mark until issued; issued is locked
+forever; numbers per type and year. Also, from the master chat (UX audit): no Approve or Reject on your own note unless the database
+allows it, clearer Void wording, and the invoice date shown in the company's date format.
+
+**Actions Completed.** `sql/103_sales_invoice_printing.sql` and `sql/tests/100_sales_invoice_printing.sql` (details in
+`sql/README.md`); `sql/tests/018`, `024`, `031`, `036` updated (new numbers; 024 and 036 move an issued invoice's date inside their
+rolled-back fixture with `erp.allow_issued_fix`, which only a database-owner session can use, proved by test 100 P3h). Shared:
+`docPrint.ts` (types, digits, amounts, the ETA layout through the existing ETA builder), two permission keys. API:
+`modules/sales/printing.ts`, `modules/core/docSettingsRoutes.ts`, `lib/invoiceLinks.ts`, public `GET /i/:token` in `index.ts`
+(anon client, same pattern as `/r/:token`; no master key, no `/v1` exception). Web: `modules/sales/print/*` (A4 print view with
+three layouts, PDF with html-to-image and jspdf, both MIT, loaded only on demand; print and send page; draft list; public page),
+`modules/core/settings/DocumentSettings.tsx`, own stylesheet `print.css`, Arabic in `lib/i18nPrinting.ts`; small edits in
+`CustomerInvoices.tsx` (create saves a draft), `InvoiceNotes.tsx` (Print link; own-note buttons), `noteMath.ts`, `registry.tsx`,
+`i18nNav.ts`, `main.tsx`, `e2e-workflows/credit-note.e2e.ts` (number pattern). Plan section 13 records the decisions.
+
+**Database / System Result.** None on live. Nothing deployed.
+
+**Safety Status.** Local PGlite (`.temp/pglite-sql-tests.mjs`, not in git): all 101 migrations, 103 run a second time, 98 of 98 SQL
+tests. Typecheck clean (shared, API, web, against this worktree's packages); tests: shared 87 (1 skipped), API 721 (7 skipped), web
+165; `biome ci` 0 errors; web build OK; migration check OK. Not checked: in a browser (print, PDF, the WhatsApp and email hand-off,
+Arabic layout on paper), the public link on the deployed site, and the e2e workflow tests (they run in CI). Before live: Ben's yes,
+merge, a rolled-back dry run of 103 on live, then apply via the Supabase CLI and run test 100 there. Not built yet: sending from the
+company's own WhatsApp or email (needs an approved Meta template), PDF letterheads, the PDF fingerprint. The worktree has
+`node_modules/@erp/*` junctions to its own packages: remove the junctions (not their targets) before deleting the worktree.
+
+## 2026-11-23 — HR & payroll app link: live state checked (`sql/102`)
+
+**Objective.** Close the HR app link, phase 1: record what is live, since the worklog still said `sql/102` was not applied.
+
+**Actions Completed.** Read-only checks only. `sql/README.md`, the checklist and the plan now say live.
+
+**Database / System Result.** Live (ggoerp), read-only query: 4 HR tables with RLS, `hr_app` allowed in `core_integrations`,
+signed-in users cannot read `hr_employees.work_email` or call `hr__sync_due`; 0 `hr_app` connections, People switched on for 0
+companies, 0 `hr.*` audit rows. Deployed API: `POST /webhooks/hr-app` with no headers answers `{"handled":"ignored"}`;
+`GET /v1/hr/employees` without sign-in answers 401. The migration was merged in PR #93; the main chat's notes say it was applied
+23 Nov, but no worklog entry names that run or its dry run.
+
+**Safety Status.** Nothing changed on live. Still open: the first real connection (needs the HR app team's staging address and an
+ERP key), switching People on for a test company, a browser check of the People screen and the HR app card, Ben's review of the
+Arabic (`apps/web/src/lib/i18nPeople.ts`), phase 2 (payroll) plan.
 
 ## 2026-11-20 — HR & payroll app link, phase 1 built (`sql/102`, not applied)
 
