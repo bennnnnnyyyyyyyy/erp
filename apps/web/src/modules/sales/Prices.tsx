@@ -61,6 +61,8 @@ export function PricesPage() {
       {notice ? <p className="notice" role="status">{notice}</p> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
 
+      {/* UX audit 20 Nov: the forms ran into the next heading (h2 has no margin). Each task now sits in its own card. */}
+      <div className="form-card stack">
       <h2>{tr('Customer groups')}</h2>
       {groupList.length === 0 ? <p className="muted">{tr('No customer groups yet.')}</p> : (
         <ul className="stack">
@@ -74,12 +76,16 @@ export function PricesPage() {
         </ul>
       )}
       {canManage ? <AddGroupForm onSave={(body) => run(() => api('/v1/sales/customer-groups', { method: 'POST', body: JSON.stringify(body) }), tr('Customer group added.'))} /> : null}
+      </div>
       {canManage && groupList.length ? (
-        <AssignCustomerForm customers={customers.data ?? []} groups={groupList}
-          onSave={(customerId, groupId) => run(() => api(`/v1/sales/customers/${customerId}/group`, { method: 'PUT', body: JSON.stringify({ groupId: groupId || null }) }), tr('Customer group saved.'))} />
+        <div className="form-card stack">
+          <h2>{tr('Put a customer in a group')}</h2>
+          <AssignCustomerForm customers={customers.data ?? []} groups={groupList}
+            onSave={(customerId, groupId) => run(() => api(`/v1/sales/customers/${customerId}/group`, { method: 'PUT', body: JSON.stringify({ groupId: groupId || null }) }), tr('Customer group saved.'))} />
+        </div>
       ) : null}
 
-      <h2>{tr('Price lists')}</h2>
+      <h2 className="related">{tr('Price lists')}</h2>
       {(lists.data ?? []).length === 0 ? <p className="muted">{tr('No price lists yet.')}</p> : (
         <table className="table">
           <thead>
@@ -153,7 +159,10 @@ function AssignCustomerForm({ customers, groups, onSave }: { customers: Customer
           {groups.map((g) => <option key={g.id} value={g.id}>{groupLabel(g)}</option>)}
         </select>
       </label>
-      <div className="form-actions"><Button type="button" disabled={!customerId} onClick={() => void onSave(customerId, groupId)}>{tr('Save group')}</Button></div>
+      <div className="form-actions">
+        <Button type="button" disabled={!customerId} onClick={() => void onSave(customerId, groupId)}>{tr('Save group')}</Button>
+        {!customerId ? <span className="muted small">{tr('Choose a customer first.')}</span> : null}
+      </div>
     </div>
   );
 }

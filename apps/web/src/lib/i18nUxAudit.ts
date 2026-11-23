@@ -121,6 +121,8 @@ export const UX_AUDIT_AR: Record<string, string> = {
   // Date boxes (UX audit 20 Nov, Track A)
   'Pick a date': 'اختر تاريخًا',
   'Type a date like {pattern}': 'اكتب التاريخ بهذا الشكل {pattern}',
+  // Prices page (UX audit 20 Nov, Track A)
+  'Choose a customer first.': 'اختر عميلًا أولًا.',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };
