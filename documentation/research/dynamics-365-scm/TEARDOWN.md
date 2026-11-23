@@ -10,6 +10,7 @@
 **Studied by:** Claude · **Date:** 2026-11-10
 **Access used:** the transcripts only (no trial account).
 **Status:** Parked: only the purchase process is covered; enough for the gap list below.
+**User experience and workflows:** see [UX_WORKFLOWS.md](UX_WORKFLOWS.md) (guided tours, 23 Nov 2026; the base for the new UI).
 
 > Behaviour only, in our own words. Claims are marked **seen in video** (demonstrated on screen in the training) or **said in video**
 > (stated by the trainer or lecturer, not shown). Nothing is copied.
