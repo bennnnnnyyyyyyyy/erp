@@ -8,6 +8,7 @@ import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
+import { registerBillScanRoutes } from './billScan';
 import {
   VAT_CLASSES,
   billLineOut,
@@ -20,6 +21,7 @@ import {
 
 // Orders are immutable commitments. Receipt is a single database function that posts stock and audit atomically.
 export const purchasingRoutes = new Hono<AppEnv>();
+registerBillScanRoutes(purchasingRoutes);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const orgOf = (c: Context<AppEnv>) => c.var.tenant.orgId;
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
