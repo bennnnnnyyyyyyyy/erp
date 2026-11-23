@@ -1,5 +1,5 @@
 /*
-  Look and feel follow coss ui (neutral palette, hairline borders, rounded-lg). The real tokens live in theme.css
+  Look and feel: Bellvox (paper page, white cards with hairline borders, pill buttons, Bellvox red; tokens in theme.css). The real tokens live in theme.css
   (light and dark); the names below are the older ones this stylesheet uses, mapped onto them so every screen follows the
   light/dark switch. Layout uses logical properties throughout, so Arabic (right-to-left) works by flipping `dir` on <html>.
 */
@@ -34,7 +34,7 @@ body {
   margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--font);
   font-feature-settings: 'tnum' 1; -webkit-font-smoothing: antialiased;
 }
-h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 0.4rem; }
+h1 { font-size: 1.55rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 0.4rem; }
 h2 { font-size: 1rem; font-weight: 600; margin: 0; }
 a { color: var(--primary-text); text-underline-offset: 2px; }
 code, .mono { font-family: var(--mono); font-size: 0.85em; }
@@ -53,7 +53,7 @@ td .confirm-row, .row-actions .confirm-row { white-space: normal; max-width: 19r
 td code, td .nowrap { white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 /* Skip link: off screen until a keyboard user tabs to it, then shown at the top start corner. */
-.skip-link { position: absolute; inset-block-start: -100px; inset-inline-start: 0.75rem; z-index: 100; padding: 0.55rem 0.9rem; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-weight: 600; text-decoration: none; }
+.skip-link { position: absolute; inset-block-start: -100px; inset-inline-start: 0.75rem; z-index: 100; padding: 0.55rem 0.9rem; border-radius: var(--radius-pill); background: var(--primary); color: var(--primary-foreground); font-weight: 600; text-decoration: none; }
 .skip-link:focus { inset-block-start: 0.5rem; }
 main.content:focus { outline: none; }
 
@@ -63,9 +63,9 @@ main.content:focus { outline: none; }
    with their own classes below, which are unlayered and so still win over these. */
 @layer base {
   button {
-    font: inherit; font-weight: 500; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius);
-    padding: 0.5rem 0.95rem; background: var(--primary); color: var(--primary-foreground);
-    transition: background 0.12s, border-color 0.12s, transform 0.06s, box-shadow 0.12s;
+    font: inherit; font-weight: 500; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius-pill);
+    padding: 0.5rem 1.15rem; background: var(--primary); color: var(--primary-foreground);
+    transition: background 0.18s var(--ease), border-color 0.18s var(--ease), transform 0.08s var(--ease), box-shadow 0.18s var(--ease);
   }
   button:hover:not(:disabled) { background: var(--primary-hover); }
   button:active:not(:disabled) { transform: translateY(1px); }
@@ -76,12 +76,12 @@ main.content:focus { outline: none; }
   label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--muted-foreground); }
   input, select, textarea {
     font: inherit; color: var(--text); width: 100%; margin-top: 0.3rem; padding: 0.5rem 0.65rem;
-    border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface);
-    transition: border-color 0.12s, box-shadow 0.12s;
+    border: 1px solid var(--input); border-radius: var(--radius); background: var(--surface);
+    transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
   }
   /* Walkthrough 19 Nov: a tick box took the full width above and showed as a long empty bar ("Deduct this VAT" on the bill form). */
   input[type='checkbox'], input[type='radio'] { width: auto; margin-top: 0; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
   textarea { resize: vertical; }
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 }
@@ -100,10 +100,9 @@ main.content:focus { outline: none; }
 /* A simple bulleted list for short lines of text (guide, in-transit panel). */
 .plain-list { margin: 0; padding-inline-start: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .banner { text-align: center; margin: 1rem; }
-.center {
-  min-height: 100vh; display: grid; place-items: center; padding: 16px;
-  background: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1.5px) 0 0 / 22px 22px, var(--bg);
-}
+.center { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 1.5rem; padding: 16px; background: var(--bg); }
+/* The product logo above the sign-in card (components/Brand.tsx). */
+.center > .product-logo { justify-self: center; }
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 1.75rem; width: min(400px, 100%); box-shadow: var(--shadow-md);
@@ -115,8 +114,21 @@ main.content:focus { outline: none; }
 .shell.with-sidebar { grid-template-columns: 232px 1fr; }
 .topbar {
   grid-column: 1 / -1; display: flex; align-items: center; gap: 0.7rem; padding-inline: 1rem;
-  background: var(--sidebar); color: var(--sidebar-foreground); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20;
+  background: var(--card); color: var(--foreground); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20;
+  --ink-text: var(--foreground); --sidebar-accent: var(--accent);
 }
+/* Product logo (components/Brand.tsx): the "Bellvox" word mark and "ERP"; on a phone the square mark only. */
+/* A Latin brand lock-up: it keeps its order ("Bellvox ERP") in Arabic too. */
+.product-logo { display: inline-flex; align-items: center; gap: 0.45rem; line-height: 1; direction: ltr; }
+.product-logo-word { display: block; height: 24px; width: auto; }
+.product-logo-mark { display: none; height: 24px; width: auto; }
+.product-logo-suffix { font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; color: var(--muted-foreground); padding-block-start: 0.2rem; }
+.product-logo-lg .product-logo-word { height: 34px; }
+.product-logo-lg .product-logo-suffix { font-size: 1rem; }
+.topbar-brand { display: inline-flex; align-items: center; padding: 0.3rem 0.5rem; margin-inline-start: -0.25rem; border-radius: var(--radius-pill); text-decoration: none; }
+.topbar-brand:hover { background: var(--accent); }
+.topbar-sep { width: 1px; height: 22px; background: var(--border); flex: none; }
+.company-logo { display: block; height: 26px; width: auto; max-width: 96px; object-fit: contain; border-radius: 6px; }
 /* The hazard stripe: the one decorative signature, kept thin. */
 .topbar::after { content: none; }
 .brand-mark {
@@ -125,8 +137,8 @@ main.content:focus { outline: none; }
   opacity: 0.95;
 }
 .apps-btn {
-  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.65rem; border-radius: var(--radius);
-  color: var(--ink-text); text-decoration: none; font-weight: 600; transition: background 0.12s;
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; border-radius: var(--radius-pill);
+  color: var(--ink-text); text-decoration: none; font-weight: 500; transition: background 0.18s var(--ease);
 }
 .apps-btn:hover, .apps-btn.active { background: var(--sidebar-accent); }
 .grid-icon { width: 14px; height: 14px; display: inline-block; background: radial-gradient(circle, currentColor 1.6px, transparent 1.8px) 0 0 / 5px 5px; }
@@ -150,22 +162,23 @@ main.content:focus { outline: none; }
   box-shadow: var(--shadow-md); display: flex; flex-direction: column; animation: pop 0.14s ease-out;
 }
 .menu-head { padding: 0.5rem 0.6rem 0.65rem; border-bottom: 1px solid var(--border); margin-bottom: 0.3rem; }
-.menu-item { background: transparent; color: var(--text); text-align: start; padding: 0.45rem 0.6rem; }
+.menu-item { background: transparent; color: var(--text); text-align: start; padding: 0.45rem 0.6rem; border-radius: var(--radius); }
 .menu-item:hover:not(:disabled) { background: var(--surface-2); }
 
 .sidebar {
-  background: var(--surface); border-inline-end: 1px solid var(--border); padding: 1.1rem 0.75rem;
+  background: var(--sidebar); color: var(--sidebar-foreground); border-inline-end: 1px solid var(--sidebar-border); padding: 1.1rem 0.75rem;
   display: flex; flex-direction: column; gap: 0.15rem;
 }
-.nav-heading { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); margin: 0 0 0.5rem 0.65rem; }
+.nav-heading { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); margin-block: 0 0.5rem; margin-inline: 0.65rem 0; }
+/* Menu items are pills; the open page is a soft red pill with red text (Bellvox). */
 .nav-item {
-  display: block; padding: 0.42rem 0.65rem; border-radius: var(--radius); color: var(--text); text-decoration: none;
-  border-inline-start: 3px solid transparent; transition: background 0.12s;
+  display: block; padding: 0.45rem 0.8rem; border-radius: var(--radius-pill); color: inherit; text-decoration: none;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
 }
-.nav-item:hover { background: var(--surface-2); }
-.nav-item.active { background: var(--accent); color: var(--primary); font-weight: 600; border-inline-start-color: var(--primary); }
+.nav-item:hover { background: var(--sidebar-accent); }
+.nav-item.active { background: var(--primary-soft); color: var(--primary-text); font-weight: 600; }
 .content { padding: 2rem 2.25rem 4rem; min-width: 0; }
-.page { max-width: 1280px; animation: rise 0.35s ease-out both; }
+.page { max-width: 1280px; animation: rise 0.45s var(--ease) both; }
 /* Page header: the title, one plain line under it, then a clear gap before the content. Every screen gets the same rhythm. */
 .page > h1 { margin-block-end: 0.3rem; }
 .page > h1 + .muted, .page > .page-head + .muted { margin-block: 0 1.5rem; max-width: 68ch; font-size: 0.95rem; }
@@ -204,13 +217,13 @@ main.content:focus { outline: none; }
   position: relative; display: flex; flex-direction: column; gap: 0.35rem; padding: 1.2rem 1.2rem 1.1rem;
   text-decoration: none; color: var(--text); background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
-  animation: rise 0.45s ease-out both; animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+  transition: border-color 0.25s var(--ease), transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  animation: rise 0.5s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms + 80ms);
 }
-.tile:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.tile:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .tile-icon {
-  width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 0.45rem;
-  background: var(--accent); color: var(--primary);
+  width: 46px; height: 46px; border-radius: var(--radius); display: grid; place-items: center; margin-bottom: 0.45rem;
+  background: var(--primary-soft); color: var(--primary-text);
 }
 .tile-icon svg { width: 24px; height: 24px; }
 .tile-name { font-weight: 600; font-size: 1.05rem; }
@@ -250,7 +263,7 @@ main.content:focus { outline: none; }
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 0.62rem 0.9rem; text-align: start; border-bottom: 1px solid var(--border); vertical-align: middle; }
-thead th { background: var(--surface-2); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); border-bottom-color: var(--border-strong); }
+thead th { background: color-mix(in srgb, var(--background) 70%, var(--card)); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); border-bottom-color: var(--border); }
 tbody tr { transition: background 0.1s; }
 tbody tr:last-child td { border-bottom: 0; }
 /* Only rows that open something react to the pointer: a hover on a dead row reads as "click me" and then does nothing. */
@@ -388,7 +401,7 @@ td input { margin-top: 0; }
 
 /* Tabs (item page, inventory redesign 10 Nov 2026). Logical properties only, so they mirror in Arabic. */
 .tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-block: 1.25rem 0.75rem; border-block-end: 1px solid var(--border-strong); }
-.tab { background: transparent; border: 0; border-block-end: 2px solid transparent; padding: 0.5rem 0.9rem; margin-block-end: -1px; color: var(--muted-foreground); font: inherit; cursor: pointer; }
+.tab { background: transparent; border: 0; border-radius: 0; border-block-end: 2px solid transparent; padding: 0.5rem 0.9rem; margin-block-end: -1px; color: var(--muted-foreground); font: inherit; cursor: pointer; }
 .tab:hover { color: var(--foreground); }
 .tab.active { color: var(--foreground); border-block-end-color: var(--primary); font-weight: 600; }
 .tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -459,18 +472,18 @@ td input { margin-top: 0; }
 .apps-btn { padding: 0.4rem 0.55rem; }
 .topbar-app-link {
   display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem 0.3rem 0.4rem; margin-inline-end: 0.35rem;
-  color: var(--ink-text); text-decoration: none; font-weight: 650; font-size: 1rem; border-radius: var(--radius); white-space: nowrap;
+  color: var(--ink-text); text-decoration: none; font-weight: 600; font-size: 1rem; border-radius: var(--radius-pill); white-space: nowrap;
 }
 .topbar-app-link:hover { background: var(--sidebar-accent); }
-.topbar-app-icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--accent); color: var(--primary); }
+.topbar-app-icon { width: 26px; height: 26px; border-radius: var(--radius-pill); display: grid; place-items: center; background: var(--primary-soft); color: var(--primary-text); }
 .topbar-app-icon svg { width: 16px; height: 16px; }
-.topbar-org-end { font-size: 0.85rem; color: color-mix(in srgb, var(--ink-text) 85%, transparent); white-space: nowrap; margin-inline-end: 0.25rem; }
+.topbar-org-end { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; color: var(--muted-foreground); white-space: nowrap; margin-inline-end: 0.25rem; }
 .menu-icon { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; opacity: 0.85; }
 .menu-icon svg { width: 16px; height: 16px; }
 .icon-letter { font-weight: 700; }
 .nav-item { display: flex; align-items: center; gap: 0.6rem; }
 .nav-group { display: flex; flex-direction: column; gap: 0.15rem; margin-block-start: 0.6rem; }
-.nav-group-heading { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); margin: 0.2rem 0 0.25rem 0.65rem; }
+.nav-group-heading { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: color-mix(in srgb, var(--sidebar-foreground) 70%, transparent); margin-block: 0.2rem 0.25rem; margin-inline: 0.8rem 0; }
 /* Every app's menu is a left list (Ben, 9 Nov 2026): it stays in view on a desktop and scrolls on its own; on a phone it is a drawer. */
 @media (min-width: 721px) {
   .sidebar { position: sticky; inset-block-start: 52px; height: calc(100vh - 52px); overflow-y: auto; }
@@ -478,6 +491,8 @@ td input { margin-top: 0; }
 @media (max-width: 1100px) { .topbar-org-end { display: none; } }
 @media (max-width: 720px) {
   .topbar-org-end { display: none; }
+  .topbar .product-logo-word, .topbar .product-logo-suffix, .topbar-sep, .apps-btn-label { display: none; }
+  .topbar .product-logo-mark { display: block; }
   .topbar-app-link span:last-child { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
   /* Touch targets: at least 44 x 44 px (WCAG 2.5.5) for the buttons in the top bar. */
   .icon-btn, .apps-btn, .topbar-app-link, .skip-link, .avatar, .nav-item, .th-sort { min-width: 44px; min-height: 44px; }

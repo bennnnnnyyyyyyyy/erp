@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Button } from './ui/button';
+import { ProductLogo } from './Brand';
 import { authLinkError, googleSignInEnabled, supabase, supabaseConfigured } from '../lib/supabase';
 
 import { tr, trf } from '../lib/i18n';
@@ -64,6 +65,7 @@ export function SignIn() {
 
   return (
     <main className="center">
+      <ProductLogo size="lg" />
       <form className="card stack" onSubmit={submit}>
         <h1>{tr(TITLE[mode])}</h1>
         {mode === 'sign-up' && <p className="muted small">{tr('Start with your own login. Next you will set up your company, which takes about a minute.')}</p>}

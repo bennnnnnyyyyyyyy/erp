@@ -6,6 +6,7 @@ import { tr } from '../lib/i18n';
 import { timeZoneList } from '../lib/zonesCurrencies';
 import { CurrencySelect, TimeZoneSelect } from './ZoneCurrencyFields';
 import { ErrorToast } from './Toast';
+import { ProductLogo } from './Brand';
 // "Set up your company": the second step of sign-up (sql/032). The person is already signed in; this creates the company, makes them
 // its owner, switches every app on and stores the company's language, currency and time zone. The language is for the whole
 // company: everyone who joins later sees it.
@@ -46,6 +47,7 @@ export function CreateCompany({ onCreated, onCancel, first }: { onCreated: (orgI
 
   return (
     <main className="center">
+      <ProductLogo size="lg" />
       <form className="card stack" onSubmit={submit}>
         <h1>{first ? tr('Set up your company') : tr('Create another company')}</h1>
         <p className="muted small">{tr('You become the owner and every module is enabled. All of this can be changed later in Settings.')}</p>

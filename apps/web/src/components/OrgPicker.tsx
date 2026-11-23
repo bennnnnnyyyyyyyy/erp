@@ -7,6 +7,7 @@ import { CreateCompany } from './CreateCompany';
 import { tr, trf } from '../lib/i18n';
 import { authErrorMessage } from '../lib/authErrors';
 import { Rich } from './Rich';
+import { ProductLogo } from './Brand';
 type OrgOption = { id: string; name: string };
 type InvitationRow = { id: string; org_id: string; org_name: string; role: MyInvitation['role']; invited_by_name: string | null; created_at: string };
 
@@ -68,6 +69,7 @@ export function OrgPicker({ onPick }: { onPick: (orgId: string) => void }) {
 
   return (
     <main className="center">
+      <ProductLogo size="lg" />
       <div className="card stack">
         {invitations.length > 0 && (
           <>

@@ -8,6 +8,8 @@ import { useTheme } from '../lib/theme';
 import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
 import { AppSideMenu } from './AppMenu';
 import { AppIcon } from './icons';
+import { CompanyLogo, ProductLogo } from './Brand';
+import { BRAND } from '../lib/brand';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
 import { TableLabels } from './TableLabels';
@@ -108,7 +110,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   }, []);
   useEffect(() => {
     const where = route?.page ? `${t(route.page.label)} · ${t(route.app.name)}` : route ? t(route.app.name) : undefined;
-    document.title = [where, session.org?.name].filter(Boolean).join(' · ') || 'ERP';
+    document.title = [where, session.org?.name, BRAND.name].filter(Boolean).join(' · ');
   }, [route, session.org?.name]);
 
   const atHome = path === '/' || path === '';
@@ -121,28 +123,34 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
       {!demoMode && ready && !asked && <FirstRunLanguage />}
       {/* Keyboard users jump past the top bar and the sidebar straight to the page (visible only when focused). */}
       <a href="#main" className="skip-link">{t('Skip to content')}</a>
-      {/* Top bar: apps grid, the current app (icon and name); company and account at the end. The app's own menu is the left list
-          (AppSideMenu); on a phone it is a drawer opened with the menu button. */}
+      {/* Top bar: the product logo (home), the apps grid and the current app (icon and name); at the end the company (its own logo
+          next to its name, never instead of the product's) and the account. The app's own menu is the left list (AppSideMenu); on a
+          phone it is a drawer opened with the menu button. */}
       <header className="topbar">
         {route && (
           <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')} aria-expanded={drawerOpen}>
             ☰
           </button>
         )}
+        <Link to="/" className="topbar-brand" title={BRAND.name}>
+          <ProductLogo />
+        </Link>
+        <span className="topbar-sep" aria-hidden="true" />
         <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label={t('All apps')} title={t('All apps')}>
           <span className="grid-icon" aria-hidden="true" />
-          {!route && t('Apps')}
+          {!route && <span className="apps-btn-label">{t('Apps')}</span>}
         </Link>
-        {route ? (
+        {route && (
           <Link to={route.app.basePath || '/'} className="topbar-app-link">
             <span className="topbar-app-icon"><AppIcon appKey={route.app.key} name={t(route.app.name)} /></span>
             <span>{t(route.app.name)}</span>
           </Link>
-        ) : (
-          <span className="topbar-org"><bdi>{session.org?.name}</bdi></span>
         )}
         <span className="spacer" />
-        {route && <span className="topbar-org-end"><bdi>{session.org?.name}</bdi></span>}
+        <span className="topbar-org-end">
+          <CompanyLogo />
+          <bdi>{session.org?.name}</bdi>
+        </span>
         <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
           {dark ? '☀' : '☾'}
         </button>
