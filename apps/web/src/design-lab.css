@@ -2,6 +2,9 @@
    theme.css and styles.css, so it overrides them at equal specificity. Default values need no rules unless noted. */
 
 /* ============ PALETTE ============ */
+/* 'bellvox' is the baked-in look (theme.css): the generic palette rules below skip it. It only sets the hue numbers, so the other
+   options that mix colours from them (gradient buttons, solid pill, filled stats) come out in Bellvox red. */
+html[data-d-palette='bellvox'] { --bh: 25; --ah: 25; --bgh: 100; --bgc: 0.003; --pc: 0.19; --ac: 0.19; --saffron: #c9222e; }
 html[data-d-palette='teal']       { --bh: 200; --ah: 78;  --bgh: 85;  --bgc: 0.014; --pc: 0.09; --ac: 0.15; }
 html[data-d-palette='indigo']     { --bh: 270; --ah: 70;  --bgh: 275; --bgc: 0.008; --pc: 0.17; --ac: 0.15; }
 html[data-d-palette='royal']      { --bh: 258; --ah: 85;  --bgh: 245; --bgc: 0.006; --pc: 0.17; --ac: 0.15; }
@@ -12,7 +15,7 @@ html[data-d-palette='rose']       { --bh: 12;  --ah: 80;  --bgh: 15;  --bgc: 0.0
 html[data-d-palette='graphite']   { --bh: 250; --ah: 70;  --bgh: 250; --bgc: 0.004; --pc: 0.03; --ac: 0.14; }
 html[data-d-palette='mono']       { --bh: 0;   --ah: 0;   --bgh: 0;   --bgc: 0;     --pc: 0;    --ac: 0;    }
 
-html[data-d-palette] {
+html[data-d-palette]:not([data-d-palette='bellvox']) {
   --background: oklch(0.972 var(--bgc) var(--bgh));
   --foreground: oklch(0.25 calc(var(--bgc) * 2) var(--bgh));
   --card: oklch(0.995 calc(var(--bgc) * 0.4) var(--bgh));
@@ -29,7 +32,7 @@ html[data-d-palette] {
   --sidebar-border: oklch(0.36 calc(var(--pc) * 0.55) var(--bh)); --sidebar-accent: oklch(0.35 calc(var(--pc) * 0.65) var(--bh));
   --saffron: oklch(0.8 var(--ac) var(--ah));
 }
-html.dark[data-d-palette] {
+html.dark[data-d-palette]:not([data-d-palette='bellvox']) {
   --background: oklch(0.19 calc(var(--pc) * 0.22) var(--bh));
   --foreground: oklch(0.95 0.012 var(--bgh));
   --card: oklch(0.235 calc(var(--pc) * 0.28) var(--bh)); --card-foreground: var(--foreground);
@@ -42,14 +45,14 @@ html.dark[data-d-palette] {
   --sidebar: oklch(0.15 calc(var(--pc) * 0.33) var(--bh)); --sidebar-foreground: oklch(0.88 0.02 var(--bgh));
   --sidebar-border: oklch(1 0 0 / 8%); --sidebar-accent: oklch(0.27 calc(var(--pc) * 0.55) var(--bh));
 }
-html[data-d-palette] .home-hero {
+html[data-d-palette]:not([data-d-palette='bellvox']) .home-hero {
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.10' stroke-width='1'%3E%3Crect x='9' y='9' width='26' height='26'/%3E%3Crect x='9' y='9' width='26' height='26' transform='rotate(45 22 22)'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 44px 44px,
     linear-gradient(120deg, oklch(0.36 calc(var(--pc) * 0.8) var(--bh)), oklch(0.3 calc(var(--pc) * 0.7) calc(var(--bh) + 12)) 60%, oklch(0.34 calc(var(--pc) * 0.9) calc(var(--bh) - 8)));
 }
-html[data-d-palette] .home-hero::after { background: radial-gradient(circle, oklch(0.82 var(--ac) var(--ah) / 0.38), transparent 65%); }
-html[data-d-palette] .tile::before { background: linear-gradient(90deg, var(--saffron), oklch(0.7 var(--ac) calc(var(--ah) - 20))); }
-html[data-d-palette] .stat.warn { background: oklch(0.96 0.045 85); }
+html[data-d-palette]:not([data-d-palette='bellvox']) .home-hero::after { background: radial-gradient(circle, oklch(0.82 var(--ac) var(--ah) / 0.38), transparent 65%); }
+html[data-d-palette]:not([data-d-palette='bellvox']) .tile::before { background: linear-gradient(90deg, var(--saffron), oklch(0.7 var(--ac) calc(var(--ah) - 20))); }
+html[data-d-palette]:not([data-d-palette='bellvox']) .stat.warn { background: oklch(0.96 0.045 85); }
 
 /* ============ APP ICON COLOURS ============ */
 html[data-d-appcolor='brand'] .tile-icon { background: var(--accent); color: var(--accent-foreground); }
@@ -85,14 +88,15 @@ html[data-d-tsize='large'] body { font-size: 16px; }
 html[data-d-tsize='xl'] body { font-size: 17px; }
 
 /* ============ RADIUS ============ */
+/* 'bellvox' (cards 18px, small parts 12px, buttons and pills 999px) is baked in; the rules below are for the other choices only. */
 html[data-d-radius='sharp']  { --radius: 0; }
 html[data-d-radius='subtle'] { --radius: 0.375rem; }
 html[data-d-radius='round']  { --radius: 0.75rem; }
 html[data-d-radius='soft']   { --radius: 1.25rem; }
-html[data-d-radius] .tile, html[data-d-radius] .form-card, html[data-d-radius] .table-wrap, html[data-d-radius] .stat, html[data-d-radius] .card { border-radius: calc(var(--radius) * 1.25); }
-html[data-d-radius] .home-hero { border-radius: calc(var(--radius) * 1.6); }
-html[data-d-radius] input, html[data-d-radius] select, html[data-d-radius] textarea, html[data-d-radius] button, html[data-d-radius] .tile-icon, html[data-d-radius] .sidebar-app-icon { border-radius: var(--radius); }
-html[data-d-radius] .nav-item, html[data-d-radius] .sidebar-app { border-radius: calc(var(--radius) * 0.8); }
+html[data-d-radius]:not([data-d-radius='bellvox']) .tile, html[data-d-radius]:not([data-d-radius='bellvox']) .form-card, html[data-d-radius]:not([data-d-radius='bellvox']) .table-wrap, html[data-d-radius]:not([data-d-radius='bellvox']) .stat, html[data-d-radius]:not([data-d-radius='bellvox']) .card { border-radius: calc(var(--radius) * 1.25); }
+html[data-d-radius]:not([data-d-radius='bellvox']) .home-hero { border-radius: calc(var(--radius) * 1.6); }
+html[data-d-radius]:not([data-d-radius='bellvox']) :is(input, select, textarea, button, .tile-icon, .sidebar-app-icon) { border-radius: var(--radius); }
+html[data-d-radius]:not([data-d-radius='bellvox']) :is(.nav-item, .sidebar-app) { border-radius: calc(var(--radius) * 0.8); }
 html[data-d-radius='sharp'] .avatar, html[data-d-radius='sharp'] .pill, html[data-d-radius='sharp'] .status { border-radius: 0; }
 html[data-d-radius='sharp'] .tile::before { border-radius: 0; }
 
@@ -122,21 +126,22 @@ html[data-d-density='spacious'] .stat { padding-block: 1.4rem; }
 }
 
 /* ============ SIDEBAR ============ */
-html[data-d-sidebar='light'], html[data-d-sidebar='paper'] {
+html[data-d-palette]:not([data-d-palette='bellvox'])[data-d-sidebar='light'], html[data-d-sidebar='paper'] {
   --sidebar: var(--card); --sidebar-foreground: var(--foreground); --sidebar-border: var(--border); --sidebar-accent: var(--accent);
 }
 html[data-d-sidebar='paper'] { --sidebar: var(--background); }
-html[data-d-sidebar='light'] .sidebar, html[data-d-sidebar='paper'] .sidebar { border-inline-end: 1px solid var(--border); }
-html[data-d-sidebar='light'] .sidebar-brand, html[data-d-sidebar='paper'] .sidebar-brand,
-html[data-d-sidebar='light'] .sidebar-app, html[data-d-sidebar='paper'] .sidebar-app { color: var(--foreground); }
-html[data-d-sidebar='light'] .sidebar-app, html[data-d-sidebar='paper'] .sidebar-app { background: var(--accent); }
-html[data-d-sidebar='light'] .nav-item, html[data-d-sidebar='paper'] .nav-item { color: color-mix(in srgb, var(--foreground) 80%, transparent); }
-html[data-d-sidebar='light'] .nav-item:hover, html[data-d-sidebar='paper'] .nav-item:hover { background: var(--accent); color: var(--foreground); }
-html[data-d-sidebar='light'] .nav-item.active, html[data-d-sidebar='paper'] .nav-item.active { background: var(--accent); color: var(--accent-foreground); }
-html[data-d-sidebar='light'] .nav-item.active .menu-icon, html[data-d-sidebar='paper'] .nav-item.active .menu-icon { color: var(--primary); }
-html[data-d-sidebar='light'] .nav-group-heading, html[data-d-sidebar='paper'] .nav-group-heading { color: var(--muted-foreground); }
-html[data-d-sidebar='light'] .nav-item.active::before, html[data-d-sidebar='paper'] .nav-item.active::before { background: var(--primary); }
-html.dark[data-d-sidebar='light'], html.dark[data-d-sidebar='paper'] { --sidebar: var(--card); }
+html[data-d-sidebar='paper'] .sidebar { border-inline-end: 1px solid var(--border); }
+html[data-d-sidebar='paper'] .sidebar-brand, html[data-d-sidebar='paper'] .sidebar-app { color: var(--foreground); }
+html[data-d-sidebar='paper'] .sidebar-app { background: var(--accent); }
+html[data-d-sidebar='paper'] .nav-item { color: color-mix(in srgb, var(--foreground) 80%, transparent); }
+html[data-d-sidebar='paper'] .nav-item:hover { background: var(--accent); color: var(--foreground); }
+html[data-d-sidebar='paper'] .nav-item.active { background: var(--accent); color: var(--accent-foreground); }
+html[data-d-sidebar='paper'] .nav-item.active .menu-icon { color: var(--primary); }
+html[data-d-sidebar='paper'] .nav-group-heading { color: var(--muted-foreground); }
+html[data-d-sidebar='paper'] .nav-item.active::before { background: var(--primary); }
+html.dark[data-d-sidebar='paper'] { --sidebar: var(--background); }
+html[data-d-palette='bellvox'][data-d-sidebar='dark'] { --sidebar: #111111; --sidebar-foreground: #dcdcd8; --sidebar-border: #2a2a2a; --sidebar-accent: #232323; --primary-soft: rgb(201 34 46 / 0.28); }
+html[data-d-palette='bellvox'][data-d-sidebar='dark'] .sidebar .nav-item.active { color: #ffffff; }
 @media (min-width: 721px) {
   html[data-d-sbw='narrow'] .shell.with-sidebar { grid-template-columns: 216px minmax(0, 1fr); }
   html[data-d-sbw='wide'] .shell.with-sidebar { grid-template-columns: 292px minmax(0, 1fr); }
@@ -152,6 +157,8 @@ html.dark[data-d-sidebar='light'], html.dark[data-d-sidebar='paper'] { --sidebar
 }
 
 /* ============ NAV ACTIVE MARKER / ICONS / GROUPS ============ */
+html[data-d-navactive='marker'] .nav-item { border-radius: var(--radius); border-inline-start: 3px solid transparent; }
+html[data-d-navactive='marker'] .nav-item.active { background: var(--accent); color: var(--primary-text); border-inline-start-color: var(--primary); }
 html[data-d-navactive='pill'] .nav-item.active { background: var(--saffron); color: oklch(0.2 0.04 var(--bh, 200)); }
 html[data-d-navactive='pill'] .nav-item.active .menu-icon { color: inherit; }
 html[data-d-navactive='pill'] .nav-item.active::before { display: none; }
@@ -166,7 +173,7 @@ html[data-d-navgroups='off'] .nav-group-heading { display: none; }
 html[data-d-topbar='brand'] .topbar { background: var(--primary); color: var(--primary-foreground); border-block-end-color: transparent; backdrop-filter: none; --ink-text: var(--primary-foreground); --sidebar-foreground: var(--primary-foreground); --foreground: var(--primary-foreground); --sidebar-accent: color-mix(in srgb, #fff 16%, transparent); }
 html[data-d-topbar='brand'] .crumbs, html[data-d-topbar='brand'] .crumbs a, html[data-d-topbar='brand'] .crumb-here, html[data-d-topbar='brand'] .topbar-org-end { color: var(--primary-foreground); }
 html[data-d-topbar='brand'] .avatar { background: var(--saffron); color: oklch(0.2 0.04 200); }
-html[data-d-topbar='plain'] .topbar { background: var(--card); backdrop-filter: none; box-shadow: var(--shadow-sm); }
+html[data-d-topbar='paper'] .topbar { background: var(--background); }
 html[data-d-topbar='clear'] .topbar { background: transparent; backdrop-filter: none; border-block-end-color: transparent; }
 html[data-d-crumbs='off'] .crumbs { display: none !important; }
 
@@ -263,7 +270,7 @@ html[data-d-hweight='light'] h1, html[data-d-hweight='light'] h2, html[data-d-hw
 html[data-d-hweight='bold'] h1, html[data-d-hweight='bold'] h2, html[data-d-hweight='bold'] .tile-name, html[data-d-hweight='bold'] .home-hero h1 { font-weight: 700; }
 html[data-d-lheight='tight'] body { line-height: 1.35; }
 html[data-d-lheight='loose'] body { line-height: 1.8; }
-html[data-d-numfont='sans'] td.right, html[data-d-numfont='sans'] .stat-value, html[data-d-numfont='sans'] .facts dd.amount, html[data-d-numfont='sans'] td code { font-family: var(--font); font-variant-numeric: tabular-nums; }
+html[data-d-numfont='mono'] td.right, html[data-d-numfont='mono'] .stat-value, html[data-d-numfont='mono'] .facts dd.amount { font-family: var(--mono); }
 html[data-d-titlealign='center'] .page > h1, html[data-d-titlealign='center'] .page > .page-head, html[data-d-titlealign='center'] .page > h1 + .muted { text-align: center; justify-content: center; margin-inline: auto; }
 
 /* ============ MORE SHAPE ============ */

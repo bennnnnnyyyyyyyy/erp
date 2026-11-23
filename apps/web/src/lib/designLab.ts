@@ -14,7 +14,9 @@ export type Group = {
 
 type FontDef = { value: string; label: string; stack: string; google?: string; arabic: boolean };
 export const FONTS: FontDef[] = [
-  { value: 'plex', label: 'IBM Plex Sans Arabic (current)', stack: "'IBM Plex Sans Arabic'", arabic: true },
+  { value: 'rubik', label: 'Rubik (Bellvox, baked in)', stack: "'Rubik'", arabic: true },
+  { value: 'marhey', label: 'Marhey (Bellvox Arabic accent, headings only)', stack: "'Marhey'", arabic: true },
+  { value: 'plex', label: 'IBM Plex Sans Arabic (before Bellvox)', stack: "'IBM Plex Sans Arabic'", arabic: true },
   { value: 'readex', label: 'Readex Pro: friendly, Arabic + Latin', stack: "'Readex Pro'", google: 'Readex+Pro:wght@300..700', arabic: true },
   { value: 'cairo', label: 'Cairo: clean, very common in Egypt', stack: "'Cairo'", google: 'Cairo:wght@400..800', arabic: true },
   { value: 'tajawal', label: 'Tajawal: compact, modern', stack: "'Tajawal'", google: 'Tajawal:wght@400;500;700', arabic: true },
@@ -43,7 +45,8 @@ const range = (key: string, section: string, label: string, min: number, max: nu
 
 export const GROUPS: Group[] = [
   // ---------- Colour ----------
-  { key: 'palette', section: 'Colour', label: 'Palette', kind: 'swatches', default: 'graphite', help: 'Brand colour, accent, background tint and sidebar all follow this. "Custom" uses the four sliders below.', options: [
+  { key: 'palette', section: 'Colour', label: 'Palette', kind: 'swatches', default: 'bellvox', help: 'Brand colour, accent, background tint and sidebar all follow this. "Bellvox" is the baked-in look (theme.css). "Custom" uses the four sliders below.', options: [
+    { value: 'bellvox', label: 'Bellvox (baked in)', swatch: ['#c9222e', '#0b0b0b', '#f6f6f4'] },
     { value: 'teal', label: 'Teal + saffron', swatch: ['#0f5a63', '#e3b34a', '#f8f4ea'] },
     { value: 'indigo', label: 'Indigo', swatch: ['#3b3fa6', '#e6a93a', '#f5f5fb'] },
     { value: 'royal', label: 'Royal blue', swatch: ['#1f4fc4', '#f0b43c', '#f3f6fc'] },
@@ -60,23 +63,23 @@ export const GROUPS: Group[] = [
   range('lbg', 'Colour', 'Custom: background tint hue', 0, 360, 1, '°', 'Only used when Palette = Custom.'),
   range('lacc', 'Colour', 'Custom: accent hue', 0, 360, 1, '°', 'The highlight colour (active marker, warnings). Only when Palette = Custom.'),
   { key: 'appcolor', section: 'Colour', label: 'App icon colours', default: 'app', help: '"By app" uses a fixed teal/saffron family per app. "Brand" follows the palette.', options: [c('app', 'By app'), c('brand', 'Brand colour')] },
-  { key: 'bg', section: 'Colour', label: 'Page background', default: 'glow', options: [c('plain', 'Plain'), c('glow', 'Soft glow'), c('dots', 'Dot grid'), c('lattice', 'Star lattice'), c('grain', 'Paper grain')] },
+  { key: 'bg', section: 'Colour', label: 'Page background', default: 'plain', options: [c('plain', 'Plain paper'), c('dots', 'Dot grid'), c('lattice', 'Star lattice'), c('grain', 'Paper grain')] },
   { key: 'border', section: 'Colour', label: 'Border strength', default: 'hairline', options: [c('none', 'None (shadow only)'), c('hairline', 'Hairline'), c('strong', 'Strong')] },
   { key: 'selection', section: 'Colour', label: 'Text selection colour', default: 'default', options: [c('default', 'Browser'), c('brand', 'Brand'), c('saffron', 'Accent')] },
 
   // ---------- Type ----------
-  { key: 'hfont', section: 'Type', label: 'Headings font', kind: 'select', default: 'plex', help: 'Google fonts load from the internet in this dev tool only. Latin-only fonts fall back to Plex for Arabic.', options: fontOptions },
-  { key: 'bfont', section: 'Type', label: 'Body font', kind: 'select', default: 'plex', options: fontOptions },
+  { key: 'hfont', section: 'Type', label: 'Headings font', kind: 'select', default: 'rubik', help: 'Google fonts load from the internet in this dev tool only (Rubik and Marhey are self-hosted). Latin-only fonts fall back to Rubik for Arabic.', options: fontOptions },
+  { key: 'bfont', section: 'Type', label: 'Body font', kind: 'select', default: 'rubik', options: fontOptions },
   { key: 'hsize', section: 'Type', label: 'Heading size', default: 'xl', options: [c('small', 'Small'), c('normal', 'Normal'), c('large', 'Large'), c('xl', 'Extra large')] },
   { key: 'hweight', section: 'Type', label: 'Heading weight', default: 'normal', options: [c('light', 'Medium'), c('normal', 'Semi-bold'), c('bold', 'Bold')] },
   { key: 'tsize', section: 'Type', label: 'Text size', default: 'large', options: [c('small', '14px'), c('normal', '15px'), c('large', '16px'), c('xl', '17px')] },
   range('fspx', 'Type', 'Exact text size (px)', 13, 20, 0.5, 'px', 'Overrides Text size when on.'),
   { key: 'lheight', section: 'Type', label: 'Line spacing', default: 'normal', options: [c('tight', 'Tight'), c('normal', 'Normal'), c('loose', 'Loose')] },
-  { key: 'numfont', section: 'Type', label: 'Numbers in tables and stats', default: 'mono', options: [c('mono', 'Monospace'), c('sans', 'Body font (tabular)')] },
+  { key: 'numfont', section: 'Type', label: 'Numbers in tables and stats', default: 'sans', options: [c('sans', 'Body font (tabular)'), c('mono', 'Monospace')] },
   { key: 'titlealign', section: 'Type', label: 'Page title alignment', default: 'start', options: [c('start', 'Start'), c('center', 'Centered')] },
 
   // ---------- Shape & depth ----------
-  { key: 'radius', section: 'Shape', label: 'Corner radius', default: 'round', options: [c('sharp', 'Sharp'), c('subtle', 'Subtle'), c('round', 'Rounded'), c('soft', 'Very round')] },
+  { key: 'radius', section: 'Shape', label: 'Corner radius', default: 'bellvox', options: [c('bellvox', 'Bellvox: cards 18, parts 12, buttons pill'), c('sharp', 'Sharp'), c('subtle', 'Subtle'), c('round', 'Rounded'), c('soft', 'Very round')] },
   range('rpx', 'Shape', 'Exact corner radius (px)', 0, 32, 1, 'px', 'Overrides Corner radius when on.'),
   { key: 'cards', section: 'Shape', label: 'Card style', default: 'border', options: [c('border', 'Bordered'), c('shadow', 'Floating shadow'), c('flat', 'Flat tint'), c('glass', 'Glass')] },
   { key: 'shadow', section: 'Shape', label: 'Shadow strength', default: 'soft', options: [c('none', 'None'), c('soft', 'Soft'), c('strong', 'Strong')] },
@@ -88,14 +91,14 @@ export const GROUPS: Group[] = [
   { key: 'avatar', section: 'Shape', label: 'Avatar shape', default: 'circle', options: [c('circle', 'Circle'), c('squircle', 'Rounded square'), c('square', 'Square')] },
 
   // ---------- Navigation ----------
-  { key: 'sidebar', section: 'Navigation', label: 'Sidebar style', default: 'dark', options: [c('dark', 'Dark brand'), c('light', 'Light'), c('paper', 'Same as page'), c('rail', 'Icon rail (narrow)')] },
+  { key: 'sidebar', section: 'Navigation', label: 'Sidebar style', default: 'light', options: [c('light', 'Light (white)'), c('dark', 'Dark'), c('paper', 'Same as page'), c('rail', 'Icon rail (narrow)')] },
   { key: 'sbw', section: 'Navigation', label: 'Sidebar width', default: 'normal', options: [c('narrow', 'Narrow'), c('normal', 'Normal'), c('wide', 'Wide')] },
   range('sbwpx', 'Navigation', 'Exact sidebar width (px)', 180, 360, 4, 'px', 'Overrides Sidebar width when on.'),
-  { key: 'navactive', section: 'Navigation', label: 'Active page marker', default: 'marker', options: [c('marker', 'Edge marker + tint'), c('pill', 'Solid pill'), c('underline', 'Underline'), c('text', 'Text only')] },
+  { key: 'navactive', section: 'Navigation', label: 'Active page marker', default: 'soft', options: [c('soft', 'Soft red pill'), c('marker', 'Edge marker + tint'), c('pill', 'Solid pill'), c('underline', 'Underline'), c('text', 'Text only')] },
   { key: 'navspace', section: 'Navigation', label: 'Sidebar item spacing', default: 'normal', options: [c('tight', 'Tight'), c('normal', 'Normal'), c('loose', 'Loose')] },
   { key: 'navicons', section: 'Navigation', label: 'Sidebar icons', default: 'on', options: [c('on', 'Show'), c('off', 'Hide')] },
   { key: 'navgroups', section: 'Navigation', label: 'Group headings', default: 'on', options: [c('on', 'Show'), c('off', 'Hide')] },
-  { key: 'topbar', section: 'Navigation', label: 'Top bar', default: 'paper', options: [c('paper', 'Paper (blends in)'), c('brand', 'Brand colour'), c('plain', 'White, bordered'), c('clear', 'Transparent')] },
+  { key: 'topbar', section: 'Navigation', label: 'Top bar', default: 'white', options: [c('white', 'White, hairline (baked in)'), c('paper', 'Paper (blends in)'), c('brand', 'Brand colour'), c('clear', 'Transparent')] },
   { key: 'crumbs', section: 'Navigation', label: 'Breadcrumbs', default: 'on', options: [c('on', 'Show'), c('off', 'Hide')] },
   { key: 'logo', section: 'Navigation', label: 'Logo shape', default: 'squircle', options: [c('squircle', 'Rounded square'), c('circle', 'Circle'), c('square', 'Square'), c('sharp', 'Sharp')] },
 
@@ -158,17 +161,18 @@ export const GROUPS: Group[] = [
 ];
 
 export type State = Record<string, string>;
-const KEY = 'erp.designLab.v1';
+// v2 (23 Nov 2026): the Bellvox look is the baked-in default. The v1 choices stay in the browser and as the "11 Nov" preset below.
+const KEY = 'erp.designLab.v2';
 const PRESET_KEY = 'erp.designLab.presets.v1';
 const UI_KEY = 'erp.designLab.ui.v1';
 
 export const defaults = (): State => Object.fromEntries(GROUPS.map((g) => [g.key, g.default]));
 
-/* ---------- Ben's choices, kept in code (Design Lab report of 11 Nov 2026) ---------- */
-export const SEED: State = {"palette":"custom","lhue":"80","lchroma":"0.02","lbg":"130","lacc":"83","appcolor":"brand","bg":"lattice","border":"hairline","selection":"default","hfont":"plex","bfont":"plex","hsize":"xl","hweight":"normal","tsize":"large","fspx":"","lheight":"normal","numfont":"mono","titlealign":"start","radius":"subtle","rpx":"","cards":"shadow","shadow":"strong","density":"comfy","rowpad":"0.5","width":"narrow","cwpx":"","iconw":"normal","avatar":"circle","sidebar":"dark","sbw":"normal","sbwpx":"204","navactive":"marker","navspace":"normal","navicons":"on","navgroups":"off","topbar":"paper","crumbs":"on","logo":"sharp","hero":"banner","tiles":"big","tilebar":"none","stats":"filled","table":"striped","thead":"dark","rowhover":"saffron","chips":"text","btn":"gradient","btnsize":"normal","inputs":"boxed","link":"plain","focus":"normal","scroll":"default","motion":"full","accent":"palette","contrast":"normal","sidetint":"flat","heroglow":"on","checks":"brand","caps":"upper","tracking":"normal","labels":"muted","tablefont":"normal","statsize":"normal","pagepad":"normal","badge":"pill","inputh":"normal","empty":"on","pageanim":"rise","cardhover":"lift","modalback":"dim","topbarh":"normal","brandtext":"off","appheader":"card","orgname":"on","navradius":"follow","herosize":"normal","heroalign":"start","tilecols":"normal","suitehead":"line"};
-/** The 18 options Ben clicked himself. The other options that differ from the defaults (radius, cards, shadow, row height, width,
- *  sidebar width, group headings, logo, tiles, tile edge, stat cards, chips) were not deliberate picks: kept, but unconfirmed. */
-export const SEED_DECIDED = ['palette', 'lhue', 'lchroma', 'lbg', 'lacc', 'appcolor', 'bg', 'hero', 'table', 'thead', 'btn', 'btnsize', 'link', 'scroll', 'motion', 'brandtext', 'orgname', 'navradius'];
+/* ---------- Ben's choices, kept in code (Design Lab report of 11 Nov 2026). Since the Bellvox look (23 Nov) they are a preset only. ---------- */
+const SEED_11_NOV: State = {"palette":"custom","lhue":"80","lchroma":"0.02","lbg":"130","lacc":"83","appcolor":"brand","bg":"lattice","border":"hairline","selection":"default","hfont":"plex","bfont":"plex","hsize":"xl","hweight":"normal","tsize":"large","fspx":"","lheight":"normal","numfont":"mono","titlealign":"start","radius":"subtle","rpx":"","cards":"shadow","shadow":"strong","density":"comfy","rowpad":"0.5","width":"narrow","cwpx":"","iconw":"normal","avatar":"circle","sidebar":"dark","sbw":"normal","sbwpx":"204","navactive":"marker","navspace":"normal","navicons":"on","navgroups":"off","topbar":"paper","crumbs":"on","logo":"sharp","hero":"banner","tiles":"big","tilebar":"none","stats":"filled","table":"striped","thead":"dark","rowhover":"saffron","chips":"text","btn":"gradient","btnsize":"normal","inputs":"boxed","link":"plain","focus":"normal","scroll":"default","motion":"full","accent":"palette","contrast":"normal","sidetint":"flat","heroglow":"on","checks":"brand","caps":"upper","tracking":"normal","labels":"muted","tablefont":"normal","statsize":"normal","pagepad":"normal","badge":"pill","inputh":"normal","empty":"on","pageanim":"rise","cardhover":"lift","modalback":"dim","topbarh":"normal","brandtext":"off","appheader":"card","orgname":"on","navradius":"follow","herosize":"normal","heroalign":"start","tilecols":"normal","suitehead":"line"};
+/** A fresh browser starts from the baked-in look (Bellvox). Nothing is marked "chosen by you" until Ben clicks an option. */
+export const SEED: State = {};
+export const SEED_DECIDED: string[] = [];
 
 export const isChanged = (g: Group, s: State) => (s[g.key] ?? g.default) !== g.default;
 
@@ -224,8 +228,9 @@ export const saveUi = (u: Ui) => localStorage.setItem(UI_KEY, JSON.stringify(u))
 
 export type Preset = { name: string; blurb: string; values: Record<string, string> };
 export const PRESETS: Preset[] = [
-  { name: "Ben's saved choices (11 Nov)", blurb: 'Everything from your Design Lab report, kept in the code.', values: SEED },
-  { name: 'Ben\'s picks (graphite)', blurb: 'The current baked-in look.', values: {} },
+  { name: 'Bellvox (baked in)', blurb: 'The look from bellvox.ai: paper, white cards, ink text, Bellvox red, Rubik, pill buttons.', values: {} },
+  { name: "Ben's saved choices (11 Nov)", blurb: 'Your Design Lab report from before Bellvox, kept in the code.', values: { ...SEED_11_NOV, palette: 'custom', hfont: 'plex', bfont: 'plex', numfont: 'mono', radius: 'subtle', sidebar: 'dark', navactive: 'marker', topbar: 'paper', bg: 'lattice' } },
+  { name: 'Graphite (before Bellvox)', blurb: 'The baked-in look until 23 Nov.', values: { palette: 'graphite', hfont: 'plex', bfont: 'plex', numfont: 'mono', radius: 'round', sidebar: 'dark', navactive: 'marker', topbar: 'paper', bg: 'plain' } },
   { name: 'Warm souk', blurb: 'Cream paper, deep teal, saffron.', values: { palette: 'teal', bg: 'glow', hsize: 'normal', tsize: 'normal' } },
   { name: 'Clean fintech', blurb: 'Indigo, light sidebar, shadows, no pattern.', values: { palette: 'indigo', sidebar: 'light', bg: 'plain', cards: 'shadow', hero: 'gradient', thead: 'plain', navactive: 'pill', hfont: 'manrope', bfont: 'inter', topbar: 'plain', border: 'none' } },
   { name: 'Bold & sharp', blurb: 'Graphite, sharp corners, full grid, compact.', values: { palette: 'graphite', radius: 'sharp', density: 'compact', table: 'grid', thead: 'dark', stats: 'filled', border: 'strong', hero: 'plain', bg: 'plain', cards: 'border', logo: 'square', chips: 'solid' } },
@@ -243,7 +248,7 @@ function ensureFont(def: FontDef | undefined) {
   link.id = id; link.rel = 'stylesheet'; link.href = `https://fonts.googleapis.com/css2?family=${def.google}&display=swap`;
   document.head.appendChild(link);
 }
-const stackFor = (def: FontDef) => `${def.stack}, 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif`;
+const stackFor = (def: FontDef) => `${def.stack}, 'Rubik', 'Segoe UI', system-ui, sans-serif`;
 
 export function apply(s: State) {
   const root = document.documentElement;
@@ -257,8 +262,8 @@ export function apply(s: State) {
   const body = FONTS.find((f) => f.value === s.bfont);
   const head = FONTS.find((f) => f.value === s.hfont);
   ensureFont(body); ensureFont(head);
-  if (body && body.value !== 'plex') root.style.setProperty('--font', stackFor(body)); else root.style.removeProperty('--font');
-  if (head && head.value !== 'plex') { root.style.setProperty('--font-head', stackFor(head)); root.setAttribute('data-d-hfont-on', '1'); }
+  if (body && body.value !== 'rubik') root.style.setProperty('--font', stackFor(body)); else root.style.removeProperty('--font');
+  if (head && head.value !== 'rubik') { root.style.setProperty('--font-head', stackFor(head)); root.setAttribute('data-d-hfont-on', '1'); }
   else { root.style.removeProperty('--font-head'); root.removeAttribute('data-d-hfont-on'); }
 }
 
@@ -347,7 +352,10 @@ const PAIRS: [string, string, string][] = [
   ['Body text on page', '--foreground', '--background'],
   ['Muted text on page', '--muted-foreground', '--background'],
   ['Text on primary button', '--primary-foreground', '--primary'],
-  ['Primary colour on page (links)', '--primary', '--background'],
+  ['Text on primary button (hover)', '--primary-foreground', '--primary-hover'],
+  ['Links (red text) on page', '--primary-text', '--background'],
+  ['Links (red text) on card', '--primary-text', '--card'],
+  ['Muted text on card', '--muted-foreground', '--card'],
   ['Sidebar text on sidebar', '--sidebar-foreground', '--sidebar'],
 ];
 export function contrastReport(): Contrast[] {
