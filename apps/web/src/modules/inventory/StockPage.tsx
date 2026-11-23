@@ -72,8 +72,8 @@ export function StockPage() {
             : <Pill status="received" label={tr('OK')} /> },
     // More about each item (walkthrough fix, 10 Nov 2026: "i should have more options"): the reorder level, whether it is tracked by batch,
     // and, for owners and admins only (the database refuses others), the average cost.
-    { key: 'reorder', label: tr('Reorder level'), value: (r) => r.reorderLevel ?? -1, align: 'right', render: (r) => (r.reorderLevel === null ? <span className="muted">—</span> : qty(r.reorderLevel)) },
-    { key: 'batches', label: tr('Batch tracked'), value: (r) => (r.tracksBatches ? 'yes' : 'no'), render: (r) => (r.tracksBatches ? tr('Yes') : <span className="muted">{tr('No')}</span>) },
+    { hidden: true, key: 'reorder', label: tr('Reorder level'), value: (r) => r.reorderLevel ?? -1, align: 'right', render: (r) => (r.reorderLevel === null ? <span className="muted">—</span> : qty(r.reorderLevel)) },
+    { hidden: true, key: 'batches', label: tr('Batch tracked'), value: (r) => (r.tracksBatches ? 'yes' : 'no'), render: (r) => (r.tracksBatches ? tr('Yes') : <span className="muted">{tr('No')}</span>) },
     ...(isManager
       ? [{
           key: 'cost',
@@ -98,6 +98,8 @@ export function StockPage() {
         }]
       : []),
   ];
+  // UX audit 20 Nov: 10 columns, the name wrapped. Reorder level and batch tracking have their own pages (and Status shows low stock);
+  // they are hidden here but still searched and exported.
   // Columns that are empty in every row are left out (for example the Arabic name when no item has one), so the table fits a laptop.
   const hidden = emptyColumnKeys(rows, {
     ar: (r) => r.nameAr,
