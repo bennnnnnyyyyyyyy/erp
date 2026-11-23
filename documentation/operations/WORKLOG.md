@@ -11,6 +11,30 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — Track A, batch 2: more audit fixes (`sql/105` written, not applied)
+
+**Objective.** The master chat's standing order (Ben, 23 Nov): finish the audit's P1/P2 fixes that are not invoice printing (Track B)
+or the Bellvox look (Track C), smallest first. The demo data clean-up is dropped (new demo companies come in phase 2d).
+
+**Actions Completed.**
+- Wording: plain subtitles (no FEFO, cycle counts, goods receipt posts...); the alert columns say "Send again after" and "Times
+  sent"; the page titles match the menu (Requests, Transfers, Counts, Adjustments).
+- Reorder levels: one "Save changes (n)" button; an empty level reads "Not watched".
+- Prices: tabs (Price lists, Customer groups, Markup) and one short subtitle.
+- Arabic (top-15 #10): in Arabic mode, the Arabic names of items and units show (`lib/names.ts`). Warehouses get an Arabic name
+  that can be changed: `sql/105_inv_warehouse_name_ar.sql` (`inv_set_warehouse_name_ar`, owners and admins, audited) and test 102.
+  The API sends `nameAr`; PUT returns 503 `not_set_up` before 105. The Add and Edit warehouse forms ask for the Arabic name.
+- Stock on hand: the Reorder level and Batch tracked columns are hidden (still searched and exported).
+- Home: the profit figure names its month.
+- Decisions taken with the recommended default (no plan gave another): titles follow the menu labels; on Prices the first tab is
+  Price lists; the profit card keeps one figure per month (merging the two profit screens, top-15 #15, waits for the menu work).
+
+**Database / System Result.** None on live. `sql/105` is written and tested locally only.
+
+**Safety Status.** Local PGlite, all 102 migrations: 99 of 99 SQL tests pass (102 is new; 105 reruns cleanly). typecheck is clean.
+Tests: shared 82, API 704 (7 skipped), web 178. biome ci shows 0 errors. The migration and doc-link checks are OK. Not checked in a
+browser. Before 105 goes to live: Ben's yes, a rolled-back dry run, then test 102 on live.
+
 ## 2026-11-23 — `sql/104` applied to live (alert notifications open their page)
 
 **Objective.** Ben's yes (23 Nov) to apply the Track A migration so alert notifications (low stock, expiry, overdue invoices,
