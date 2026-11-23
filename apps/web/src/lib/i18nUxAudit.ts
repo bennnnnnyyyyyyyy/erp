@@ -149,6 +149,20 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Net profit in {month}: {amount}': 'صافي الربح في {month}: {amount}',
   // Low stock pop-up (phase 1a, sql/106)
   'Choose a {party}.': 'اختر {party}.',
+  '{n} item is low': 'صنف واحد منخفض',
+  '{n} items are low': '{n} أصناف منخفضة',
+  'Available {qty}, reorder level {level}': 'المتاح {qty}، حد إعادة الطلب {level}',
+  'suggested order {qty}': 'الطلب المقترح {qty}',
+  'Create purchase order': 'إنشاء أمر شراء',
+  'Ask for it': 'اطلبه',
+  'Remind me': 'ذكّرني',
+  'Remind me…': 'ذكّرني…',
+  'Remind me about {name}': 'ذكّرني بـ {name}',
+  'In 1 hour': 'بعد ساعة',
+  'Next workday': 'يوم العمل التالي',
+  'Next week': 'الأسبوع القادم',
+  "Don't show again": 'لا تعرضه مرة أخرى',
+  'Show all': 'عرض الكل',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

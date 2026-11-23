@@ -5,6 +5,7 @@ import { readableMessage } from '../lib/auditText';
 import { formatDateTime, formatDay } from '../lib/format';
 import { Link, navigate } from '../lib/router';
 import { useSession } from '../session';
+import { LOW_STOCK_EVENT } from './LowStockPopup';
 
 import { tr, trf } from '../lib/i18n';
 export type AppNotification = { id: string; title: string; body: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string };
@@ -38,8 +39,17 @@ export function NotificationBell() {
   const button = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
+  // A low stock alert that arrives while the person works opens the low stock pop-up (sql/106, phase 1a).
+  const seen = useRef<Set<string> | null>(null);
   const load = useCallback(() => {
-    api<{ items: AppNotification[]; unread: number }>('/v1/messaging/notifications').then(setData).catch(() => undefined);
+    api<{ items: AppNotification[]; unread: number }>('/v1/messaging/notifications')
+      .then((d) => {
+        const fresh = seen.current ? d.items.filter((n) => !seen.current!.has(n.id) && !n.readAt && n.entityType === 'alert:stock_below') : [];
+        seen.current = new Set(d.items.map((n) => n.id));
+        if (fresh.length) window.dispatchEvent(new CustomEvent(LOW_STOCK_EVENT));
+        setData(d);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
