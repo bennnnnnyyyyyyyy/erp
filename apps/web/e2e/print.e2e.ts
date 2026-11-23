@@ -5,7 +5,8 @@ import { expect, test, type Page } from '@playwright/test';
 // and English, the ETA layout in both languages, and a draft with its DRAFT mark. The sample build serves fixed sample data (src/lib/demoPrint.ts), so a changed picture means the printed page changed.
 //
 // Pictures differ between Windows and Linux (fonts are drawn differently), so Playwright keeps one set per system (the file name ends in
-// -win32 or -linux). A system without its pictures skips these tests instead of failing; CI (Linux) skips until a Linux set is added.
+// -win32 or -linux). A system without its pictures skips these tests instead of failing. CI (Linux) makes a missing Linux set and offers it
+// as the download "print-pictures-linux" on the run (ci-deploy.yml); look at it, then commit it here.
 // Make or refresh the pictures on purpose, after checking the page by eye:
 //   npx playwright test print --project desktop --update-snapshots          (in apps/web)
 

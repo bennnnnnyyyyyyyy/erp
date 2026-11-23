@@ -86,6 +86,29 @@ jobs:
         if: steps.changes.outputs.app == 'true'
         run: npm run test:e2e -w apps/web
 
+      # Invoice layout pictures (apps/web/e2e/print.e2e.ts) are kept per system and only the Windows set is in the repo, so the smoke
+      # test above skips them here. When the Linux set is missing, make it and offer it as a download ("print-pictures-linux"); a
+      # person looks at the pictures and commits them, and from then on this job compares against them. Never fails the job.
+      - name: Make missing Linux print pictures
+        id: printpics
+        if: steps.changes.outputs.app == 'true'
+        working-directory: apps/web
+        run: |
+          if ls e2e/print.e2e.ts-snapshots/*-linux.png >/dev/null 2>&1; then
+            echo "Linux print pictures are in the repo; the smoke test compared against them."
+          else
+            npx playwright test print --project desktop --update-snapshots || echo "::warning::Could not make the Linux print pictures"
+            if ls e2e/print.e2e.ts-snapshots/*-linux.png >/dev/null 2>&1; then echo "made=true" >> "$GITHUB_OUTPUT"; fi
+          fi
+
+      - name: Offer the new Linux print pictures
+        if: steps.printpics.outputs.made == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: print-pictures-linux
+          path: apps/web/e2e/print.e2e.ts-snapshots/*-linux.png
+          retention-days: 14
+
       - name: Build web app
         run: npm run build -w apps/web
         env:

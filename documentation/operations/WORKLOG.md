@@ -11,6 +11,18 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — CI makes the Linux invoice pictures
+
+**Objective.** The invoice layout picture tests (`apps/web/e2e/print.e2e.ts`) had Windows pictures only, so CI (Linux) skipped them.
+
+**Actions Completed.** Branch `ci/linux-print-pictures`. `.github/workflows/ci-deploy.yml`: after the smoke test, when no `*-linux.png`
+pictures are in the repo, the job makes them and uploads them as the artifact `print-pictures-linux` (14 days); it never fails the job.
+Once someone looks at them and commits them, the smoke test compares against them on every run.
+
+**Database / System Result.** None.
+
+**Safety Status.** Workflow YAML parses. Not yet run on GitHub (it runs on the PR).
+
 ## 2026-11-23 — Send an invoice from the company (`sql/107`, not applied)
 
 **Objective.** Item 5 of the track-b2 brief: the "send from the company" mode of invoice printing. Plan
