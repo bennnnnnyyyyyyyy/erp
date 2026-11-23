@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useId, useRef, useState } from 'react';
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Loading } from './Loading';
 import { api } from '../lib/api';
 import { demoMode } from '../lib/demo';
@@ -6,9 +6,10 @@ import { useI18n } from '../lib/i18n';
 import { Link, ParamsContext, usePath } from '../lib/router';
 import { useTheme } from '../lib/theme';
 import { preloadScreens, resolveRoute, visibleApps } from '../modules/registry';
-import { AppSideMenu } from './AppMenu';
-import { AppIcon } from './icons';
-import { CompanyLogo, ProductLogo } from './Brand';
+import { CompanyLogo } from './Brand';
+import { Frame, type FrameVersion } from './frame/Frame';
+import { useLabChoice } from '../lib/labChoice';
+import { buildSections, pushRecent, sectionOf } from '../lib/sections';
 import { BRAND } from '../lib/brand';
 import { Home } from '../modules/core/Home';
 import { TourHost } from '../modules/help/TourHost';
@@ -97,9 +98,12 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   const path = usePath();
   const apps = visibleApps(session);
   const route = resolveRoute(path, apps);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  useEffect(() => setDrawerOpen(false), [path]);
+  const frame = useLabChoice<FrameVersion>('frame', ['A', 'B', 'C'], 'B');
+  const sections = useMemo(() => buildSections(apps), [apps]);
+  // Recent pages (on this device) for the menu and the home page.
+  useEffect(() => {
+    if (route?.page && route.page.nav !== false) pushRecent(route.app.basePath + route.page.path);
+  }, [route?.app, route?.page]);
   // Fetch every screen's code once the browser is idle after sign-in, so no page (and no tour step) waits for a download later.
   useEffect(() => {
     const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
@@ -116,70 +120,46 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
   const atHome = path === '/' || path === '';
   const Page = route?.page?.component;
 
+  // New frame (new UI plan, 23 Nov 2026): app bar with one search, and the menu in one of three versions being decided (Design Lab).
+  const end = (
+    <>
+      <span className="company-name fr-company"><CompanyLogo /><bdi>{session.org?.name}</bdi></span>
+      <button className="icon-btn fr-icon" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
+        {dark ? '☀' : '☾'}
+      </button>
+      <NotificationBell />
+      <LowStockPopup />
+      <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
+    </>
+  );
   return (
-    <div className={route ? 'shell with-sidebar' : 'shell'}>
+    <>
       <TourHost />
       <TableLabels />
       {!demoMode && ready && !asked && <FirstRunLanguage />}
-      {/* Keyboard users jump past the top bar and the sidebar straight to the page (visible only when focused). */}
+      {/* Keyboard users jump past the app bar and the menu straight to the page (visible only when focused). */}
       <a href="#main" className="skip-link">{t('Skip to content')}</a>
-      {/* Top bar: the product logo (home), the apps grid and the current app (icon and name); at the end the company (its own logo
-          next to its name, never instead of the product's) and the account. The app's own menu is the left list (AppSideMenu); on a
-          phone it is a drawer opened with the menu button. */}
-      <header className="topbar">
-        {route && (
-          <button className="icon-btn drawer-toggle" onClick={() => setDrawerOpen((o) => !o)} aria-label={t('Menu')} aria-expanded={drawerOpen}>
-            ☰
-          </button>
-        )}
-        <Link to="/" className="topbar-brand" title={BRAND.name}>
-          <ProductLogo />
-        </Link>
-        <span className="topbar-sep" aria-hidden="true" />
-        <Link to="/" className={atHome ? 'apps-btn active' : 'apps-btn'} aria-label={t('All apps')} title={t('All apps')}>
-          <span className="grid-icon" aria-hidden="true" />
-          {!route && <span className="apps-btn-label">{t('Apps')}</span>}
-        </Link>
-        {route && (
-          <Link to={route.app.basePath || '/'} className="topbar-app-link">
-            <span className="topbar-app-icon"><AppIcon appKey={route.app.key} name={t(route.app.name)} /></span>
-            <span>{t(route.app.name)}</span>
-          </Link>
-        )}
-        <span className="spacer" />
-        <span className="topbar-org-end">
-          <CompanyLogo />
-          <bdi>{session.org?.name}</bdi>
-        </span>
-        <button className="icon-btn" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
-          {dark ? '☀' : '☾'}
-        </button>
-        <NotificationBell />
-        <LowStockPopup />
-        <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
-      </header>
-
-      {route && <AppSideMenu app={route.app} current={route.page ?? undefined} open={drawerOpen} />}
-
-      <main className="content" id="main" tabIndex={-1}>
-        {atHome ? (
-          <Home apps={apps} />
-        ) : Page ? (
-          <ParamsContext.Provider value={route.params}>
-            {/* Pages are lazy chunks (modules/registry.tsx): the skeleton shows while one is fetched the first time. */}
-            <Suspense fallback={<section className="page"><Loading /></section>}>
-              <Page key={`${lang}:${path}`} />
-            </Suspense>
-          </ParamsContext.Provider>
-        ) : (
-          <section>
-            <h1>{t('Page not found')}</h1>
-            <p className="muted">
-              {t("This page doesn't exist or you don't have access to it.")} <Link to="/">{t('Back to apps')}</Link>
-            </p>
-          </section>
-        )}
-      </main>
-    </div>
+      <Frame version={frame} sections={sections} current={sectionOf(route?.app.key, sections)} path={path || '/'} end={end}>
+        <main className="content" id="main" tabIndex={-1}>
+          {atHome ? (
+            <Home apps={apps} />
+          ) : Page ? (
+            <ParamsContext.Provider value={route.params}>
+              {/* Pages are lazy chunks (modules/registry.tsx): the skeleton shows while one is fetched the first time. */}
+              <Suspense fallback={<section className="page"><Loading /></section>}>
+                <Page key={`${lang}:${path}`} />
+              </Suspense>
+            </ParamsContext.Provider>
+          ) : (
+            <section>
+              <h1>{t('Page not found')}</h1>
+              <p className="muted">
+                {t("This page doesn't exist or you don't have access to it.")} <Link to="/">{t('Back to apps')}</Link>
+              </p>
+            </section>
+          )}
+        </main>
+      </Frame>
+    </>
   );
 }

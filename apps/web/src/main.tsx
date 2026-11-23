@@ -8,6 +8,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { PublicInvoicePage } from './modules/sales/print/PublicInvoicePage';
+import { CreateCompany } from './components/CreateCompany';
 import { DemoApp } from './DemoApp';
 import { EnvBanner, demoEnvironment } from './components/EnvBanner';
 import { demoMode } from './lib/demo';
@@ -21,6 +22,10 @@ import './styles.css';
 // Open the app with ?nolab in the address (for example http://localhost:5173/?nolab) to load without the Lab, e.g. to compare speed.
 if ((import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1') && !new URLSearchParams(location.search).has('nolab')) void import('./components/DesignLab').then((m) => m.mountDesignLab());
 
+// New UI review (dev server and Design Lab previews only): open a screen that normally needs a sign-in, to compare its versions.
+// ?preview=create-company. In a normal or production build the condition is constant-false.
+const preview = import.meta.env.DEV || import.meta.env.VITE_DESIGN_LAB === '1' ? new URLSearchParams(location.search).get('preview') : null;
+
 // A customer's invoice link (/i/<token>, sql/103): no sign-in, no app shell. Everything else is the app.
 const publicInvoice = !demoMode ? /^\/i\/([^/]+)\/?$/.exec(window.location.pathname) : null;
 
@@ -29,7 +34,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <I18nProvider>
-        {publicInvoice ? (
+        {preview === 'create-company' ? (
+          <CreateCompany first onCreated={() => {}} />
+        ) : publicInvoice ? (
           <PublicInvoicePage token={publicInvoice[1] ?? ''} />
         ) : demoMode ? (
           <DemoApp />

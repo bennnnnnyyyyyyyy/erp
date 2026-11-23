@@ -44,7 +44,10 @@ const range = (key: string, section: string, label: string, min: number, max: nu
   ({ key, section, label, kind: 'range', options: [], default: '', min, max, step, unit, ...(help ? { help } : {}) });
 
 export const GROUPS: Group[] = [
-  // ---------- Screens being decided (new UI v2): each screen in 2 or 3 versions; Ben picks one, then the others are deleted ----------
+  // ---------- Screens being decided (new UI v2): each screen in 2 or 3 versions; Ben and Grant pick one, then the others are deleted ----------
+  { key: 'frame', section: 'Screens being decided', label: 'Menu (app frame)', default: 'B', options: [c('A', 'A: Areas on top (Business Central)'), c('B', 'B: Left menu, Home / Recent / Pinned'), c('C', 'C: Search first + icon rail')] },
+  { key: 'home', section: 'Screens being decided', label: 'Home page', default: 'A', options: [c('A', 'A: Attention list (things that need you)'), c('B', 'B: Role center (actions, figures, count tiles)'), c('C', 'C: My work + figures, split')] },
+  { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------
   { key: 'palette', section: 'Colour', label: 'Palette', kind: 'swatches', default: 'bellvox', help: 'Brand colour, accent, background tint and sidebar all follow this. "Bellvox" is the baked-in look (theme.css). "Custom" uses the four sliders below.', options: [
