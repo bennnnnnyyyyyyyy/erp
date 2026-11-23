@@ -55,7 +55,7 @@ export function BatchesPage() {
   return (
     <section className="page wide">
       <h1>{tr('Batches and expiry')}</h1>
-      <p className="muted">{tr('Batch and expiry tracking. Stock is issued first-expiry, first-out (FEFO).')}</p>
+      <p className="muted">{tr('Batches and expiry dates. The batch that expires first goes out first.')}</p>
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}
 
       {canReceive && <ReceiveBatchForm items={items.data} warehouses={warehouses.data} onReceived={reloadAll} />}

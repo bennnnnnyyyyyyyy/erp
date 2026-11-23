@@ -77,8 +77,8 @@ export function TransfersList() {
 
   return (
     <section className="page wide">
-      <h1>{tr('Stock transfers')}</h1>
-      <p className="muted">{tr('Inter-warehouse transfers, approved before dispatch.')}</p>
+      <h1>{tr('Transfers')}</h1>
+      <p className="muted">{tr('Move stock between warehouses. A manager approves first.')}</p>
       {transit.data && transit.data.length > 0 && (
         <div className="form-card stack">
           <strong>{tr('In transit now')}</strong>

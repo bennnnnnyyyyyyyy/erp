@@ -62,8 +62,8 @@ export function AdjustmentsPage() {
 
   return (
     <section className="page">
-      <h1>{tr('Stock adjustments')}</h1>
-      <p className="muted">{tr('Cycle counts. A manager approves any variance before it is posted.')}</p>
+      <h1>{tr('Adjustments')}</h1>
+      <p className="muted">{tr('Correct a quantity after a count. A manager approves the difference before stock changes.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canCount && <FormToggle label={tr('Correct a quantity')} open={formOpen} onOpenChange={setFormOpen}><form className="stack" onSubmit={submit}>
         <p className="muted small">{tr('The books say one number; type what is really there. Your manager will be asked to approve the difference, and stock changes only after they do.')}</p>

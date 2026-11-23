@@ -65,7 +65,7 @@ export function PurchaseOrders() {
   return (
     <section className="page">
       <h1>{tr('Purchase orders')}</h1>
-      <p className="muted">{tr('Purchase orders to suppliers. Goods receipt posts the quantities to stock.')}</p>
+      <p className="muted">{tr('Orders to suppliers. Stock goes up when you receive the goods.')}</p>
       {orders.data && suppliers.data && cat.ready ? (
         <ListView
           title={tr('Purchase orders')}

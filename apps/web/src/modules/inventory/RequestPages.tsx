@@ -46,7 +46,7 @@ export function RequestsList() {
 
   return (
     <section className="page">
-      <h1>{tr('Stock requests')}</h1>
+      <h1>{tr('Requests')}</h1>
       <p className="muted">{tr('Goods are issued only against an approved request.')}</p>
       {requests.data && cat.ready ? (
         <ListView

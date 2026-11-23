@@ -103,7 +103,7 @@ export function TasksPage() {
   return (
     <section className="page">
       <h1>{tr('Tasks')}</h1>
-      <p className="muted">{tr('Assigned tasks with due dates, reminders and escalation.')}</p>
+      <p className="muted">{tr('Tasks with due dates. A late task sends a reminder.')}</p>
       {error && <p className="error notice">{error}</p>}
       {tasks.data && members.data ? (
         <ListView

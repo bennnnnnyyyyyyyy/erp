@@ -52,7 +52,7 @@ export function SupplierInvoices(){
   const toBill=billingRows.filter(r=>r.billed<r.received);
   const shownBilling=showAll?billingRows:toBill;
   return <section className="page">
-    <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Supplier invoices matched against received purchase orders.')}</p>
+    <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Bills from suppliers for the goods you received.')}</p>
     {message&&(message.ok||!(formOpen&&summary))&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
     {hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">

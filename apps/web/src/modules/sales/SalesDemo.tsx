@@ -53,7 +53,7 @@ export function SalesOrders() {
   return (
     <section className="page">
       <h1>{tr('Sales orders')}</h1>
-      <p className="muted">{tr('Customer orders. Goods are issued through a manager-approved stock request.')}</p>
+      <p className="muted">{tr('Orders from customers.')}</p>
       {orders.data && customers.data && cat.ready ? (
         <ListView
           title={tr('Sales orders')}

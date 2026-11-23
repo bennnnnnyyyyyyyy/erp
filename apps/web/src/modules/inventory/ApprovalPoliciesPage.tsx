@@ -52,7 +52,7 @@ export function ApprovalPoliciesPage() {
   return (
     <section className="page">
       <h1>{tr('Approval policies')}</h1>
-      <p className="muted">{tr('Thresholds above which a stock request needs more than one approval.')}</p>
+      <p className="muted">{tr('Ask for a second approval when a stock request is above an amount.')}</p>
       {error && <p className="error notice">{error}</p>}
       {canManage && (
         <FormToggle label={tr('Add or update a policy')}><form className="stack" onSubmit={save}>

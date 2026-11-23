@@ -124,6 +124,19 @@ export const UX_AUDIT_AR: Record<string, string> = {
   // Prices page (UX audit 20 Nov, Track A)
   'Choose a customer first.': 'اختر عميلًا أولًا.',
   '(days; empty = company default)': '(بالأيام؛ فارغ = افتراضي الشركة)',
+  // Plain subtitles, one name per idea (UX audit 20 Nov, Track A)
+  'Batches and expiry dates. The batch that expires first goes out first.': 'الدفعات وتواريخ انتهاء الصلاحية. الدفعة التي تنتهي أولًا تخرج أولًا.',
+  'Move stock between warehouses. A manager approves first.': 'نقل المخزون بين المستودعات. يعتمد المدير أولًا.',
+  'Correct a quantity after a count. A manager approves the difference before stock changes.': 'تصحيح كمية بعد الجرد. يعتمد المدير الفرق قبل أن يتغير المخزون.',
+  'Orders to suppliers. Stock goes up when you receive the goods.': 'طلبات الشراء من الموردين. يزيد المخزون عند استلام البضاعة.',
+  'Bills from suppliers for the goods you received.': 'فواتير الموردين عن البضاعة التي استلمتها.',
+  'Orders from customers.': 'طلبات العملاء.',
+  'Ask for a second approval when a stock request is above an amount.': 'اطلب اعتمادًا ثانيًا عندما يزيد طلب المخزون عن مبلغ معين.',
+  'Tasks with due dates. A late task sends a reminder.': 'مهام لها مواعيد. المهمة المتأخرة ترسل تذكيرًا.',
+  'The rules are checked every five minutes.': 'تُفحص القواعد كل خمس دقائق.',
+  'Send again after (hours)': 'أعد الإرسال بعد (ساعات)',
+  'Send again after': 'أعد الإرسال بعد',
+  'Times sent': 'مرات الإرسال',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

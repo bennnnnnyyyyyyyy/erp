@@ -94,7 +94,7 @@ export function CountsList() {
 
   return (
     <section className="page wide">
-      <h1>{tr('Stock counts')}</h1>
+      <h1>{tr('Counts')}</h1>
       <p className="muted">{tr('Count a whole warehouse. The differences change stock only after a manager approves them.')}</p>
       {canStart && warehouses && warehouses.length > 0 && (
         <form className="form-card stack" onSubmit={start}>
