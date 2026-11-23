@@ -41,6 +41,8 @@ export const MODULES: readonly ModuleManifest[] = [
       // Integrations (INTEGRATIONS_PLAN.md, sql/053): owners and admins only (neither key ends in ".read").
       'core.integrations.view',
       'core.integrations.manage',
+      // Invoice printing (sql/103): logo, letterhead and document settings. Owners and admins (the database checks the role again).
+      'core.templates.manage',
     ],
     suite: 'Core',
   },
@@ -151,6 +153,8 @@ export const MODULES: readonly ModuleManifest[] = [
       'sales.orders.manage',
       'sales.invoices.read',
       'sales.invoices.manage',
+      // Invoice printing (sql/103): send by WhatsApp or email, make or switch off the customer link. Members too.
+      'sales.invoices.send',
       'sales.notes.read',
       'sales.notes.create',
       'sales.notes.approve',
@@ -158,7 +162,7 @@ export const MODULES: readonly ModuleManifest[] = [
       'sales.prices.read',
       'sales.prices.manage',
     ],
-    memberGrants: ['sales.orders.create', 'sales.orders.fulfill', 'sales.notes.create'],
+    memberGrants: ['sales.orders.create', 'sales.orders.fulfill', 'sales.notes.create', 'sales.invoices.send'],
     suite: 'Sales & Purchasing',
   },
   {

@@ -54,6 +54,8 @@ const SalesOrders = lazyNamed(() => import('./sales/SalesDemo'), 'SalesOrders');
 const OnlineOrders = lazyNamed(() => import('./sales/OnlineOrders'), 'OnlineOrders');
 const CustomerInvoicePage = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoicePage');
 const CustomerInvoices = lazyNamed(() => import('./sales/CustomerInvoices'), 'CustomerInvoices');
+const InvoicePrintPage = lazyNamed(() => import('./sales/print/InvoicePrintPage'), 'InvoicePrintPage');
+const DocumentSettings = lazyNamed(() => import('./core/settings/DocumentSettings'), 'DocumentSettings');
 const PricesPage = lazyNamed(() => import('./sales/Prices'), 'PricesPage');
 const ExpensesPage = lazyNamed(() => import('./finance/Finance'), 'ExpensesPage');
 const PaymentsPage = lazyNamed(() => import('./finance/Finance'), 'PaymentsPage');
@@ -214,6 +216,8 @@ const SALES_APP: AppDef = {
     { path: '/online-orders', label: 'Online orders', permission: 'core.integrations.view', component: OnlineOrders },
     { path: '/invoices', label: 'Sales invoices', permission: 'sales.invoices.read', component: CustomerInvoices },
     { path: '/invoices/:id', label: 'Sales invoice', permission: 'sales.invoices.read', component: CustomerInvoicePage, nav: false, parent: '/invoices' },
+    // Invoice printing (sql/103): a draft, an invoice or a note on A4; print, PDF, send.
+    { path: '/print/:type/:id', label: 'Print or send', permission: 'sales.invoices.read', component: InvoicePrintPage, nav: false, parent: '/invoices' },
   ],
 };
 
@@ -349,6 +353,8 @@ export const APPS: AppDef[] = [
       ...(demoMode ? [] : [{ path: '/integrations', label: 'Integrations', permission: 'core.integrations.view', component: IntegrationsSettings }]),
       // Import items, customers and suppliers from a CSV or Excel file (Sheets option A). Each kind needs its own manage permission.
       ...(demoMode ? [] : [{ path: '/import', label: 'Import from a file', anyPermission: ['inventory.items.manage', 'sales.customers.manage', 'purchasing.suppliers.manage'], component: ImportFromFile }]),
+      // Invoice printing (sql/103): logo, letterhead, texts, language and digits of the company's documents. Real API only.
+      ...(demoMode ? [] : [{ path: '/documents', label: 'Invoices and documents', permission: 'core.templates.manage', component: DocumentSettings }]),
       { path: '/apps', label: 'Apps', permission: 'core.org.manage', component: AppsSettings },
       { path: '/audit', label: 'Audit log', permission: 'core.org.manage', component: AuditLog },
     ],
@@ -372,7 +378,7 @@ export const MENU_GROUPS: Record<string, Record<string, string>> = {
   },
   // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
   settings: {
-    '': 'Company', '/branches': 'Company', '/users': 'Company', '/apps': 'Company',
+    '': 'Company', '/branches': 'Company', '/users': 'Company', '/documents': 'Company', '/apps': 'Company',
     '/me': 'Your account',
     '/integrations': 'Connections', '/import': 'Connections',
     '/audit': 'Records',

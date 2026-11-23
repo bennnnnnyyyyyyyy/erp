@@ -6,7 +6,7 @@ import { formatDateTime, formatDay } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { todayIn } from '../../lib/dates';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { ClickRow } from '../../components/ClickRow';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { RecordHistory } from '../../components/RecordHistory';
@@ -15,6 +15,7 @@ import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { PaymentLinks } from '../finance/PaymentLinks';
 import { Pill } from '../trade/common';
 import { InvoiceNotes } from './InvoiceNotes';
+import { DraftInvoices, type InvoiceDraft } from './print/DraftInvoices';
 import { netInvoiceMinor } from './noteMath';
 
 import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
@@ -29,6 +30,7 @@ type Order = { id: string; number: string; customerId: string; status: string; c
 type InvoiceLine = { id?: string; orderLineId: string; qty: number; unitPriceMinor: number; taxRate?: number; netMinor?: number; taxMinor?: number; grossMinor?: number; priceIncludesVat?: boolean };
 type Invoice = { id: string; number: string; orderId: string; customerId: string; invoiceDate: string; dueDate?: string; currency: string; status: 'issued' | 'void'; totalMinor: number; netMinor?: number; taxMinor?: number; grossMinor?: number; createdAt: string; creditedMinor?: number; debitedMinor?: number; lines: InvoiceLine[] };
 type Customer = { id: string; name: string };
+
 type Item = { id: string; sku: string; name: string; uom?: string };
 
 const FLAG: Record<BillingFlag, { label: string; pill: string }> = {
@@ -58,6 +60,9 @@ export function CustomerInvoices() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [formOpen, setFormOpen] = useState(Boolean(preset));
+  // Invoice printing (sql/103): "Create" saves a draft (no number, nothing posted); Issue gives the number. Editing reopens this form.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draftsKey, setDraftsKey] = useState(0);
 
   const invoicedByLine = useMemo(() => {
     const m = new Map<string, number>();
@@ -90,9 +95,9 @@ export function CustomerInvoices() {
         const taxRateId = vatOn ? lineRate[b.orderLineId] : undefined;
         return { orderLineId: b.orderLineId, qty: qtyFor(b), ...(taxRateId ? { taxRateId } : {}) };
       });
-      const made = await api<{ number: string }>(`/v1/sales/orders/${chosen.o.id}/invoices`, { method: 'POST', body: JSON.stringify({ invoiceDate: date, lines }) });
-      setMessage({ ok: true, text: trf('Invoice {number} created.', { number: made.number }) }); setOrderId(''); setQty({}); setLineRate({});
-      invoices.reload();
+      await api<{ id: string }>('/v1/sales/invoice-drafts', { method: 'POST', body: JSON.stringify({ draftId: editing, orderId: chosen.o.id, invoiceDate: date, lines }) });
+      setMessage({ ok: true, text: tr('Draft saved. Check it, then issue it: it gets its number then and can no longer change.') }); setOrderId(''); setQty({}); setLineRate({}); setEditing(null);
+      setDraftsKey((k) => k + 1);
     } catch (e) { setMessage({ ok: false, text: (e as Error).message }); } finally { setBusy(false); }
   }
 
@@ -110,19 +115,19 @@ export function CustomerInvoices() {
   return (
     <section className="page wide">
       <h1>{tr('Sales invoices')}</h1>
-      <p className="muted">{tr('Invoice delivered sales orders. A wrong invoice is voided, not edited.')}</p>
+      <p className="muted">{tr('Invoice delivered sales orders. A new invoice starts as a draft. Once issued it never changes: correct it with a credit or debit note.')}</p>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
 
       {canManage && (
         <FormToggle label={tr('Create an invoice')} open={formOpen} onOpenChange={setFormOpen}>
           <div className="form-row">
             <label>{tr('Delivered sales order')}
-              <select value={orderId} onChange={(e) => { setOrderId(e.target.value); setQty({}); }}>
+              <select value={orderId} disabled={!!editing} onChange={(e) => { setOrderId(e.target.value); setQty({}); }}>
                 <option value="">{tr('Choose an order…')}</option>
                 {open.map((r) => <option key={r.o.id} value={r.o.id}>{r.o.number} · {customer(r.o.customerId)}</option>)}
               </select>
             </label>
-            <label>{tr('Invoice date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></label>
+            <label>{tr('Invoice date')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /><span className="muted small">{formatDay(date, session.org)}</span></label>
           </div>
           {chosen && (
             <>
@@ -144,11 +149,15 @@ export function CustomerInvoices() {
               </tbody></table></div>
               {vatOn ? <p className="muted small">{vat.data?.pricesIncludeVat ? tr('Prices include VAT: each line is split into the amount before VAT and the VAT when the invoice is created, and never changes afterwards.') : tr('Prices are before VAT. The VAT is worked out on each line when the invoice is created and never changes afterwards.')}</p> : null}
               {!chosen.billing.some((b) => qtyFor(b) > 0) ? <p className="muted small">{tr('Nothing is left to invoice on this order.')}</p> : null}
-              <Button disabled={busy || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Creating…') : tr('Create invoice')}</Button>
+              <Button disabled={busy || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Saving…') : editing ? tr('Save draft') : tr('Create draft invoice')}</Button>
             </>
           )}
         </FormToggle>
       )}
+
+      <DraftInvoices key={draftsKey} canManage={canManage} customer={customer} orderNumber={(oid) => orders.data?.find((o) => o.id === oid)?.number ?? '—'}
+        onEdit={(d: InvoiceDraft) => { setEditing(d.id); setOrderId(d.orderId); setDate(d.invoiceDate); setQty(Object.fromEntries(d.lines.map((l) => [l.orderLineId, String(l.qty)]))); setLineRate(Object.fromEntries(d.lines.filter((l) => l.taxRateId).map((l) => [l.orderLineId, l.taxRateId ?? '']))); setFormOpen(true); window.scrollTo({ top: 0 }); }}
+        onIssued={(number) => { setMessage({ ok: true, text: trf('Invoice {number} issued.', { number }) }); invoices.reload(); }} />
 
       <h2 className="related">{tr('Invoices')}</h2>
       <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Customer')}</th><th scope="col">{tr('Order')}</th><th scope="col">{tr('Created')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
@@ -234,6 +243,7 @@ export function CustomerInvoicePage() {
       <div className="page-head">
         <h1 className="mono">{inv.number}</h1>
         <Pill status={inv.status === 'void' ? 'cancelled' : 'received'} label={inv.status === 'void' ? tr('Void') : tr('Issued')} />
+        <Link to={`/sales/print/invoice/${inv.id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{tr('Print or send')}</Link>
       </div>
       {message && <p className={message.ok ? 'notice' : 'error notice'}>{message.text}</p>}
       <dl className="facts">
@@ -265,7 +275,7 @@ export function CustomerInvoicePage() {
       </table></div>
 
       {inv.status === 'void' && <p className="muted">{tr('This invoice was voided. Its quantity can be invoiced again.')}</p>}
-      {canManage && inv.status === 'issued' && <div className="form-actions" style={{ marginBlockStart: '1rem' }}><ConfirmButton label={tr('Void invoice')} confirmLabel={tr('Yes, void it')} question={tr('Void this invoice? It can not be undone; its quantity can then be invoiced again.')} disabled={busy} onConfirm={voidIt} /></div>}
+      {canManage && inv.status === 'issued' && <div className="form-actions" style={{ marginBlockStart: '1rem' }}><ConfirmButton label={tr('Void invoice')} confirmLabel={tr('Yes, void it')} question={tr('Void this invoice only if it should never have been issued (for example, the wrong customer). To change amounts or quantities, make a credit or debit note instead. Voiding cannot be undone; the quantity can then be invoiced again, and its customer link stops working.')} disabled={busy} onConfirm={voidIt} /></div>}
       <InvoiceNotes invoice={inv} itemOf={itemOf} onChanged={invoices.reload} />
       {inv.status === 'issued' && <PaymentsAgainst key={payKey} field="customerInvoiceId" id={inv.id} totalMinor={net} currency={inv.currency} />}
       {inv.status === 'issued' && <PaymentLinks invoiceId={inv.id} onPaid={() => setPayKey((k) => k + 1)} />}

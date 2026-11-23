@@ -106,7 +106,10 @@ begin
   cinv := ((public.sal_create_invoice(so, current_date, jsonb_build_array(jsonb_build_object('orderLineId', ol, 'qty', 2)))) ->> 'id')::uuid;
   r4 := public.alr_create_rule('Overdue', 'receivable_overdue', null, 30, 24, jsonb_build_array(jsonb_build_object('type', 'role', 'role', 'owner')));
   reset role;
+  -- fixture: back-date the issued invoice (sql/103 locks issued invoices; only a database-owner session may, with this setting)
+  perform set_config('erp.allow_issued_fix', 'on', true);
   update public.sal_invoices set invoice_date = current_date - 40 where id = cinv;
+  perform set_config('erp.allow_issued_fix', '', true);
   j := public.alr_run(o);
   select count(*) into n from public.msg_outbox where org_id = o and recipient_id = u and subject like 'Overdue invoice%'; if n <> 1 then raise exception 'FAIL S6a: overdue alerts % (expected 1)', n; end if;
   update public.alr_firings set last_fired_at = now() - interval '2 days' where rule_id = r4;
