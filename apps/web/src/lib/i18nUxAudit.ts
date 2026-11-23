@@ -137,6 +137,11 @@ export const UX_AUDIT_AR: Record<string, string> = {
   'Send again after (hours)': 'أعد الإرسال بعد (ساعات)',
   'Send again after': 'أعد الإرسال بعد',
   'Times sent': 'مرات الإرسال',
+  // Reorder levels: one save (UX audit 20 Nov, Track A)
+  'Not watched': 'غير مراقب',
+  'Save changes ({n})': 'حفظ التغييرات ({n})',
+  '{n} reorder level(s) saved.': 'تم حفظ {n} من حدود إعادة الطلب.',
+  '{sku}: a reorder level must be zero or more, or empty.': '{sku}: يجب أن يكون حد إعادة الطلب صفرًا أو أكثر، أو فارغًا.',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };
