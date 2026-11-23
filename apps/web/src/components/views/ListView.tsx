@@ -17,6 +17,8 @@ export type Column<T> = {
   align?: 'left' | 'right';
   /** Extra class for the heading and every cell (for example `col-sticky-end` keeps an Actions column in view). */
   className?: string;
+  /** Not shown as a column, but still searched and exported (UX audit 20 Nov: lists with 11 columns ran off the screen). */
+  hidden?: boolean;
 };
 
 type Props<T> = {
@@ -44,6 +46,7 @@ function csvCell(v: string | number | null): string {
 export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref, more }: Props<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
+  const visible = columns.filter((c) => !c.hidden);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -100,7 +103,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
         <table>
           <thead>
             <tr>
-              {columns.map((c) => (
+              {visible.map((c) => (
                 <th key={c.key} scope="col" className={[c.align === 'right' ? 'right' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}>
                   <button className="th-sort" onClick={() => toggleSort(c.key)} aria-label={c.label || tr('Actions')}>
                     {c.label}
@@ -116,7 +119,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
               const cells = (
                 <>
                   {/* data-label: on a phone each row becomes a card and each cell shows its column name (styles.css). */}
-                  {columns.map((c) => (
+                  {visible.map((c) => (
                     <td key={c.key} data-label={c.label} className={[c.align === 'right' ? 'right' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}>
                       {c.render ? c.render(r) : c.value(r)}
                     </td>
@@ -128,7 +131,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="muted empty">
+                <td colSpan={visible.length + (actions ? 1 : 0)} className="muted empty">
                   {rows.length === 0 ? (empty ?? tr('Nothing here yet.')) : tr('No matches.')}
                   {rows.length === 0 && emptyAction && <div className="empty-action">{emptyAction}</div>}
                 </td>

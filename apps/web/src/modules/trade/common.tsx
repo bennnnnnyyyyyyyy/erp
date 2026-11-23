@@ -147,29 +147,24 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
   const columns: Column<Party>[] = [
     // sql/050: the code is searchable like every column (ListView searches all of them).
     ...(demoMode ? [] : [{ key: 'code', label: tr('Code'), value: (p: Party) => p.code ?? '', render: (p: Party) => <code>{p.code}</code> }]),
+    // UX audit 20 Nov: 11 columns ran off the screen and names wrapped to three lines. The list shows code, name, city and terms;
+    // contact, phone, email, tax number and currency are still searched and exported, and are seen and changed under Edit.
     { key: 'name', label: tr('Name'), value: (p) => p.name, render: (p) => <strong>{p.name}</strong> },
-    { key: 'contact', label: tr('Contact'), value: (p) => p.contact },
+    { key: 'contact', label: tr('Contact'), value: (p) => p.contact, hidden: true },
     { key: 'city', label: tr('City'), value: (p) => p.city },
-    { key: 'phone', label: tr('Phone'), value: (p) => p.phone, render: (p) => <code>{p.phone}</code> },
+    { key: 'phone', label: tr('Phone'), value: (p) => p.phone, hidden: true },
     ...(withDetails
       ? [
-          { key: 'email', label: tr('Email'), value: (p: Party) => p.email ?? '' },
-          { key: 'tax', label: tr('Tax registration no.'), value: (p: Party) => p.taxNumber ?? '', render: (p: Party) => <code>{p.taxNumber}</code> },
-          { key: 'currency', label: tr('Currency'), value: (p: Party) => p.defaultCurrency ?? '' },
+          { key: 'email', label: tr('Email'), value: (p: Party) => p.email ?? '', hidden: true },
+          { key: 'tax', label: tr('Tax registration no.'), value: (p: Party) => p.taxNumber ?? '', hidden: true },
+          { key: 'currency', label: tr('Currency'), value: (p: Party) => p.defaultCurrency ?? '', hidden: true },
         ]
       : []),
     {
       key: 'terms',
       label: tr('Payment terms'),
       value: (p) => p.paymentTermsDays ?? -1,
-      render: (p) =>
-        canSetTerms ? (
-          <TermsCell party={p} endpoint={endpoint} onSaved={parties.reload} />
-        ) : p.paymentTermsDays == null ? (
-          <span className="muted">{tr('Company default')}</span>
-        ) : (
-          trf('{n} days', { n: p.paymentTermsDays })
-        ),
+      render: (p) => (p.paymentTermsDays == null ? <span className="muted">{tr('Company default')}</span> : trf('{n} days', { n: p.paymentTermsDays })),
     },
     ...(canEdit
       ? [
@@ -212,6 +207,12 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
               </p>
             )}
             <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
+            {editing && canSetTerms ? (
+              // Saved on its own as soon as it changes (owners and admins; the database checks again), as before in the list.
+              <label>{tr('Payment terms')} <span className="muted small">{tr('(days; empty = company default)')}</span>
+                <TermsCell party={editing} endpoint={endpoint} onSaved={parties.reload} />
+              </label>
+            ) : null}
             <div className="form-row">
               <label>{tr('Contact person (optional)')}<input value={form.contact} onChange={set('contact')} /></label>
               <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
