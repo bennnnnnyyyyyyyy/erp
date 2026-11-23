@@ -224,6 +224,8 @@ const DEMO_SALES_APP: AppDef = {
     { path: '/customers', label: 'Customers', component: Customers },
     { path: '/customers/:id', label: 'Customer', component: CustomerNew, nav: false, parent: '/customers', newOnly: true },
     ...EMPTY_PREVIEW,
+    // Sample print data only (lib/demoPrint.ts), for the layout picture tests (e2e/print.e2e.ts). Not in the menu.
+    { path: '/print/:type/:id', label: 'Print or send', component: InvoicePrintPage, nav: false, parent: '' },
   ],
 };
 

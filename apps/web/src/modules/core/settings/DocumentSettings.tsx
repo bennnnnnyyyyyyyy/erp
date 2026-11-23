@@ -19,6 +19,7 @@ import { api } from '../../../lib/api';
 import { tr } from '../../../lib/i18n';
 import { useLoad } from '../../../lib/useLoad';
 import { PrintDocument } from '../../sales/print/PrintDocument';
+import { isPdfFile, letterheadFromPdf } from './letterheadPdf';
 
 // Settings > Invoices and documents (sql/103): the company's own look on its invoices and notes. Owners and admins. A live preview with a
 // sample invoice shows the letterhead and its margins. This is the customer's branding on its own paper; the app itself looks like Bellvox.
@@ -28,7 +29,7 @@ const LANGUAGE_LABEL: Record<DocLanguage, string> = { ar: 'Arabic', en: 'English
 const DIGITS_LABEL: Record<DocDigits, string> = { latn: 'Western digits (1 2 3)', arab: 'Arabic-Indic digits (١ ٢ ٣)' };
 const SEND_LABEL: Record<DocSendMode, string> = {
   device: 'From the person’s own phone or computer (WhatsApp or email app)',
-  queue: 'From the company’s connected WhatsApp Business or email (coming next; until then, from the device)',
+  queue: 'From the company: email through your connected email (Settings → Integrations); WhatsApp once the invoice template is approved',
 };
 
 function readImage(file: File, max: number): Promise<string> {
@@ -63,6 +64,7 @@ export function DocumentSettings() {
   const loaded = useLoad(() => api<DocSettings>('/v1/core/doc-settings'));
   const [draft, setDraft] = useState<DocSettings | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);   // a PDF letterhead is being turned into a picture
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   if (!loaded.data) return <section className="page"><Loading error={loaded.error} /></section>;
@@ -74,9 +76,18 @@ export function DocumentSettings() {
     if (!file) return;
     setMessage(null);
     try {
-      set({ [kind]: await readImage(file, kind === 'logo' ? DOC_LOGO_MAX_CHARS : DOC_LETTERHEAD_MAX_CHARS) });
+      // A letterhead may also be a one-page PDF: it is turned into a picture of the page here, in the browser.
+      if (kind === 'letterhead' && isPdfFile(file)) {
+        setReading(true);
+        set({ letterhead: await letterheadFromPdf(file, DOC_LETTERHEAD_MAX_CHARS) });
+        setMessage({ ok: true, text: tr('The PDF letterhead was turned into a picture of the page. Check the preview, then save.') });
+      } else {
+        set({ [kind]: await readImage(file, kind === 'logo' ? DOC_LOGO_MAX_CHARS : DOC_LETTERHEAD_MAX_CHARS) });
+      }
     } catch (e) {
       setMessage({ ok: false, text: (e as Error).message });
+    } finally {
+      setReading(false);
     }
   }
 
@@ -108,9 +119,10 @@ export function DocumentSettings() {
         {s.logo ? <Button variant="ghost" size="sm" onClick={() => set({ logo: null })}>{tr('Remove logo')}</Button> : null}
       </div>
       <div className="form-row">
-        <label>{tr('Letterhead: a picture of your whole A4 paper (PNG, JPEG or WebP, up to about 1.5 MB)')}
-          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void pick('letterhead', e.target.files?.[0])} />
+        <label>{tr('Letterhead: your whole A4 paper, as a one-page PDF or a picture (PNG, JPEG or WebP, up to about 1.5 MB)')}
+          <input type="file" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp" disabled={reading} onChange={(e) => void pick('letterhead', e.target.files?.[0])} />
         </label>
+        {reading ? <span className="muted small" role="status">{tr('Reading the PDF…')}</span> : null}
         {s.letterhead ? <Button variant="ghost" size="sm" onClick={() => set({ letterhead: null })}>{tr('Remove letterhead')}</Button> : null}
       </div>
       {s.letterhead ? (
@@ -138,7 +150,7 @@ export function DocumentSettings() {
         <select value={s.sendMode ?? 'device'} onChange={(e) => set({ sendMode: e.target.value as DocSendMode })}>{DOC_SEND_MODES.map((m) => <option key={m} value={m}>{tr(SEND_LABEL[m])}</option>)}</select>
       </label>
       <div className="form-actions" style={{ marginBlock: '1rem' }}>
-        <Button disabled={busy || !changed} onClick={save}>{busy ? tr('Saving…') : tr('Save')}</Button>
+        <Button disabled={busy || reading || !changed} onClick={save}>{busy ? tr('Saving…') : tr('Save')}</Button>
         {changed ? <Button variant="ghost" disabled={busy} onClick={() => setDraft(null)}>{tr('Undo changes')}</Button> : null}
       </div>
 

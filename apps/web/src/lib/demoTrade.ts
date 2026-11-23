@@ -1,3 +1,4 @@
+import { demoPrintData } from './demoPrint';
 import { catalog, createRequest, getRequest, receiveGoods, DemoRuleError, type Actor, type RequestStatus } from './demoInventory';
 
 // DEMO ONLY: sample purchasing and sales on top of the inventory demo, to show how the product grows
@@ -147,6 +148,14 @@ export function handleTrade(domain: 'purchasing' | 'sales', method: string, part
     parties.push(party);
     actor.log(`${domain}.${kind}.created`, kind, party.id, `${kind === 'supplier' ? 'Supplier' : 'Customer'} ${name} added`);
     return party;
+  }
+
+  // Invoice printing (sample data only, for looking at the print page and its picture tests): no link is on, nothing is recorded.
+  if (domain === 'sales' && area === 'print' && method === 'GET') return demoPrintData(id, action);
+  if (domain === 'sales' && area === 'documents' && method === 'GET') {
+    // .../queue (sql/107): the sample company sends from the device; .../link: no link is on.
+    if (parts[3] === 'queue') return { sendMode: 'device', emailConnected: false, whatsappReady: false, customerEmail: null, customerPhone: null, sends: [] };
+    return { active: false };
   }
 
   if (area !== 'orders') throw new DemoRuleError(404, 'Not available in demo mode', 'not_found');

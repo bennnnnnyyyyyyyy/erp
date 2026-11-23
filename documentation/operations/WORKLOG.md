@@ -11,6 +11,110 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — `sql/107` applied to live (send an invoice from the company)
+
+**Objective.** PR #106 (send an invoice from the company) is merged; its database part, `sql/107_sal_doc_send_queue.sql`, was not on live.
+
+**Actions Completed.** Ben said "yes 107". Checked live first: 103 and 106 present, `msg_outbox.to_address` absent. A rolled-back dry run of
+`sql/107` on live (the file up to its `commit`, then `rollback`; no error; checked afterwards that nothing stayed). Then applied with
+`npx supabase db query --linked -f sql/107_sal_doc_send_queue.sql`. Its verification: kind `document` allowed, shape rule present,
+users cannot read `doc_params`, users can read `to_address`, anonymous cannot queue, signed-in users can, `core_doc_sends.outbox_id`
+exists (all as expected). Then `sql/tests/104_doc_send_queue.sql` and `sql/tests/092_column_grants.sql` on live: both
+"ALL TESTS PASSED (everything rolled back)". `sql/README.md` row updated.
+
+**Database / System Result.** Live project ggoerp: `sql/107` applied. No data changed (live holds only test data). WhatsApp sending from the
+company stays off until `WHATSAPP_DOC_TEMPLATE` is set (needs the approved Meta template); email works for a company with the email
+integration on and "How Send works" set to "From the company".
+
+**Safety Status.** Not done: a real send from the company in the browser (Ben's step, report section 9). The Linux invoice pictures commit
+(`e855c45`) is not on main; Ben closed that, so CI keeps skipping the picture comparison on Linux.
+
+## 2026-11-23 — CI makes the Linux invoice pictures
+
+**Objective.** The invoice layout picture tests (`apps/web/e2e/print.e2e.ts`) had Windows pictures only, so CI (Linux) skipped them.
+
+**Actions Completed.** Branch `ci/linux-print-pictures`. `.github/workflows/ci-deploy.yml`: after the smoke test, when no `*-linux.png`
+pictures are in the repo, the job makes them and uploads them as the artifact `print-pictures-linux` (14 days); it never fails the job.
+Once someone looks at them and commits them, the smoke test compares against them on every run.
+
+**Database / System Result.** None.
+
+**Safety Status.** Workflow YAML parses. Not yet run on GitHub (it runs on the PR).
+
+## 2026-11-23 — Send an invoice from the company (`sql/107`, not applied)
+
+**Objective.** Item 5 of the track-b2 brief: the "send from the company" mode of invoice printing. Plan
+`documentation/plans/INVOICE_SEND_QUEUE_PLAN.md`, approved by Ben 23 Nov (one Meta template in Arabic and English; one email per customer).
+
+**Actions Completed.** Branch `feat/invoice-send-queue` from `origin/main`.
+- `sql/107_sal_doc_send_queue.sql`: `msg_outbox` kind `document` with `to_address` and `doc_params` and a shape rule;
+  `sal_queue_doc_send` (all checks, link, message, send record with `outbox_id`, audit, once a minute, 200 an hour);
+  `sal_doc_queue_status`; `sal_record_doc_send` refuses `queue`. Test `sql/tests/104_doc_send_queue.sql`.
+- API: `GET/POST /v1/sales/documents/:type/:id/queue` (`sales.invoices.read` / `.send`); the link address comes from the allowed origins,
+  never the body; WhatsApp answers 409 `not_connected` until `WHATSAPP_DOC_TEMPLATE` is set. Email channel sends a document to
+  `to_address`; WhatsApp channel sends a document as the approved template (company, document, amount, link). `waPhone` and
+  `looksLikeEmail` moved to `@erp/shared`. No master-key change: delivery stays in `jobs/outbox.ts` (every five minutes).
+- Web: print page in "send from the company" mode fills in the customer's email and phone, queues, says when a channel is not ready
+  (then the device send), and lists the sends with their status. Settings wording and Arabic strings.
+- Found: WhatsApp and email are not per company (our one number, our Resend sender). Recorded in the plan as question 4 for Ben.
+
+**Database / System Result.** None on live. All 102 SQL tests pass locally on PGlite (107 run twice). CI first failed on test 092:
+`msg_outbox.doc_params` is unreadable on purpose and is now listed there with its reason.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` shared 88, API 742 (7 skipped), web 188; `biome ci` 0 errors; Playwright
+13 passed, 9 skipped (Windows pictures only where present; the picture tests skip on phone). Not done: apply `sql/107` to live (needs Ben's yes);
+the Meta template; a real send.
+
+## 2026-11-23 — PDF letterhead; cloud PDF choice and cloud deployment plan (track-b2, part 2)
+
+**Objective.** Item 4 of the track-b2 brief (a company uploads its letterhead as a PDF), after Ben installed `pdfjs-dist`; and Ben's
+decisions of 23 Nov on PDFs for on-prem and cloud.
+
+**Actions Completed.** Branch `feat/invoice-printing-2`.
+- Decisions recorded (Ben, 23 Nov): on-prem makes PDFs with **Gotenberg** on the same server (`pdf` container in
+  `documentation/planning/2026-11-19-on-prem-deployment-plan.md`); the cloud uses **Cloudflare Browser Run** (option A in
+  `documentation/plans/INVOICE_SEND_QUEUE_PLAN.md` section 6). New `documentation/planning/2026-11-23-cloud-deployment-plan.md` with
+  the Cloudflare Workers Paid plan step (Ben: a deployment plan that includes cloud must include the Cloudflare plan).
+- PDF letterhead: `apps/web/src/modules/core/settings/letterheadPdf.ts` draws page 1 of a one-page PDF with pdf.js in the browser and
+  saves it as a JPEG of the A4 page within the existing letterhead limit (tries 1240/992/827 px wide at falling quality). Refuses: more
+  than one page, more than 10 MB, a password, an unreadable file. No XFA forms. `DocumentSettings.tsx` accepts PDF for the letterhead.
+  pdf.js and its worker load only when a PDF is picked (own chunks in the build). `apps/web/package.json` and `package-lock.json`:
+  `pdfjs-dist` 6.5.438 (installed by Ben). New Arabic strings in `lib/i18nPrinting.ts`.
+- Tests: `letterheadPdf.test.ts` (size choice); `e2e/letterhead.e2e.ts` (real Chrome: a one-page PDF becomes a 1240 x 1754 JPEG with the
+  right colours, a two-page PDF is refused).
+
+**Database / System Result.** None. Nothing bought or changed on Cloudflare.
+
+**Safety Status.** `npm run typecheck` clean; `npm test` shared 88, API 737 (7 skipped), web 188; `biome ci` 0 errors;
+`letterhead.e2e.ts` passed; production build makes the pdf.js chunks. Not checked: a real company letterhead PDF (with Arabic fonts) in
+the live app; that the live host serves the `.mjs` worker file as JavaScript (Ben's browser step).
+
+## 2026-11-23 — Invoice printing leftovers (track-b2): invoice page fixes, layout picture tests, three print fixes
+
+**Objective.** Finish the invoice printing leftovers from the master chat's brief (`.temp/2026-11-23-track-b2-brief.md`), in its order.
+
+**Actions Completed.** Branch `feat/invoice-printing-2` from `origin/main`; not pushed.
+- Item 1 (commit `18d47df`): `CustomerInvoices.tsx` invoice date box is now `components/DateInput` (company date format). The old
+  subtitle "A wrong invoice is voided, not edited." was already replaced by Track B; its orphan Arabic entry is removed from
+  `lib/i18nScreens.ts`, and the Guide text (`help/helpContent.ts`, English and Arabic) now says drafts, then credit or debit notes.
+  The Void button stays (Ben's decision).
+- Item 2 (commit `dc46439`): layout picture tests `apps/web/e2e/print.e2e.ts` (8 pictures: simple, detailed, ETA in Arabic and
+  English; ETA in both; a draft with its DRAFT mark) on fixed sample print data (`lib/demoPrint.ts`, served by `demo.ts` /
+  `demoTrade.ts`; the sample build's Sales app has the print page, not in its menu). Pictures are kept per system; only Windows pictures
+  exist, so CI (Linux) skips these tests until a Linux set is added.
+- Print fixes found by the pictures: (1) the ETA sheet was laid out in one row (the sheet's class `print-eta` also styled the QR box as
+  flex; the box is now `print-eta-box`); (2) the ETA line table was wider than A4 and its last columns were cut off on paper (smaller
+  type, codes may break); (3) English-only paper used the Arabic comma in addresses.
+- Item 5 plan written: `documentation/plans/INVOICE_SEND_QUEUE_PLAN.md` (draft, waiting for Ben). Item 4 (PDF letterhead) waits for
+  Ben to install `pdfjs-dist`.
+
+**Database / System Result.** None. No migration; numbers 107 and test 104 are still free.
+
+**Safety Status.** `npm run typecheck` clean; `npm test`: shared 88, API 737 (7 skipped), web 185, all pass; `biome ci` 0 errors;
+doc links OK; `print.e2e.ts` 8 passed on Windows (desktop Chrome). Not checked: the printing in a real browser against live
+(steps for Ben in `.temp/2026-11-23-track-b2-report.md`). Smoke test 4 of 4 pass with one worker (with two, two inventory pages
+timed out from dev-server load).
+
 ## 2026-11-23 — `sql/103` applied to live (invoice printing)
 
 **Objective.** Ben's yes (23 Nov) to apply the invoice printing migration, merged in PR #100. The invoice pages on live need it.

@@ -50,7 +50,11 @@
 .print-lines thead th { background: #f1f1f1; border-block-end: 1.5px solid #999; font-weight: 600; font-size: 9.5pt; }
 .print-lines .print-num { text-align: end; white-space: nowrap; }
 .print-lines tr { break-inside: avoid; }
-.print-eta .print-lines td, .print-eta-cell { font-size: 9pt; }
+.print-lines thead th.print-num { white-space: normal; }
+/* The ETA layout has twelve columns: smaller type and long codes may break, so the table stays inside the A4 sheet (the sheet hides what
+   sticks out, so a wider table lost its last columns on paper; found by the layout picture tests, 23 Nov 2026). */
+.print-eta .print-lines th, .print-eta .print-lines td { font-size: 8pt; padding: 1.2mm 1mm; }
+.print-eta .print-lines td.print-mono { overflow-wrap: anywhere; }
 
 .print-bottom { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; }
 .print-extra { flex: 1; display: grid; gap: 3mm; }
@@ -60,7 +64,10 @@
 .print-totals td { text-align: end; padding: 1mm 2mm; white-space: nowrap; }
 .print-totals .print-grand th, .print-totals .print-grand td { font-weight: 700; font-size: 12pt; border-block-start: 1.5px solid #333; }
 
-.print-eta { display: flex; gap: 4mm; align-items: center; }
+/* The QR area and "Not yet submitted to ETA". Not `.print-eta`: that is the sheet's own class in the ETA layout (print-${layout}), and a
+   flex rule on it laid the whole ETA sheet out in one row (found by the layout picture tests, 23 Nov 2026). */
+.print-eta-box { display: flex; gap: 4mm; align-items: center; }
+.print-eta-box p { flex: 1; min-inline-size: 30mm; }
 .print-qr { inline-size: 26mm; block-size: 26mm; border: 1.5px dashed #888; flex: none; }
 
 .print-footer { margin-block-start: 8mm; padding-block-start: 3mm; border-block-start: 1px solid #ccc; text-align: center; color: #444; font-size: 9pt; }
