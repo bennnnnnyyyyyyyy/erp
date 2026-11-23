@@ -20,6 +20,8 @@ export type Bindings = {
   WHATSAPP_GRAPH_VERSION?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
   WHATSAPP_TEMPLATE_LANG?: string;
+  /** sql/107: the approved WhatsApp invoice template (Arabic and English under one name). Unset: no WhatsApp send from the company. */
+  WHATSAPP_DOC_TEMPLATE?: string;
   // Email (lib/channels/integrations.ts, sql/053). Secret: RESEND_API_KEY. EMAIL_FROM like "ERP <notifications@example.com>" on a
   // domain verified with Resend. Without them, email works in simulated mode only.
   RESEND_API_KEY?: string;

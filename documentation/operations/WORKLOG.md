@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — Send an invoice from the company (`sql/107`, not applied)
+
+**Objective.** Item 5 of the track-b2 brief: the "send from the company" mode of invoice printing. Plan
+`documentation/plans/INVOICE_SEND_QUEUE_PLAN.md`, approved by Ben 23 Nov (one Meta template in Arabic and English; one email per customer).
+
+**Actions Completed.** Branch `feat/invoice-send-queue` from `origin/main`.
+- `sql/107_sal_doc_send_queue.sql`: `msg_outbox` kind `document` with `to_address` and `doc_params` and a shape rule;
+  `sal_queue_doc_send` (all checks, link, message, send record with `outbox_id`, audit, once a minute, 200 an hour);
+  `sal_doc_queue_status`; `sal_record_doc_send` refuses `queue`. Test `sql/tests/104_doc_send_queue.sql`.
+- API: `GET/POST /v1/sales/documents/:type/:id/queue` (`sales.invoices.read` / `.send`); the link address comes from the allowed origins,
+  never the body; WhatsApp answers 409 `not_connected` until `WHATSAPP_DOC_TEMPLATE` is set. Email channel sends a document to
+  `to_address`; WhatsApp channel sends a document as the approved template (company, document, amount, link). `waPhone` and
+  `looksLikeEmail` moved to `@erp/shared`. No master-key change: delivery stays in `jobs/outbox.ts` (every five minutes).
+- Web: print page in "send from the company" mode fills in the customer's email and phone, queues, says when a channel is not ready
+  (then the device send), and lists the sends with their status. Settings wording and Arabic strings.
+- Found: WhatsApp and email are not per company (our one number, our Resend sender). Recorded in the plan as question 4 for Ben.
+
+**Database / System Result.** None on live. `sql/107` and test 104 pass locally on PGlite (107 run twice; test 100 still passes).
+
+**Safety Status.** `npm run typecheck` clean; `npm test` shared 88, API 742 (7 skipped), web 188; `biome ci` 0 errors; Playwright
+13 passed, 9 skipped (Windows pictures only where present; the picture tests skip on phone). Not done: apply `sql/107` to live (needs Ben's yes);
+the Meta template; a real send.
+
 ## 2026-11-23 — PDF letterhead; cloud PDF choice and cloud deployment plan (track-b2, part 2)
 
 **Objective.** Item 4 of the track-b2 brief (a company uploads its letterhead as a PDF), after Ben installed `pdfjs-dist`; and Ben's

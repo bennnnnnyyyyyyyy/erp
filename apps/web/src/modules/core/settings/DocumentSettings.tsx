@@ -29,7 +29,7 @@ const LANGUAGE_LABEL: Record<DocLanguage, string> = { ar: 'Arabic', en: 'English
 const DIGITS_LABEL: Record<DocDigits, string> = { latn: 'Western digits (1 2 3)', arab: 'Arabic-Indic digits (١ ٢ ٣)' };
 const SEND_LABEL: Record<DocSendMode, string> = {
   device: 'From the person’s own phone or computer (WhatsApp or email app)',
-  queue: 'From the company’s connected WhatsApp Business or email (coming next; until then, from the device)',
+  queue: 'From the company: email through your connected email (Settings → Integrations); WhatsApp once the invoice template is approved',
 };
 
 function readImage(file: File, max: number): Promise<string> {

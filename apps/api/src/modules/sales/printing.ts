@@ -6,7 +6,10 @@ import {
   DOC_SEND_MODES,
   PRINT_DOC_TYPES,
   SEND_DOC_TYPES,
+  looksLikeEmail,
+  waPhone,
   type DocPrintData,
+  type DocQueueStatus,
   type PrintDocType,
   type SendDocType,
 } from '@erp/shared';
@@ -16,6 +19,7 @@ import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
+import { whatsappDocReady } from '../../lib/whatsapp';
 import { requirePermission } from '../../middleware/tenant';
 
 // Invoice printing, step 1c (documentation/plans/INVOICE_PRINTING_PLAN.md; sql/103). Draft invoices (no number until issued), the print
@@ -42,6 +46,18 @@ function sendType(c: Context<AppEnv>): SendDocType {
   const t = c.req.param('type') ?? '';
   if (!(SEND_DOC_TYPES as readonly string[]).includes(t)) throw new HttpError(404, 'Not found', 'not_found');
   return t as SendDocType;
+}
+
+/**
+ * The web app's address for the customer link in a message sent from the company (sql/107): the calling app when it is on the allowed
+ * list, else the first allowed one. Never taken from the request body.
+ */
+function appOrigin(c: Context<AppEnv>): string {
+  const allowed = c.env.ALLOWED_ORIGINS.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const origin = c.req.header('Origin');
+  return origin && allowed.includes(origin) ? origin : (allowed[0] ?? '');
 }
 
 /** Draft lines from a request body: [{ orderLineId, qty, taxRateId? }]. Bad lines are refused, not dropped. */
@@ -214,6 +230,50 @@ export function registerPrintRoutes(r: Hono<AppEnv>) {
     );
   });
 
+  // ---- sending from the company (sql/107): the message goes into the queue and the delivery job sends it (within about five minutes)
+  r.get('/documents/:type/:id/queue', requirePermission('sales.invoices.read'), async (c) => {
+    const status = await callRpc<Omit<DocQueueStatus, 'whatsappReady'>>(userDb(c), 'sal_doc_queue_status', {
+      p_doc_type: sendType(c),
+      p_doc_id: idParam(c),
+    });
+    c.header('Cache-Control', 'no-store');
+    return ok(c, { ...status, whatsappReady: whatsappDocReady(c.env) } satisfies DocQueueStatus);
+  });
+
+  r.post('/documents/:type/:id/queue', requirePermission('sales.invoices.send'), async (c) => {
+    const b = await jsonBody(c);
+    const channel = text(b.channel);
+    const layout = text(b.layout);
+    const language = text(b.language);
+    if (channel !== 'email' && channel !== 'whatsapp') invalid('Choose email or WhatsApp');
+    if (layout && !(DOC_LAYOUTS as readonly string[]).includes(layout)) invalid('Unknown layout');
+    if (language && !(DOC_LANGUAGES as readonly string[]).includes(language)) invalid('Unknown language');
+    let to: string;
+    if (channel === 'email') {
+      to = text(b.to).toLowerCase();
+      if (!looksLikeEmail(to) || to.length > 200) invalid("Type the customer's email address");
+    } else {
+      // WhatsApp needs the server set up and Meta's approved invoice template; until then the person sends from their own phone.
+      if (!whatsappDocReady(c.env)) {
+        throw new HttpError(409, 'WhatsApp sending from the company is not set up yet. Send from your own phone instead.', 'not_connected');
+      }
+      to = waPhone(text(b.to)) ?? '';
+      if (!to) invalid("Type the customer's WhatsApp number");
+    }
+    const appUrl = appOrigin(c);
+    if (!appUrl) throw new HttpError(503, 'The app address is not set on this server', 'not_set_up');
+    const queued = await callRpc<{ outboxId: string; sendId?: string; duplicate: boolean }>(userDb(c), 'sal_queue_doc_send', {
+      p_doc_type: sendType(c),
+      p_doc_id: idParam(c),
+      p_channel: channel,
+      p_to: to,
+      p_layout: layout || null,
+      p_language: language || null,
+      p_app_url: appUrl,
+    });
+    return ok(c, queued, queued.duplicate ? 200 : 201);
+  });
+
   // Record that the person printed, downloaded, copied the link of, or sent an issued invoice or approved note from their own device.
   r.post('/documents/:type/:id/sends', requirePermission('sales.invoices.send'), async (c) => {
     const b = await jsonBody(c);
@@ -224,9 +284,8 @@ export function registerPrintRoutes(r: Hono<AppEnv>) {
     const language = text(b.language);
     if (!(DOC_SEND_CHANNELS as readonly string[]).includes(channel)) invalid('Choose how it was sent');
     if (!(DOC_SEND_MODES as readonly string[]).includes(mode)) invalid('mode must be device or queue');
-    // Sending from our server (the company's connected WhatsApp or email) is the next part of this step; until it exists nothing is
-    // recorded as sent by the server.
-    if (mode !== 'device') invalid('Sending from the server is not available yet: send from your own device');
+    // A send from the company is recorded only by POST .../queue (sql/107), together with its message.
+    if (mode !== 'device') invalid('Use the send from the company for that');
     if (recipient.length > 200) invalid('The recipient is too long');
     if (layout && !(DOC_LAYOUTS as readonly string[]).includes(layout)) invalid('Unknown layout');
     if (language && !(DOC_LANGUAGES as readonly string[]).includes(language)) invalid('Unknown language');

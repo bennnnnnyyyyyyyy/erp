@@ -163,6 +163,49 @@ describe('sending', () => {
       template: { name: 'approval_request' },
     });
   });
+  it('a document (sql/107) is sent as the approved invoice template, with company, document, amount and link', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const doc: OutboxMessage = {
+      ...message,
+      recipient_id: null,
+      kind: 'document',
+      secret_body: null,
+      to_address: '201001234567',
+      doc_params: {
+        company: 'شركة ديمو',
+        document: 'فاتورة INV-2026-00001',
+        documentAr: 'فاتورة INV-2026-00001',
+        documentEn: 'Invoice INV-2026-00001',
+        grossMinor: 176700,
+        currency: 'EGP',
+        url: 'https://app.example/i/abc',
+        language: 'both',
+      },
+    };
+    const lookup = vi.fn(async () => null);
+    // not set up: a visible failure, nothing sent
+    await expect(makeWhatsAppAdapter(lookup).send(doc, cfgEnv)).rejects.toThrow('not set up');
+    expect(await makeWhatsAppAdapter(lookup).send(doc, { ...cfgEnv, WHATSAPP_DOC_TEMPLATE: 'invoice_link' })).toBe('whatsapp-template');
+    expect(lookup).not.toHaveBeenCalled();
+    const sent = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(sent).toMatchObject({ to: '201001234567', type: 'template', template: { name: 'invoice_link', language: { code: 'ar' } } });
+    expect(sent.template.components[0].parameters.map((p: { text: string }) => p.text)).toEqual([
+      'شركة ديمو',
+      'فاتورة INV-2026-00001',
+      '1,767.00 EGP',
+      'https://app.example/i/abc',
+    ]);
+    fetchMock.mockClear();
+    await makeWhatsAppAdapter(lookup).send(
+      { ...doc, doc_params: { ...doc.doc_params!, language: 'en' } },
+      { ...cfgEnv, WHATSAPP_DOC_TEMPLATE: 'invoice_link' },
+    );
+    const en = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(en.template.language.code).toBe('en');
+    expect(en.template.components[0].parameters[1].text).toBe('Invoice INV-2026-00001');
+  });
+
   it('fails visibly: no number, not configured, Meta refuses', async () => {
     await expect(makeWhatsAppAdapter(async () => null).send(message, cfgEnv)).rejects.toThrow('no verified WhatsApp number');
     await expect(sendText(baseEnv, '+201001234567', 'x')).rejects.toThrow('not configured');

@@ -83,6 +83,23 @@ describe('integration adapters', () => {
     expect(body.html).not.toContain('<b>');
   });
 
+  it('a document (sql/107) goes to the customer address, never looked up as a member; switched off means skipped', async () => {
+    const live = { ...env, RESEND_API_KEY: 're_test', EMAIL_FROM: 'ERP <n@example.com>' };
+    const doc = msg({
+      kind: 'document',
+      recipient_id: null,
+      to_address: 'buyer@example.com',
+      subject: 'Invoice INV-2026-00001 - A',
+      body: 'link',
+    });
+    const f = fakes({ enabled: true });
+    expect(await f.email.send(doc, live)).toBe('resend');
+    expect((JSON.parse(String(f.calls[0]!.init.body)) as { to: string[] }).to).toEqual(['buyer@example.com']);
+    const off = fakes({ enabled: false });
+    expect(await off.email.send(doc, live)).toBe('skipped (switched off)');
+    await expect(f.email.send({ ...doc, to_address: null }, live)).rejects.toThrow(/no email address/);
+  });
+
   it('live Slack and Teams post to the saved URL; no URL is a visible failure', async () => {
     const f = fakes({ enabled: true }, 'https://hooks.slack.com/services/a/b/c');
     expect(await f.slack.send(msg({ channel: 'slack', recipient_id: null }), env)).toBe('slack-webhook');
