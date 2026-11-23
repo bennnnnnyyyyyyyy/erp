@@ -11,6 +11,36 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — New UI built beside the old UI (track-c, branch feat/bellvox-look; no SQL)
+
+**Objective.** Ben (23 Nov): build a new UI from zero (Bellvox look, Dynamics 365 way of working, every screen in 2 or 3 versions that
+Ben and Grant pick on https://team.bellvox-decisions.pages.dev). The old UI stays live and unchanged; the new UI gets every new feature
+too, through the same page list and shared logic.
+
+**Actions Completed.**
+- `apps/web/src/lib/uiMode.ts`: `newUi` is on in the dev server (`?oldui` shows the old UI) and in builds made with `NEW_UI=1`
+  (`vite.config.ts`); off in every other build, including live. The new UI loads as lazy chunks; `new-ui.css` (Bellvox tokens and
+  fonts, scoped to `html.nu`) is imported only when it is on.
+- Old-UI files are as on main (Shell, Home, SignIn, CreateCompany, theme.css, styles.css, ui/button.tsx, index.html,
+  e2e-workflows/helpers.ts). New screens: ShellNew (6-section menu, page search), HomeNew, SignInNew (Ben's pick: one step at a time),
+  CreateCompanyNew; App, DemoApp, OrgPicker and main.tsx choose by `newUi`.
+- `modules/registry.tsx`: optional `newComponent` per page and `newOnly` pages (customer, stock report, approvals, all settings, a
+  dev-only empty preview). `visibleApps` leaves `newOnly` pages out when the new UI is off. Without `newComponent` the new UI shows the
+  old screen inside the new frame.
+- Shared logic: `useOrderForm` (trade/common.tsx) and `useNewRequest` (inventory/RequestPages.tsx) serve the old forms (markup unchanged)
+  and the new layouts (trade/OrderFormNew.tsx, inventory/RequestNew.tsx).
+- `lib/newUiCoverage.test.ts` reports pages without a new-UI screen per module and never fails: 6 of 84 new, 78 old (23 Nov).
+- Research: `documentation/research/dynamics-365-scm/UX_WORKFLOWS.md` (Microsoft's public guided tours, own words).
+- Merged origin/main into the branch (merge, no rebase); one registry conflict (both sides added sales pages), both kept.
+
+**Database / System Result.** None. No SQL, no API change. A small Cloudflare Pages site `bellvox-decisions` (with one KV store) holds
+the decision page for Ben and Grant; it is separate from erp-live and erp-demo and is not in this repo (it holds people's names).
+
+**Safety Status.** Web typecheck 0 errors; all tests pass (8 + 38 + 38 files); biome 0 errors. Checked in the browser: the new UI in
+the dev server; with `?oldui` the old shell, old font, old colours and title, and `new-ui.css` not loaded. Not checked: a `NEW_UI=1`
+preview build and the live build were not built or deployed. The API typecheck shows one error in `integrationRoutes.ts` because this
+worktree reads `@erp/shared` from the main checkout, where another chat has an unfinished change (`AiStatus.reader`); not from this branch.
+
 ## 2026-11-23 — `sql/107` applied to live (send an invoice from the company)
 
 **Objective.** PR #106 (send an invoice from the company) is merged; its database part, `sql/107_sal_doc_send_queue.sql`, was not on live.
