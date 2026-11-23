@@ -82,7 +82,7 @@ The ETA layout works now. Later we turn on sending to ETA. Then the only change 
 
 **Where Gotenberg runs**
 - **On-prem:** one more container in the customer's Docker setup (`scripts/onprem/`). **Decided 23 Nov (Ben):** yes, the `pdf` container in the on-prem plan ([2026-11-19-on-prem-deployment-plan.md](../planning/2026-11-19-on-prem-deployment-plan.md)), on the same server, internal network only.
-- **Cloud:** not decided (23 Nov: Ben does not know yet if we sell cloud, on-prem or both; we prepare for both). Cloudflare Containers need the paid Workers plan (no free tier). Options for Ben in [INVOICE_SEND_QUEUE_PLAN.md](INVOICE_SEND_QUEUE_PLAN.md) section 6.
+- **Cloud:** **decided 23 Nov (Ben): Cloudflare Browser Run** (Cloudflare's own Chromium, no container). Needs the Workers Paid plan for real use: [cloud deployment plan](../planning/2026-11-23-cloud-deployment-plan.md). Word templates (step 1e) will need Gotenberg in Cloudflare Containers or a rented server. Ben does not know yet if we sell cloud, on-prem or both; we prepare for both.
 - **Code:** one "PDF maker" in the API with one setting, so the same code uses Gotenberg on-prem and the cloud choice in the cloud.
 - Our API calls it over HTTPS with a secret.
 - It only converts files. It never reads the database. It keeps no files.

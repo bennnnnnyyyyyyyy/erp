@@ -56,13 +56,14 @@
    Suggested text: "{{1}} sent you invoice {{2}} for {{3}}. View it here: {{4}}". Until it is approved, WhatsApp "send from the company"
    stays off and the device send stays.
 2. **Customer email.** Add one email per customer (suggested), or several contacts per customer (bigger, later)?
-3. **Cloud PDF maker:** which option in section 6? (On-prem is decided: Gotenberg, 23 Nov.)
+3. ~~**Cloud PDF maker:** which option in section 6?~~ **Decided 23 Nov (Ben): A, Browser Run.** On-prem: Gotenberg.
 
 ## 5. Attaching the PDF
 
 - **On-prem (decided 23 Nov, Ben):** Gotenberg runs on the same server. The queue makes the PDF there and attaches it to the WhatsApp
   message (as a document) and the email. The PDF fingerprint goes in `core_doc_sends`.
-- **Cloud:** depends on section 6. Until it is chosen, the cloud message carries the link only.
+- **Cloud (decided 23 Nov, Ben): Browser Run** (option A in section 6). It needs the Workers Paid plan for real use: see the
+  [cloud deployment plan](../planning/2026-11-23-cloud-deployment-plan.md). On the free plan the message may carry the link only.
 - **If the PDF maker is down or missing:** the message is sent with the link only, and the send record says so. A send never fails
   only because the PDF could not be made.
 
@@ -74,7 +75,7 @@
 | B. **Gotenberg in Cloudflare Containers** | **No.** Containers need the paid Workers plan | $5 a month minimum (includes 25 GB-hours memory, 375 vCPU-minutes a month), then by use; plus Worker and Durable Object use | The same container as on-prem. Also converts Word (step 1e). Containers were in beta when checked. |
 | C. **Gotenberg on a small server we rent** (any provider) | — | The server's monthly price | Like on-prem. One more machine for us to look after. |
 
-**Suggestion:** A for PDFs now (no container, same output); B when Word templates (step 1e) come, because only Gotenberg converts Word.
+**Ben chose A (23 Nov).** The suggestion was: A for PDFs now (no container, same output); B when Word templates (step 1e) come, because only Gotenberg converts Word.
 A cloud version sold to companies will very likely need the paid Workers plan anyway (the free plan has daily request and CPU limits),
 so both would be on the same $5 plan. The code has one "PDF maker" setting, so on-prem uses Gotenberg and the cloud uses A or B without other changes.
 
