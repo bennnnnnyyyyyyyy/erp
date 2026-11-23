@@ -31,6 +31,8 @@ export function PricesPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openList, setOpenList] = useState<string | null>(null);
+  // UX audit 20 Nov: three tasks on one page. Each now has its own tab; price lists first, as the most used.
+  const [tab, setTab] = useState<'lists' | 'groups' | 'markup'>('lists');
 
   if (groups.loading || lists.loading || customers.loading) return <section className="page"><Loading /></section>;
   if (groups.error) return <section className="page"><h1>{tr('Prices')}</h1><p className="error">{groups.error}</p></section>;
@@ -57,9 +59,16 @@ export function PricesPage() {
   return (
     <section className="page">
       <h1>{tr('Prices')}</h1>
-      <p className="muted">{tr('A customer gets the price list of their group for the order date, otherwise the item’s own sales price. The price on an order stays editable. A new purchase price never changes a sales price; the item page shows it as a suggestion.')}</p>
+      <p className="muted">{tr('A customer gets the price list of their group; otherwise the item’s own sales price. You can still change the price on an order.')}</p>
       {notice ? <p className="notice" role="status">{notice}</p> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
+      <div className="tabs" role="tablist" aria-label={tr('Prices')}>
+        {([['lists', tr('Price lists')], ['groups', tr('Customer groups')], ...(canManage ? [['markup', tr('Markup')]] : [])] as [typeof tab, string][]).map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'tab active' : 'tab'} onClick={() => setTab(key)}>{label}</button>
+        ))}
+      </div>
+      <div role="tabpanel">
+      {tab === 'groups' && <>
 
       {/* UX audit 20 Nov: the forms ran into the next heading (h2 has no margin). Each task now sits in its own card. */}
       <div className="form-card stack">
@@ -85,7 +94,8 @@ export function PricesPage() {
         </div>
       ) : null}
 
-      <h2 className="related">{tr('Price lists')}</h2>
+      </>}
+      {tab === 'lists' && <>
       {(lists.data ?? []).length === 0 ? <p className="muted">{tr('No price lists yet.')}</p> : (
         <table className="table">
           <thead>
@@ -118,8 +128,10 @@ export function PricesPage() {
         <AddListForm groups={groupList} onSave={(body) => run(() => api('/v1/sales/price-lists', { method: 'POST', body: JSON.stringify(body) }), tr('Price list added.'))} />
       ) : null}
       {canManage && !groupList.length ? <p className="muted small">{tr('Add a customer group first; each price list belongs to one.')}</p> : null}
+      </>}
 
-      {canManage ? <MarkupForm onSave={(markupPercent) => run(() => api('/v1/sales/price-settings', { method: 'PUT', body: JSON.stringify({ markupPercent }) }), tr('Markup saved.'))} /> : null}
+      {tab === 'markup' && canManage ? <MarkupForm onSave={(markupPercent) => run(() => api('/v1/sales/price-settings', { method: 'PUT', body: JSON.stringify({ markupPercent }) }), tr('Markup saved.'))} /> : null}
+      </div>
     </section>
   );
 }
