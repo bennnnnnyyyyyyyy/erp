@@ -19,6 +19,7 @@ import { tr, trf } from '../../lib/i18n';
 import { usePeople } from '../../lib/people';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { Pill, toMinor } from '../trade/common';
 import { AccountSelect, Notice, accountLabel, accountName, eventLabel, firstOfYear, money, side, sourceLabel, sourcePath, today, useNotice } from './common';
@@ -49,15 +50,13 @@ export function EntriesPage() {
   const [to, setTo] = useState(query('to'));
   const [source, setSource] = useState('');
   const [filter, setFilter] = useState({ from: query('from'), to: query('to'), source: '' });
-  const entries = useLoad(() => {
-    const qs = new URLSearchParams(Object.entries(filter).filter(([, v]) => v));
-    return api<LedgerEntry[]>(`/v1/accounting/entries${qs.size ? `?${qs}` : ''}`);
-  });
+  const qs = new URLSearchParams(Object.entries(filter).filter(([, v]) => v));
+  const entries = usePaged<LedgerEntry>(`/v1/accounting/entries${qs.size ? `?${qs}` : ''}`, 300);
 
   return (
     <section className="page wide">
       <h1>{tr('Journal')}</h1>
-      <p className="muted">{tr('Every entry in the books, newest first (at most 300 shown). Entries cannot be changed; a correction is a reversing entry.')}</p>
+      <p className="muted">{tr('Every entry in the books, newest first. Entries cannot be changed; a correction is a reversing entry.')}</p>
       <div className="form-row">
         <label>{tr('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label>{tr('To')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
@@ -86,6 +85,7 @@ export function EntriesPage() {
           {!entries.data.length && <tr><td colSpan={6} className="muted empty">{tr('No entries yet.')}</td></tr>}
         </tbody></table></div>
       )}
+      {entries.hasMore && <div className="form-actions list-more"><Button variant="outline" disabled={entries.loading} onClick={entries.more}>{entries.loading ? tr('Loading…') : tr('Load more')}</Button></div>}
     </section>
   );
 }

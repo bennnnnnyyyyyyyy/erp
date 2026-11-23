@@ -24,6 +24,7 @@ import {
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -445,7 +446,7 @@ accountingRoutes.get('/entries', requirePermission('accounting.ledger.view'), as
   if (from) q = q.gte('entry_date', from);
   if (to) q = q.lte('entry_date', to);
   if (source) q = q.eq('source_type', source);
-  const { data, error } = await q.order('entry_date', { ascending: false }).order('number', { ascending: false }).limit(300);
+  const { data, error } = await q.order('entry_date', { ascending: false }).order('number', { ascending: false }).range(...pageRange(c, 300));
   if (error) throw error;
   const entries = (data ?? []) as EntryRow[];
   const lines: EntryLineRow[] = [];
@@ -559,7 +560,7 @@ accountingRoutes.get('/journals', requirePermission('accounting.ledger.view'), a
   if (status && !['draft', 'posted', 'rejected', 'cancelled'].includes(status)) invalid('Invalid status');
   let q = userDb(c).from('acc_manual_journals').select(JOURNAL_COLS).eq('org_id', orgOf(c));
   if (status) q = q.eq('status', status);
-  const { data, error } = await q.order('created_at', { ascending: false }).limit(300);
+  const { data, error } = await q.order('created_at', { ascending: false }).range(...pageRange(c, 300));
   if (error) throw error;
   const rows = (data ?? []) as JournalRow[];
   const lines = await journalLines(

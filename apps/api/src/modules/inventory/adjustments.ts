@@ -2,6 +2,7 @@ import type { Context, Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
@@ -50,7 +51,7 @@ async function loadAdjustments(c: Context<AppEnv>, id?: string) {
     )
     .eq('org_id', orgOf(c))
     .order('created_at', { ascending: false })
-    .limit(200);
+    .range(...pageRange(c, 200));
   if (id) q = q.eq('id', id);
   const { data, error } = await q;
   if (error) throw error;

@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
@@ -78,7 +79,7 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
       .select('id, item_id, warehouse_id, qty, kind, request_id, ref, posted_by, posted_at, inv_requests(number)')
       .eq('org_id', orgOf(c));
     if (itemId) query = query.eq('item_id', itemId);
-    const { data, error } = await query.order('id', { ascending: false }).limit(500);
+    const { data, error } = await query.order('id', { ascending: false }).range(...pageRange(c, 500));
     if (error) throw error;
     type LedgerRow = {
       id: number;

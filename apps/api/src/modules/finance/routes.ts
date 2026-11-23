@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -52,7 +53,7 @@ financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async 
     .eq('org_id', orgOf(c))
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(300);
+    .range(...pageRange(c, 300));
   if (error) throw error;
   return ok(
     c,
@@ -237,7 +238,7 @@ financeRoutes.get('/payments', requirePermission('finance.reports.view'), async 
   const rows = column
     ? await fetchAll<PaymentRow>((from, to) => base().eq(column, m![2]!).order('paid_on', { ascending: false }).order('id').range(from, to))
     : await (async () => {
-        const { data, error } = await base().order('paid_on', { ascending: false }).order('created_at', { ascending: false }).limit(300);
+        const { data, error } = await base().order('paid_on', { ascending: false }).order('created_at', { ascending: false }).range(...pageRange(c, 300));
         if (error) throw error;
         return (data ?? []) as PaymentRow[];
       })();

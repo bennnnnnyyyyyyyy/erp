@@ -4,6 +4,7 @@ import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { csvResponse, minorToText } from '../../lib/csv';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -207,7 +208,7 @@ treasuryRoutes.get('/transfers', requirePermission('treasury.accounts.view'), as
     .eq('org_id', c.var.tenant.orgId)
     .order('transfer_date', { ascending: false })
     .order('number', { ascending: false })
-    .limit(300);
+    .range(...pageRange(c, 300));
   if (error) throw error;
   return ok<TreasuryTransfer[]>(
     c,

@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
+import { pageRange } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
@@ -122,7 +123,7 @@ async function loadOrders(c: Context<AppEnv>, id?: string) {
       .eq('org_id', orgOf(c))
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(200);
+      .range(...pageRange(c, 200));
     if (id) query = query.eq('id', id);
     return query;
   };
@@ -240,7 +241,7 @@ purchasingRoutes.get('/supplier-prices', requirePermission('purchasing.prices.vi
     .eq('org_id', orgOf(c));
   if (itemId) query = query.eq('item_id', itemId);
   if (supplierId) query = query.eq('supplier_id', supplierId);
-  const { data, error } = await query.order('recorded_at', { ascending: false }).limit(500);
+  const { data, error } = await query.order('recorded_at', { ascending: false }).range(...pageRange(c, 500));
   if (error) throw error;
   type Row = {
     supplier_id: string;

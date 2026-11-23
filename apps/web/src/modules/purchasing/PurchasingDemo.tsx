@@ -12,6 +12,7 @@ import { formatDateTime } from '../../lib/format';
 import { todayIn } from '../../lib/dates';
 import { Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
@@ -47,7 +48,7 @@ export function Suppliers() {
 
 export function PurchaseOrders() {
   const cat = useCatalog();
-  const orders = useLoad(() => api<PurchaseOrder[]>('/v1/purchasing/orders'));
+  const orders = usePaged<PurchaseOrder>('/v1/purchasing/orders', 200);
   const suppliers = useLoad(() => api<Party[]>('/v1/purchasing/suppliers'));
   const session = useSession();
   const supplier = (id: string) => suppliers.data?.find((s) => s.id === id)?.name ?? id;
@@ -69,6 +70,7 @@ export function PurchaseOrders() {
         <ListView
           title={tr('Purchase orders')}
           rows={orders.data}
+          more={{ hasMore: orders.hasMore, loading: orders.loading, onMore: orders.more }}
           columns={columns}
           rowKey={(o) => o.id}
           rowHref={(o) => `/purchasing/orders/${o.id}`}

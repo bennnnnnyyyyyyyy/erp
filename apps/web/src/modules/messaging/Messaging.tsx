@@ -8,6 +8,7 @@ import { formatDateTime } from '../../lib/format';
 import { Link } from '../../lib/router';
 import { usePeople } from '../../lib/people';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 
 import { tr, trf } from '../../lib/i18n';
@@ -16,7 +17,9 @@ import { tr, trf } from '../../lib/i18n';
 
 export function NotificationsPage() {
   const session = useSession();
-  const inbox = useLoad(() => api<{ items: AppNotification[]; unread: number }>('/v1/messaging/notifications'));
+  const [unread, setUnread] = useState(0);
+  const inbox = usePaged<AppNotification>('/v1/messaging/notifications', 50, (url) =>
+    api<{ items: AppNotification[]; unread: number }>(url).then((d) => { setUnread(d.unread); return d.items; }));
 
   const [markError, setMarkError] = useState<string | null>(null);
   async function markAll() {
@@ -43,11 +46,12 @@ export function NotificationsPage() {
       {inbox.data ? (
         <ListView
           title={tr('Notifications')}
-          rows={inbox.data.items}
+          rows={inbox.data}
+          more={{ hasMore: inbox.hasMore, loading: inbox.loading, onMore: inbox.more }}
           columns={columns}
           rowKey={(n) => n.id}
           empty={tr('Nothing yet.')}
-          toolbar={inbox.data.unread > 0 ? <Button variant="outline" type="submit" onClick={markAll}>{tr('Mark all read (')}{inbox.data.unread})</Button> : undefined}
+          toolbar={unread > 0 ? <Button variant="outline" type="submit" onClick={markAll}>{tr('Mark all read (')}{unread})</Button> : undefined}
         />
       ) : (
         <Loading error={inbox.error} />

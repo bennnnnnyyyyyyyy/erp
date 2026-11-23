@@ -114,6 +114,10 @@ export const UX_AUDIT_AR: Record<string, string> = {
   '{qty} in {warehouse}': '{qty} في {warehouse}',
   // History (UX audit 20 Nov, Track A)
   'to {n} people': 'إلى {n} أشخاص',
+  // Paging (UX audit 20 Nov, Track A)
+  'Load more': 'عرض المزيد',
+  'Every entry in the books, newest first. Entries cannot be changed; a correction is a reversing entry.': 'كل القيود في الدفاتر، الأحدث أولًا. لا يمكن تعديل القيود؛ التصحيح يكون بقيد عكسي.',
+  '{shown} of the newest {total}': '{shown} من أحدث {total}',
   // Own requests (UX audit 20 Nov, Track A)
   'You asked for this, so another owner or manager must approve it.': 'أنت طلبت هذا، لذلك يجب أن يعتمده مالك أو مدير آخر.',
 };

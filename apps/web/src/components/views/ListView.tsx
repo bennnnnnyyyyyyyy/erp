@@ -32,6 +32,8 @@ type Props<T> = {
   actions?: (row: T) => ReactNode;
   /** Where clicking the row goes. Rows without it do not react to the pointer. */
   rowHref?: (row: T) => string;
+  /** Older rows on the server (lib/usePaged.ts): a "Load more" button under the table. Search and sort cover the loaded rows only. */
+  more?: { hasMore: boolean; loading: boolean; onMore: () => void };
 };
 
 function csvCell(v: string | number | null): string {
@@ -39,7 +41,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref }: Props<T>) {
+export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref, more }: Props<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
 
@@ -86,7 +88,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
           aria-label={trf('Search {title}', { title })}
         />
         <span className="muted list-count">
-          {trf('{shown} of {total}', { shown: shown.length, total: rows.length })}
+          {more?.hasMore ? trf('{shown} of the newest {total}', { shown: shown.length, total: rows.length }) : trf('{shown} of {total}', { shown: shown.length, total: rows.length })}
         </span>
         <span className="spacer" />
         {toolbar}
@@ -135,6 +137,11 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
           </tbody>
         </table>
       </div>
+      {more?.hasMore && (
+        <div className="form-actions list-more">
+          <Button variant="outline" disabled={more.loading} onClick={more.onMore}>{more.loading ? tr('Loading…') : tr('Load more')}</Button>
+        </div>
+      )}
     </div>
   );
 }
