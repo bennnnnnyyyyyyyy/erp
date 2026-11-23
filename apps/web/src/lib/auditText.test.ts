@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readableSummary as raw } from './auditText';
+import { readableMessage, readableSummary as raw } from './auditText';
 
 // Intl puts a no-break space between the currency code and the number; compare with plain spaces.
 const readableSummary = (s: string | null, c: string) => raw(s, c).replace(/ /g, ' ');
@@ -31,5 +31,21 @@ describe('readableSummary', () => {
   it('leaves other text alone', () => {
     expect(readableSummary('Role changed to admin on 2026-11-02', 'EGP')).toBe('Role changed to admin on 2026-11-02');
     expect(readableSummary(null, 'EGP')).toBe('');
+  });
+});
+
+describe('readableMessage', () => {
+  const day = (d: string) => d.split('-').reverse().join('/');
+  const read = (b: string) => {
+    const r = readableMessage(b, day);
+    return { ...r, first: r.first.replace(/ /g, ' ') };
+  };
+  it('shows one line and how many more (UX audit: overdue invoices as one paragraph)', () => {
+    const body = ['Invoice INV-0033 for A is unpaid 377 day(s) after its due date 2026-11-02: 6717.31 EGP still owed', 'Invoice INV-0034 for B', '...and 62 more'].join('\n');
+    expect(read(body)).toEqual({ first: 'Invoice INV-0033 for A is unpaid 377 day(s) after its due date 02/11/2026: EGP 6,717.31 still owed', more: 63 });
+  });
+  it('formats money and quantities in one-line messages', () => {
+    expect(read('This month so far: sales 2000, cost of goods 220, expenses 85000: a loss of 83220 EGP.')).toEqual({ first: 'This month so far: sales 2000, cost of goods 220, expenses 85000: a loss of EGP 83,220.00.', more: 0 });
+    expect(read('Available 27.806, reorder level 67.000').first).toBe('Available 27.806, reorder level 67');
   });
 });

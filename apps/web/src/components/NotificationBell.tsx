@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { hasPermission } from '@erp/shared';
 import { api } from '../lib/api';
-import { formatDateTime } from '../lib/format';
+import { readableMessage } from '../lib/auditText';
+import { formatDateTime, formatDay } from '../lib/format';
 import { Link, navigate } from '../lib/router';
 import { useSession } from '../session';
 
@@ -101,7 +102,7 @@ export function NotificationBell() {
             {(data?.items ?? []).slice(0, 8).map((n) => (
               <button key={n.id} className={n.readAt ? 'bell-item' : 'bell-item unread'} onClick={() => openItem(n)}>
                 <span className="bell-title">{n.title}</span>
-                {n.body && <span className="muted small">{n.body}</span>}
+                {n.body && <MessageBody body={n.body} />}
                 <span className="muted small">{formatDateTime(n.createdAt, session.org)}</span>
               </button>
             ))}
@@ -110,5 +111,17 @@ export function NotificationBell() {
         </div>
       )}
     </div>
+  );
+}
+
+/** A notification's text: its first line, money and dates formatted, and "+ N more" for a list (lib/auditText.ts, UX audit 20 Nov). */
+export function MessageBody({ body }: { body: string }) {
+  const session = useSession();
+  const { first, more } = readableMessage(body, (d) => formatDay(d, session.org));
+  return (
+    <span className="muted small">
+      {first}
+      {more > 0 ? <> {trf('+ {count} more', { count: more })}</> : null}
+    </span>
   );
 }

@@ -52,3 +52,27 @@ export function collapseSame(rows: AuditEntry[]): (AuditEntry & { times: number 
   }
   return out;
 }
+
+/**
+ * A notification body as people read it (UX audit 20 Nov: "Overdue invoices: 72" was one huge paragraph of raw numbers). Alert
+ * messages hold one line per item (at most ten, then "...and N more"; sql/086). The screens show the first line and how many more;
+ * the title already gives the count, and the Open link goes to the list. Money written as "6717.31 EGP" becomes "EGP 6,717.31",
+ * quantities lose the stored decimals, and dates (2026-11-02) follow the company format.
+ */
+export function readableMessage(body: string | null | undefined, showDate: (ymd: string) => string): { first: string; more: number } {
+  const lines = (body ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+  let more = Math.max(lines.length - 1, 0);
+  const tail = /^\.\.\.and (\d+) more$/.exec(lines[lines.length - 1] ?? '');
+  if (tail && lines.length > 1) more = lines.length - 2 + Number(tail[1]);
+  let s = lines[0] ?? '';
+  s = s.replace(/(-?\d+(?:\.\d+)?) ([A-Z]{3})\b/g, (_m, n: string, cur: string) => {
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(Number(n));
+    } catch {
+      return `${n} ${cur}`;
+    }
+  });
+  s = s.replace(/(-?\d+\.\d{3})(?=\D|$)/g, (n: string) => formatQty(n));
+  s = s.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d: string) => showDate(d));
+  return { first: s, more };
+}

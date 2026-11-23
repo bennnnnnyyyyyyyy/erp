@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { ListView, type Column } from '../../components/views/ListView';
-import { notificationTarget, type AppNotification } from '../../components/NotificationBell';
+import { MessageBody, notificationTarget, type AppNotification } from '../../components/NotificationBell';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { Link } from '../../lib/router';
@@ -34,7 +34,7 @@ export function NotificationsPage() {
 
   const columns: Column<AppNotification>[] = [
     { key: 'when', label: tr('When'), value: (n) => n.createdAt, render: (n) => <span className="nowrap">{formatDateTime(n.createdAt, session.org)}</span> },
-    { key: 'title', label: tr('Message'), value: (n) => n.title, render: (n) => (<>{n.readAt ? n.title : <strong>{n.title}</strong>}{n.body && <div className="muted small">{n.body}</div>}</>) },
+    { key: 'title', label: tr('Message'), value: (n) => n.title, render: (n) => (<>{n.readAt ? n.title : <strong>{n.title}</strong>}{n.body && <div><MessageBody body={n.body} /></div>}</>) },
     { key: 'open', label: '', value: () => '', render: (n) => { const to = notificationTarget(n); return to ? <Link to={to}>{tr('Open')}</Link> : null; } },
   ];
 
