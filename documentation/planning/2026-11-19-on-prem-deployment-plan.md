@@ -46,8 +46,9 @@ On-prem, one Docker Compose package holds all of it:
 | `api` | Our API on Node (Hono's Node adapter) | Same code as the Worker; small adapter for the two rate limiters and the 5-minute job |
 | `web` | The built web app behind a web server (Caddy or nginx) | HTTPS with the customer's certificate, or a self-signed one inside their network |
 | `backup` | Nightly `pg_dump` to a folder they choose | Keeps 14 days; restore script |
+| `pdf` | Gotenberg (`gotenberg/gotenberg`, MIT licence): turns our invoice HTML into a PDF, and later Word templates into PDF | **Added 23 Nov (Ben).** Only the `api` container can reach it (Docker internal network, no port open to the office or the internet). It never reads the database and keeps no files. Works with no internet; our fonts (IBM Plex Sans Arabic) go with each page. Needed for: a PDF attached to WhatsApp or email sent by the company, Word templates (invoice printing plan step 1e), the PDF fingerprint in the send record. The browser-made PDF works without it. |
 
-Minimum server (to confirm with a load test): 4 CPU cores, 8 GB RAM, 100 GB SSD, Linux (Ubuntu 22.04/24.04) or Windows Server with
+Minimum server (to confirm with a load test, including Gotenberg: assume about 1 GB more RAM until measured): 4 CPU cores, 8 GB RAM, 100 GB SSD, Linux (Ubuntu 22.04/24.04) or Windows Server with
 Docker. Up to about 50 users.
 
 ## 4. What changes in our code
@@ -98,6 +99,7 @@ honest customers honest and makes tampering a clear breach of contract; the cont
 
 - **Install:** we send a package (or a private registry login when online) and a one-page guide. `./install` asks for the licence
   file, the server address and the email settings, writes `.env`, starts the containers and creates the first owner.
+- **Size:** the Gotenberg image is large (over 1 GB, it holds Chromium and LibreOffice). An update by USB carries it only when its version changes.
 - **Updates:** each release is a version number. `./update` pulls (or loads from USB when offline) the new images, takes a backup,
   runs the new migrations, restarts, and checks health. If a migration fails, it stops and restores the backup.
 - **Versions:** on-prem customers get the stable releases, not every merge; we keep at most the last two versions supported.

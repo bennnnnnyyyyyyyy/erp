@@ -81,8 +81,9 @@ The ETA layout works now. Later we turn on sending to ETA. Then the only change 
   - Simple PDF libraries (for example pdf-lib) do not join Arabic letters correctly. So we do not use them.
 
 **Where Gotenberg runs**
-- **On-prem:** one more container in the customer's Docker setup (`scripts/onprem/`).
-- **Cloud:** one small container that we host. We must decide where (see section 12).
+- **On-prem:** one more container in the customer's Docker setup (`scripts/onprem/`). **Decided 23 Nov (Ben):** yes, the `pdf` container in the on-prem plan ([2026-11-19-on-prem-deployment-plan.md](../planning/2026-11-19-on-prem-deployment-plan.md)), on the same server, internal network only.
+- **Cloud:** **decided 23 Nov (Ben): Cloudflare Browser Run** (Cloudflare's own Chromium, no container). Needs the Workers Paid plan for real use: [cloud deployment plan](../planning/2026-11-23-cloud-deployment-plan.md). Word templates (step 1e) will need Gotenberg in Cloudflare Containers or a rented server. Ben does not know yet if we sell cloud, on-prem or both; we prepare for both.
+- **Code:** one "PDF maker" in the API with one setting, so the same code uses Gotenberg on-prem and the cloud choice in the cloud.
 - Our API calls it over HTTPS with a secret.
 - It only converts files. It never reads the database. It keeps no files.
 
@@ -251,6 +252,8 @@ After one sign-up, everything works through the API. Levels 1 and 2 need nothing
 **Not built yet (next parts of this step):**
 - Sending from the company's connected WhatsApp or email (the "server" choice). WhatsApp needs an approved Meta message template
   before a business can start a chat. Until then the screen says so and sends from the device. Plan: [INVOICE_SEND_QUEUE_PLAN.md](INVOICE_SEND_QUEUE_PLAN.md) (draft, waiting for Ben).
-- A letterhead as a one-page PDF (needs one more library, `pdfjs-dist`). Only pictures for now.
+- ~~A letterhead as a one-page PDF (needs one more library, `pdfjs-dist`).~~ Done 23 Nov (track-b2): Settings → Invoices and documents
+  takes a one-page PDF; the browser turns it into a JPEG of the page (pdf.js, Apache-2.0) and stores it like a picture letterhead. No
+  database change.
 - The PDF fingerprint in `core_doc_sends` (needs the server converter).
 - ~~Saved pictures of each layout for comparison tests (section 9).~~ Done 23 Nov (track-b2): `apps/web/e2e/print.e2e.ts`, Windows pictures only; CI (Linux) skips them until a Linux set is added.
