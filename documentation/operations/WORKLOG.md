@@ -11,6 +11,24 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-23 — `sql/107` applied to live (send an invoice from the company)
+
+**Objective.** PR #106 (send an invoice from the company) is merged; its database part, `sql/107_sal_doc_send_queue.sql`, was not on live.
+
+**Actions Completed.** Ben said "yes 107". Checked live first: 103 and 106 present, `msg_outbox.to_address` absent. A rolled-back dry run of
+`sql/107` on live (the file up to its `commit`, then `rollback`; no error; checked afterwards that nothing stayed). Then applied with
+`npx supabase db query --linked -f sql/107_sal_doc_send_queue.sql`. Its verification: kind `document` allowed, shape rule present,
+users cannot read `doc_params`, users can read `to_address`, anonymous cannot queue, signed-in users can, `core_doc_sends.outbox_id`
+exists (all as expected). Then `sql/tests/104_doc_send_queue.sql` and `sql/tests/092_column_grants.sql` on live: both
+"ALL TESTS PASSED (everything rolled back)". `sql/README.md` row updated.
+
+**Database / System Result.** Live project ggoerp: `sql/107` applied. No data changed (live holds only test data). WhatsApp sending from the
+company stays off until `WHATSAPP_DOC_TEMPLATE` is set (needs the approved Meta template); email works for a company with the email
+integration on and "How Send works" set to "From the company".
+
+**Safety Status.** Not done: a real send from the company in the browser (Ben's step, report section 9). The Linux invoice pictures commit
+(`e855c45`) is not on main; Ben closed that, so CI keeps skipping the picture comparison on Linux.
+
 ## 2026-11-23 — CI makes the Linux invoice pictures
 
 **Objective.** The invoice layout picture tests (`apps/web/e2e/print.e2e.ts`) had Windows pictures only, so CI (Linux) skipped them.
