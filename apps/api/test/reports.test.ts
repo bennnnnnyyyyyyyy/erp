@@ -20,6 +20,7 @@ const routes: [string, string][] = [
   ['PATCH', `/v1/reports/saved/${ID}`],
   ['DELETE', `/v1/reports/saved/${ID}`],
   ['GET', '/v1/reports/forecast/sales?by=item&horizon=30'],
+  ['POST', `/v1/reports/saved/${ID}/alert`],
 ];
 
 describe('report builder API', () => {
@@ -36,6 +37,9 @@ describe('report builder API', () => {
       expect(src).toContain(`${r}, requirePermission('reports.custom.create')`);
     }
     expect(src).toContain("get('/forecast/sales', requirePermission('reports.forecast.read')");
+    // "alert me when" is an alert rule: owners and admins (the alerts key), checked again by the database
+    expect(src).toContain("post('/saved/:id/alert', requirePermission('alerts.rules.manage')");
+    expect(src).toContain("'alr_create_report_rule'");
     // a company report needs the manage key on top
     expect(src.match(/hasPermission\(c\.var\.tenant\.permissions, 'reports\.custom\.manage'\)/g)?.length).toBe(2);
   });

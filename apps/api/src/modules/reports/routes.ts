@@ -170,6 +170,42 @@ reportsRoutes.patch('/saved/:id', requirePermission('reports.custom.create'), as
   return ok<{ id: string }>(c, { id });
 });
 
+/**
+ * "Alert me when" (step 5, sql/111): a new alert rule on a saved company report. Owners and admins (the alerts key). The database checks
+ * the report, the total, the period, and that every recipient may see the report's data; the five-minute alert job does the rest.
+ */
+const ALERT_PERIODS = ['today', 'last_7', 'this_month', 'last_30'];
+reportsRoutes.post('/saved/:id/alert', requirePermission('alerts.rules.manage'), async (c) => {
+  const id = uuidParam(c.req.param('id'));
+  const b = await jsonBody(c);
+  const name = typeof b.name === 'string' ? b.name.trim() : '';
+  if (!name || name.length > 120) invalid('Give the alert a name (up to 120 characters)');
+  const total = typeof b.total === 'string' ? b.total : '';
+  if (!/^(sum|count|avg|min|max)_[a-z][a-z0-9_]{0,60}$/.test(total)) invalid('Choose one of the report’s totals');
+  if (b.compare !== 'above' && b.compare !== 'below') invalid('Choose above or below');
+  const threshold = Number(b.threshold);
+  if (b.threshold === null || b.threshold === undefined || b.threshold === '' || !Number.isFinite(threshold)) invalid('Give the limit');
+  const currency = b.currency === null || b.currency === undefined || b.currency === '' ? null : String(b.currency);
+  if (currency && !/^[A-Z]{3}$/.test(currency)) invalid('The currency is a three-letter code, for example EGP');
+  const period = b.period === null || b.period === undefined || b.period === '' ? null : String(b.period);
+  if (period && !ALERT_PERIODS.includes(period)) invalid('Unknown period');
+  const repeatHours = b.repeatHours === undefined ? 24 : Number(b.repeatHours);
+  if (!Number.isInteger(repeatHours) || repeatHours < 1 || repeatHours > 720) invalid('Repeat every 1 to 720 hours');
+  if (!Array.isArray(b.recipients) || b.recipients.length === 0 || b.recipients.length > 20) invalid('Choose who is told');
+  const ruleId = await callRpc<string>(userDb(c), 'alr_create_report_rule', {
+    p_name: name,
+    p_report_id: id,
+    p_total: total,
+    p_compare: b.compare,
+    p_threshold: threshold,
+    p_currency: currency,
+    p_period: period,
+    p_repeat_hours: repeatHours,
+    p_recipients: b.recipients,
+  });
+  return ok<{ id: string }>(c, { id: ruleId }, 201);
+});
+
 /** The sales forecast (step 4, sql/110): by product or by customer, for the next 30, 60 or 90 days. Read-only. */
 reportsRoutes.get('/forecast/sales', requirePermission('reports.forecast.read'), async (c) => {
   const by = c.req.query('by') ?? 'item';

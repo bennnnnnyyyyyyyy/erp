@@ -11,6 +11,33 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights step 5: "alert me when" on a saved report (`sql/111`, not applied)
+
+**Objective.** Step 5 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) (section 7.5): tell people when a number on a
+saved company report goes above or below a limit, through the existing alert engine.
+
+**Actions Completed.**
+- `sql/111_rpt_report_alerts.sql`: alert kind `report_value` (report, total, above/below, limit in minor units for money, currency,
+  rolling period). `alr_create_report_rule` (owners and admins; audited) checks the report, the total and the period, and refuses any
+  recipient who may not see the report's data; `alr_set_rule_recipients` does the same for these rules. `rpt__alert_run` runs each
+  rule's report for its company with the maker's role, compares the total (money in the rule's currency only), and tells only recipients
+  who may still see the data; same repeat rules as the other kinds (`alr_firings`); one broken rule does not stop the others.
+  `alr_run` (the job's entry point) is now a small wrapper: the previous evaluator is unchanged, renamed `alr__run_core`.
+- `sql/tests/108_rpt_report_alerts.sql`: making a rule and its audit; 8 refusals; a member refused as recipient of a money report (on
+  making and on changing recipients); the job tells the right people once, linked to the rule (sql/104); a limit not passed says
+  nothing; currency kept apart; a recipient who lost the right is skipped; a deleted report stops its rule; the existing alert kinds
+  still run; another company cannot make a rule on this company's report; users cannot run the job.
+- API `POST /v1/reports/saved/:id/alert` (key `alerts.rules.manage`). Web: "Alert me when" in the builder (saved company reports with a
+  total, no unsaved changes; `ReportAlert.tsx`); the Alerts page lists these rules as "Report alert" (switch off, retire; not made
+  there); the bell opens Reports & Insights. Arabic for every new text.
+
+**Database / System Result.** None on live. `sql/111` waits for Ben's "yes 111" (after 109 and 110). The Alerts page does not read the
+new columns, so it keeps working before 111 is applied.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (109 + 808 + 212); SQL tests 106 of 106 on pglite (109, 110, 111 rerun);
+biome clean on the changed files; production web build OK. Not checked in a browser or on live. After "yes 111": dry run, apply, tests
+108 and 092 and the alert tests on live; then make an alert from a saved report and wait for the five-minute job.
+
 ## 2026-11-24 — Reports & Insights step 4: sales forecast (`sql/110`, not applied)
 
 **Objective.** Step 4 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) (section 7.4; Ben: sales first, company-wide):

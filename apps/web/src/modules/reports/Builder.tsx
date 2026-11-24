@@ -34,6 +34,7 @@ import { saveBlob, sheetToPdf } from '../sales/print/pdf';
 import { cellText, cellValue, headerLabel } from './cells';
 import { presetPeriod, templateDefinition, tidy } from './definition';
 import { FN_LABELS, VALUE_LABELS, columnLabel, opLabel, sourceLabel } from './labels';
+import { ReportAlert } from './ReportAlert';
 import { ReportChart } from './ReportChart';
 import { XLSX_TYPE, xlsxBytes } from './xlsx';
 
@@ -64,6 +65,10 @@ export function ReportBuilderPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
+  // Step 5: "Alert me when" works on the report as saved, so it waits for unsaved changes to be saved.
+  const [dirty, setDirty] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const canAlert = hasPermission(session.permissions, 'alerts.rules.manage');
   const sheet = useRef<HTMLDivElement>(null);
   const source = sources.data?.find((s) => s.key === def?.source);
 
@@ -105,6 +110,7 @@ export function ReportBuilderPage() {
         .then((r) => {
           setMeta({ id: r.id, name: r.name, description: r.description ?? '', visibility: r.visibility, mine: r.mine, templateKey: r.templateKey });
           setDef(r.definition);
+          setDirty(false);
           void run(r.definition, sources.data?.find((s) => s.key === r.definition.source));
         })
         .catch((e: Error) => setError(e.message));
@@ -130,6 +136,7 @@ export function ReportBuilderPage() {
   const set = (patch: Partial<ReportDefinition>) => {
     setDef((d) => (d ? { ...d, ...patch } : d));
     setSaved(null);
+    setDirty(true);
   };
   const grouped = (def.groupBy ?? []).length > 0;
   const outKeys = reportOutputKeys(tidy(def));
@@ -151,6 +158,7 @@ export function ReportBuilderPage() {
       if (meta.id && !asNew) {
         await api(`/v1/reports/saved/${meta.id}`, { method: 'PATCH', body });
         setSaved(tr('Saved.'));
+        setDirty(false);
         setSaveOpen(false);
       } else {
         const r = await api<{ id: string }>('/v1/reports/saved', { method: 'POST', body });
@@ -428,12 +436,30 @@ export function ReportBuilderPage() {
           {busy === 'pdf' ? tr('Working…') : tr('PDF')}
         </Button>
         <Button variant="outline" disabled={!result} onClick={() => window.print()}>{tr('Print')}</Button>
+        {meta.id && meta.visibility === 'company' && canAlert && (def.totals ?? []).length > 0 && (
+          <Button variant="outline" disabled={busy !== null || dirty} title={dirty ? tr('Save your changes first.') : undefined} onClick={() => setAlertOpen((o) => !o)}>
+            {tr('Alert me when')}
+          </Button>
+        )}
         {meta.id && canEditSaved && (
           <ConfirmButton label={tr('Delete')} confirmLabel={tr('Yes, delete')} question={trf('Delete the report "{name}"?', { name: meta.name })} disabled={busy !== null} onConfirm={remove} />
         )}
         {saved && <span className="muted small">{saved}</span>}
       </div>
       {result && result.rows.length > PDF_MAX_ROWS && <p className="muted small no-print">{trf('A PDF holds up to {n} rows: use Excel for more.', { n: PDF_MAX_ROWS })}</p>}
+
+      {alertOpen && meta.id && !dirty && (
+        <ReportAlert
+          reportId={meta.id}
+          reportName={meta.name}
+          totals={def.totals ?? []}
+          source={source}
+          onClose={(message) => {
+            setAlertOpen(false);
+            if (message) setSaved(message);
+          }}
+        />
+      )}
 
       {saveOpen && (
         <fieldset className="report-panel no-print">

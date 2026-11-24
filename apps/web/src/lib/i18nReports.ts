@@ -209,6 +209,30 @@ export const REPORTS_AR: Record<string, string> = {
   Good: 'جيدة',
   'Thin: a guess': 'ضعيفة: تقدير',
 
+  // step 5: "alert me when" (sql/111)
+  'Alert me when': 'نبّهني عندما',
+  'Save your changes first.': 'احفظ تغييراتك أولاً.',
+  'Give the limit as a number.': 'اكتب الحد كرقم.',
+  'Alert made. You can switch it off on the Alerts page.': 'تم إنشاء التنبيه. يمكنك إيقافه من صفحة التنبيهات.',
+  Goes: 'يصبح',
+  above: 'أعلى من',
+  below: 'أقل من',
+  Limit: 'الحد',
+  'Checked for': 'يُفحص عن',
+  Tell: 'أبلغ',
+  'All owners and admins': 'كل الملاك والمسؤولين',
+  'How often': 'كم مرة',
+  'Checked every few minutes. Only people who may see this report’s data can be told.':
+    'يُفحص كل بضع دقائق. لا يُبلَّغ إلا من يُسمح له برؤية بيانات هذا التقرير.',
+  'Make the alert': 'إنشاء التنبيه',
+  Today: 'اليوم',
+  'Last 7 days': 'آخر 7 أيام',
+  'Every hour at most': 'مرة كل ساعة على الأكثر',
+  'Once a day at most': 'مرة في اليوم على الأكثر',
+  'Once a week at most': 'مرة في الأسبوع على الأكثر',
+  'Report alert': 'تنبيه تقرير',
+  'Made from a saved report in Reports & Insights.': 'يُنشأ من تقرير محفوظ في التقارير والتحليلات.',
+
   // the shared definition check (packages/shared/src/reports.ts), shown by the builder before it runs
   'The report settings are missing.': 'إعدادات التقرير غير موجودة.',
   'The report has a setting we do not know.': 'في التقرير إعداد غير معروف.',
