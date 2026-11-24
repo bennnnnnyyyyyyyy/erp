@@ -11,6 +11,32 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Report builder as one sentence (Ben's option A; no migration)
+
+**Objective.** Ben found the report builder's controls confusing (six boxes of settings before the report, technical words, a Run button
+that looked switched off). Two options were shown to him with pictures (`.temp/reports-builder/2026-11-24-builder-options.md`, taken
+from the sample-data build on 127.0.0.1); he picked A: one sentence on top, the report right under it.
+
+**Actions Completed.**
+- `apps/web/src/modules/reports/Builder.tsx`: the settings are "Show [what] by [split] for [period]" (`.rb-sentence`). "What" is a total
+  in plain words (a column added up, "Number of lines") or "Each line (a list)"; "by" is a text or date column or "Nothing (every
+  line)"; "for" is a period choice or "Pick dates…". Under it, chips: filters as short sentences (click to change, ✕ to remove),
+  "+ Only include…", "+ Also show…" (another total, or the list's columns), "+ Split again by…", "Order and rows…". Above the report:
+  Bars / Line / Pie / Table only. No Run button: the report runs 0.35 s after the last change, and a slower earlier answer is dropped.
+  Save is the main button.
+- New `modules/reports/sentence.ts` (the sentence's choices to and from the same definition; sql/109 and saved reports unchanged) and
+  `sentence.test.ts` (6 tests, each sentence gives a definition the shared check accepts).
+- `cells.ts`: headings in plain words ("Total", not "Sum of Total"; "Number of lines" for a count). Excel and alerts use the same names.
+- `styles.css` (`.rb-*`, logical properties; under 640 px each choice takes a full line). Arabic for every new text (`i18nReports.ts`).
+- Plan (`REPORTS_INSIGHTS_PLAN.md`, the Builder screen row) updated.
+
+**Database / System Result.** None (no SQL, no API change).
+
+**Safety Status.** `tsc` 0 errors (web); web tests 218 passed (Arabic coverage included); biome 0 errors (warnings are array-index keys,
+as before). Looked at in the sample-data build on 127.0.0.1 (desktop, 390 px, right-to-left; pictures `.temp/reports-builder/built-A-*`).
+Found there, not ours: at 390 px every page of the app is about 60 px wider than the screen (the app shell, also on the library page).
+Not checked on real data or the live app.
+
 ## 2026-11-24 — Shortcuts: home cards open Reports & Insights; broken and empty links fixed (no migration)
 
 **Objective.** Ben's feedback on Reports steps 1-5 (via erp-master): tiles and cards about a report must open it in Reports & Insights, and

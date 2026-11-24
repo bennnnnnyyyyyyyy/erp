@@ -38,7 +38,7 @@ export const REPORTS_AR: Record<string, string> = {
 
   // step 2: the report builder (sql/109)
   'No data is open to you for reports yet. Ask an admin for access.': 'لا توجد بيانات متاحة لك للتقارير بعد. اطلب الصلاحية من المسؤول.',
-  'You can change the settings and run them, but only save them as a new report.': 'يمكنك تغيير الإعدادات وتشغيلها، لكن يمكنك حفظها كتقرير جديد فقط.',
+  'You can change the settings and see the result, but only save them as a new report.': 'يمكنك تغيير الإعدادات ورؤية النتيجة، لكن يمكنك حفظها كتقرير جديد فقط.',
   'What the report is about': 'موضوع التقرير',
   Data: 'البيانات',
   'Period ({column})': 'الفترة ({column})',
@@ -265,4 +265,25 @@ export const REPORTS_AR: Record<string, string> = {
   'Sort by a column that is shown.': 'رتّب حسب عمود ظاهر.',
   'Show 1 to 5000 rows.': 'اعرض من 1 إلى 5000 صف.',
   'The chart needs two columns that are shown.': 'الرسم البياني يحتاج عمودين ظاهرين.',
+
+  // the builder as one sentence (Ben, 24 Nov: option A): "Show [what] by [split] for [period]"
+  'What to show': 'ما الذي يُعرض',
+  'Each line (a list)': 'كل سطر (قائمة)',
+  'Number of lines': 'عدد الأسطر',
+  by: 'حسب',
+  'Split by': 'التقسيم حسب',
+  'Nothing (every line)': 'بدون تقسيم (كل سطر)',
+  for: 'عن',
+  'Pick dates…': 'اختر التواريخ…',
+  'then by {column}': 'ثم حسب {column}',
+  'also {what}': 'وأيضًا {what}',
+  '+ Only include…': '+ اعرض فقط…',
+  '+ Also show…': '+ اعرض أيضًا…',
+  '+ Split again by…': '+ قسّم أيضًا حسب…',
+  'Order and rows…': 'الترتيب وعدد الصفوف…',
+  'Only include lines where': 'اعرض فقط الأسطر التي فيها',
+  'Columns in the list': 'الأعمدة في القائمة',
+  'Split each row again by': 'قسّم كل صف أيضًا حسب',
+  'Show at most (rows)': 'اعرض على الأكثر (صفوف)',
+  'Table only': 'جدول فقط',
 };
