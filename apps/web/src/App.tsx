@@ -12,6 +12,8 @@ import {useI18n, tr } from './lib/i18n';
 import { SetPassword } from './components/SetPassword';
 import { OrgPicker } from './components/OrgPicker';
 import { Shell } from './components/Shell';
+import { rememberReturnPath, takeReturnPath } from './lib/returnTo';
+import { navigate } from './lib/router';
 
 export function App() {
   const { lang } = useI18n();
@@ -30,6 +32,16 @@ export function App() {
     });
     return () => data.subscription.unsubscribe();
   }, []);
+
+  // Deep links through sign-in (lib/returnTo.ts): signed out, keep the page asked for; signed in, open it if the sign-in came back to home.
+  const signedIn = auth ? auth.user.id : auth === null ? null : undefined;
+  useEffect(() => {
+    if (signedIn === null) rememberReturnPath(window.location.pathname + window.location.search);
+    else if (signedIn) {
+      const back = takeReturnPath(window.location.pathname);
+      if (back) navigate(back);
+    }
+  }, [signedIn]);
 
   // Reload the session only when the signed-in person or the company changes, or a screen asks (sessionTick); never on a token
   // renewal or the tab regaining focus, which are new `auth` objects for the same person (see lib/sessionKey.ts).

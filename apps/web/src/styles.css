@@ -439,6 +439,16 @@ td input { margin-top: 0; }
 .bell-item {
   display: flex; flex-direction: column; gap: 0.1rem; text-align: start; background: transparent; color: var(--text);
   padding: 0.6rem 0.8rem; border-radius: 0; border-bottom: 1px solid var(--border); border-inline-start: 3px solid transparent;
+  /* Ben's phone test, 24 Nov 2026 (Safari): in the scrolling list each row shrank below its text, so the rows were drawn over each
+     other. A row keeps its full height and long words wrap. */
+  flex: none; min-width: 0; white-space: normal; overflow-wrap: anywhere;
+}
+.bell-item > * { display: block; min-width: 0; }
+/* On a phone the panel is as wide as the screen (less a margin), under the top bar: it ran off the left edge (it was at least 340 px
+   wide and pinned to the bell, which is not at the screen's edge). */
+@media (max-width: 720px) {
+  .bell-menu { position: fixed; inset-inline: 8px; top: 60px; min-width: 0; max-width: none; inline-size: auto; z-index: 40; }
+  .bell-list { max-height: calc(100dvh - 180px); }
 }
 .bell-item:hover:not(:disabled) { background: var(--surface-2); }
 .bell-item.unread { background: color-mix(in srgb, var(--signal) 10%, var(--surface)); border-inline-start-color: var(--signal); }

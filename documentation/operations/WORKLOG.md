@@ -11,6 +11,48 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Phone: bell panel fixed; deep links survive sign-in (no migration)
+
+**Objective.** Ben's phone test on live (iPhone, Safari, dark mode): (1) a link into the app (the invoice QR code, bell, WhatsApp or
+email) must open that page after signing in; (2) the bell panel ran off the left edge and its rows were drawn over each other.
+
+**Actions Completed.**
+- Bell (`apps/web/src/styles.css`): each row keeps its full height (`flex: none`; Safari shrank the buttons in the scrolling list below
+  their text, so the text of one row was drawn over the next) and long words wrap. On a phone (720 px or less) the panel is fixed under
+  the top bar, 8 px from each screen edge, above the account button (it was at least 340 px wide and pinned to the bell).
+- Deep links (`apps/web/src/lib/returnTo.ts`, `App.tsx`): code check: signed out, the sign-in screen shows at the same address, so a
+  password sign-in already returned to the page. Google sign-in and the emailed links come back to the home address and lost it. Now
+  the page asked for (path and query) is kept for an hour while signed out and opened after sign-in when the app came back to home.
+  Only a page of this app is accepted (no "//host", no other site). `returnTo.test.ts`: 5 tests.
+- Seen in Ben's picture: "Low stock: R-FR2" three times (the old sql/013 message and the alert engine); stopping the old one is Ben's
+  answer 5, in migration 112 with step 6.
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 223 passed. The bell panel was checked in the sample-data build at 360 and 390 px, English
+and Arabic, light and dark, with rows like Ben's (the sample build has no bell, so its markup was added to the page for the check);
+pictures `.temp/reports-builder/bell-phone-after-*.jpg`. Not checked: Safari on a real iPhone, and Google sign-in on live (needs the
+live Supabase sign-in).
+
+## 2026-11-24 — Printed documents: bigger QR code, clean totals box (no migration)
+
+**Objective.** Ben: the QR code on printed invoices, drafts and notes was too small, and on the Simple layout the line under "Total"
+stopped halfway across the totals box.
+
+**Actions Completed.** `apps/web/src/modules/sales/print/print.css` only: the QR code is 30 mm square (was 20 mm), its caption beside
+it may be up to 45 mm wide (one line in one language; English and Arabic together take three short lines). Cause of the half line: the
+app's own table styles reached the totals box (a line under the label cell only, a grey stripe on one cell, and 100% width that
+squeezed the QR caption). The totals box now draws its own lines across both cells (a dark line above the total, a light one under
+it) and has its own width (at least 80 mm). Applies to every layout and language, the downloaded PDF (same page, `pdf.ts` unchanged)
+and the public link. Print layout pictures refreshed (`apps/web/e2e/print.e2e.ts-snapshots/`, 8 pictures), checked by eye: everything
+stays on one A4 page.
+
+**Database / System Result.** None.
+
+**Safety Status.** Print picture tests: 8 passed (desktop). Note: the picture tests allow 1% difference, so a size change of the QR code
+alone does not fail them; refresh them with `--update-snapshots=all` after a print change. Not checked: printing on paper, scanning the
+bigger code with a phone.
+
 ## 2026-11-24 — Phone width: pages of an app with a long name were wider than the screen (old UI; no migration)
 
 **Objective.** At 360-390 px, the Reports & Insights pages were about 60 px wider than the screen (the account button was cut off and the
