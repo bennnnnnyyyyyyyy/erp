@@ -62,6 +62,8 @@ export const GROUPS: Group[] = [
   { key: 'journal', section: 'Screens being decided', label: 'Journal entry (Accounting > Manual journals > New)', default: 'A', options: [c('A', 'A: Dynamics journal, preview posting'), c('B', 'B: Two sides, debit and credit'), c('C', 'C: Simple, from one account to another')] },
   { key: 'tb', section: 'Screens being decided', label: 'Trial balance (Accounting)', default: 'A', options: [c('A', 'A: Dynamics report, folding groups'), c('B', 'B: Read first'), c('C', 'C: Accountant’s sheet, tree')] },
   { key: 'vatmonth', section: 'Screens being decided', label: 'VAT month (Money > VAT summary)', default: 'A', options: [c('A', 'A: Dynamics period, status path'), c('B', 'B: Like the return, numbered boxes'), c('C', 'C: Twelve months in one list')] },
+  { key: 'rlib', section: 'Screens being decided', label: 'Report library (Reports)', default: 'A', options: [c('A', 'A: Dynamics explorer, areas at the side'), c('B', 'B: One list, search first'), c('C', 'C: Every area in columns')] },
+  { key: 'rfc', section: 'Screens being decided', label: 'Sales forecast (Reports > Sales forecast)', default: 'A', options: [c('A', 'A: Dynamics report, figures strip'), c('B', 'B: Read first'), c('C', 'C: Chart first')] },
   { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------

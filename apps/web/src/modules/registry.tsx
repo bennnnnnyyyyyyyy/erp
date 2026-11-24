@@ -106,6 +106,9 @@ const TrialBalancePage = lazyNamed(() => import('./accounting/Ledger'), 'TrialBa
 const TrialBalanceNew = lazyNamed(() => import('./accounting/TrialBalanceNew'), 'TrialBalanceNew');
 const JournalFormNew = lazyNamed(() => import('./accounting/JournalFormNew'), 'JournalFormNew');
 const VatMonthNew = lazyNamed(() => import('./finance/VatMonthNew'), 'VatMonthNew');
+// New UI, reports (24 Nov 2026): versions of the library and the sales forecast (lib/designLab.ts 'rlib', 'rfc').
+const ReportLibraryNew = lazyNamed(() => import('./reports/LibraryNew'), 'ReportLibraryNew');
+const SalesForecastNew = lazyNamed(() => import('./reports/ForecastNew'), 'SalesForecastNew');
 const AccountLinesPage = lazyNamed(() => import('./accounting/Ledger'), 'AccountLinesPage');
 const IncomeStatementPage = lazyNamed(() => import('./accounting/Statements'), 'IncomeStatementPage');
 const BalanceSheetPage = lazyNamed(() => import('./accounting/Statements'), 'BalanceSheetPage');
@@ -356,12 +359,18 @@ export const APPS: AppDef[] = [
   {
     key: 'reports', module: 'reports', name: 'Reports & Insights', description: 'All your reports in one place, by area',
     suite: 'Core', basePath: '/reports', pages: [
-      { path: '', label: 'Report library', permission: 'reports.library.read', component: ReportLibraryPage },
+      { path: '', label: 'Report library', permission: 'reports.library.read', component: ReportLibraryPage, newComponent: ReportLibraryNew },
+      // The new UI's demo has sample forecast data, saved reports and sources (lib/demoReports.ts). The builder is listed so the library
+      // shows saved and ready-made reports; running a report needs the real API.
+      ...(demoMode && newUi ? [
+        { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
+        { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage, newComponent: SalesForecastNew },
+      ] : []),
       // Step 2 (sql/109): the report builder; a saved report opens in it. Real API only (the sample-data build has no report database).
       ...(demoMode ? [] : [
         { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
         // Step 4 (sql/110): the sales forecast.
-        { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage },
+        { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage, newComponent: SalesForecastNew },
         { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
         // Step 3: a ready-made report opens in the builder and runs at once.
         { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },

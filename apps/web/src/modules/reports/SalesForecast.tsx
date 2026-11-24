@@ -17,11 +17,12 @@ import { XLSX_TYPE, xlsxBytes } from './xlsx';
 const TREND: Record<SalesForecastRow['trend'], string> = { up: 'Up', down: 'Down', flat: 'Steady' };
 const TREND_MARK: Record<SalesForecastRow['trend'], string> = { up: '▲', down: '▼', flat: '■' };
 
-const money = (minor: number, currency: string) => formatMoney({ amountMinor: Math.round(minor), currency });
-const nameOf = (r: SalesForecastRow) => (currentLanguage() === 'ar' && r.nameAr ? r.nameAr : r.name);
+export const money = (minor: number, currency: string) => formatMoney({ amountMinor: Math.round(minor), currency });
+export const nameOf = (r: SalesForecastRow) => (currentLanguage() === 'ar' && r.nameAr ? r.nameAr : r.name);
+export { TREND, TREND_MARK };
 
-export function SalesForecastPage() {
-  const session = useSession();
+/** The forecast's logic, shared by this page and the new-UI versions (ForecastNew): the choice, the data, the Excel file. */
+export function useSalesForecast() {
   const [by, setBy] = useState<SalesForecastBy>('item');
   const [horizon, setHorizon] = useState<SalesForecastHorizon>(30);
   const data = useLoad(() => api<SalesForecast>(`/v1/reports/forecast/sales?by=${by}&horizon=${horizon}`));
@@ -62,6 +63,12 @@ export function SalesForecastPage() {
     );
     saveBlob(new Blob([xlsxBytes(tr('Sales forecast'), header, rows, currentLanguage() === 'ar') as BlobPart], { type: XLSX_TYPE }), 'sales-forecast.xlsx');
   }
+  return { by, horizon, data, change, items, exportExcel };
+}
+
+export function SalesForecastPage() {
+  const session = useSession();
+  const { by, horizon, data, change, items, exportExcel } = useSalesForecast();
 
   return (
     <section className="page wide">

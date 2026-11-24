@@ -1,0 +1,54 @@
+/* Reports in the new UI (report library, sales forecast). Seamless: hairlines, no tiles. Logical properties only (RTL-safe).
+   Used with ../sales/pagekit.css. */
+.rl-new { text-decoration: none; }
+.rl-tag { white-space: nowrap; display: inline-block; margin-inline-start: 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--primary-text); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* A: explorer */
+.rl-explorer { display: grid; grid-template-columns: 220px minmax(0, 1fr) 280px; gap: 1.5rem; align-items: start; }
+.rl-areas { display: flex; flex-direction: column; border-block-start: 1px solid var(--border); }
+.rl-areas .st-row { grid-template-columns: 1fr auto; padding-inline: 0.6rem; }
+.rl-side { position: sticky; inset-block-start: 1rem; }
+.rl-open { align-self: flex-start; text-decoration: none; }
+
+/* B: one list */
+.rl-b { max-width: 980px; }
+.rl-group { display: flex; flex-direction: column; gap: 0.25rem; }
+.rl-rows { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--border); }
+.rl-row { display: grid; grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 2fr) auto; gap: 1rem; align-items: baseline; padding: 0.75rem 0.25rem; border-block-end: 1px solid var(--border); color: var(--foreground); text-decoration: none; }
+.rl-row:hover { background: var(--accent); }
+.rl-row:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.rl-title { font-weight: 600; }
+.rl-desc { color: var(--muted-foreground); font-size: 0.92rem; }
+.rl-go { color: var(--muted-foreground); }
+[dir='rtl'] .rl-go { transform: scaleX(-1); }
+
+/* C: columns */
+.rl-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 1.5rem; }
+.rl-col { border-block-start: 2px solid var(--foreground); padding-block: 0.6rem 1.2rem; }
+.rl-col h2 { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 600; }
+.rl-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rl-col li { display: flex; align-items: baseline; gap: 0.3rem; padding-block: 0.35rem; border-block-end: 1px solid var(--border); }
+.rl-col a { color: var(--foreground); text-decoration: none; font-size: 0.92rem; }
+.rl-col a:hover { color: var(--primary-text); text-decoration: underline; }
+.rl-dot { color: var(--primary-text); font-weight: 700; }
+.rl-legend { font-size: 0.85rem; }
+
+/* sales forecast */
+.rf-trend { font-weight: 600; white-space: nowrap; }
+.rf-trend.up { color: var(--success-foreground); }
+.rf-trend.down { color: var(--primary-text); }
+.rf-trend.flat { color: var(--muted-foreground); }
+.rf-how { margin: 0; padding: 0 0 1rem; padding-inline-start: 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; color: var(--muted-foreground); font-size: 0.9rem; }
+.rf-pair { display: flex; flex-direction: column; gap: 3px; }
+.rf-last { display: block; height: 100%; background: color-mix(in srgb, var(--foreground) 35%, transparent); border-radius: 3px; }
+.rf-next { display: block; height: 100%; background: var(--foreground); border-radius: 3px; }
+.rf-thin .rf-next { background: repeating-linear-gradient(90deg, var(--foreground) 0 6px, transparent 6px 9px); }
+.rf-key-last { background: color-mix(in srgb, var(--foreground) 35%, transparent); }
+.rf-key-next { background: var(--foreground); }
+.rf-bars .rp-track { height: 8px; }
+.rf .pk-num, .rf .pk-strip strong, .rl .pk-group-n { unicode-bidi: plaintext; }
+
+@media (max-width: 1100px) { .rl-explorer { grid-template-columns: 200px minmax(0, 1fr); } .rl-side { display: none; } }
+@media (max-width: 760px) { .rl-explorer { grid-template-columns: 1fr; } .rl-row { grid-template-columns: 1fr; gap: 0.2rem; } }
+@media print { .pk-bar { display: none; } }
+.rl a.pk-act-main, .rl a.pk-act-main:hover { color: var(--primary-foreground); text-decoration: none; }

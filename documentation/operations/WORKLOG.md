@@ -11,6 +11,24 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — New UI: report library and sales forecast in versions (track-c, feat/bellvox-look; no SQL)
+
+**Objective.** Ben (24 Nov): start the next new-UI pages. The Reports & Insights screens were only old screens inside the new frame;
+the library is the way into every report (today a grid of tiles, which Ben does not want).
+
+**Actions Completed.**
+- Shared logic first, old pages keep their markup: `useReportLibrary` (reports/Library.tsx), `useSalesForecast` (reports/SalesForecast.tsx).
+- `reports/LibraryNew.tsx` (A Dynamics explorer: areas with counts, report rows, side panel; B one searchable list; C every area in
+  columns) and `reports/ForecastNew.tsx` (A report with a figures strip; B read first; C chart first, last 30 days against the forecast).
+  Design Lab keys `rlib`, `rfc`; styles `reports/reports-new.css`; Arabic `lib/i18nReportsUi.ts` (20 texts) in the new-UI translation test.
+- New UI demo only: `lib/demoReports.ts` (two saved reports, report sources so the ready-made reports show, a sales forecast); reports
+  switched on and the forecast and builder addresses listed in the new UI demo. Old UI and its demo unchanged.
+- Team page: two questions in "Screen 7 · Reports & Insights" (Report library, Sales forecast) with screenshots in English and Arabic.
+
+**Database / System Result.** None.
+
+**Safety Status.** tsc 0 errors; vitest 109 + 808 + 219 pass; biome 0 errors on the changed files. Not deployed; never on main.
+
 ## 2026-11-24 — Grant's accounting screens in versions: journal entry, trial balance, VAT month (track-c, feat/bellvox-look; no SQL)
 
 **Objective.** erp-master (Ben's answer, 24 Nov): no scanning screens yet; mark every accounting screen "Needs Grant's sign-off" on the

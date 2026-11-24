@@ -16,7 +16,8 @@ import { libraryFor } from './reportLibrary';
 // Step 2: the saved reports this person can see and run ("My reports", "Company reports"), and "New report" (the builder). Before
 // sql/109 is applied the API answers 503 and these simply do not show.
 
-export function ReportLibraryPage() {
+/** The library's logic, shared by this page and the new-UI versions (LibraryNew): who may open what, the saved reports, the search. */
+export function useReportLibrary() {
   const session = useSession();
   const [search, setSearch] = useState('');
   const [saved, setSaved] = useState<SavedReport[]>([]);
@@ -53,6 +54,11 @@ export function ReportLibraryPage() {
   const mine = shownSaved.filter((r) => r.visibility === 'private');
   const company = shownSaved.filter((r) => r.visibility === 'company');
   const anyAtAll = libraryFor(canOpen).length > 0 || saved.length > 0 || canBuild;
+  return { search, setSearch, apps, canOpen, canBuild, areas, q, shownSaved, mine, company, anyAtAll };
+}
+
+export function ReportLibraryPage() {
+  const { search, setSearch, apps, canBuild, areas, q, shownSaved, mine, company, anyAtAll } = useReportLibrary();
   let tileIndex = 0;
 
   const savedTiles = (list: SavedReport[]) => (
