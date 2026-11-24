@@ -29,6 +29,18 @@ describe('report library', () => {
     expect(shown.flatMap((a) => a.reports.map((r) => r.title))).toEqual(['Sales invoices', 'Stock on hand', 'VAT summary']);
   });
 
+  it('adds the ready-made reports only for the sources the person may use, after the screens', () => {
+    const open: Record<string, string> = { '/inventory/stock': 'Stock on hand' };
+    const shown = libraryFor((p) => open[p] ?? null, '', (s) => s, new Set(['stock_on_hand']));
+    const stock = shown.find((a) => a.key === 'stock')?.reports ?? [];
+    expect(stock[0]?.path).toBe('/inventory/stock');
+    expect(stock.filter((r) => r.ready).map((r) => r.path)).toEqual(['/reports/template/stock_by_warehouse', '/reports/template/out_of_stock']);
+    expect(shown.some((a) => a.key === 'money')).toBe(false);
+    expect(libraryFor(() => null, 'out of', (s) => s, new Set(['stock_on_hand'])).flatMap((a) => a.reports.map((r) => r.path))).toEqual([
+      '/reports/template/out_of_stock',
+    ]);
+  });
+
   it('shows nothing to a person who can open no report', () => {
     expect(libraryFor(() => null)).toEqual([]);
   });

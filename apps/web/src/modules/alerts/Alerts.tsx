@@ -17,7 +17,7 @@ type Rule = { id: string; name: string; kind: Kind; itemId: string | null; thres
 type Team = { id: string; name: string; userIds: string[] };
 type Person = { userId: string; name: string };
 type Item = { id: string; sku: string; name: string };
-type Kind = 'stock_below' | 'expiry_within' | 'receivable_overdue' | 'profit_negative' | 'forecast_stockout';
+type Kind = 'stock_below' | 'expiry_within' | 'receivable_overdue' | 'profit_negative' | 'forecast_stockout' | 'report_value';
 
 const KIND: Record<Kind, { label: string; hint: string; unit?: string }> = {
   stock_below: { label: 'Stock below reorder level', hint: 'Leave blank to use each item\'s reorder level.', unit: 'units or fewer available' },
@@ -25,7 +25,11 @@ const KIND: Record<Kind, { label: string; hint: string; unit?: string }> = {
   receivable_overdue: { label: 'Customer invoice overdue', hint: 'Counted from the invoice date.', unit: 'days after the invoice date' },
   profit_negative: { label: 'Month-to-date net loss', hint: 'Sales minus the cost of goods sold and running costs, this month so far.' },
   forecast_stockout: { label: 'Forecast stock-out', hint: 'Based on the stock forecast: reports days of cover and forecast confidence. Items with no usage in 90 days are excluded.', unit: 'days of stock left, or fewer' },
+  // Reports & Insights step 5 (sql/111): made from a saved report ("Alert me when"), not from this form; listed here to switch off or retire.
+  report_value: { label: 'Report alert', hint: 'Made from a saved report in Reports & Insights.' },
 };
+/** The kinds this page's form makes (a report alert is made from its report). */
+const FORM_KINDS = (Object.keys(KIND) as Kind[]).filter((k) => k !== 'report_value');
 const ROLE_LABEL: Record<string, string> = { owner: 'All owners', admin: 'All admins', member: 'All members', viewer: 'All viewers' };
 
 export function AlertsPage() {
@@ -56,6 +60,8 @@ export function AlertsPage() {
     const base = tr(k.label);
     if (r.kind === 'stock_below') return `${base} (${itemLabel(r.itemId)}${r.threshold !== null ? trf(', {n} or fewer', { n: r.threshold }) : tr(', at its reorder level')})`;
     if (r.kind === 'forecast_stockout') return `${base} (${itemLabel(r.itemId)}): ${r.threshold} ${tr(k.unit ?? '')}`;
+    // The limit of a report alert may be money in minor units: its report says what it watches.
+    if (r.kind === 'report_value') return base;
     return r.threshold !== null ? `${base}: ${r.threshold} ${tr(k.unit ?? '')}` : base;
   };
   const recipientLabel = (r: Recipient) => (r.type === 'team' ? trf('Team: {name}', { name: teams.data?.find((t) => t.id === r.id)?.name ?? '?' }) : r.type === 'role' ? tr(ROLE_LABEL[r.role ?? ''] ?? r.role ?? '') : person(r.id));
@@ -80,7 +86,7 @@ export function AlertsPage() {
             <label>{tr('Name')}<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={tr('e.g. Main item running low')} /></label>
             <label>{tr('Trigger')}
               <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Kind, threshold: '' })}>
-                {(Object.keys(KIND) as Kind[]).map((k) => <option key={k} value={k}>{tr(KIND[k].label)}</option>)}
+                {FORM_KINDS.map((k) => <option key={k} value={k}>{tr(KIND[k].label)}</option>)}
               </select>
             </label>
             {(f.kind === 'stock_below' || f.kind === 'forecast_stockout') && (

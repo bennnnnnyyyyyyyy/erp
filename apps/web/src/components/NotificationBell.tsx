@@ -17,6 +17,7 @@ const ALERT_TARGET: Record<string, string> = {
   expiry_within: '/inventory/batches',
   receivable_overdue: '/finance/owed',
   profit_negative: '/finance/overview',
+  report_value: '/reports', // sql/111: "alert me when" on a saved report
 };
 
 /** Where a notification leads when clicked. */

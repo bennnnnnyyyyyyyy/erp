@@ -36,6 +36,7 @@ export const ERRORS_AR: Record<string, string> = {
   'That account is inactive or not part of this company': 'هذا الحساب غير نشط أو لا يتبع هذه الشركة',
   'That account still holds money: transfer it out first': 'ما زال في هذا الحساب رصيد: حوّله أولًا',
   'That already exists': 'هذا موجود بالفعل',
+  'A report with that name already exists': 'يوجد تقرير بهذا الاسم بالفعل',
   'That batch has already expired': 'انتهت صلاحية هذه الدفعة',
   'That cash box or bank account does not fit this payment': 'هذه الخزينة أو الحساب البنكي لا يناسب هذه الدفعة',
   'That date is in a locked period': 'هذا التاريخ في فترة مقفلة',
