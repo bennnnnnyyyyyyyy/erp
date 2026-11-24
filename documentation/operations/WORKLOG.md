@@ -43,7 +43,8 @@ and one SQL test, 105).
 - 24 Nov, CI fix: on CI's real Supabase, test 105 failed with `NOT_FOUND` (where Storage exists, `core_add_attachment` checks that the
   file was really uploaded, and the test had uploaded none). The test now puts its two files in `storage.objects` there (rolled back),
   and a new check B1m proves that a file never uploaded is refused. Locally checked with a stub `storage` schema as well.
-- Step 2, barcodes (24 Nov; Ben installed `@zxing/browser` 0.2.1, Apache-2.0, with `@zxing/library` 0.23). `sql/108`:
+- Step 2, barcodes (24 Nov; Ben installed `@zxing/browser` 0.2.1, MIT, with `@zxing/library` 0.23, Apache-2.0, and
+  `@zxing/text-encoding` 0.9, Unlicense or Apache-2.0; the plan said Apache-2.0 for all, and both licences allow our use). `sql/108`:
   `inv_items.barcode` (printable, no spaces, up to 64; unique among a company's live items) with its column grant in the same
   migration; `inv_set_item_barcode` (owners, admins, members; blank clears; `DUPLICATE` names the item that has it; audited). API:
   `GET /v1/inventory/items/by-barcode/:code`, `PUT /v1/inventory/items/:id/barcode`, an optional `barcode` on `POST /v1/inventory/items`

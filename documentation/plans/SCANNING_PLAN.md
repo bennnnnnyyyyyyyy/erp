@@ -73,7 +73,8 @@ People type less. They scan paper and products instead.
 4. Reading the barcode from the camera:
    - Some browsers have a built-in barcode reader (`BarcodeDetector`). From general knowledge: Chrome on Android and Mac have it.
      **Chrome on Windows does not.**
-   - So we also use **ZXing for JavaScript** as a backup. Licence: Apache-2.0 (checked 20 Nov). We can use it.
+   - So we also use **ZXing for JavaScript** as a backup. Licence: Apache-2.0 (checked 20 Nov). We can use it. (24 Nov, at install:
+     `@zxing/browser` is MIT and `@zxing/library` is Apache-2.0. Both allow our use.)
    - ZXing is a new package. **Ben must install it in the main folder.** Never run `npm install` in a worktree.
 
 **Later, not now:** USB or Bluetooth scanners, printing barcode labels, barcodes from weighing scales (for groceries).
