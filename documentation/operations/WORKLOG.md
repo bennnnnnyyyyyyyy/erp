@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights: module plan written (no migration)
+
+**Objective.** Plan the Reports & Insights module (brief from erp-master; Ben's decisions of 23 Nov) before any build.
+
+**Actions Completed.** Wrote [`documentation/plans/REPORTS_INSIGHTS_PLAN.md`](../plans/REPORTS_INSIGHTS_PLAN.md): six steps that merge
+on their own (report library; builder with saved reports and Excel/PDF export; templates; sales forecast with the `sql/029` method;
+"alert me when" as a new alert kind; scheduled reports through the outbox). Cash flow forecast and AI are written as later sections
+only. Added the plan to `checklist.md` and the plans index. Worktree `.claude/worktrees/reports`, branch `feat/reports`.
+
+**Database / System Result.** None. Step 2 will take the next free migration (now `109`) and SQL test (now `106`).
+
+**Safety Status.** Documents only. Nothing built or applied. Waiting for Ben's yes and his answers to the open questions (plan section 11).
+
 ## 2026-11-24 — AI busy: try again (scanning fix)
 
 **Objective.** After the model fix, Ben's scan failed with "Gemini refused the request (answer 503)": Google's model was overloaded
