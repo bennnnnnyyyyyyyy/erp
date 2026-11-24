@@ -47,6 +47,7 @@ Add a line here in the same change that adds a plan.
 - [`INVOICE_PRINTING_PLAN.md`](INVOICE_PRINTING_PLAN.md): Arabic invoice print and PDF, letterhead and Word templates, ETA layout, WhatsApp and email.
 - [`SCANNING_PLAN.md`](SCANNING_PLAN.md): AI providers with the company key, supplier bill reading, camera barcodes, attachments, QR.
 - [`LOW_STOCK_AND_EXPIRY_PLAN.md`](LOW_STOCK_AND_EXPIRY_PLAN.md): low-stock pop-ups and suggested reorder points, expiry windows, stock value brackets.
+- [`REPORTS_INSIGHTS_PLAN.md`](REPORTS_INSIGHTS_PLAN.md): Reports & Insights: report library, builder, templates, sales forecast, alerts on reports, scheduled reports (draft, waiting for Ben's approval).
 
 **Dated audits and working plans**
 

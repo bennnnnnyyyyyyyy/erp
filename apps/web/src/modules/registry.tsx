@@ -88,6 +88,7 @@ const StatementsPage = lazyNamed(() => import('./finance/Statements'), 'Statemen
 const VatSummaryPage = lazyNamed(() => import('./finance/VatSummary'), 'VatSummaryPage');
 const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
 const PeoplePage = lazyNamed(() => import('./hr/People'), 'PeoplePage');
+const ReportLibraryPage = lazyNamed(() => import('./reports/Library'), 'ReportLibraryPage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/SetupGuide'), 'AccountingSetupPage');
@@ -340,6 +341,14 @@ export const APPS: AppDef[] = [
       { path: '', label: 'People', permission: 'hr.people.read', component: PeoplePage },
     ],
   } satisfies AppDef]),
+  // Reports & Insights (REPORTS_INSIGHTS_PLAN.md). Ben, 24 Nov 2026 (Q1): after every business app, before the tutorial, Guide and
+  // Settings. Step 1 is the library: links to the reports that exist, each shown only to people who may open it.
+  {
+    key: 'reports', module: 'reports', name: 'Reports & Insights', description: 'All your reports in one place, by area',
+    suite: 'Core', basePath: '/reports', pages: [
+      { path: '', label: 'Report library', permission: 'reports.library.read', component: ReportLibraryPage },
+    ],
+  },
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.
   ...(demoMode ? [] : [{
     key: 'start', module: 'core', name: 'Getting started', description: 'Setup checklist for a new company',

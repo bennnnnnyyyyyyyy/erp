@@ -16,6 +16,8 @@ const APP: Record<string, ReactNode> = {
   alerts: svg(<path key="a" d="M12 3l9.5 17h-19L12 3z" />, <path key="b" d="M12 10v4.5M12 17.3v.2" />),
   guide: svg(<path key="a" d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5v-15z" />, <path key="b" d="M4 20.5A2.5 2.5 0 006.5 23H20v-5" />),
   start: svg(<circle key="a" cx="12" cy="12" r="9" />, <path key="b" d="M10 8.5l5.5 3.5-5.5 3.5v-7z" />),
+  // Reports & Insights: a page with a small bar chart.
+  reports: svg(<rect key="a" x="4" y="3" width="16" height="18" rx="2.5" />, <path key="b" d="M8 17v-4M12 17V8M16 17v-6" />),
   settings: svg(<circle key="a" cx="12" cy="12" r="3" />, <path key="b" d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />),
 };
 
