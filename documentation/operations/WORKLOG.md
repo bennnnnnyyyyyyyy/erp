@@ -11,6 +11,22 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Gemini model not found (scanning fix)
+
+**Objective.** Ben's first bill scan with a free Gemini key failed: "Gemini refused the request (the model was not found)". Our default
+model, `gemini-2.5-flash`, is no longer offered to that key, and Check connection had passed because it only tested a saved model.
+
+**Actions Completed.** Branch `fix/gemini-model`. `lib/aiProviders.ts`: the Gemini default is Google's `gemini-flash-latest` (always the
+current Flash model); the "model not found" message says to type another model on the card and check again. `lib/integrationChecks.ts`:
+Check connection tests the model reading will really use (the saved one, else the default); for Gemini it also asks Google for that
+one model when the list leaves it out; on failure it names up to five models the key does offer (Flash, Haiku or mini first). The
+Gemini card's placeholder shows `gemini-flash-latest`. Tests: `apps/api/test/reader_check.test.ts`.
+
+**Database / System Result.** None (no migration). Until this deploys, type `gemini-flash-latest` (or a model from Google AI Studio) in
+the Gemini card's Model box.
+
+**Safety Status.** API 790 tests, typecheck, biome 0 errors. No real Gemini call was made from here.
+
 ## 2026-11-24 — `sql/108` applied to live (scanning)
 
 **Objective.** Scanning steps 0-4 are merged (PR #109-#112); their database part, `sql/108_scanning.sql`, was not on live.

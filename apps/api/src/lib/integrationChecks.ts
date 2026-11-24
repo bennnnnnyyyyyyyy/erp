@@ -1,6 +1,6 @@
 import type { IntegrationCheck } from '@erp/shared';
 import type { Bindings } from '../env';
-import { assertSafeOllamaUrl } from './aiProviders';
+import { assertSafeOllamaUrl, READER_DEFAULT_MODEL } from './aiProviders';
 import { adminDb } from './db.admin';
 import { sha256Hex } from './payments/links';
 import { hrApiBase, hrCall, hrReason, hrUrl, isObj as isHrObj } from './hr/hrClient';
@@ -291,11 +291,25 @@ async function checkReaderKey(
           : { url: 'https://openrouter.ai/api/v1/key', headers: { Authorization: `Bearer ${c.api_key}` } };
   const r = await call(deps, req.url, { headers: req.headers });
   if (r.status !== 200) return fail(`${name} refused your key: ${reason(r)}`);
-  if (!c.model || kind === 'openrouter') return pass(`${name} accepted your key.`);
+  // The model that reading will use: the saved one, else our default (a default that the provider retired must fail here too, not
+  // only at the first scan: gemini-2.5-flash, 24 Nov 2026).
+  const model = c.model || READER_DEFAULT_MODEL[kind] || '';
+  if (!model || kind === 'openrouter') return pass(`${name} accepted your key.`);
   const ids =
     kind === 'gemini' ? listedIds(r.body, 'models', 'name').map((x) => x.replace(/^models\//, '')) : listedIds(r.body, 'data', 'id');
-  if (ids.length === 0 || ids.includes(c.model)) return pass(`${name} accepted your key.`);
-  return fail(`${name} accepted your key, but it does not offer the model ${c.model}.`);
+  if (ids.length === 0 || ids.includes(model)) return pass(`${name} accepted your key. Model: ${model}.`);
+  // Google's "latest" names may be missing from its list: ask for the one model (still a free call).
+  if (kind === 'gemini' && /^[\w.-]+$/.test(model)) {
+    const one = await call(deps, `https://generativelanguage.googleapis.com/v1beta/models/${model}`, { headers: req.headers });
+    if (one.status === 200) return pass(`${name} accepted your key. Model: ${model}.`);
+  }
+  // Model names are public, never secret: offer a few the key does have (Flash first for Gemini), so the person can type one.
+  // ("-mini", not "mini": every "gemini" name contains "mini".)
+  const offered = [...ids.filter((m) => /flash|haiku|-mini\b/i.test(m)), ...ids].filter((m, i, all) => all.indexOf(m) === i).slice(0, 5);
+  const saved = c.model ? '' : ' (the default, as no model is saved)';
+  return fail(
+    `${name} accepted your key, but it does not offer the model ${model}${saved}. Type one it offers in Model, for example: ${offered.join(', ')}.`,
+  );
 }
 
 // ------------------------------------------------------------------ HR & payroll app (sql/102; contract 4.3: GET /erp/v1/ping)
