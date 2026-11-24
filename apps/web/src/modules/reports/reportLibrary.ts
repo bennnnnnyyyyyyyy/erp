@@ -27,6 +27,7 @@ export const AREAS: { key: ReportArea; label: string }[] = [
 export const LIBRARY: readonly LibraryEntry[] = [
   { area: 'sales', path: '/finance/product-sales', description: 'How much of each product you sold, and for how much.' },
   { area: 'sales', path: '/sales/invoices', description: 'Every sales invoice, with its status and what is still owed.' },
+  { area: 'sales', path: '/reports/forecast', description: 'What you are likely to sell next, by product or by customer.' },
   { area: 'buy', path: '/purchasing', description: 'Every purchase order and its status.' },
   { area: 'buy', path: '/purchasing/invoices', description: 'Every bill from your suppliers.' },
   { area: 'stock', path: '/inventory/stock', description: 'How much you have of each item, in each warehouse.' },

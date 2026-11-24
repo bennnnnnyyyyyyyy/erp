@@ -47,6 +47,8 @@ describe('Reports & Insights translations', () => {
       ...stringsIn('../modules/reports/Builder.tsx'),
       ...stringsIn('../modules/reports/ReportChart.tsx'),
       ...stringsIn('../modules/reports/cells.ts'),
+      ...stringsIn('../modules/reports/SalesForecast.tsx'),
+      'Up', 'Down', 'Steady', 'Good', 'Thin: a guess',
       ...Object.values(labels.SOURCE_LABELS),
       ...Object.values(labels.COLUMN_LABELS),
       ...Object.values(labels.FN_LABELS),

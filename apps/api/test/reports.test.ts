@@ -19,6 +19,7 @@ const routes: [string, string][] = [
   ['POST', '/v1/reports/saved'],
   ['PATCH', `/v1/reports/saved/${ID}`],
   ['DELETE', `/v1/reports/saved/${ID}`],
+  ['GET', '/v1/reports/forecast/sales?by=item&horizon=30'],
 ];
 
 describe('report builder API', () => {
@@ -34,6 +35,7 @@ describe('report builder API', () => {
     for (const r of ["post('/saved'", "patch('/saved/:id'", "delete('/saved/:id'"]) {
       expect(src).toContain(`${r}, requirePermission('reports.custom.create')`);
     }
+    expect(src).toContain("get('/forecast/sales', requirePermission('reports.forecast.read')");
     // a company report needs the manage key on top
     expect(src.match(/hasPermission\(c\.var\.tenant\.permissions, 'reports\.custom\.manage'\)/g)?.length).toBe(2);
   });

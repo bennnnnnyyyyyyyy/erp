@@ -178,6 +178,37 @@ export const REPORTS_AR: Record<string, string> = {
   'VAT on purchases, by supplier': 'ضريبة القيمة المضافة على المشتريات حسب المورد',
   'Net purchases and VAT paid to each supplier last month.': 'صافي المشتريات والضريبة المدفوعة لكل مورد في الشهر الماضي.',
 
+  // step 4: the sales forecast (sql/110)
+  'What you are likely to sell next, by product or by customer.': 'ما يُتوقع أن تبيعه قريبًا، حسب المنتج أو العميل.',
+  'What you are likely to sell next, from your own sales of the last 90 days.': 'ما يُتوقع أن تبيعه قريبًا، من مبيعاتك في آخر 90 يومًا.',
+  'Sold in the last 30 days': 'المباع في آخر 30 يومًا',
+  'Forecast: next {n} days': 'المتوقع: الأيام الـ{n} القادمة',
+  'Sales in the last 30 days': 'المبيعات في آخر 30 يومًا',
+  'Forecast value: next {n} days': 'القيمة المتوقعة: الأيام الـ{n} القادمة',
+  Trend: 'الاتجاه',
+  Product: 'المنتج',
+  'Forecast for': 'التوقع لـ',
+  'the next {n} days': 'الأيام الـ{n} القادمة',
+  'Worked out on {date}.': 'حُسب في {date}.',
+  'No sales in the last 90 days, so there is nothing to forecast yet.': 'لا توجد مبيعات في آخر 90 يومًا، فلا يوجد ما يمكن توقعه بعد.',
+  'How this is worked out': 'كيف يُحسب هذا',
+  'Sales are the issued invoices of the last 90 days, without VAT, minus approved credit notes.':
+    'المبيعات هي الفواتير الصادرة في آخر 90 يومًا، بدون ضريبة القيمة المضافة، مخصومًا منها إشعارات الدائن المعتمدة.',
+  'Sales per day: the latest 30 days count 50%, the 30 days before 30%, and the 30 days before that 20%.':
+    'المبيعات اليومية: آخر 30 يومًا وزنها 50%، والـ30 يومًا قبلها 30%، والـ30 يومًا قبل ذلك 20%.',
+  'The forecast is sales per day times the number of days. Each currency is shown on its own line.':
+    'التوقع هو المبيعات اليومية مضروبة في عدد الأيام. كل عملة تظهر في سطر مستقل.',
+  'Trend: up or down when the latest 30 days differ by more than 10% from the oldest 30 days.':
+    'الاتجاه: صاعد أو هابط عندما تختلف آخر 30 يومًا بأكثر من 10% عن أقدم 30 يومًا.',
+  'Good: at least 8 invoices over at least 60 days. Thin: less history, so treat the number as a guess.':
+    'جيدة: 8 فواتير على الأقل خلال 60 يومًا على الأقل. ضعيفة: تاريخ أقل، فاعتبر الرقم تقديرًا.',
+  'Seasons, price changes and promotions are not taken into account.': 'لا تؤخذ المواسم وتغيّر الأسعار والعروض في الحسبان.',
+  Up: 'صاعد',
+  Down: 'هابط',
+  Steady: 'ثابت',
+  Good: 'جيدة',
+  'Thin: a guess': 'ضعيفة: تقدير',
+
   // the shared definition check (packages/shared/src/reports.ts), shown by the builder before it runs
   'The report settings are missing.': 'إعدادات التقرير غير موجودة.',
   'The report has a setting we do not know.': 'في التقرير إعداد غير معروف.',

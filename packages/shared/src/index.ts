@@ -17,3 +17,4 @@ export * from './billScan';
 export * from './attachments';
 export * from './reports';
 export * from './reportTemplates';
+export * from './salesForecast';

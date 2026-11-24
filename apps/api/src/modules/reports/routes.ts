@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 import {
+  SALES_FORECAST_HORIZONS,
   hasPermission,
   reportDefinitionProblem,
+  type SalesForecast,
   type ReportDefinition,
   type ReportResult,
   type ReportSource,
@@ -166,6 +168,15 @@ reportsRoutes.patch('/saved/:id', requirePermission('reports.custom.create'), as
   }
   await callRpc<string>(userDb(c), 'rpt_save_report', saveArgs(c, merged, id));
   return ok<{ id: string }>(c, { id });
+});
+
+/** The sales forecast (step 4, sql/110): by product or by customer, for the next 30, 60 or 90 days. Read-only. */
+reportsRoutes.get('/forecast/sales', requirePermission('reports.forecast.read'), async (c) => {
+  const by = c.req.query('by') ?? 'item';
+  const horizon = Number(c.req.query('horizon') ?? 30);
+  if (by !== 'item' && by !== 'customer') invalid('Forecast by product or by customer');
+  if (!(SALES_FORECAST_HORIZONS as readonly number[]).includes(horizon)) invalid('Forecast the next 30, 60 or 90 days');
+  return ok<SalesForecast>(c, await callRpc<SalesForecast>(userDb(c), 'rpt_sales_forecast', { p_by: by, p_horizon: horizon }));
 });
 
 reportsRoutes.delete('/saved/:id', requirePermission('reports.custom.create'), async (c) => {

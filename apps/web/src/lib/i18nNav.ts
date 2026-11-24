@@ -144,6 +144,7 @@ export const NAV_AR: Record<string, string> = {
   'Alert rules': 'قواعد التنبيه',
   'Report library': 'مكتبة التقارير',
   'New report': 'تقرير جديد',
+  'Sales forecast': 'توقع المبيعات',
   Report: 'تقرير',
   General: 'عام',
   Users: 'المستخدمون',

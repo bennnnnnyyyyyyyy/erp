@@ -11,6 +11,30 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights step 4: sales forecast (`sql/110`, not applied)
+
+**Objective.** Step 4 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) (section 7.4; Ben: sales first, company-wide):
+what the company is likely to sell next, by product and by customer.
+
+**Actions Completed.**
+- `sql/110_rpt_sales_forecast.sql`: `rpt_sales_forecast(by, horizon)`, the stock forecast's method (sql/029) on sales: issued invoice
+  lines of the last 90 days minus approved credit notes (net of VAT), weighted 50/30/20 per 30-day block, times 30, 60 or 90 days;
+  quantity for products only; value per currency; trend and confidence as in the plan. Read-only; everyone who may read sales
+  invoices; sales module on; only the caller's company.
+- `sql/tests/107_rpt_sales_forecast.sql`: the plan's worked example (1.5 a day, 45 in 30 days, up, thin), an approved credit note taken
+  off (1.4) and a waiting one not, good and flat with 10 invoices, nothing listed after 90 days, a void invoice not counted, two
+  currencies kept apart, by customer without quantity, 60 days, refusals, members and viewers, another company, sales off, anonymous.
+- Shared types `packages/shared/src/salesForecast.ts`; key `reports.forecast.read`; API `GET /v1/reports/forecast/sales`.
+- Web: `/reports/forecast` (`SalesForecast.tsx`): by product or customer, 30/60/90 days, the last 30 days, the forecast, trend,
+  confidence, the method in plain words, Excel and print; a card in the library's Sales area. Arabic for every new text.
+
+**Database / System Result.** None on live. `sql/110` waits for Ben's "yes 110" (it needs 109 first). Before that the forecast page
+shows the "not set up yet" message.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (109 + 807 + 212); SQL tests 105 of 105 on pglite (109 and 110 rerun);
+biome clean on the changed files. Not checked in a browser or on live. After "yes 110": rolled-back dry run, apply, test 107 on live;
+then open Reports & Insights → Sales forecast with real invoices.
+
 ## 2026-11-24 — Reports & Insights step 3: ready-made reports (no migration)
 
 **Objective.** Step 3 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md): useful reports ready to open, made with the

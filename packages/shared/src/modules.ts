@@ -270,6 +270,8 @@ export const MODULES: readonly ModuleManifest[] = [
       'reports.custom.read',
       'reports.custom.create',
       'reports.custom.manage',
+      // Step 4, the sales forecast (sql/110): everyone who may read sales invoices (the database checks the sales module again).
+      'reports.forecast.read',
     ],
     memberGrants: ['reports.custom.create'],
     suite: 'Core',
