@@ -13,3 +13,5 @@ export * from './mt940';
 export * from './integrations';
 export * from './hr';
 export * from './docPrint';
+export * from './billScan';
+export * from './attachments';

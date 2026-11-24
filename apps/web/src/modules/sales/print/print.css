@@ -70,6 +70,12 @@
 .print-eta-box p { flex: 1; min-inline-size: 30mm; }
 .print-qr { inline-size: 26mm; block-size: 26mm; border: 1.5px dashed #888; flex: none; }
 
+/* Scanning step 4: our own QR code, a link into the app. */
+.print-app-qr { display: flex; gap: 3mm; align-items: center; margin: 0; }
+.print-app-qr-code { inline-size: 20mm; block-size: 20mm; flex: none; }
+.print-app-qr-code svg { display: block; inline-size: 100%; block-size: 100%; }
+.print-app-qr figcaption { color: #444; font-size: 8pt; min-inline-size: 24mm; max-inline-size: 30mm; }
+
 .print-footer { margin-block-start: 8mm; padding-block-start: 3mm; border-block-start: 1px solid #ccc; text-align: center; color: #444; font-size: 9pt; }
 
 .print-missing { max-inline-size: 210mm; margin-inline: auto; border: 1px solid #c33; border-radius: 6px; padding: 0.75rem 1rem; background: #fff5f5; color: #7a1010; }

@@ -73,7 +73,8 @@ People type less. They scan paper and products instead.
 4. Reading the barcode from the camera:
    - Some browsers have a built-in barcode reader (`BarcodeDetector`). From general knowledge: Chrome on Android and Mac have it.
      **Chrome on Windows does not.**
-   - So we also use **ZXing for JavaScript** as a backup. Licence: Apache-2.0 (checked 20 Nov). We can use it.
+   - So we also use **ZXing for JavaScript** as a backup. Licence: Apache-2.0 (checked 20 Nov). We can use it. (24 Nov, at install:
+     `@zxing/browser` is MIT and `@zxing/library` is Apache-2.0. Both allow our use.)
    - ZXing is a new package. **Ben must install it in the main folder.** Never run `npm install` in a worktree.
 
 **Later, not now:** USB or Bluetooth scanners, printing barcode labels, barcodes from weighing scales (for groceries).
@@ -198,10 +199,15 @@ If the lines plus VAT do not equal the printed total, the screen shows a warning
 3. Ben checks with a real phone camera on the live test site.
 4. Ben installs ZXing in the main folder before step 2.
 
-## 11. Open questions
+## 11. Questions (answered by Ben, 23 Nov 2026; built and live 24 Nov, sql/108)
 
-1. One barcode for each item now, and more (packs, cartons) later. Is this OK?
-2. Someone scans a bill, but the goods have not arrived yet (no received order). Two choices:
-   - refuse it: "Receive the goods first", or
-   - offer to start the receipt.
-3. How long do we keep the photo of each scanned bill? This affects storage cost. Egyptian record-keeping rules are a question for Grant.
+1. One barcode for each item now, and more (packs, cartons) later. **Answer: yes.** One barcode per item, unique in each company.
+2. Someone scans a bill, but the goods have not arrived yet (no received order). **Answer: refuse it, and offer to start the receipt.**
+   The draft shows a red warning and "Receive the goods of PO-…"; Save is off, and the database refuses the bill as well.
+3. How long do we keep the photo of each scanned bill? **Answer: until someone removes it.** Removing only hides it (soft delete);
+   the file stays. Still open for Grant: do Egyptian record-keeping rules ask for a minimum number of years?
+
+Still open:
+- Barcode beep (section 8): not built; the scanner makes no sound.
+- "Must a scanned bill keep its photo?" (section 8): built without a setting; the photo is always attached when the bill is saved.
+- For Grant: do we ever sell AI credits (section 3)? Today each company uses its own AI key.

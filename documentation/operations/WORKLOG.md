@@ -11,6 +11,55 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — AI busy: try again (scanning fix)
+
+**Objective.** After the model fix, Ben's scan failed with "Gemini refused the request (answer 503)": Google's model was overloaded
+(common on the free tier).
+
+**Actions Completed.** Branch `fix/ai-busy-retry`. `lib/aiProviders.ts` `readDocument`: when the provider answers busy (500, 502, 503,
+504, 529) it tries again after 1.5 s and 4 s, at most three tries in all; a refused request is not charged. Not on 429 (the account's
+limit) or a refused key. After the last try the message says "it is busy right now; wait a minute and try again". Tests in
+`apps/api/test/ai_reader.test.ts`.
+
+**Database / System Result.** None (no migration).
+
+**Safety Status.** API 793 tests, typecheck, biome 0 errors. No real AI was called from here.
+
+## 2026-11-24 — Gemini model not found (scanning fix)
+
+**Objective.** Ben's first bill scan with a free Gemini key failed: "Gemini refused the request (the model was not found)". Our default
+model, `gemini-2.5-flash`, is no longer offered to that key, and Check connection had passed because it only tested a saved model.
+
+**Actions Completed.** Branch `fix/gemini-model`. `lib/aiProviders.ts`: the Gemini default is Google's `gemini-flash-latest` (always the
+current Flash model); the "model not found" message says to type another model on the card and check again. `lib/integrationChecks.ts`:
+Check connection tests the model reading will really use (the saved one, else the default); for Gemini it also asks Google for that
+one model when the list leaves it out; on failure it names up to five models the key does offer (Flash, Haiku or mini first). The
+Gemini card's placeholder shows `gemini-flash-latest`. Tests: `apps/api/test/reader_check.test.ts`.
+
+**Database / System Result.** None (no migration). Until this deploys, type `gemini-flash-latest` (or a model from Google AI Studio) in
+the Gemini card's Model box.
+
+**Safety Status.** API 790 tests, typecheck, biome 0 errors. No real Gemini call was made from here.
+
+## 2026-11-24 — `sql/108` applied to live (scanning)
+
+**Objective.** Scanning steps 0-4 are merged (PR #109-#112); their database part, `sql/108_scanning.sql`, was not on live.
+
+**Actions Completed.** Ben said "yes 108". Checked live first: `sql/107` present; `core_attachments`, `inv_items.barcode` and the
+`doc-files` bucket absent; AI notice v2. A rolled-back dry run of `sql/108` on live (the file up to its `commit`, then `rollback`; no
+error; checked afterwards that nothing stayed). Then applied with `npx supabase db query --linked -f sql/108_scanning.sql`. Checked:
+AI notice v3; Claude needs `api_key` and `model`; users cannot read the AI state (keys), cannot write `core_attachments` or
+`core_ai_extractions` directly, can choose the reader (owners and admins, in the function); bucket `doc-files` private, 10 MB, JPEG,
+PNG, WebP and PDF only; storage rules `doc_files_read` and `doc_files_upload` present; users read `inv_items.barcode` but cannot write
+it; anonymous cannot set barcodes. Then `sql/tests/105_scanning.sql` and `sql/tests/092_column_grants.sql` on live: both "ALL TESTS
+PASSED (everything rolled back)"; afterwards no test company, attachment row or file remained. `sql/README.md` row updated.
+
+**Database / System Result.** Live project ggoerp: `sql/108` applied. No data changed (live holds only test data). Each owner must
+accept the AI notice again (v3) before any AI is used. Bill scanning needs the company's own AI key (Settings → Integrations).
+
+**Safety Status.** Not done: the phone check (report section 4.5): a real bill read by a real AI, a real upload, a barcode and a QR
+code scanned with a camera.
+
 ## 2026-11-23 — New UI built beside the old UI (track-c, branch feat/bellvox-look; no SQL)
 
 **Objective.** Ben (23 Nov): build a new UI from zero (Bellvox look, Dynamics 365 way of working, every screen in 2 or 3 versions that
@@ -41,7 +90,7 @@ the dev server; with `?oldui` the old shell, old font, old colours and title, an
 preview build and the live build were not built or deployed. The API typecheck shows one error in `integrationRoutes.ts` because this
 worktree reads `@erp/shared` from the main checkout, where another chat has an unfinished change (`AiStatus.reader`); not from this branch.
 
-## 2026-11-23 — Scanning (phase 1d), `sql/108` (not applied)
+## 2026-11-23 — Scanning (phase 1d), `sql/108` (applied 24 Nov)
 
 **Objective.** Phase 1d of the Bellvox readiness roadmap: `documentation/plans/SCANNING_PLAN.md`. Build plan approved by Ben 23 Nov
 (owners and admins scan; a bill price that differs from the order is a warning only; the photo is kept until removed; one migration, 108,
@@ -56,9 +105,43 @@ and one SQL test, 105).
   (`lib/integrationChecks.ts`); `PUT /v1/core/integrations/ai/reader`. Settings → Integrations: four new AI cards, "Use this AI to read
   supplier bills". No new master-key file: `readWithAi` added to the entry points guarded in `boundaries.test.ts`. Tests:
   `apps/api/test/ai_reader.test.ts` (recorded fake answers), `sql/tests/105_scanning.sql`.
+- Step 1, read supplier bills. `sql/108`: `core_attachments` (files on records; members add, viewers read; only in the company's own
+  folder `org/<company id>/…`; soft delete; audited), private Storage bucket `doc-files` and its rules (only where Storage exists),
+  `core_ai_extractions` (what the AI read; owners and admins; `pur_record_bill_scan`, audited), `pur_bill_scan_candidates` (suppliers
+  by tax number or name word; received orders still to bill with item codes and the supplier's own codes; orders still waiting for
+  goods). API: `POST /v1/purchasing/bills/scan` (owners and admins, `purchasing.bills.scan`; asks the database first, then the
+  company's AI; our matching in `modules/purchasing/billMatch.ts`), `POST /v1/purchasing/bills/match` (match again, no AI),
+  `GET/POST/DELETE /v1/core/attachments` (uploads with the person's own sign-in, no master key). Web: "Scan a bill" on Purchase
+  invoices (photo and draft side by side, differences in colour, Save through the normal bill function, then the photo is attached).
+  A bill with no received goods: blocking warning and "Receive the goods" (master accepted this instead of a 409, on the condition
+  that the database still refuses it: proved by test 105 B4). Tests: `apps/api/test/bill_scan.test.ts`, test 105 B1-B5.
+- Step 3, attachments panel (`apps/web/src/components/Attachments.tsx`) on the purchase invoice, purchase order, sales invoice, sales
+  order, expense and item pages (item: an "Attachments" tab) and in the customer and supplier Edit window. Camera or file; open (five-
+  minute link); remove (the person who added it, or an owner or admin; soft delete). Hidden while `sql/108` is missing and in the
+  sample build. Receipts have no page of their own: their papers go on the purchase order.
+- 24 Nov, CI fix: on CI's real Supabase, test 105 failed with `NOT_FOUND` (where Storage exists, `core_add_attachment` checks that the
+  file was really uploaded, and the test had uploaded none). The test now puts its two files in `storage.objects` there (rolled back),
+  and a new check B1m proves that a file never uploaded is refused. Locally checked with a stub `storage` schema as well.
+- Step 2, barcodes (24 Nov; Ben installed `@zxing/browser` 0.2.1, MIT, with `@zxing/library` 0.23, Apache-2.0, and
+  `@zxing/text-encoding` 0.9, Unlicense or Apache-2.0; the plan said Apache-2.0 for all, and both licences allow our use). `sql/108`:
+  `inv_items.barcode` (printable, no spaces, up to 64; unique among a company's live items) with its column grant in the same
+  migration; `inv_set_item_barcode` (owners, admins, members; blank clears; `DUPLICATE` names the item that has it; audited). API:
+  `GET /v1/inventory/items/by-barcode/:code`, `PUT /v1/inventory/items/:id/barcode`, an optional `barcode` on `POST /v1/inventory/items`
+  (checked before the item is made); the item list returns `barcode` (falls back before sql/108). Web:
+  `components/BarcodeScanner.tsx` (the browser's own `BarcodeDetector` first, ZXing loaded only when there is none; typing works too),
+  "Scan a barcode" on the purchase and sales order forms (adds the item, or 1 more), a Barcode field with Scan on Add item and Edit
+  item. `Modal.tsx`: only the top dialog answers Escape and Tab (the scanner opens over a form). Tests: test 105 C1-C10,
+  `apps/api/test/barcodes.test.ts`, `apps/web/src/components/BarcodeScanner.test.ts`.
+- Step 4, QR codes (24 Nov, branch `feat/scanning-qr`; no database change). Every printed invoice, draft and note (all three layouts;
+  print, PDF, public link) carries a QR code with a link into the app (`lib/docLink.ts`: an invoice or an issued draft → its invoice
+  page; a draft not yet issued or a note → its print page). Drawn as SVG by ZXing's QR writer (`print/DocQr.tsx`), loaded only when a
+  document is shown; the PDF waits for it (`pdf.ts`). The ETA layout keeps its empty box for ETA's own QR code. "Scan an invoice QR
+  code" on Sales invoices (`sales/ScanDocQr.tsx`) opens a scanned link only when it is one of those pages on this same site; the page
+  loads through row level security, so another company's code opens nothing. Print pictures (`apps/web/e2e`, Windows set) refreshed
+  and checked by eye; the QR codes in them were decoded with ZXing and give the expected links. Tests: `lib/docLink.test.ts`.
 
-**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new cards answer 503 `not_set_up`, and accepting the
-AI notice answers 503 (this build shows notice v3).
+**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new AI cards, bill scanning, attachments and
+barcodes answer 503 `not_set_up`, and accepting the AI notice answers 503 (this build shows notice v3).
 
 **Safety Status.** `npm run typecheck`, `npm test`, `npx biome check` (0 errors), PGlite SQL tests pass. No real AI was called.
 

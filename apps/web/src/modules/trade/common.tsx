@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Attachments } from '../../components/Attachments';
+import { BarcodeScanner } from '../../components/BarcodeScanner';
 import { readOrderLink } from '../../lib/orderLink';
 import { unitLabel } from '../../lib/names';
 import { demoMode } from '../../lib/demo';
@@ -245,6 +247,7 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
             {error && <p className="error">{error}</p>}
             <div className="form-actions"><Button type="submit">{editing ? tr('Save changes') : <>{tr('Add')} {noun}</>}</Button></div>
           </form>
+          {editing && !demoMode ? <Attachments entityType={endpoint.includes('/suppliers') ? 'supplier' : 'customer'} entityId={editing.id} /> : null}
         </Modal>
       )}
     </section>
@@ -334,6 +337,8 @@ export function useOrderForm(props: OrderFormProps) {
   const [lines, setLines] = useState<Line[]>(() => [link.itemId ? { ...emptyLine(), itemId: link.itemId, qty: link.qty || '1' } : emptyLine()]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState<string | null>(null);
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
   // Start on the first real warehouse (UX audit: it started on a placeholder, so an order for the first warehouse could not be saved).
   const warehouses = cat.warehouses.data;
@@ -384,6 +389,31 @@ export function useOrderForm(props: OrderFormProps) {
     };
   }, [priceLookup, partyId, itemKey]);
 
+  // Scanning step 2: a scanned barcode adds the item, or 1 more if it is already on a line in its base unit. The item list already
+  // carries barcodes; an item made since the page opened is asked for (sql/108). Nothing is saved until the order is placed.
+  async function addScanned(code: string) {
+    setScanning(false);
+    setScanned(null);
+    let item = (cat.items.data ?? []).find((it) => it.barcode === code);
+    if (!item) {
+      try {
+        item = await api<DemoItem>(`/v1/inventory/items/by-barcode/${encodeURIComponent(code)}`);
+      } catch (err) {
+        const status = (err as { status?: number }).status;
+        return setError(status === 404 ? trf('No item has the barcode {code}.', { code }) : (err as Error).message);
+      }
+    }
+    const found = item;
+    setLines((ls) => {
+      const same = ls.findIndex((l) => l.itemId === found.id && !l.unit);
+      if (same >= 0) return ls.map((l, n) => (n === same ? { ...l, qty: String((parseAmount(l.qty) || 0) + 1) } : l));
+      const blank = ls.findIndex((l) => !l.itemId);
+      const line = { ...emptyLine(), itemId: found.id, unit: defaultUnitOf(found.id) };
+      return blank >= 0 ? ls.map((l, n) => (n === blank ? line : l)) : [...ls, line];
+    });
+    setScanned(trf('Added {item}.', { item: `${found.sku} · ${found.name}` }));
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     const chosen = lines.filter((l) => l.itemId);
@@ -415,7 +445,7 @@ export function useOrderForm(props: OrderFormProps) {
     }
   }
 
-  return { session, cat, parties, link, partyId, setPartyId, quickAdd, setQuickAdd, canQuickAdd, warehouseId, setWarehouseId, lines, setLines, error, setError, busy, setBusy, setLine, currency, partyCodes, vatOn, side, itemUnits, baseUnitOf, unitsOf, factorOf, defaultUnitOf, saved, money2, submit };
+  return { session, cat, parties, link, partyId, setPartyId, quickAdd, setQuickAdd, canQuickAdd, warehouseId, setWarehouseId, lines, setLines, error, setError, busy, setBusy, setLine, currency, partyCodes, vatOn, side, itemUnits, baseUnitOf, unitsOf, factorOf, defaultUnitOf, saved, money2, submit, scanning, setScanning, scanned, addScanned };
 }
 
 // The old UI's order form (unchanged). The new UI shows its own layouts (lib/uiMode.ts), loaded only when the new UI is on.
@@ -425,7 +455,7 @@ export function NewOrderForm(props: OrderFormProps) {
 }
 
 function OldOrderForm(props: OrderFormProps) {
-  const { session, cat, parties, link, partyId, setPartyId, quickAdd, setQuickAdd, canQuickAdd, warehouseId, setWarehouseId, lines, setLines, error, setError, busy, setLine, currency, partyCodes, vatOn, baseUnitOf, unitsOf, factorOf, defaultUnitOf, saved, money2, submit } = useOrderForm(props);
+  const { session, cat, parties, link, partyId, setPartyId, quickAdd, setQuickAdd, canQuickAdd, warehouseId, setWarehouseId, lines, setLines, error, setError, busy, setLine, currency, partyCodes, vatOn, baseUnitOf, unitsOf, factorOf, defaultUnitOf, saved, money2, submit, scanning, setScanning, scanned, addScanned } = useOrderForm(props);
   if (!cat.ready || !parties.data) return <section className="page"><Loading /></section>;
 
   return (
@@ -509,7 +539,10 @@ function OldOrderForm(props: OrderFormProps) {
         ))}
         <div className="form-actions">
           <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, emptyLine()])}>{tr('Add another item')}</Button>
+          {demoMode ? null : <Button variant="outline" type="button" onClick={() => setScanning(true)}>{tr('Scan a barcode')}</Button>}
         </div>
+        {scanned ? <p className="notice small" role="status">{scanned}</p> : null}
+        {scanning ? <BarcodeScanner onCode={(code) => void addScanned(code)} onClose={() => setScanning(false)} /> : null}
         <ErrorToast message={error} onClose={() => setError(null)} />
         <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
       </form>

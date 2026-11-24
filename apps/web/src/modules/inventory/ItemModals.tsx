@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { localName, unitLabel } from '../../lib/names';
 import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/Modal';
+import { BarcodeField } from '../../components/BarcodeScanner';
 import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../components/SkuFormat';
 import { UnitSelect } from '../../components/UnitSelect';
 import { hasPermission, type VatSettings } from '@erp/shared';
@@ -14,7 +15,7 @@ import { tr, trf } from '../../lib/i18n';
 import { GroupSelect, useItemGroups, type CodeRule } from './ItemGroups';
 
 export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: DemoWarehouse[]; onClose: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '' });
+  const [form, setForm] = useState({ sku: '', name: '', nameAr: '', uom: 'piece', openingQty: '0', warehouseId: warehouses[0]?.id ?? '', cost: '', barcode: '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
   // Batch tracking where people look for it (task-first Inventory, 10 Nov 2026): the same call as Batches and expiry, after the item exists.
@@ -54,7 +55,7 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
     setError(null);
     let made: { id: string };
     try {
-      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, groupId: groupId || null, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null }) });
+      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, groupId: groupId || null, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null, ...(form.barcode.trim() ? { barcode: form.barcode.trim() } : {}) }) });
     } catch (err) {
       setError((err as Error).message);
       return;
@@ -91,6 +92,7 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
         </div>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        {demoMode ? null : <BarcodeField value={form.barcode} onChange={(barcode) => setForm((f) => ({ ...f, barcode }))} />}
         <div className="form-row">
           <label>{tr('Opening stock (optional)')}<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
           {/* sql/046: opening stock is a receipt, so it carries a unit cost (required once accounting is on). */}
@@ -127,6 +129,8 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
   // The item's group (sql/095). Moving it keeps its code.
   const groups = useItemGroups();
   const [groupId, setGroupId] = useState(item.groupId ?? '');
+  // The item's barcode (sql/108), sent only when it changed, so editing an item works before that database update.
+  const [barcode, setBarcode] = useState(item.barcode ?? '');
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -134,6 +138,7 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
     e.preventDefault();
     setError(null);
     try {
+      if (barcode.trim() !== (item.barcode ?? '')) await api(`/v1/inventory/items/${item.id}/barcode`, { method: 'PUT', body: JSON.stringify({ barcode: barcode.trim() || null }) });
       await api(`/v1/inventory/items/${item.id}`, { method: 'PUT', body: JSON.stringify(form) });
       if (rateId !== (item.vatRateId ?? '')) await api(`/v1/inventory/items/${item.id}/vat-rate`, { method: 'PUT', body: JSON.stringify({ rateId: rateId || null }) });
       if (groupId !== (item.groupId ?? '')) await api(`/v1/inventory/items/${item.id}/group`, { method: 'PUT', body: JSON.stringify({ groupId: groupId || null }) });
@@ -152,6 +157,7 @@ export function EditItemModal({ item, onClose, onDone }: { item: DemoItem; onClo
         </p>
         <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
+        {demoMode ? null : <BarcodeField value={barcode} onChange={setBarcode} />}
         {groups.data?.length ? (
           <label>
             {tr('Item group')}

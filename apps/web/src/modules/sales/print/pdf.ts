@@ -10,6 +10,8 @@ async function settled(el: HTMLElement): Promise<void> {
   await document.fonts?.ready;
   const imgs = [...el.querySelectorAll('img')];
   await Promise.all(imgs.map((img) => (img.complete ? Promise.resolve() : new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r(); }))));
+  // The QR code (DocQr.tsx) is drawn after its library loads: wait for it, at most three seconds.
+  for (let waited = 0; el.querySelector('[data-qr="pending"]') && waited < 3000; waited += 100) await new Promise((r) => setTimeout(r, 100));
 }
 
 /** A PDF file of the element (an A4 .print-sheet). */

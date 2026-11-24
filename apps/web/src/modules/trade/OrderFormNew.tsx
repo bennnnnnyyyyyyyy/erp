@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { ErrorToast } from '../../components/Toast';
+import { BarcodeScanner } from '../../components/BarcodeScanner';
+import { demoMode } from '../../lib/demo';
 import { SearchSelect } from '../../components/SearchSelect';
 import { tr, trf } from '../../lib/i18n';
 import { useLabChoice } from '../../lib/labChoice';
@@ -13,7 +15,7 @@ import './form.css';
 // The new UI's order form (sales and purchase orders). Same logic as the old form (useOrderForm in common.tsx): prices, units, VAT,
 // checks and saving are shared; only the layout is new. Loaded only when the new UI is on (lib/uiMode.ts).
 export function OrderFormNew(props: OrderFormProps) {
-  const { cat, parties, link, partyId, setPartyId, quickAdd, setQuickAdd, canQuickAdd, warehouseId, setWarehouseId, lines, setLines, error, setError, busy, setLine, currency, partyCodes, vatOn, baseUnitOf, unitsOf, factorOf, defaultUnitOf, saved, money2, submit } = useOrderForm(props);
+  const { cat, parties, link, partyId, setPartyId, quickAdd, setQuickAdd, canQuickAdd, warehouseId, setWarehouseId, lines, setLines, error, setError, busy, setLine, currency, partyCodes, vatOn, baseUnitOf, unitsOf, factorOf, defaultUnitOf, saved, money2, submit, scanning, setScanning, scanned, addScanned } = useOrderForm(props);
   const layout = useLabChoice('form', ['A', 'B', 'C'] as const, 'A');
   const [step, setStep] = useState(0);
   const [pick, setPick] = useState('');
@@ -102,6 +104,9 @@ export function OrderFormNew(props: OrderFormProps) {
       onClose={() => setQuickAdd(false)} onAdded={(id) => { setQuickAdd(false); setPartyId(id); parties.reload(); }} />
   ) : null;
   const errorToast = <ErrorToast message={error} onClose={() => setError(null)} />;
+  // Scanning step 2 (sql/108) in the new UI too: the same addScanned as the old form; not in the sample build.
+  const scanButton = demoMode ? null : <button type="button" className="fm-add" onClick={() => setScanning(true)}>{tr('Scan a barcode')}</button>;
+  const scanUi = <>{scanned ? <p className="notice small" role="status">{scanned}</p> : null}{scanning ? <BarcodeScanner onCode={(code) => void addScanned(code)} onClose={() => setScanning(false)} /> : null}</>;
 
   if (layout === 'B') {
     const STEPS = [tr(props.partyLabel), tr('Items'), tr('Review')];
@@ -113,7 +118,7 @@ export function OrderFormNew(props: OrderFormProps) {
         <ol className="pk-steps fm-steps">{STEPS.map((s, i) => <li key={s} className={i < step ? 'done' : i === step ? 'current' : ''}>{i + 1}. {s}</li>)}</ol>
         <form className="fm-body" onSubmit={(e) => { if (step < 2) { e.preventDefault(); if (canNext) setStep(step + 1); } else void submit(e); }}>
           {step === 0 && <div className="fm-two">{partyField}{warehouseField}</div>}
-          {step === 1 && <>{grid(true)}<button type="button" className="fm-add" onClick={() => setLines((ls) => [...ls, emptyLine()])}>+ {tr('Add another item')}</button>{totals}</>}
+          {step === 1 && <>{grid(true)}<button type="button" className="fm-add" onClick={() => setLines((ls) => [...ls, emptyLine()])}>+ {tr('Add another item')}</button>{scanButton}{scanUi}{totals}</>}
           {step === 2 && (
             <>
               <dl className="pk-grid">
@@ -153,6 +158,7 @@ export function OrderFormNew(props: OrderFormProps) {
             <span className="fm-label">{tr('Add an item')}</span>
             <SearchSelect value={pick} onChange={addItem} label={tr('Add an item')} placeholder={tr('Type an item name or code, then pick it')} options={itemOptions} />
           </label>
+          {scanButton}{scanUi}
           {chosen.length ? grid(false) : <p className="pk-empty">{tr('No items yet. Type above to add the first one.')}</p>}
           {errorToast}
           <div className="fm-sticky">
@@ -178,6 +184,7 @@ export function OrderFormNew(props: OrderFormProps) {
           <h2>{tr('Lines')}</h2>
           {grid(true)}
           <button type="button" className="fm-add" onClick={() => setLines((ls) => [...ls, emptyLine()])}>+ {tr('Add a line')}</button>
+          {scanButton}{scanUi}
           {totals}
         </section>
         {errorToast}

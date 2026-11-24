@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Attachments } from '../../components/Attachments';
 import { Loading } from '../../components/Loading';
 import { billingFor, formatMoney, type BillingFlag, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
@@ -18,6 +19,7 @@ import { Pill } from '../trade/common';
 import { InvoiceNotes } from './InvoiceNotes';
 import { DraftInvoices, type InvoiceDraft } from './print/DraftInvoices';
 import { netInvoiceMinor } from './noteMath';
+import { ScanDocQr } from './ScanDocQr';
 
 import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
 import { tr, trf } from '../../lib/i18n';
@@ -160,7 +162,10 @@ export function CustomerInvoices() {
         onEdit={(d: InvoiceDraft) => { setEditing(d.id); setOrderId(d.orderId); setDate(d.invoiceDate); setQty(Object.fromEntries(d.lines.map((l) => [l.orderLineId, String(l.qty)]))); setLineRate(Object.fromEntries(d.lines.filter((l) => l.taxRateId).map((l) => [l.orderLineId, l.taxRateId ?? '']))); setFormOpen(true); window.scrollTo({ top: 0 }); }}
         onIssued={(number) => { setMessage({ ok: true, text: trf('Invoice {number} issued.', { number }) }); invoices.reload(); }} />
 
-      <h2 className="related">{tr('Invoices')}</h2>
+      <div className="section-head">
+        <h2 className="related">{tr('Invoices')}</h2>
+        <ScanDocQr />
+      </div>
       <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Customer')}</th><th scope="col">{tr('Order')}</th><th scope="col">{tr('Created')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
         {invoices.data.map((i) => (
           <ClickRow key={i.id} to={`/sales/invoices/${i.id}`}><td><Link to={`/sales/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{customer(i.customerId)}</td><td><Link to={`/sales/orders/${i.orderId}`}><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
@@ -280,6 +285,7 @@ export function CustomerInvoicePage() {
       <InvoiceNotes invoice={inv} itemOf={itemOf} onChanged={invoices.reload} />
       {inv.status === 'issued' && <PaymentsAgainst key={payKey} field="customerInvoiceId" id={inv.id} totalMinor={net} currency={inv.currency} />}
       {inv.status === 'issued' && <PaymentLinks invoiceId={inv.id} onPaid={() => setPayKey((k) => k + 1)} />}
+      <Attachments entityType="sales_invoice" entityId={inv.id} />
       <RecordHistory key={inv.id} id={inv.id} />
     </section>
   );

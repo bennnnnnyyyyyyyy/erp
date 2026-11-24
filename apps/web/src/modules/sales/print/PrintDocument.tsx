@@ -13,6 +13,8 @@ import {
   type PrintLine,
 } from '@erp/shared';
 import { tr, trf } from '../../../lib/i18n';
+import { docAppPath } from '../../../lib/docLink';
+import { DocQr } from './DocQr';
 import { label, printDir, type PrintLabelKey } from './printLabels';
 import './print.css';
 
@@ -216,6 +218,8 @@ export function PrintDocument({ data, options }: { data: DocPrintData; options: 
               <p className="print-strong">{lbl('etaNotSubmitted')}</p>
             </div>
           ) : null}
+          {/* Scanning step 4: a link into the app; only the company's own signed-in staff can open it. */}
+          {typeof window !== 'undefined' ? <DocQr text={`${window.location.origin}${docAppPath(doc)}`} label={lbl('appQr')} /> : null}
         </div>
         <table className="print-totals">
           <tbody>

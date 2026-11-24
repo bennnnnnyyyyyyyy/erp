@@ -43,7 +43,11 @@ export const MODULES: readonly ModuleManifest[] = [
       'core.integrations.manage',
       // Invoice printing (sql/103): logo, letterhead and document settings. Owners and admins (the database checks the role again).
       'core.templates.manage',
+      // Attachments (sql/108): files on records. Everyone in the company reads them; members, admins and owners add them.
+      'core.attachments.read',
+      'core.attachments.add',
     ],
+    memberGrants: ['core.attachments.add'],
     suite: 'Core',
   },
   // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for
@@ -134,6 +138,8 @@ export const MODULES: readonly ModuleManifest[] = [
       'purchasing.notes.approve',
       // Each supplier's last cost (sql/097): owners and admins (not ".read", so members do not get it; costs reveal margins).
       'purchasing.prices.view',
+      // Scanning a bill with the company's AI (sql/108): owners and admins, like recording a bill (Ben, 23 Nov 2026).
+      'purchasing.bills.scan',
     ],
     memberGrants: ['purchasing.orders.receive', 'purchasing.notes.create'],
     suite: 'Sales & Purchasing',
