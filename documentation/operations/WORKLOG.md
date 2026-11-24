@@ -53,7 +53,13 @@ and one SQL test, 105).
   "Scan a barcode" on the purchase and sales order forms (adds the item, or 1 more), a Barcode field with Scan on Add item and Edit
   item. `Modal.tsx`: only the top dialog answers Escape and Tab (the scanner opens over a form). Tests: test 105 C1-C10,
   `apps/api/test/barcodes.test.ts`, `apps/web/src/components/BarcodeScanner.test.ts`.
-- Step 4 (QR codes) not started.
+- Step 4, QR codes (24 Nov, branch `feat/scanning-qr`; no database change). Every printed invoice, draft and note (all three layouts;
+  print, PDF, public link) carries a QR code with a link into the app (`lib/docLink.ts`: an invoice or an issued draft → its invoice
+  page; a draft not yet issued or a note → its print page). Drawn as SVG by ZXing's QR writer (`print/DocQr.tsx`), loaded only when a
+  document is shown; the PDF waits for it (`pdf.ts`). The ETA layout keeps its empty box for ETA's own QR code. "Scan an invoice QR
+  code" on Sales invoices (`sales/ScanDocQr.tsx`) opens a scanned link only when it is one of those pages on this same site; the page
+  loads through row level security, so another company's code opens nothing. Print pictures (`apps/web/e2e`, Windows set) refreshed
+  and checked by eye; the QR codes in them were decoded with ZXing and give the expected links. Tests: `lib/docLink.test.ts`.
 
 **Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new AI cards, bill scanning, attachments and
 barcodes answer 503 `not_set_up`, and accepting the AI notice answers 503 (this build shows notice v3).

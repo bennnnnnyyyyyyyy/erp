@@ -109,4 +109,8 @@ export const SCANNING_AR: Record<string, string> = {
   Scan: 'مسح',
   'No item has the barcode {code}.': 'لا يوجد صنف بالباركود {code}.',
   'Added {item}.': 'تمت إضافة {item}.',
+  // step 4: QR codes on printed invoices
+  'Scan an invoice QR code': 'مسح رمز QR لفاتورة',
+  'This code does not open anything in this app. Scan the QR code printed on one of our invoices.':
+    'هذا الرمز لا يفتح شيئًا في هذا البرنامج. امسح رمز QR المطبوع على إحدى فواتيرنا.',
 };
