@@ -11,6 +11,45 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights step 2: report builder and saved reports (`sql/109`, not applied)
+
+**Objective.** Step 2 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md): people build their own reports from a fixed,
+safe list of data, save them for themselves or the company, and export them, without SQL ever leaving our code.
+
+**Actions Completed.**
+- `sql/109_rpt_reports.sql`: the fixed list of 9 sources inside the database (`rpt__catalog`), each one fixed query with the company
+  filter, its columns, its module and the roles that may use it (copying today's table rules: money sources and the ledger for owners
+  and admins; item average cost and stock-move cost in no source). `rpt__check` refuses anything not on the list; `rpt_run` runs a
+  checked definition for the caller's company (names from the list, operators and functions from fixed lists, every value as a
+  parameter; at most 5,000 rows; money totals one line per currency). `rpt_sources()`. `rpt_reports` (saved reports, company or
+  private; RLS; select only) with `rpt_save_report` / `rpt_delete_report` (soft delete), audited before and after. "All apps on" for new
+  companies now includes `reports`.
+- `sql/tests/106_rpt_reports.sql`: sources per role; 18 refusals (unknown source, column, setting, operator, function; SQL in a column
+  name; bad date; no period; over 3 years; limit; grouping without a total; hidden sort column; bad chart); a quoted value is only a
+  value; group by; currency split; truncation; who saves and sees which report; names used once; audit rows; another company sees,
+  runs and changes nothing; no direct writes; no anonymous use; every source and column compiled at least once.
+- Shared: `packages/shared/src/reports.ts` (types and the plain check `reportDefinitionProblem`, with tests); permission keys
+  `reports.custom.read`, `reports.custom.create` (members), `reports.custom.manage` (owners and admins).
+- API: `apps/api/src/modules/reports/routes.ts` (`/v1/reports/sources`, `/run`, `/saved` list, get, run, create, change, delete), each
+  with its permission; `DUPLICATE_NAME` → 409. Test `apps/api/test/reports.test.ts`.
+- Web: the builder `apps/web/src/modules/reports/Builder.tsx` at `/reports/new` and `/reports/:id` (source, period with quick choices,
+  columns, group by, totals, filters, sort, row limit, chart; Run, Save, Save as new, Delete, Excel, PDF, Print); the library shows
+  "My reports" and "Company reports" and a "New report" button. Excel is our own small writer (`xlsx.ts`, no package; a test reads
+  it back with our .xlsx reader); PDF reuses the invoice PDF helper (Arabic correct); the chart is our own SVG (bars and lines right to
+  left in Arabic). Arabic for every new text (machine draft) in `i18nReports.ts`, `i18nNav.ts`, `i18nErrors.ts`.
+- Worktrees: `@erp/shared` now points at this checkout's own `packages/shared` (`tsconfig.base.json` paths, `apps/web/vite.config.ts`
+  alias, new `apps/api/vitest.config.ts`). In the main checkout it is the same folder as before; in a git worktree the package name
+  used to load the main checkout's copy, so a new module or type failed there.
+- Plan corrected: plain shared check (the repo has no Zod); time limit is Supabase's statement timeout for signed-in users.
+
+**Database / System Result.** None on live. `sql/109` is written, not applied: it waits for Ben's "yes 109". Until then every
+`/v1/reports` builder route answers 503 `not_set_up`, and the library simply hides the saved-report sections.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (92 + 806 + 210); SQL tests on pglite pass, including 106 and 092; biome clean
+on the changed files (warnings only, as elsewhere); a production web build succeeds. Not checked in a browser or on live. After "yes 109":
+rolled-back dry run on live, apply with the CLI, run tests 106 and 092 on live, then switch on Reports & Insights (Settings → Apps) for
+the test company and try: a grouped sales report with a chart, save it, export Excel and PDF, as owner and as a member.
+
 ## 2026-11-24 — Reports & Insights step 1: report library (no migration)
 
 **Objective.** Ben approved the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) and all five suggested answers (24 Nov,

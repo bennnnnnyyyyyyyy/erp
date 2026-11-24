@@ -143,6 +143,8 @@ export const NAV_AR: Record<string, string> = {
   'Set up your company': 'إعداد شركتك',
   'Alert rules': 'قواعد التنبيه',
   'Report library': 'مكتبة التقارير',
+  'New report': 'تقرير جديد',
+  Report: 'تقرير',
   General: 'عام',
   Users: 'المستخدمون',
   'Audit log': 'سجل التدقيق',

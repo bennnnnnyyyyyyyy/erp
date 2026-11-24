@@ -32,6 +32,8 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   },
   INVALID_STATE: { status: 409, message: 'That is not possible in the current state', code: 'invalid_state' },
   NOT_FOUND: { status: 404, message: 'Not found', code: 'not_found' },
+  // sql/109: a saved report's name is used once among the reports a person can see.
+  DUPLICATE_NAME: { status: 409, message: 'A report with that name already exists', code: 'duplicate_name' },
   MODULE_DISABLED: { status: 403, message: 'This module is not enabled for your organization', code: 'module_disabled' },
   BILL_QTY_EXCEEDS_RECEIVED: { status: 409, message: 'Billed quantity cannot exceed received quantity', code: 'bill_qty_exceeds_received' },
   DUPLICATE_INVOICE: { status: 409, message: 'That supplier invoice number is already recorded', code: 'duplicate_invoice' },
