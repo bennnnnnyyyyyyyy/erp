@@ -255,6 +255,17 @@ export const MODULES: readonly ModuleManifest[] = [
     permissions: ['hr.people.read', 'hr.people.manage'],
     suite: 'Team and messages',
   },
+  {
+    // documentation/plans/REPORTS_INSIGHTS_PLAN.md. Step 1: the report library (links to the reports that already exist; each one keeps
+    // its own permission). Later steps add the builder, the sales forecast and scheduled reports, each with its own keys.
+    key: 'reports',
+    name: 'Reports & Insights',
+    description: 'All your reports in one place: sales, buying, stock, money and tax.',
+    core: false,
+    dependsOn: [],
+    permissions: ['reports.library.read'],
+    suite: 'Core',
+  },
 ];
 
 export function findModule(key: string): ModuleManifest | undefined {

@@ -1,7 +1,7 @@
 # Reports & Insights Plan
 
 **Module key:** `reports` (tables start with `rpt_`)
-**Status:** `[📝 Draft / RFC]`: waiting for Ben's yes (written 24 Nov 2026)
+**Status:** `[✅ Approved]`: Ben's yes, 24 Nov 2026 (through erp-master). Building step by step.
 **Owner:** coding chat "reports" · **Reviewers:** Ben, erp-master
 **Research:** none new. The scope comes from the feasibility note `.temp/2026-11-23-reports-insights-feasibility.md` (local, not in the repo) and Ben's decisions of 23 Nov.
 **Depends on modules:** core. Each data source also needs its own module switched on (sales, purchasing, inventory, finance, accounting).
@@ -284,15 +284,19 @@ No customer names, currencies or rules are written into the code.
 4. The module is switched on with the other apps (Settings → Apps). It is in the default app list for new companies.
 5. Manual check (Ben, in the browser): the steps and the URL come with each step's report.
 
-## 11. Open questions (each has a suggested answer)
+## 11. Decisions (Ben, 24 Nov 2026, through erp-master: plan approved, all five suggested answers accepted)
 
-| # | Question | Suggested answer |
+| # | Question | Decision |
 |---|---|---|
 | Q1 | "Last item in the menu": after Alerts but before Guide and Settings, or after everything? | After every business app, before Guide and Settings. |
 | Q2 | May members save their own private reports? | Yes (member grant `reports.custom.create`); only owners and admins save company reports. |
 | Q3 | Scheduled reports to people outside the company (for example an accountant's email)? | Not now. Company members only. Later, with an owner-only switch. |
 | Q4 | Should the old report screens move out of Finance and other apps into Reports & Insights? | No. They stay where they are; the library links to them. We can move them later. |
 | Q5 | Is the sales forecast per branch needed now? | Not now. Company-wide first. |
+
+**Switching the app on (found at build time, 24 Nov).** `reports` is an optional module, so it is off for every company until an
+owner or admin switches it on in Settings → Apps. Step 1 has no migration, so after step 1 it is switched on by hand. Step 2's
+migration (`sql/109`) adds `reports` to the default apps for new companies (`core_enable_all_modules`).
 
 ## 12. Later sections (not built now)
 
