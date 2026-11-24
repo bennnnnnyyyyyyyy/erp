@@ -60,9 +60,16 @@
 .print-extra { flex: 1; display: grid; gap: 3mm; }
 .print-extra p { margin: 0; }
 .print-totals { border-collapse: collapse; min-inline-size: 70mm; }
+/* Its own width (the app's tables are 100% wide, which squeezed the QR code's caption onto four lines): at least 80 mm, else its content. */
+.print-sheet .print-totals { inline-size: auto; min-inline-size: 80mm; flex: none; }
 .print-totals th { text-align: start; font-weight: 400; color: #333; padding: 1mm 2mm; }
 .print-totals td { text-align: end; padding: 1mm 2mm; white-space: nowrap; }
-.print-totals .print-grand th, .print-totals .print-grand td { font-weight: 700; font-size: 12pt; border-block-start: 1.5px solid #333; }
+/* The app's own table lines and stripes reached this box: a line under the label only (it stopped halfway under "Total") and a grey
+   stripe on one cell (Ben, 24 Nov 2026). The box draws its own lines, across both cells. */
+.print-sheet .print-totals th, .print-sheet .print-totals td { border: 0; background: transparent; }
+.print-sheet .print-totals .print-grand th, .print-sheet .print-totals .print-grand td {
+  font-weight: 700; font-size: 12pt; border-block-start: 1.5px solid #333; border-block-end: 1px solid #999; padding-block: 1.5mm;
+}
 
 /* The QR area and "Not yet submitted to ETA". Not `.print-eta`: that is the sheet's own class in the ETA layout (print-${layout}), and a
    flex rule on it laid the whole ETA sheet out in one row (found by the layout picture tests, 23 Nov 2026). */
@@ -71,10 +78,11 @@
 .print-qr { inline-size: 26mm; block-size: 26mm; border: 1.5px dashed #888; flex: none; }
 
 /* Scanning step 4: our own QR code, a link into the app. */
+/* 30 mm square (Ben, 24 Nov 2026: 20 mm was too small); the caption stays beside it on one or two short lines. */
 .print-app-qr { display: flex; gap: 3mm; align-items: center; margin: 0; }
-.print-app-qr-code { inline-size: 20mm; block-size: 20mm; flex: none; }
+.print-app-qr-code { inline-size: 30mm; block-size: 30mm; flex: none; }
 .print-app-qr-code svg { display: block; inline-size: 100%; block-size: 100%; }
-.print-app-qr figcaption { color: #444; font-size: 8pt; min-inline-size: 24mm; max-inline-size: 30mm; }
+.print-app-qr figcaption { color: #444; font-size: 8.5pt; min-inline-size: 22mm; max-inline-size: 45mm; }
 
 .print-footer { margin-block-start: 8mm; padding-block-start: 3mm; border-block-start: 1px solid #ccc; text-align: center; color: #444; font-size: 9pt; }
 

@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Printed documents: bigger QR code, clean totals box (no migration)
+
+**Objective.** Ben: the QR code on printed invoices, drafts and notes was too small, and on the Simple layout the line under "Total"
+stopped halfway across the totals box.
+
+**Actions Completed.** `apps/web/src/modules/sales/print/print.css` only: the QR code is 30 mm square (was 20 mm), its caption beside
+it may be up to 45 mm wide (one line in one language; English and Arabic together take three short lines). Cause of the half line: the
+app's own table styles reached the totals box (a line under the label cell only, a grey stripe on one cell, and 100% width that
+squeezed the QR caption). The totals box now draws its own lines across both cells (a dark line above the total, a light one under
+it) and has its own width (at least 80 mm). Applies to every layout and language, the downloaded PDF (same page, `pdf.ts` unchanged)
+and the public link. Print layout pictures refreshed (`apps/web/e2e/print.e2e.ts-snapshots/`, 8 pictures), checked by eye: everything
+stays on one A4 page.
+
+**Database / System Result.** None.
+
+**Safety Status.** Print picture tests: 8 passed (desktop). Note: the picture tests allow 1% difference, so a size change of the QR code
+alone does not fail them; refresh them with `--update-snapshots=all` after a print change. Not checked: printing on paper, scanning the
+bigger code with a phone.
+
 ## 2026-11-24 — Phone width: pages of an app with a long name were wider than the screen (old UI; no migration)
 
 **Objective.** At 360-390 px, the Reports & Insights pages were about 60 px wider than the screen (the account button was cut off and the
