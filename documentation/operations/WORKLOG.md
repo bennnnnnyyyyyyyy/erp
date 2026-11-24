@@ -11,7 +11,26 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
-## 2026-11-23 — Scanning (phase 1d), `sql/108` (not applied)
+## 2026-11-24 — `sql/108` applied to live (scanning)
+
+**Objective.** Scanning steps 0-4 are merged (PR #109-#112); their database part, `sql/108_scanning.sql`, was not on live.
+
+**Actions Completed.** Ben said "yes 108". Checked live first: `sql/107` present; `core_attachments`, `inv_items.barcode` and the
+`doc-files` bucket absent; AI notice v2. A rolled-back dry run of `sql/108` on live (the file up to its `commit`, then `rollback`; no
+error; checked afterwards that nothing stayed). Then applied with `npx supabase db query --linked -f sql/108_scanning.sql`. Checked:
+AI notice v3; Claude needs `api_key` and `model`; users cannot read the AI state (keys), cannot write `core_attachments` or
+`core_ai_extractions` directly, can choose the reader (owners and admins, in the function); bucket `doc-files` private, 10 MB, JPEG,
+PNG, WebP and PDF only; storage rules `doc_files_read` and `doc_files_upload` present; users read `inv_items.barcode` but cannot write
+it; anonymous cannot set barcodes. Then `sql/tests/105_scanning.sql` and `sql/tests/092_column_grants.sql` on live: both "ALL TESTS
+PASSED (everything rolled back)"; afterwards no test company, attachment row or file remained. `sql/README.md` row updated.
+
+**Database / System Result.** Live project ggoerp: `sql/108` applied. No data changed (live holds only test data). Each owner must
+accept the AI notice again (v3) before any AI is used. Bill scanning needs the company's own AI key (Settings → Integrations).
+
+**Safety Status.** Not done: the phone check (report section 4.5): a real bill read by a real AI, a real upload, a barcode and a QR
+code scanned with a camera.
+
+## 2026-11-23 — Scanning (phase 1d), `sql/108` (applied 24 Nov)
 
 **Objective.** Phase 1d of the Bellvox readiness roadmap: `documentation/plans/SCANNING_PLAN.md`. Build plan approved by Ben 23 Nov
 (owners and admins scan; a bill price that differs from the order is a warning only; the photo is kept until removed; one migration, 108,
