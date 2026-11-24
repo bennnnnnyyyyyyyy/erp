@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights step 3: ready-made reports (no migration)
+
+**Objective.** Step 3 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md): useful reports ready to open, made with the
+builder, that people can copy and change.
+
+**Actions Completed.**
+- `packages/shared/src/reportTemplates.ts`: 14 ready-made reports, each an ordinary builder definition with a period choice (this
+  month, last month, last 30 days, or none): sales by customer, top 20 products, sales by item group, sales day by day; purchases by
+  supplier; stock by warehouse, out of stock, stock movements by kind; money owed by age and by customer, expenses by category, money
+  in and out; VAT on sales day by day, VAT on purchases by supplier. Test `reportTemplates.test.ts` reads the source list from
+  `sql/109` itself and checks every template against it.
+- Library: each ready-made report shows in its area (marked "Ready-made"), only when the person may use its data (`rpt_sources`).
+  It opens at `/reports/template/:key` in the builder and runs at once; "Save" keeps the person's own copy with the template's key.
+- Period choices moved to `apps/web/src/modules/reports/definition.ts`, with tests. Arabic for the 27 new texts.
+
+**Database / System Result.** None. Ready-made reports run through `sql/109` (still waiting for Ben's "yes 109"); before it, the
+library does not show them.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (109 + 806 + 212); biome clean on the changed files. Not checked in a browser.
+After "yes 109": open each area's ready-made reports as owner and as a member (members see no money ones).
+
 ## 2026-11-24 — Reports & Insights step 2: report builder and saved reports (`sql/109`, not applied)
 
 **Objective.** Step 2 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md): people build their own reports from a fixed,

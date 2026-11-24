@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import type { SavedReport } from '@erp/shared';
+import type { ReportSource, SavedReport } from '@erp/shared';
 import { PageIcon } from '../../components/icons';
 import { buttonVariants } from '../../components/ui/button';
 import { api } from '../../lib/api';
@@ -20,6 +20,7 @@ export function ReportLibraryPage() {
   const session = useSession();
   const [search, setSearch] = useState('');
   const [saved, setSaved] = useState<SavedReport[]>([]);
+  const [sourceKeys, setSourceKeys] = useState<ReadonlySet<string>>(new Set());
   const apps = useMemo(() => visibleApps(session), [session]);
   const canOpen = useMemo(
     () => (path: string) => {
@@ -33,15 +34,20 @@ export function ReportLibraryPage() {
   useEffect(() => {
     if (!canBuild) return;
     let live = true;
+    // Not set up yet (sql/109), or nothing to show: the library still works without these.
     api<SavedReport[]>('/v1/reports/saved')
       .then((r) => live && setSaved(r))
-      .catch(() => undefined); // not set up yet, or nothing to show: the library still works
+      .catch(() => undefined);
+    // Step 3: the ready-made reports on the sources this person may use.
+    api<ReportSource[]>('/v1/reports/sources')
+      .then((s) => live && setSourceKeys(new Set(s.map((x) => x.key))))
+      .catch(() => undefined);
     return () => {
       live = false;
     };
   }, [canBuild]);
 
-  const areas = libraryFor(canOpen, search, tr);
+  const areas = libraryFor(canOpen, search, tr, sourceKeys);
   const q = search.trim().toLocaleLowerCase();
   const shownSaved = saved.filter((r) => !q || `${r.name} ${r.description ?? ''}`.toLocaleLowerCase().includes(q));
   const mine = shownSaved.filter((r) => r.visibility === 'private');
@@ -102,7 +108,7 @@ export function ReportLibraryPage() {
                   </span>
                   <span className="tile-go" aria-hidden="true">→</span>
                   <span className="tile-name">{tr(r.title)}</span>
-                  <span className="tile-desc muted">{tr(r.description)}</span>
+                  <span className="tile-desc muted">{r.ready ? `${tr('Ready-made')} · ` : ''}{tr(r.description)}</span>
                 </Link>
               );
             })}

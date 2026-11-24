@@ -25,3 +25,14 @@ describe('tidy', () => {
     expect(t.sort).toEqual([{ column: 'sum_qty', dir: 'desc' }]);
   });
 });
+
+describe('period choices', () => {
+  it('turns a choice into dates', async () => {
+    const { presetPeriod } = await import('./definition');
+    expect(presetPeriod('this_month', '2026-03-15')).toEqual({ from: '2026-03-01', to: '2026-03-15' });
+    expect(presetPeriod('last_month', '2026-03-15')).toEqual({ from: '2026-02-01', to: '2026-02-28' });
+    expect(presetPeriod('last_month', '2026-01-10')).toEqual({ from: '2025-12-01', to: '2025-12-31' });
+    expect(presetPeriod('last_30', '2026-03-15')).toEqual({ from: '2026-02-14', to: '2026-03-15' });
+    expect(presetPeriod('this_year', '2026-03-15')).toEqual({ from: '2026-01-01', to: '2026-03-15' });
+  });
+});

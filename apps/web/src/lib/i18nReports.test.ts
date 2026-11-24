@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { MODULES } from '@erp/shared';
+import { MODULES, REPORT_TEMPLATES } from '@erp/shared';
 import { describe, expect, it } from 'vitest';
 import { AREAS, LIBRARY } from '../modules/reports/reportLibrary';
 import { REPORTS_AR } from './i18nReports';
@@ -53,6 +53,7 @@ describe('Reports & Insights translations', () => {
       ...Object.values(labels.VALUE_LABELS).flatMap((m) => Object.values(m)).filter((v) => !/^[0-9+-]+$/.test(v)),
       ...ops.flatMap((op) => [labels.opLabel(op, 'text'), labels.opLabel(op, 'date')]),
       ...problems,
+      ...REPORT_TEMPLATES.flatMap((t) => [t.name, t.description]),
       ...AREAS.map((a) => a.label),
       ...LIBRARY.map((e) => e.description),
       mod?.name ?? '', mod?.description ?? '',

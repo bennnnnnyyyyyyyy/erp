@@ -3,7 +3,9 @@
 // and they hold the page's permission), which the caller decides with the registry (`canOpen`). Kept free of React and of the registry
 // itself so it can be tested without a browser.
 
-export type ReportArea = 'sales' | 'buy' | 'stock' | 'money' | 'tax';
+import { REPORT_TEMPLATES, type ReportArea } from '@erp/shared';
+
+export type { ReportArea };
 
 export type LibraryEntry = {
   area: ReportArea;
@@ -44,18 +46,21 @@ export const LIBRARY: readonly LibraryEntry[] = [
   { area: 'tax', path: '/finance/vat', description: 'VAT on sales and purchases for a period, and what to pay.' },
 ];
 
-export type ShownReport = LibraryEntry & { title: string };
+/** A ready-made report (step 3) shows in its area after the screens; `ready` marks it. */
+export type ShownReport = LibraryEntry & { title: string; ready?: boolean };
 export type ShownArea = { key: ReportArea; label: string; reports: ShownReport[] };
 
 /**
  * The areas and reports this person can open. `canOpen(path)` returns the page's title (English) when the person can open that exact
  * page, or null. `search` keeps the reports whose title or description contains it (case ignored; the caller passes the texts already
- * translated through `translate`). Areas with no report left are dropped.
+ * translated through `translate`). `sourceKeys`: the report sources this person may use (rpt_sources); their ready-made reports are
+ * added. Areas with no report left are dropped.
  */
 export function libraryFor(
   canOpen: (path: string) => string | null,
   search = '',
   translate: (s: string) => string = (s) => s,
+  sourceKeys: ReadonlySet<string> = new Set(),
 ): ShownArea[] {
   const q = search.trim().toLocaleLowerCase();
   const shown: ShownReport[] = [];
@@ -64,6 +69,11 @@ export function libraryFor(
     if (!title) continue;
     if (q && !`${translate(title)} ${translate(e.description)}`.toLocaleLowerCase().includes(q)) continue;
     shown.push({ ...e, title });
+  }
+  for (const t of REPORT_TEMPLATES) {
+    if (!sourceKeys.has(t.definition.source)) continue;
+    if (q && !`${translate(t.name)} ${translate(t.description)}`.toLocaleLowerCase().includes(q)) continue;
+    shown.push({ area: t.area, path: `/reports/template/${t.key}`, description: t.description, title: t.name, ready: true });
   }
   return AREAS.map((a) => ({ ...a, reports: shown.filter((r) => r.area === a.key) })).filter((a) => a.reports.length > 0);
 }

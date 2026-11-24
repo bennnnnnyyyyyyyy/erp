@@ -328,6 +328,8 @@ export const APPS: AppDef[] = [
       ...(demoMode ? [] : [
         { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
         { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
+        // Step 3: a ready-made report opens in the builder and runs at once.
+        { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
       ]),
     ],
   },

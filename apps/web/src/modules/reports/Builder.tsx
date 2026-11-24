@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   REPORT_CHART_TYPES,
   REPORT_LIMITS,
+  findReportTemplate,
   hasPermission,
   reportDefinitionProblem,
   reportFnsFor,
@@ -23,7 +24,6 @@ import { ConfirmButton } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
-import { firstOfYearIn, todayIn } from '../../lib/dates';
 import { formatDay } from '../../lib/format';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
 import { parseAmount } from '../../lib/numbers';
@@ -32,7 +32,7 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { saveBlob, sheetToPdf } from '../sales/print/pdf';
 import { cellText, cellValue, headerLabel } from './cells';
-import { tidy } from './definition';
+import { presetPeriod, templateDefinition, tidy } from './definition';
 import { FN_LABELS, VALUE_LABELS, columnLabel, opLabel, sourceLabel } from './labels';
 import { ReportChart } from './ReportChart';
 import { XLSX_TYPE, xlsxBytes } from './xlsx';
@@ -45,20 +45,6 @@ type Meta = { id: string | null; name: string; description: string; visibility: 
 const NEW_META: Meta = { id: null, name: '', description: '', visibility: 'private', mine: true, templateKey: null };
 const PDF_MAX_ROWS = 1000;
 
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
-function presetPeriod(kind: 'this_month' | 'last_month' | 'last_30' | 'this_year'): { from: string; to: string } {
-  const today = todayIn();
-  const t = new Date(`${today}T00:00:00Z`);
-  if (kind === 'this_month') return { from: `${today.slice(0, 8)}01`, to: today };
-  if (kind === 'last_month') {
-    const first = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() - 1, 1));
-    const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 0));
-    return { from: ymd(first), to: ymd(last) };
-  }
-  if (kind === 'last_30') return { from: ymd(new Date(t.getTime() - 29 * 86_400_000)), to: today };
-  return { from: firstOfYearIn(), to: today };
-}
-
 /** A new report on a source: its first columns, this month. */
 export function startingDefinition(s: ReportSource): ReportDefinition {
   return { source: s.key, columns: s.columns.slice(0, 5).map((c) => c.key), period: s.period ? presetPeriod('this_month') : null };
@@ -67,6 +53,7 @@ export function startingDefinition(s: ReportSource): ReportDefinition {
 export function ReportBuilderPage() {
   const session = useSession();
   const id = useParam('id');
+  const templateKey = useParam('key');
   const canCreate = hasPermission(session.permissions, 'reports.custom.create');
   const canManage = hasPermission(session.permissions, 'reports.custom.manage');
   const sources = useLoad(() => api<ReportSource[]>('/v1/reports/sources'));
@@ -98,10 +85,22 @@ export function ReportBuilderPage() {
     }
   }, []);
 
-  // Open a saved report, or start a new one on the first source.
+  // Open a saved report, or a ready-made one (step 3: it runs at once; "Save" keeps the person's own copy), or start a new one.
   useEffect(() => {
     if (!sources.data) return;
-    if (id) {
+    if (templateKey) {
+      const t = findReportTemplate(templateKey);
+      const src = t && sources.data.find((s) => s.key === t.definition.source);
+      if (!t || !src) {
+        setDef(null);
+        setError(tr('This ready-made report is not open to you.'));
+        return;
+      }
+      const d = templateDefinition(t);
+      setMeta({ ...NEW_META, name: tr(t.name), description: tr(t.description), templateKey: t.key });
+      setDef(d);
+      void run(d, src);
+    } else if (id) {
       api<SavedReport>(`/v1/reports/saved/${id}`)
         .then((r) => {
           setMeta({ id: r.id, name: r.name, description: r.description ?? '', visibility: r.visibility, mine: r.mine, templateKey: r.templateKey });
@@ -115,7 +114,7 @@ export function ReportBuilderPage() {
       const first = sources.data[0];
       setDef(first ? startingDefinition(first) : null);
     }
-  }, [sources.data, id, run]);
+  }, [sources.data, id, templateKey, run]);
 
   if (!sources.data) return <section className="page"><Loading error={sources.error} /></section>;
   if (sources.data.length === 0) {
@@ -206,7 +205,8 @@ export function ReportBuilderPage() {
 
   return (
     <section className="page wide">
-      <h1>{meta.id ? meta.name : tr('New report')}</h1>
+      <h1>{meta.id || meta.templateKey ? meta.name : tr('New report')}</h1>
+      {!meta.id && meta.templateKey && <p className="muted small no-print">{tr('A ready-made report. Change anything and save it as your own.')}</p>}
       {meta.description && <p className="muted">{meta.description}</p>}
       {meta.id && !canEditSaved && <p className="muted small no-print">{tr('You can change the settings and run them, but only save them as a new report.')}</p>}
 
