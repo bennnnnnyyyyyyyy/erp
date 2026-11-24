@@ -131,6 +131,45 @@ describe('reading a document: one door, six providers', () => {
   });
 });
 
+describe('a busy provider (Gemini free tier answered 503, 24 Nov 2026)', () => {
+  /** Answers with the given statuses in turn, then the last one again. */
+  const seq = (statuses: number[]) => {
+    const waits: number[] = [];
+    let n = 0;
+    const fetchFn = (async () => {
+      const status = statuses[Math.min(n++, statuses.length - 1)] as number;
+      const reply =
+        status === 200 ? { candidates: [{ content: { parts: [{ text: JSON.stringify(answer) }] } }] } : { error: 'busy key-123456789' };
+      return new Response(JSON.stringify(reply), { status });
+    }) as typeof fetch;
+    return { deps: { fetch: fetchFn, sleep: async (ms: number) => void waits.push(ms) }, waits, tries: () => n };
+  };
+
+  it('tries again after a short wait, and reads when it answers', async () => {
+    const s = seq([503, 200]);
+    const r = await readDocument({ ...base, kind: 'gemini', file: png }, s.deps);
+    expect(r.data).toEqual(answer);
+    expect(s.tries()).toBe(2);
+    expect(s.waits).toEqual([1500]);
+  });
+
+  it('gives up after three tries with a plain message, without the key', async () => {
+    const s = seq([503]);
+    const err = await readDocument({ ...base, kind: 'gemini', file: png }, s.deps).catch((e: Error) => e);
+    expect(s.tries()).toBe(3);
+    expect(String(err)).toContain('Gemini refused the request (it is busy right now; wait a minute and try again)');
+    expect(String(err)).not.toContain('key-123456789');
+  });
+
+  it('does not try again on the account limit (429) or a refused key', async () => {
+    for (const status of [429, 401]) {
+      const s = seq([status]);
+      await readDocument({ ...base, kind: 'gemini', file: png }, s.deps).catch(() => null);
+      expect(s.tries()).toBe(1);
+    }
+  });
+});
+
 describe('which AI reads (own key only)', () => {
   const on = (credentials: Record<string, string>) => ({ enabled: true, credentials });
   const off = { enabled: false, credentials: {} };

@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — AI busy: try again (scanning fix)
+
+**Objective.** After the model fix, Ben's scan failed with "Gemini refused the request (answer 503)": Google's model was overloaded
+(common on the free tier).
+
+**Actions Completed.** Branch `fix/ai-busy-retry`. `lib/aiProviders.ts` `readDocument`: when the provider answers busy (500, 502, 503,
+504, 529) it tries again after 1.5 s and 4 s, at most three tries in all; a refused request is not charged. Not on 429 (the account's
+limit) or a refused key. After the last try the message says "it is busy right now; wait a minute and try again". Tests in
+`apps/api/test/ai_reader.test.ts`.
+
+**Database / System Result.** None (no migration).
+
+**Safety Status.** API 793 tests, typecheck, biome 0 errors. No real AI was called from here.
+
 ## 2026-11-24 — Gemini model not found (scanning fix)
 
 **Objective.** Ben's first bill scan with a free Gemini key failed: "Gemini refused the request (the model was not found)". Our default
