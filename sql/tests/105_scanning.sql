@@ -17,7 +17,7 @@ declare
   x uuid := gen_random_uuid();  -- owner of B
   vw uuid := gen_random_uuid(); -- viewer of A
   o uuid; ob uuid; w uuid; i1 uuid; i2 uuid; sup uuid; sup2 uuid; po1 uuid; po2 uuid; pl uuid; bill uuid; att uuid; ex uuid;
-  n bigint; ok boolean; j jsonb; p text; p2 text;
+  n bigint; ok boolean; j jsonb; p text; p2 text; ib uuid;
 begin
   insert into auth.users (id, aud, role, email) values
     (u, 'authenticated', 'authenticated', 'sc-o@tests.invalid'), (a, 'authenticated', 'authenticated', 'sc-a@tests.invalid'),
@@ -216,6 +216,44 @@ begin
   reset role;
   perform set_config('request.headers', json_build_object('x-org-id', o)::text, true);
 
+
+  -- ---- C: barcodes (one per item, unique in each company)
+  perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform public.inv_set_item_barcode(i1, ' 6221234567890 ');
+  select count(*) into n from public.inv_items where id = i1 and barcode = '6221234567890';
+  if n <> 1 then raise exception 'FAIL C1: the member could not set a barcode (or it was not trimmed)'; end if;
+  ok := false; begin perform public.inv_set_item_barcode(i2, '6221234567890'); exception when others then ok := (sqlerrm = 'DUPLICATE'); end;
+  if not ok then raise exception 'FAIL C2: two items of one company got the same barcode'; end if;
+  ok := false; begin perform public.inv_set_item_barcode(i2, 'has space'); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
+  if not ok then raise exception 'FAIL C3: a barcode with a space was accepted'; end if;
+  ok := false; begin update public.inv_items set barcode = 'X1' where id = i2; exception when others then ok := true; end;
+  if not ok then raise exception 'FAIL C4: a user wrote a barcode directly'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', vw, 'role', 'authenticated')::text, true);
+  ok := false; begin perform public.inv_set_item_barcode(i2, 'V-1'); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
+  if not ok then raise exception 'FAIL C5: a viewer set a barcode'; end if;
+  select count(*) into n from public.inv_items where barcode = '6221234567890';
+  if n <> 1 then raise exception 'FAIL C6: the viewer cannot find the item by its barcode'; end if;
+  -- company B: does not see A's barcode, cannot change A's item, may use the same barcode for its own item
+  perform set_config('request.headers', json_build_object('x-org-id', ob)::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', x, 'role', 'authenticated')::text, true);
+  select count(*) into n from public.inv_items where barcode = '6221234567890';
+  if n <> 0 then raise exception 'FAIL C7: B finds A''s item by barcode'; end if;
+  ok := false; begin perform public.inv_set_item_barcode(i1, null); exception when others then ok := (sqlerrm = 'NOT_FOUND'); end;
+  if not ok then raise exception 'FAIL C8: B changed A''s barcode'; end if;
+  ib := public.inv_create_item('B-1', 'B item');
+  perform public.inv_set_item_barcode(ib, '6221234567890');
+  reset role;
+  perform set_config('request.headers', json_build_object('x-org-id', o)::text, true);
+  -- clearing; both changes audited
+  perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform public.inv_set_item_barcode(i1, '');
+  reset role;
+  select count(*) into n from public.inv_items where id = i1 and barcode is null;
+  if n <> 1 then raise exception 'FAIL C9: a blank barcode did not clear it'; end if;
+  select count(*) into n from public.audit_log where org_id = o and action = 'inventory.item.barcode_changed';
+  if n <> 2 then raise exception 'FAIL C10: barcode changes audited % times', n; end if;
 
   -- ---- Z: audit chain
   select count(*) into n from public.audit_verify(o);

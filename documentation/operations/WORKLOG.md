@@ -40,10 +40,22 @@ and one SQL test, 105).
   order, expense and item pages (item: an "Attachments" tab) and in the customer and supplier Edit window. Camera or file; open (five-
   minute link); remove (the person who added it, or an owner or admin; soft delete). Hidden while `sql/108` is missing and in the
   sample build. Receipts have no page of their own: their papers go on the purchase order.
-- Step 2 (barcodes) and step 4 (QR codes) not started: waiting for Ben to install `@zxing/browser` in the main checkout.
+- 24 Nov, CI fix: on CI's real Supabase, test 105 failed with `NOT_FOUND` (where Storage exists, `core_add_attachment` checks that the
+  file was really uploaded, and the test had uploaded none). The test now puts its two files in `storage.objects` there (rolled back),
+  and a new check B1m proves that a file never uploaded is refused. Locally checked with a stub `storage` schema as well.
+- Step 2, barcodes (24 Nov; Ben installed `@zxing/browser` 0.2.1, Apache-2.0, with `@zxing/library` 0.23). `sql/108`:
+  `inv_items.barcode` (printable, no spaces, up to 64; unique among a company's live items) with its column grant in the same
+  migration; `inv_set_item_barcode` (owners, admins, members; blank clears; `DUPLICATE` names the item that has it; audited). API:
+  `GET /v1/inventory/items/by-barcode/:code`, `PUT /v1/inventory/items/:id/barcode`, an optional `barcode` on `POST /v1/inventory/items`
+  (checked before the item is made); the item list returns `barcode` (falls back before sql/108). Web:
+  `components/BarcodeScanner.tsx` (the browser's own `BarcodeDetector` first, ZXing loaded only when there is none; typing works too),
+  "Scan a barcode" on the purchase and sales order forms (adds the item, or 1 more), a Barcode field with Scan on Add item and Edit
+  item. `Modal.tsx`: only the top dialog answers Escape and Tab (the scanner opens over a form). Tests: test 105 C1-C10,
+  `apps/api/test/barcodes.test.ts`, `apps/web/src/components/BarcodeScanner.test.ts`.
+- Step 4 (QR codes) not started.
 
-**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new AI cards, bill scanning and attachments answer
-503 `not_set_up`, and accepting the AI notice answers 503 (this build shows notice v3).
+**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new AI cards, bill scanning, attachments and
+barcodes answer 503 `not_set_up`, and accepting the AI notice answers 503 (this build shows notice v3).
 
 **Safety Status.** `npm run typecheck`, `npm test`, `npx biome check` (0 errors), PGlite SQL tests pass. No real AI was called.
 

@@ -21,6 +21,7 @@ type ItemRow = {
   default_tax_rate_id?: string | null;
   group_id?: string | null;
   max_level?: number | null;
+  barcode?: string | null;
 };
 const toItem = (r: ItemRow) => ({
   id: r.id,
@@ -37,6 +38,8 @@ const toItem = (r: ItemRow) => ({
   groupId: r.group_id ?? null,
   /** The level a reorder fills stock up to (sql/106), or null. */
   maxLevel: r.max_level == null ? null : Number(r.max_level),
+  /** The item's barcode (sql/108), or null. */
+  barcode: r.barcode ?? null,
 });
 
 const ITEM_COLUMNS = 'id, sku, name, name_ar, uom, reorder_level, tracks_batches, storage_condition_id, default_tax_rate_id';
@@ -44,6 +47,10 @@ const ITEM_COLUMNS = 'id, sku, name, name_ar, uom, reorder_level, tracks_batches
 const ITEM_COLUMNS_WITH_GROUP = `${ITEM_COLUMNS}, group_id`;
 // max_level comes with sql/106 (the low stock pop-up); the same fallback applies.
 const ITEM_COLUMNS_WITH_MAX = `${ITEM_COLUMNS_WITH_GROUP}, max_level`;
+// barcode comes with sql/108 (scanning step 2); the same fallback applies.
+const ITEM_COLUMNS_WITH_BARCODE = `${ITEM_COLUMNS_WITH_MAX}, barcode`;
+/** A barcode as sql/108 accepts it: printable ASCII without spaces, 1 to 64 characters. */
+export const BARCODE_RE = /^[!-~]{1,64}$/;
 
 export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
@@ -52,11 +59,45 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     // Also on "permission denied" (42501): inv_items is read through column grants, and a new column without its grant must not
     // block every screen that lists items (sql/095 shipped without one; fixed by sql/096).
     const fallBack = (e: unknown) => !!e && (isMissingSchema(e) || (e as { code?: string }).code === '42501');
-    let { data, error } = await list(ITEM_COLUMNS_WITH_MAX);
+    let { data, error } = await list(ITEM_COLUMNS_WITH_BARCODE);
+    if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS_WITH_MAX));
     if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS_WITH_GROUP));
     if (fallBack(error)) ({ data, error } = await list(ITEM_COLUMNS));
     if (error) throw error;
     return ok(c, ((data ?? []) as unknown as ItemRow[]).map(toItem));
+  });
+
+  // Find one live item by its barcode (scanning step 2): the camera reads the code, the form asks here. Row level security keeps it to
+  // the signed-in company. Not found: 404 not_found. Before sql/108: 503 not_set_up (the global missing-schema answer).
+  inventoryRoutes.get('/items/by-barcode/:code', requirePermission('inventory.items.read'), async (c) => {
+    const code = decodeURIComponent(c.req.param('code') ?? '').trim();
+    if (!BARCODE_RE.test(code)) invalid('A barcode is up to 64 letters, digits or symbols, without spaces');
+    const { data, error } = await userDb(c)
+      .from('inv_items')
+      .select(ITEM_COLUMNS_WITH_BARCODE)
+      .eq('org_id', orgOf(c))
+      .eq('barcode', code)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) {
+      if (isMissingSchema(error) || (error as { code?: string }).code === '42501')
+        throw new HttpError(503, 'Barcodes need a database update (sql/108) first.', 'not_set_up');
+      throw error;
+    }
+    if (!data) throw new HttpError(404, 'No item has this barcode', 'not_found');
+    return ok(c, toItem(data as unknown as ItemRow));
+  });
+
+  // Set or clear an item's barcode: { barcode } (null or blank clears). sql/108 checks the role, the format and that no other live item
+  // of the company has it (409 duplicate, naming that item); audited.
+  inventoryRoutes.put('/items/:id/barcode', requirePermission('inventory.items.manage'), async (c) => {
+    const id = idParam(c);
+    const raw = (await jsonBody(c)).barcode;
+    if (raw !== null && raw !== undefined && typeof raw !== 'string') invalid('barcode must be text or null');
+    const barcode = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+    if (barcode !== null && !BARCODE_RE.test(barcode)) invalid('A barcode is up to 64 letters, digits or symbols, without spaces');
+    await callRpc<void>(userDb(c), 'inv_set_item_barcode', { p_item_id: id, p_barcode: barcode });
+    return ok(c, { id, barcode });
   });
 
   inventoryRoutes.get('/stock', requirePermission('inventory.items.read'), async (c) => {
@@ -166,6 +207,24 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     const cost = body.unitCostMinor === undefined || body.unitCostMinor === null ? null : Number(body.unitCostMinor);
     if (cost !== null && (!Number.isInteger(cost) || cost < 0))
       invalid('unitCostMinor must be a whole number of minor units, zero or more');
+    // Optional barcode (sql/108). Checked before the item is made, so a taken barcode does not leave an item behind.
+    const barcode = typeof body.barcode === 'string' && body.barcode.trim() ? body.barcode.trim() : null;
+    if (barcode !== null) {
+      if (!BARCODE_RE.test(barcode)) invalid('A barcode is up to 64 letters, digits or symbols, without spaces');
+      const taken = await userDb(c)
+        .from('inv_items')
+        .select('sku')
+        .eq('org_id', orgOf(c))
+        .eq('barcode', barcode)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (taken.error) {
+        if (isMissingSchema(taken.error) || (taken.error as { code?: string }).code === '42501')
+          throw new HttpError(503, 'Barcodes need a database update (sql/108) first.', 'not_set_up');
+        throw taken.error;
+      }
+      if (taken.data) throw new HttpError(409, `Item ${(taken.data as { sku: string }).sku} already has this barcode`, 'duplicate');
+    }
     const id = await callRpc<string>(userDb(c), 'inv_create_item', {
       p_sku: sku,
       p_name: name,
@@ -182,6 +241,7 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
     // owners and admins only. With opening stock the receipt above already set it.
     if (opening === 0 && cost !== null && cost > 0)
       await callRpc<void>(userDb(c), 'inv_set_item_cost', { p_item_id: id, p_unit_cost_minor: cost });
+    if (barcode !== null) await callRpc<void>(userDb(c), 'inv_set_item_barcode', { p_item_id: id, p_barcode: barcode });
     // The code may have been given by the database: read it back.
     const { data: saved, error: readError } = await userDb(c)
       .from('inv_items')
@@ -200,6 +260,7 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
         uom: text(body.uom) || 'piece',
         reorder_level: null,
         group_id: groupId as string | null,
+        barcode,
       }),
       201,
     );

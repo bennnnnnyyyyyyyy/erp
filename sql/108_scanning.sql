@@ -6,6 +6,7 @@
 -- core_integrations kind check, core__provider_fields (from sql/102), core_save_integration (from sql/102), ai__provider_state and
 -- core__ai_notice_version (from sql/061) and core_ai_status (from sql/056) are recreated from their latest versions with only these
 -- additions.
+-- Step 2, barcodes: inv_items.barcode (one per item, unique among a company's live items) with its column grant; inv_set_item_barcode.
 -- Depends on sql/001-107. Rerun-safe. Then run sql/tests/105_scanning.sql.
 
 begin;
@@ -373,7 +374,48 @@ end $$;
 revoke all on function public.pur_bill_scan_candidates(text, text, uuid) from public, anon;
 grant execute on function public.pur_bill_scan_candidates(text, text, uuid) to authenticated;
 
--- @@STEP2@@
+-- ---------------------------------------------------------------- step 2: barcodes
+-- One barcode per item, unique in each company among live items (Ben, 23 Nov). Printable ASCII, up to 64 characters (EAN, UPC,
+-- Code 128 and QR text all fit). inv_items is read through column grants: the grant comes in this same migration (sql/095 lesson).
+alter table public.inv_items add column if not exists barcode text;
+alter table public.inv_items drop constraint if exists inv_items_barcode_check;
+alter table public.inv_items add constraint inv_items_barcode_check check (barcode is null or barcode ~ '^[!-~]{1,64}$');
+create unique index if not exists inv_items_org_barcode_uq on public.inv_items (org_id, barcode)
+  where barcode is not null and deleted_at is null;
+grant select (barcode) on public.inv_items to authenticated;
+
+-- Set or clear (null or blank) an item's barcode. Same roles as renaming an item (sql/062). Audited. A barcode that another live item of
+-- the company already has: DUPLICATE, naming that item's code so the person can fix it.
+create or replace function public.inv_set_item_barcode(p_item_id uuid, p_barcode text) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  v_org uuid := public.inv__guard(array['owner', 'admin', 'member']);
+  v_code text := nullif(trim(coalesce(p_barcode, '')), '');
+  i public.inv_items;
+  v_other text;
+begin
+  if v_code is not null and v_code !~ '^[!-~]{1,64}$' then
+    raise exception 'INVALID_INPUT' using detail = 'a barcode is up to 64 letters, digits or symbols, without spaces';
+  end if;
+  select * into i from public.inv_items where org_id = v_org and id = p_item_id and deleted_at is null for update;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if i.barcode is not distinct from v_code then return; end if;
+  if v_code is not null then
+    select sku into v_other from public.inv_items where org_id = v_org and barcode = v_code and deleted_at is null and id <> i.id;
+    if v_other is not null then raise exception 'DUPLICATE' using detail = format('item %s already has this barcode', v_other); end if;
+  end if;
+  begin
+    update public.inv_items set barcode = v_code where org_id = v_org and id = i.id;
+  exception when unique_violation then
+    raise exception 'DUPLICATE' using detail = 'another item already has this barcode';
+  end;
+  insert into public.audit_log (org_id, actor_user_id, action, entity_type, entity_id, summary, before, after)
+  values (v_org, auth.uid(), 'inventory.item.barcode_changed', 'item', i.id::text,
+          format('%s: barcode %s', i.sku, coalesce(v_code, 'removed')),
+          jsonb_build_object('barcode', i.barcode), jsonb_build_object('barcode', v_code));
+end $$;
+revoke all on function public.inv_set_item_barcode(uuid, text) from public, anon;
+grant execute on function public.inv_set_item_barcode(uuid, text) to authenticated;
 
 commit;
 
@@ -385,3 +427,6 @@ select has_function_privilege('authenticated', 'public.core_set_ai_reader(text)'
 select has_table_privilege('authenticated', 'public.core_attachments', 'insert') as users_insert_attachments,
        has_table_privilege('authenticated', 'public.core_ai_extractions', 'insert') as users_insert_extractions;
 select to_regclass('storage.buckets') is not null as storage_present;
+select has_column_privilege('authenticated', 'public.inv_items', 'barcode', 'select') as users_read_barcodes,
+       has_column_privilege('authenticated', 'public.inv_items', 'barcode', 'update') as users_write_barcodes,
+       has_function_privilege('anon', 'public.inv_set_item_barcode(uuid, text)', 'execute') as anon_sets_barcodes;
