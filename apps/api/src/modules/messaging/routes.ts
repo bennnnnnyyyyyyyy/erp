@@ -51,7 +51,20 @@ messagingRoutes.get('/notifications', requirePermission('messaging.notifications
     entityId: n.entity_id,
     readAt: n.read_at,
     createdAt: n.created_at,
+    reportId: null as string | null,
   }));
+  // A report alert opens its saved report (shortcut audit, 24 Nov 2026). The notification holds the alert rule's id; the rule names the
+  // report. Read with the person's own sign-in: alert rules are readable by owners and admins only (sql/028), so others keep the library link.
+  const ruleIds = items.filter((n) => n.entityType === 'alert:report_value' && n.entityId).map((n) => n.entityId as string);
+  if (ruleIds.length > 0) {
+    const rules = await userDb(c)
+      .from('alr_rules')
+      .select('id, report_id')
+      .eq('org_id', c.var.tenant.orgId)
+      .in('id', [...new Set(ruleIds)]);
+    const byRule = new Map(((rules.data ?? []) as { id: string; report_id: string | null }[]).map((r) => [r.id, r.report_id]));
+    for (const n of items) if (n.entityId && byRule.has(n.entityId)) n.reportId = byRule.get(n.entityId) ?? null;
+  }
   return ok(c, { items, unread: items.filter((n) => !n.readAt).length });
 });
 
@@ -66,7 +79,7 @@ messagingRoutes.get('/outbox', requirePermission('messaging.outbox.manage'), asy
   const { data, error } = await userDb(c)
     .from('msg_outbox')
     .select(
-      'id, recipient_id, channel, kind, subject, status, attempts, max_attempts, next_attempt_at, expires_at, last_error, sent_at, created_at, delivered_via',
+      'id, recipient_id, channel, kind, subject, status, attempts, max_attempts, next_attempt_at, expires_at, last_error, sent_at, created_at, delivered_via, entity_type, entity_id',
     )
     .eq('org_id', c.var.tenant.orgId)
     .order('created_at', { ascending: false })
@@ -86,6 +99,8 @@ messagingRoutes.get('/outbox', requirePermission('messaging.outbox.manage'), asy
     last_error: string | null;
     sent_at: string | null;
     created_at: string;
+    entity_type: string | null;
+    entity_id: string | null;
   };
   return ok(
     c,
@@ -103,6 +118,9 @@ messagingRoutes.get('/outbox', requirePermission('messaging.outbox.manage'), asy
       lastError: m.last_error,
       sentAt: m.sent_at,
       createdAt: m.created_at,
+      // The document a message carries (sql/107: sales_invoice or sales_note), so the Messages page can link to it.
+      entityType: m.entity_type ?? null,
+      entityId: m.entity_id ?? null,
     })),
   );
 });

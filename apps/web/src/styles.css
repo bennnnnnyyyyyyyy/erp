@@ -109,8 +109,10 @@ main.content:focus { outline: none; }
 .card h1 { font-size: 1.4rem; }
 
 /* ---- shell ---- */
-.shell { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: 1fr; min-height: 100vh; }
-.shell.with-sidebar { grid-template-columns: 232px 1fr; }
+/* minmax(0, ...): a plain 1fr column grows to its widest content, so one long line (an app name in the top bar) made every page of that
+   app wider than a phone screen (Ben, 24 Nov 2026). */
+.shell { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: minmax(0, 1fr); min-height: 100vh; }
+.shell.with-sidebar { grid-template-columns: 232px minmax(0, 1fr); }
 .topbar {
   grid-column: 1 / -1; display: flex; align-items: center; gap: 0.7rem; padding-inline: 1rem;
   background: var(--sidebar); color: var(--sidebar-foreground); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20;
@@ -363,7 +365,7 @@ td input { margin-top: 0; }
 
 /* ---- small screens ---- */
 @media (max-width: 720px) {
-  .shell.with-sidebar { grid-template-columns: 1fr; }
+  .shell.with-sidebar { grid-template-columns: minmax(0, 1fr); }
   .drawer-toggle { display: inline-block; }
   .topbar-app, .topbar-org { display: none; }
   .sidebar {
@@ -475,6 +477,10 @@ td input { margin-top: 0; }
 @media (max-width: 720px) {
   .topbar-org-end { display: none; }
   .topbar-app-link span:last-child { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
+  /* The app's name gives way first: the link shrinks and its name ends in "…" (it kept its full width and pushed the page wider). */
+  .topbar-app-link { min-width: 0; flex: 0 1 auto; overflow: hidden; }
+  .topbar-app-link span:last-child { min-width: 0; }
+  .topbar-app-icon { flex: none; }
   /* Touch targets: at least 44 x 44 px (WCAG 2.5.5) for the buttons in the top bar. */
   .icon-btn, .apps-btn, .topbar-app-link, .skip-link, .avatar, .nav-item, .th-sort { min-width: 44px; min-height: 44px; }
   .icon-btn, .apps-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -692,5 +698,32 @@ tr.scan-row-warn > td { background: color-mix(in srgb, var(--signal-soft) 60%, t
 .report-actions { margin-block: 0.75rem; }
 .report-sheet { background: var(--card); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border); margin-block-start: 1rem; }
 .report-title { margin-block: 0 0.25rem; font-size: 1.2rem; }
+/* Report builder as one sentence (Ben, 24 Nov 2026, option A): "Show [what] by [split] for [period]", chips under it, the report right below. */
+.rb { display: grid; gap: 0.6rem; margin-block: 0.75rem 0.5rem; }
+.rb-data { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.rb-data select { inline-size: auto; margin-block-start: 0; font-size: 0.85rem; }
+.rb-sentence { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.6rem; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--card); font-size: 1.15rem; }
+.rb-sentence select { inline-size: auto; margin-block-start: 0; font-size: 1rem; font-weight: 600; min-inline-size: 8rem; max-inline-size: 100%; }
+.rb-dates input { inline-size: auto; margin-block-start: 0; }
+.rb-data { color: var(--muted-foreground); }
+.rb-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.rb-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.rb-chip { display: inline-flex; align-items: center; gap: 0.25rem; border: 1px solid var(--border); border-radius: 999px; padding-block: 0.25rem; padding-inline: 0.7rem; background: var(--card); color: var(--foreground); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.rb-chip.add { border-style: dashed; color: var(--muted-foreground); }
+.rb-chip[aria-pressed='true'], .rb-chip[data-on='true'] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+.rb-chip-text, .rb-chip-x { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.rb-chip-x { opacity: 0.7; padding-inline-start: 0.2rem; }
+.rb-chip-x:hover { opacity: 1; }
+.rb-editor { display: grid; gap: 0.5rem; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--card); }
+.rb-editor label { display: grid; gap: 0.25rem; }
+.rb-editor.rb-row { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; }
+.rb-columns { border: 0; padding: 0; margin: 0; }
+.rb-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.rb-bar .report-actions { margin-block: 0.25rem; align-items: center; }
+@media (max-width: 640px) {
+  .rb-sentence { font-size: 1rem; padding: 0.7rem; }
+  .rb-sentence select { flex: 1 1 100%; }
+  .rb-bar { flex-direction: column; align-items: stretch; }
+}
 .report-chart { margin: 0.5rem 0 1rem; }
 .report-chart svg { inline-size: 100%; max-block-size: 320px; color: var(--foreground); }

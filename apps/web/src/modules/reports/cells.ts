@@ -8,12 +8,17 @@ import { FN_LABELS, VALUE_LABELS, columnLabel } from './labels';
 
 type DateFormat = { dateFormat: string } | null;
 
-/** A column heading: the column's name, or for a total "Sum of Total". */
+/**
+ * A column heading: the column's name. A total in plain words (Ben, 24 Nov: "Sum of Total" was jargon): a sum is the column's name
+ * ("Total", "Quantity"), a count is "Number of lines", the others "Average of Net".
+ */
 export function headerLabel(key: string, result?: Pick<ReportResult, 'totals'>): string {
   const t = result?.totals.find((x) => x.key === key);
   const m = t ? null : /^(sum|count|avg|min|max)_(.+)$/.exec(key);
   const fn = (t?.fn ?? m?.[1]) as ReportTotalFn | undefined;
   const column = t?.column ?? m?.[2];
+  if (fn === 'sum' && column) return tr(columnLabel(column));
+  if (fn === 'count') return tr('Number of lines');
   if (fn && column) return trf('{fn} of {column}', { fn: tr(FN_LABELS[fn]), column: tr(columnLabel(column)) });
   return tr(columnLabel(key));
 }

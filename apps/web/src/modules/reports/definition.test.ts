@@ -34,5 +34,7 @@ describe('period choices', () => {
     expect(presetPeriod('last_month', '2026-01-10')).toEqual({ from: '2025-12-01', to: '2025-12-31' });
     expect(presetPeriod('last_30', '2026-03-15')).toEqual({ from: '2026-02-14', to: '2026-03-15' });
     expect(presetPeriod('this_year', '2026-03-15')).toEqual({ from: '2026-01-01', to: '2026-03-15' });
+    expect(presetPeriod('last_90', '2026-03-15')).toEqual({ from: '2025-12-16', to: '2026-03-15' });
+    expect(presetPeriod('last_12_months', '2026-03-15')).toEqual({ from: '2025-04-01', to: '2026-03-15' });
   });
 });
