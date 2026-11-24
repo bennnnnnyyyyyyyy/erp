@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Phone width: pages of an app with a long name were wider than the screen (old UI; no migration)
+
+**Objective.** At 360-390 px, the Reports & Insights pages were about 60 px wider than the screen (the account button was cut off and the
+page scrolled sideways). Ben's yes to fix it in the old UI.
+
+**Actions Completed.** Cause: the top bar's app link (`Shell.tsx`, `.topbar-app-link`) never shrinks (no wrap, fixed size in a flex
+row), and the shell's grid columns were plain `1fr`, which grow to their widest content. A long app name ("Reports & Insights") plus the
+top bar's buttons needed 431 px, so the column and every page under it became 431 px wide. Apps with short names fitted, so it showed
+only there; a long Arabic name would hit it too. `apps/web/src/styles.css`: shell columns are `minmax(0, 1fr)` (desktop and phone); on a
+phone the app link may shrink and its name ends in "…". Print styles unchanged. Track-c's new frame not touched.
+
+**Database / System Result.** None (CSS only).
+
+**Safety Status.** Measured in the sample-data build on 127.0.0.1 at 360 and 390 px, English and Arabic (right to left): home, Reports
+library, Sales orders list, New sales order form, report builder all fit (page width = screen width; before: 431 px). Pictures:
+`.temp/reports-builder/phone-width-*.jpg`. Web tests passed. Not checked on a real phone or on the live app.
+
 ## 2026-11-24 — Shortcuts, Ben's answers: report periods match the home cards; overdue alert and sent documents link (no migration)
 
 **Objective.** Ben answered the 8 open items of the shortcut check (via erp-master, `.temp/2026-11-24-shortcuts-check.md`).
