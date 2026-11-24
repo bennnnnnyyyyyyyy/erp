@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Attachments } from '../../components/Attachments';
 import { parseAmount } from '../../lib/numbers';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
@@ -333,6 +334,7 @@ export function PurchaseOrderPage() {
         <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory/stock">{tr('check stock on hand')}</Link>.</p>
       )}
 
+      {demoMode ? null : <Attachments entityType="purchase_order" entityId={o.id} />}
       <RecordHistory key={`${o.id}:${o.status}`} id={o.id} />
     </section>
   );

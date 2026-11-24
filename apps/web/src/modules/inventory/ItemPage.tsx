@@ -1,4 +1,5 @@
 import { formatQty } from '../../lib/numbers';
+import { Attachments } from '../../components/Attachments';
 import { localName, unitLabel } from '../../lib/names';
 import { useState, type CSSProperties } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
@@ -24,7 +25,7 @@ import { ItemUnits } from './ItemUnits';
 // six screens: totals, stock per warehouse, its movements, batches, units, average cost and its history. Read-only apart from Edit;
 // the actions open the existing screens.
 
-type Tab = 'stock' | 'moves' | 'batches' | 'units' | 'cost' | 'history';
+type Tab = 'stock' | 'moves' | 'batches' | 'units' | 'cost' | 'files' | 'history';
 type Unit = { id: string; unit: string; factor: number; forPurchase: boolean; forSale: boolean };
 type Batch = { id: string; itemId: string; batchNo: string; expiryDate: string | null; status: string; stock?: { warehouseId: string; qty: number }[] };
 type Cost = { itemId: string; avgCostMinor: number | null; onHand: number; valueMinor: number | null };
@@ -75,6 +76,7 @@ export function ItemPage() {
     { key: 'batches', label: tr('Batches'), show: !demoMode && can('inventory.batches.read') },
     { key: 'units', label: tr('Units'), show: !demoMode },
     { key: 'cost', label: tr('Cost'), show: !demoMode && isManager },
+    { key: 'files', label: tr('Attachments'), show: !demoMode },
     { key: 'history', label: tr('History'), show: !demoMode },
   ];
 
@@ -188,6 +190,7 @@ export function ItemPage() {
           ) : costs.data ? <p className="muted">{tr('No cost recorded for this item yet.')}</p> : <Loading />
         )}
 
+        {tab === 'files' && <Attachments entityType="item" entityId={item.id} />}
         {tab === 'history' && <RecordHistory id={item.id} />}
       </div>
 

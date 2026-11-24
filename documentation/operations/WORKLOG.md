@@ -26,9 +26,24 @@ and one SQL test, 105).
   (`lib/integrationChecks.ts`); `PUT /v1/core/integrations/ai/reader`. Settings → Integrations: four new AI cards, "Use this AI to read
   supplier bills". No new master-key file: `readWithAi` added to the entry points guarded in `boundaries.test.ts`. Tests:
   `apps/api/test/ai_reader.test.ts` (recorded fake answers), `sql/tests/105_scanning.sql`.
+- Step 1, read supplier bills. `sql/108`: `core_attachments` (files on records; members add, viewers read; only in the company's own
+  folder `org/<company id>/…`; soft delete; audited), private Storage bucket `doc-files` and its rules (only where Storage exists),
+  `core_ai_extractions` (what the AI read; owners and admins; `pur_record_bill_scan`, audited), `pur_bill_scan_candidates` (suppliers
+  by tax number or name word; received orders still to bill with item codes and the supplier's own codes; orders still waiting for
+  goods). API: `POST /v1/purchasing/bills/scan` (owners and admins, `purchasing.bills.scan`; asks the database first, then the
+  company's AI; our matching in `modules/purchasing/billMatch.ts`), `POST /v1/purchasing/bills/match` (match again, no AI),
+  `GET/POST/DELETE /v1/core/attachments` (uploads with the person's own sign-in, no master key). Web: "Scan a bill" on Purchase
+  invoices (photo and draft side by side, differences in colour, Save through the normal bill function, then the photo is attached).
+  A bill with no received goods: blocking warning and "Receive the goods" (master accepted this instead of a 409, on the condition
+  that the database still refuses it: proved by test 105 B4). Tests: `apps/api/test/bill_scan.test.ts`, test 105 B1-B5.
+- Step 3, attachments panel (`apps/web/src/components/Attachments.tsx`) on the purchase invoice, purchase order, sales invoice, sales
+  order, expense and item pages (item: an "Attachments" tab) and in the customer and supplier Edit window. Camera or file; open (five-
+  minute link); remove (the person who added it, or an owner or admin; soft delete). Hidden while `sql/108` is missing and in the
+  sample build. Receipts have no page of their own: their papers go on the purchase order.
+- Step 2 (barcodes) and step 4 (QR codes) not started: waiting for Ben to install `@zxing/browser` in the main checkout.
 
-**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new cards answer 503 `not_set_up`, and accepting the
-AI notice answers 503 (this build shows notice v3).
+**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new AI cards, bill scanning and attachments answer
+503 `not_set_up`, and accepting the AI notice answers 503 (this build shows notice v3).
 
 **Safety Status.** `npm run typecheck`, `npm test`, `npx biome check` (0 errors), PGlite SQL tests pass. No real AI was called.
 

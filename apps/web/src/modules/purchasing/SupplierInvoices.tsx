@@ -1,4 +1,5 @@
 import { DateInput } from '../../components/DateInput';
+import { Attachments } from '../../components/Attachments';
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission, type VatSettings } from '@erp/shared';
@@ -19,6 +20,7 @@ import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseV
 
 import { TheirCodeCell, TheirCodeHeader, codesFor, usePartyCodes } from '../inventory/PartyCodes';
 import { tr, trf } from '../../lib/i18n';
+import { ScanBill } from './ScanBill';
 type Summary = { orderId:string;number:string;supplierId:string;currency:string;lines:{orderLineId:string;itemId:string;receivedQty:number;billedQty:number;unitCostMinor:number}[] };
 type Supplier = {id:string;name:string};
 type Item = {id:string;sku:string;name:string};
@@ -37,7 +39,7 @@ export function SupplierInvoices(){
   const session=useSession();
   const [orderId,setOrderId]=useState('');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
   const [quantities,setQuantities]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [message,setMessage]=useState<{ok:boolean;text:string}|null>(null);
-  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(false);
+  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(false);const [scanOpen,setScanOpen]=useState(false);
   const summary=summaries.data?.find(o=>o.orderId===orderId);
   const summaryRows=summaries.data??[];
   const supplierName=(id:string)=>suppliers.data?.find(s=>s.id===id)?.name??id;
@@ -54,6 +56,7 @@ export function SupplierInvoices(){
   return <section className="page">
     <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Bills from suppliers for the goods you received.')}</p>
     {message&&(message.ok||!(formOpen&&summary))&&<p className={message.ok?'notice':'error notice'}>{message.text}</p>}
+    {hasPermission(session.permissions,'purchasing.bills.scan')&&hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Scan a bill')} open={scanOpen} onOpenChange={setScanOpen}><ScanBill suppliers={suppliers.data} onSaved={()=>{summaries.reload();invoices.reload();}} /></FormToggle>}
     {hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
         <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
@@ -141,6 +144,7 @@ export function SupplierInvoicePage() {
       </table></div>
       <SupplierNotes billId={inv.id} currency={inv.currency} lines={inv.lines} itemOf={itemOf} onChanged={invoice.reload} />
       <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={due} currency={inv.currency} />
+      <Attachments entityType="supplier_bill" entityId={inv.id} />
       <RecordHistory key={inv.id} id={inv.id} currency={inv.currency} />
     </section>
   );

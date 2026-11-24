@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Attachments } from '../../components/Attachments';
 import { readOrderLink } from '../../lib/orderLink';
 import { unitLabel } from '../../lib/names';
 import { demoMode } from '../../lib/demo';
@@ -244,6 +245,7 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
             {error && <p className="error">{error}</p>}
             <div className="form-actions"><Button type="submit">{editing ? tr('Save changes') : <>{tr('Add')} {noun}</>}</Button></div>
           </form>
+          {editing && !demoMode ? <Attachments entityType={endpoint.includes('/suppliers') ? 'supplier' : 'customer'} entityId={editing.id} /> : null}
         </Modal>
       )}
     </section>

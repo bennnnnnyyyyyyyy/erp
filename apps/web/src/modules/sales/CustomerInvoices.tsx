@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Attachments } from '../../components/Attachments';
 import { Loading } from '../../components/Loading';
 import { billingFor, formatMoney, type BillingFlag, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
@@ -280,6 +281,7 @@ export function CustomerInvoicePage() {
       <InvoiceNotes invoice={inv} itemOf={itemOf} onChanged={invoices.reload} />
       {inv.status === 'issued' && <PaymentsAgainst key={payKey} field="customerInvoiceId" id={inv.id} totalMinor={net} currency={inv.currency} />}
       {inv.status === 'issued' && <PaymentLinks invoiceId={inv.id} onPaid={() => setPayKey((k) => k + 1)} />}
+      <Attachments entityType="sales_invoice" entityId={inv.id} />
       <RecordHistory key={inv.id} id={inv.id} />
     </section>
   );
