@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AI_NOTICE_VERSION, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
+import { AI_NOTICE_VERSION, AI_PROVIDER_KINDS, hasPermission, INTEGRATION_MESSAGE_KINDS, PROVIDERS, type AiStatus, type FxRate, type IntegrationKind, type IntegrationSettings, type ProviderDef, type ProviderSettings } from '@erp/shared';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
@@ -224,7 +224,7 @@ export function IntegrationsSettings() {
   const connections = [...providerConnections, ...channelConnections];
   const byKey = new Map(connections.map((c) => [c.key, c]));
   const entries = (group: ProviderDef['group']) => PROVIDERS.filter((d) => d.group === group).flatMap((d) => (byKey.has(d.kind) ? [d.kind as string] : []));
-  const aiOn = ['openai', 'elevenlabs', 'ollama'].some((k) => byKey.get(k)?.enabled);
+  const aiOn = AI_PROVIDER_KINDS.some((k) => byKey.get(k)?.enabled);
 
   const menu: { title: string; keys: string[] }[] = [
     { title: 'Payments', keys: entries('payments') },
@@ -274,7 +274,7 @@ export function IntegrationsSettings() {
           )}
           {current === OVERVIEW_KEY ? <Overview connections={connections} aiNoticeNeeded={aiOn && !consented} onOpen={open} /> : null}
           {channelItem ? <IntegrationCard key={channelItem.kind} item={channelItem} canManage={canManage} onChanged={reload} /> : null}
-          {providerDef && providerItem ? <ProviderCard key={providerDef.kind} def={providerDef} item={providerItem} canManage={canManage} consented={consented} onChanged={reload} /> : null}
+          {providerDef && providerItem ? <ProviderCard key={providerDef.kind} def={providerDef} item={providerItem} canManage={canManage} consented={consented} reader={status.reader ?? null} onChanged={reload} /> : null}
           {current === AI_NOTICE_KEY ? (
             <div className="stack intg-detail">
               <AiNotice status={status} canManage={canManage} onChanged={reload} />

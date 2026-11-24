@@ -369,9 +369,9 @@ describe('integration routes', () => {
     const declared = src.match(/integrationRoutes\.(get|post|put|delete)\(/g) ?? [];
     const guarded =
       src.match(/integrationRoutes\.(get|post|put|delete)\([^\n]*requirePermission\('core\.integrations\.(view|manage)'\)/g) ?? [];
-    // 11 since sql/082 added POST /check/:kind ("Check connection"); every one of them is guarded
-    expect(declared.length).toBe(11);
-    expect(guarded.length).toBe(11);
+    // 11 since sql/082 added POST /check/:kind ("Check connection"); 12 since sql/108 added PUT /ai/reader; every one of them is guarded
+    expect(declared.length).toBe(12);
+    expect(guarded.length).toBe(12);
     expect(src).not.toMatch(/(?<!Routes)\.(insert|update|upsert)\(/);
     expect(src).not.toContain('secret_id');
   });

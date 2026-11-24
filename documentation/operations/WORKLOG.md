@@ -41,6 +41,27 @@ the dev server; with `?oldui` the old shell, old font, old colours and title, an
 preview build and the live build were not built or deployed. The API typecheck shows one error in `integrationRoutes.ts` because this
 worktree reads `@erp/shared` from the main checkout, where another chat has an unfinished change (`AiStatus.reader`); not from this branch.
 
+## 2026-11-23 — Scanning (phase 1d), `sql/108` (not applied)
+
+**Objective.** Phase 1d of the Bellvox readiness roadmap: `documentation/plans/SCANNING_PLAN.md`. Build plan approved by Ben 23 Nov
+(owners and admins scan; a bill price that differs from the order is a warning only; the photo is kept until removed; one migration, 108,
+and one SQL test, 105).
+
+**Actions Completed.** Branch `feat/scanning` from `origin/main`.
+- Step 0, AI providers with the company's own key. `sql/108_scanning.sql`: kinds `gemini`, `anthropic` (Claude), `grok`, `openrouter`
+  in `core_integrations` (key required, model), AI notice v3 (it names them; owners accept again), `core_set_ai_reader` (which AI reads
+  bills; owners and admins; audited), `ai__provider_state` and `core_ai_status` show the reader. `lib/aiProviders.ts` `readDocument`
+  (six providers, picture or PDF in, JSON of a fixed shape out; Grok and Ollama take pictures only); `lib/aiService.ts` `readWithAi`
+  (own key only, never ours; no usable provider → 503 `not_set_up`); Check connection for the four new kinds
+  (`lib/integrationChecks.ts`); `PUT /v1/core/integrations/ai/reader`. Settings → Integrations: four new AI cards, "Use this AI to read
+  supplier bills". No new master-key file: `readWithAi` added to the entry points guarded in `boundaries.test.ts`. Tests:
+  `apps/api/test/ai_reader.test.ts` (recorded fake answers), `sql/tests/105_scanning.sql`.
+
+**Database / System Result.** None yet: `sql/108` is not applied. Until it is, the new cards answer 503 `not_set_up`, and accepting the
+AI notice answers 503 (this build shows notice v3).
+
+**Safety Status.** `npm run typecheck`, `npm test`, `npx biome check` (0 errors), PGlite SQL tests pass. No real AI was called.
+
 ## 2026-11-23 — `sql/107` applied to live (send an invoice from the company)
 
 **Objective.** PR #106 (send an invoice from the company) is merged; its database part, `sql/107_sal_doc_send_queue.sql`, was not on live.

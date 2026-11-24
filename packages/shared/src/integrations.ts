@@ -62,7 +62,25 @@ export type IntegrationCheck = {
 
 // ------------------------------------------------------------------ providers (sql/056; Ben's choices, 6 Nov)
 
-export const PROVIDER_KINDS = ['paymob', 'fawry', 'bosta', 'shopify', 'openai', 'elevenlabs', 'ollama', 'hr_app'] as const;
+export const PROVIDER_KINDS = [
+  'paymob',
+  'fawry',
+  'bosta',
+  'shopify',
+  'openai',
+  'elevenlabs',
+  'ollama',
+  'hr_app',
+  'gemini',
+  'anthropic',
+  'grok',
+  'openrouter',
+] as const;
+/** The AI providers that can read a picture or PDF of a bill (sql/108 core__ai_reader_kinds). Only with the company's own key. */
+export const AI_READER_KINDS = ['openai', 'gemini', 'anthropic', 'grok', 'openrouter', 'ollama'] as const;
+export type AiReaderKind = (typeof AI_READER_KINDS)[number];
+/** Every AI provider: each needs the owner's acceptance of the AI notice. */
+export const AI_PROVIDER_KINDS = ['openai', 'elevenlabs', 'ollama', 'gemini', 'anthropic', 'grok', 'openrouter'] as const;
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];
 export type ProviderGroup = 'payments' | 'shipping' | 'store' | 'ai' | 'people';
 
@@ -219,6 +237,56 @@ export const PROVIDERS: readonly ProviderDef[] = [
       { key: 'api_key', label: 'Access key (optional)', secret: true, required: false, help: 'If your address is protected by a key.' },
     ],
   },
+  // sql/108 (scanning, step 0): more AI providers, each only with the company's own key (Ben, 23 Nov 2026). They read bills.
+  {
+    kind: 'gemini',
+    group: 'ai',
+    name: 'Google Gemini',
+    summary: "Reads supplier bills (photos and PDFs) with your own Google AI key. Needs the owner's consent: the bill is sent to Google.",
+    fields: [
+      { key: 'api_key', label: 'Your API key', secret: true, required: true, help: 'Google AI Studio → Get API key.' },
+      { key: 'model', label: 'Model (optional)', secret: false, required: false, placeholder: 'gemini-2.5-flash' },
+    ],
+  },
+  {
+    kind: 'anthropic',
+    group: 'ai',
+    name: 'Claude (Anthropic)',
+    summary:
+      "Reads supplier bills (photos and PDFs) with your own Anthropic key. Needs the owner's consent: the bill is sent to Anthropic.",
+    fields: [
+      { key: 'api_key', label: 'Your API key', secret: true, required: true, placeholder: 'sk-ant-…', help: 'Claude Console → API keys.' },
+      { key: 'model', label: 'Model (optional)', secret: false, required: false, placeholder: 'claude-haiku-5-5' },
+    ],
+  },
+  {
+    kind: 'grok',
+    group: 'ai',
+    name: 'Grok (xAI)',
+    summary: "Reads supplier bills (photos only, not PDF) with your own xAI key. Needs the owner's consent: the bill is sent to xAI.",
+    fields: [
+      { key: 'api_key', label: 'Your API key', secret: true, required: true, placeholder: 'xai-…', help: 'xAI console → API keys.' },
+      { key: 'model', label: 'Model', secret: false, required: true, help: 'A Grok model that reads images.' },
+    ],
+  },
+  {
+    kind: 'openrouter',
+    group: 'ai',
+    name: 'OpenRouter',
+    summary:
+      "Reads supplier bills with your own OpenRouter key and the model you choose there. Needs the owner's consent: the bill is sent to OpenRouter and that model's provider.",
+    fields: [
+      { key: 'api_key', label: 'Your API key', secret: true, required: true, placeholder: 'sk-or-…' },
+      {
+        key: 'model',
+        label: 'Model',
+        secret: false,
+        required: true,
+        placeholder: 'google/gemini-2.5-flash',
+        help: 'A model that reads images.',
+      },
+    ],
+  },
   {
     // HR & payroll app (sql/102; documentation/plans/hr-app/CONTRACT.md). v1: a per-company ERP key made in the HR app. The ERP
     // registers its own webhook with the HR app, so there is no address to give it.
@@ -273,11 +341,14 @@ export type AiStatus = {
   /** Our monthly cap across all companies on our keys (USD). */
   serviceCapUsd: number;
   ownProviderReady: { openai: boolean; elevenlabs: boolean };
+  /** The provider chosen to read bills (sql/108); null = the first one that is on. */
+  reader: AiReaderKind | null;
 };
 
 /**
  * The notice the owner accepts before company data may go to any AI provider (versioned; changing it asks again).
  * v2 (sql/061, 6 Nov 2026): the notice covers Ollama, which reaches the company's server over the internet.
  * Must equal core__ai_notice_version() in the database: the database refuses any other version, and only consent to its version counts.
+ * v3 (sql/108, 23 Nov 2026): the notice names Gemini, Claude, Grok and OpenRouter, and bills read by AI.
  */
-export const AI_NOTICE_VERSION = 'v2';
+export const AI_NOTICE_VERSION = 'v3';
