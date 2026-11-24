@@ -24,6 +24,8 @@ async function openSheet(page: Page, path: string, layout: 'simple' | 'detailed'
   await page.getByLabel('Language of the document').selectOption(language);
   const sheet = page.locator('.print-sheet').first();
   await expect(sheet).toBeVisible();
+  // The QR code (scanning step 4) is drawn once its library loads.
+  await expect(sheet.locator('[data-qr="ready"] svg')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   expect(problems, `${path}: errors in the browser`).toEqual([]);
   return sheet;

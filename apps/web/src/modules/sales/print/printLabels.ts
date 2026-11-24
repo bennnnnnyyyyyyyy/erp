@@ -48,6 +48,7 @@ export const PRINT_LABELS = {
   currency: { ar: 'العملة', en: 'Currency' },
   etaNotSubmitted: { ar: 'لم تُرسل إلى مصلحة الضرائب المصرية بعد', en: 'Not yet submitted to ETA' },
   etaQr: { ar: 'رمز QR من مصلحة الضرائب', en: 'ETA QR code' },
+  appQr: { ar: 'امسح الرمز لفتح المستند في البرنامج', en: 'Scan to open in the app' },
   page: { ar: 'صفحة', en: 'Page' },
 } as const;
 
