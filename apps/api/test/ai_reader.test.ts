@@ -146,7 +146,7 @@ describe('which AI reads (own key only)', () => {
   it('the chosen one when usable, else the first usable in a fixed order', () => {
     const p = { openai: on({ api_key: 'k1' }), gemini: on({ api_key: 'k2' }) };
     expect(chooseReader(s(p))?.kind).toBe('openai');
-    expect(chooseReader(s(p, 'gemini'))).toMatchObject({ kind: 'gemini', model: 'gemini-2.5-flash' });
+    expect(chooseReader(s(p, 'gemini'))).toMatchObject({ kind: 'gemini', model: 'gemini-flash-latest' });
     expect(chooseReader(s(p, 'grok'))?.kind).toBe('openai');
   });
   it('Grok and OpenRouter need a model; Ollama needs its address', () => {

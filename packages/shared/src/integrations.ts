@@ -245,7 +245,7 @@ export const PROVIDERS: readonly ProviderDef[] = [
     summary: "Reads supplier bills (photos and PDFs) with your own Google AI key. Needs the owner's consent: the bill is sent to Google.",
     fields: [
       { key: 'api_key', label: 'Your API key', secret: true, required: true, help: 'Google AI Studio → Get API key.' },
-      { key: 'model', label: 'Model (optional)', secret: false, required: false, placeholder: 'gemini-2.5-flash' },
+      { key: 'model', label: 'Model (optional)', secret: false, required: false, placeholder: 'gemini-flash-latest' },
     ],
   },
   {

@@ -179,10 +179,11 @@ export const READER_NAMES: Record<ReaderKind, string> = {
   openrouter: 'OpenRouter',
   ollama: 'Ollama',
 };
-/** Used when the company saved no model. Grok, OpenRouter and Ollama have no default: their model is required. */
+/** Used when the company saved no model. Grok, OpenRouter and Ollama have no default: their model is required. Gemini uses Google's
+ *  "latest" name, which always points to its current Flash model (gemini-2.5-flash was no longer found for a free key, 24 Nov 2026). */
 export const READER_DEFAULT_MODEL: Partial<Record<ReaderKind, string>> = {
   openai: 'gpt-5-mini',
-  gemini: 'gemini-2.5-flash',
+  gemini: 'gemini-flash-latest',
   anthropic: 'claude-haiku-5-5',
 };
 /** Which providers take a PDF as it is. The others read pictures only. */
@@ -227,7 +228,7 @@ function refused(name: string, status: number): Error {
     status === 401 || status === 403
       ? 'the key was refused'
       : status === 404
-        ? 'the model was not found'
+        ? 'the model was not found: type another model on its card in Settings, Integrations, then Check connection'
         : status === 429
           ? 'too many requests, or no credit left on the account'
           : status === 413
