@@ -1,5 +1,5 @@
 /* New app frame (components/frame/Frame.tsx). Versions A (areas on top), B (left menu), C (search first + rail). Logical properties only. */
-.fr { min-height: 100vh; display: grid; grid-template-rows: 56px auto 1fr; grid-template-columns: 1fr; background: var(--background); }
+.fr { min-height: 100vh; display: grid; grid-template-rows: 56px auto 1fr; grid-template-columns: minmax(0, 1fr); background: var(--background); }
 .fr-b { grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: 56px 1fr; }
 .fr-b.fr-folded { grid-template-columns: 64px minmax(0, 1fr); }
 .fr-c { grid-template-columns: 84px minmax(0, 1fr); grid-template-rows: 64px 1fr; }
@@ -93,7 +93,7 @@
 
 /* phones: the menu is a drawer from the menu button */
 @media (max-width: 760px) {
-  .fr, .fr-b, .fr-c, .fr-b.fr-folded { grid-template-columns: 1fr; }
+  .fr, .fr-b, .fr-c, .fr-b.fr-folded { grid-template-columns: minmax(0, 1fr); }
   .fr-b .fr-main, .fr-c .fr-main { grid-column: 1; }
   .fr-menu-btn { all: unset; cursor: pointer; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; font-size: 1.2rem; }
   .fr-bar { gap: 0.5rem; padding-inline: 0.5rem; }

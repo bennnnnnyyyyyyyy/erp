@@ -240,3 +240,10 @@
 .es-c { display: flex; flex-direction: column-reverse; gap: 1.25rem; padding-block: 1.5rem; }
 .es-c .es-over, [dir="rtl"] .es-c .es-over { position: static; background: none; padding: 0; }
 .es-c .es-ghost { opacity: 0.45; filter: none; border-block-start: 1px dashed var(--input); }
+
+/* Phone widths (erp-master check, 24 Nov): nothing in the page kit may make the page wider than the screen. A row of tabs scrolls on
+   its own; the view picker in a title never grows past the screen. */
+.pk-tabs { overflow-x: auto; scrollbar-width: thin; }
+.pk-tab { flex: none; white-space: nowrap; }
+.pk-view { max-width: 100%; }
+.pk-view select { max-width: 100%; }

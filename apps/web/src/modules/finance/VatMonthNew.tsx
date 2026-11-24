@@ -141,7 +141,7 @@ function MonthBody({ vs, version }: { vs: ReturnType<typeof useVatSummary>; vers
         <div className="ac-return">
           <div className="ac-form">
             <p className="pk-muted">{trf('{from} to {to}, in {currency}.', { from: formatDay(s.from, session.org), to: formatDay(s.to, session.org), currency: s.currency })} {tr('Box names are ours until the accountant gives the return\'s headings.')}</p>
-            <table className="pk-table">
+            <div className="pk-table-wrap"><table className="pk-table">
               <thead><tr><th scope="col">{tr('Box')}</th><th scope="col">{tr('Section')}</th><th scope="col" className="pk-num">{tr('Before VAT')}</th><th scope="col" className="pk-num">{tr('VAT')}</th></tr></thead>
               <tbody>
                 <tr className="ac-boxhead"><th colSpan={4} scope="rowgroup">{tr('Sales (output VAT)')}</th></tr>
@@ -153,7 +153,7 @@ function MonthBody({ vs, version }: { vs: ReturnType<typeof useVatSummary>; vers
                 <tr className="ac-boxhead"><th colSpan={4} scope="rowgroup">{tr('Result')}</th></tr>
                 {box(dueLabel, null, Math.abs(s.dueMinor), true)}
               </tbody>
-            </table>
+            </table></div>
           </div>
           <aside className="pk-side ac-return-side">
             <p className="pk-label">{tr('Status')}</p>
@@ -185,7 +185,7 @@ function MonthBody({ vs, version }: { vs: ReturnType<typeof useVatSummary>; vers
       {vs.canClose ? <Actions vm={vm} /> : null}
       <section className="pk-section">
         <h2>{tr('Sales (output VAT)')}</h2>
-        <table className="pk-table">
+        <div className="pk-table-wrap"><table className="pk-table">
           <thead><tr><th scope="col">{tr('Section')}</th><th scope="col" className="pk-num">{tr('Invoices')}</th><th scope="col" className="pk-num">{tr('Credit and debit notes')}</th><th scope="col" className="pk-num">{tr('Before VAT')}</th><th scope="col" className="pk-num">{tr('VAT')}</th></tr></thead>
           <tbody>
             {s.sales.map((r) => { const k = vs.key('sales', r.kind, r.rate); return (
@@ -195,11 +195,11 @@ function MonthBody({ vs, version }: { vs: ReturnType<typeof useVatSummary>; vers
               </tr>); })}
             {!s.sales.length ? <tr><td colSpan={5} className="pk-empty">{tr('No sales in this period.')}</td></tr> : null}
           </tbody>
-        </table>
+        </table></div>
       </section>
       <section className="pk-section">
         <h2>{tr('Purchases (input VAT)')}</h2>
-        <table className="pk-table">
+        <div className="pk-table-wrap"><table className="pk-table">
           <thead><tr><th scope="col">{tr('Section')}</th><th scope="col" className="pk-num">{tr('Before VAT')}</th><th scope="col" className="pk-num">{tr('VAT deducted')}</th><th scope="col" className="pk-num">{tr('VAT not deductible (in the cost)')}</th></tr></thead>
           <tbody>
             {s.purchases.map((r) => { const k = vs.key('purchases', r.kind, 0); return (
@@ -208,7 +208,7 @@ function MonthBody({ vs, version }: { vs: ReturnType<typeof useVatSummary>; vers
               </tr>); })}
             {!s.purchases.length ? <tr><td colSpan={4} className="pk-empty">{tr('No purchases in this period.')}</td></tr> : null}
           </tbody>
-        </table>
+        </table></div>
       </section>
       <Documents vs={vs} />
     </section>
