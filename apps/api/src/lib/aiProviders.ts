@@ -2,7 +2,8 @@
 // fetch so tests send nothing. Nothing here reads the database or decides who may call: lib/aiService.ts does that.
 // Request shapes follow the vendors' public API pages; the exact fields are checked against a real call when keys arrive.
 
-export type AiDeps = { fetch: typeof fetch };
+/** `sleep`: the wait between tries when a provider is busy (readDocument); tests pass one that does not wait. */
+export type AiDeps = { fetch: typeof fetch; sleep?: (ms: number) => Promise<void> };
 export const realAiDeps: AiDeps = { fetch: (...a) => fetch(...a) };
 
 export type ChatResult = { text: string; inputTokens: number; outputTokens: number };
@@ -233,13 +234,37 @@ function refused(name: string, status: number): Error {
           ? 'too many requests, or no credit left on the account'
           : status === 413
             ? 'the file is too large for it'
-            : `answer ${status}`;
+            : BUSY.includes(status)
+              ? 'it is busy right now; wait a minute and try again'
+              : `answer ${status}`;
   return new Error(`${name} refused the request (${why})`);
+}
+
+/** "Busy, try again later" answers: overloaded or briefly down (Gemini's free tier answered 503, 24 Nov 2026; Claude uses 529). Not 429:
+ *  that is the account's limit, and trying again at once only makes it worse. */
+const BUSY = [500, 502, 503, 504, 529];
+const BUSY_WAITS_MS = [1500, 4000];
+const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** The same fetch, tried up to twice more while the provider answers "busy". A refused request is not charged. */
+function retryingWhenBusy(deps: AiDeps): AiDeps {
+  const sleep = deps.sleep ?? realSleep;
+  const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    let res = await deps.fetch(input, init);
+    for (const ms of BUSY_WAITS_MS) {
+      if (!BUSY.includes(res.status)) break;
+      await sleep(ms);
+      res = await deps.fetch(input, init);
+    }
+    return res;
+  }) as typeof fetch;
+  return { ...deps, fetch: fetchFn };
 }
 
 const MODEL_RE = /^[A-Za-z0-9._:/@-]{1,120}$/;
 
-export async function readDocument(p: ReadRequest, deps: AiDeps = realAiDeps): Promise<ReadResult> {
+export async function readDocument(p: ReadRequest, given: AiDeps = realAiDeps): Promise<ReadResult> {
+  const deps = retryingWhenBusy(given);
   const name = READER_NAMES[p.kind];
   if (!MODEL_RE.test(p.model)) throw new Error(`The ${name} model name is not valid`);
   const isPdf = p.file.mime === 'application/pdf';
