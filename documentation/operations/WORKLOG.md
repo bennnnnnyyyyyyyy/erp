@@ -11,6 +11,44 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights step 1: report library (no migration)
+
+**Objective.** Ben approved the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) and all five suggested answers (24 Nov,
+through erp-master). Step 1: one place that lists every report we already have.
+
+**Actions Completed.**
+- New module `reports` in `packages/shared/src/modules.ts` (key `reports.library.read`; everyone gets it, as it ends in `.read`).
+- New app "Reports & Insights" at `/reports` (`apps/web/src/modules/registry.tsx`), in the Core group after People and before the
+  tutorial, Guide and Settings (Q1). Page `apps/web/src/modules/reports/Library.tsx`; the list and grouping in `reportLibrary.ts`
+  (19 reports in Sales, Buying, Stock, Money, Tax). A card shows only when the menu would let the person open that exact page
+  (module on, page permission held), so the library never shows more than the menu. Search by title or description.
+- Arabic: `apps/web/src/lib/i18nReports.ts` (machine draft) and three nav texts in `i18nNav.ts`. App icon in `components/icons.tsx`.
+- Tests: `reportLibrary.test.ts` (links point at real registry pages, permission filtering, search, Arabic search) and
+  `i18nReports.test.ts` (every text has Arabic; no other feature's Arabic is redefined).
+- Plan section 11 now records the decisions. The line for the new UI plan (`.temp`, section 2.4) was sent to erp-master: this
+  worktree session cannot edit files in the main checkout.
+
+**Database / System Result.** None. `reports` is an optional module, so it is off for every company until an owner or admin switches
+it on in Settings → Apps. Step 2's migration (`sql/109`) adds it to the default apps.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (87 + 793 + 203); SQL tests 103 of 103 (pglite); biome clean on the changed
+files. Not checked in a browser. Note for worktrees: `@erp/shared` resolves to the main checkout's copy, so `i18nReports.test.ts`
+imports the manifest by path. Manual check after merge: Settings → Apps → switch on "Reports & Insights", open it from the home page,
+and check each card opens its report (as owner, then as a member).
+
+## 2026-11-24 — Reports & Insights: module plan written (no migration)
+
+**Objective.** Plan the Reports & Insights module (brief from erp-master; Ben's decisions of 23 Nov) before any build.
+
+**Actions Completed.** Wrote [`documentation/plans/REPORTS_INSIGHTS_PLAN.md`](../plans/REPORTS_INSIGHTS_PLAN.md): six steps that merge
+on their own (report library; builder with saved reports and Excel/PDF export; templates; sales forecast with the `sql/029` method;
+"alert me when" as a new alert kind; scheduled reports through the outbox). Cash flow forecast and AI are written as later sections
+only. Added the plan to `checklist.md` and the plans index. Worktree `.claude/worktrees/reports`, branch `feat/reports`.
+
+**Database / System Result.** None. Step 2 will take the next free migration (now `109`) and SQL test (now `106`).
+
+**Safety Status.** Documents only. Nothing built or applied. Waiting for Ben's yes and his answers to the open questions (plan section 11).
+
 ## 2026-11-24 — AI busy: try again (scanning fix)
 
 **Objective.** After the model fix, Ben's scan failed with "Gemini refused the request (answer 503)": Google's model was overloaded
