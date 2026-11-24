@@ -39,7 +39,7 @@ a module plan from it without going back to the system.
 | Daftra | `daftra` | Inventory, requisitions, lots/serials/expiry | Not started | inventory |
 | Odoo | `odoo` | Inventory, internal transfers, WhatsApp, AI agents | In progress: main benchmark; P1 gap written ([`odoo/P1_GAP.md`](odoo/P1_GAP.md)), trial results pending | inventory, messaging |
 | Wafeq | `wafeq` | Accounting, approval-gated AI agent, EGP pricing | Not started | billing |
-| Microsoft Dynamics 365 Supply Chain, Business Central, Finance | `dynamics-365-scm` | Purchase process, landed cost; MRP basics; **UX and workflows (the base for the new UI, Ben 23 Nov)** | Videos: parked, gap list ([`TEARDOWN.md`](dynamics-365-scm/TEARDOWN.md)). Guided tours: page types and workflows ([`UX_WORKFLOWS.md`](dynamics-365-scm/UX_WORKFLOWS.md)) | purchasing, inventory, all screens |
+| Microsoft Dynamics 365 Supply Chain, Business Central, Finance | `dynamics-365-scm` | Purchase process, landed cost; MRP basics; **UX and workflows (the base for the new UI, Ben 23 Nov)** | Videos: parked, gap list ([`TEARDOWN.md`](dynamics-365-scm/TEARDOWN.md)). Guided tours: page types and workflows ([`UX_WORKFLOWS.md`](dynamics-365-scm/UX_WORKFLOWS.md)). Microsoft docs, round 2: rules, approvals, stock, accounting, AI, Arabic ([`DOCS_ROUND_2.md`](dynamics-365-scm/DOCS_ROUND_2.md)) | purchasing, inventory, all screens |
 | Zoho (Books/Inventory) | `zoho` | Approvals, audit trail, transfer orders | Not started | inventory |
 | ERPNext | `erpnext` | Workflow engine, multi-level approvals | Not started | inventory |
 | Business Central | `business-central` | Approval workflows, agents, MCP | Not started | messaging |

@@ -11,6 +11,27 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Dynamics 365 research round 2; main merged into the new UI (track-c, branch feat/bellvox-look; no SQL)
+
+**Objective.** Ben (24 Nov): study the full Dynamics 365 (Finance and Supply Chain, not Business Central) beyond the guided tours,
+and show Grant what we learned. Keep `feat/bellvox-look` up to date with main.
+
+**Actions Completed.**
+- Microsoft's public docs repo (`MicrosoftDocs/dynamics-365-unified-operations-public`, CC BY 4.0) downloaded, text only, to
+  `.temp/d365-docs` (5,151 pages; local, not in git). Five readers, one topic each; behaviour only, in our own words, a source page
+  for every claim: `documentation/research/dynamics-365-scm/DOCS_ROUND_2.md` (summary, which screen version the docs support, ideas
+  worth taking, where we are ahead) and `docs-round-2/1..5-*.md`. Pointers in `UX_WORKFLOWS.md` and `documentation/research/README.md`.
+- Merged origin/main twice (PR #109, then #110 to #115). `trade/common.tsx`: `useOrderForm` now returns the barcode scan state and
+  `addScanned`; the new-UI order form (versions A, B, C) gets the same "Scan a barcode" button (both UIs rule).
+- The team decision page (outside the repo) gained a "What we learned from Dynamics" page, a "What Dynamics does / Closest" line per
+  question, comments (replies, tone, version, a pin on a screenshot) and notifications (bell, unread marks, optional pop-ups).
+
+**Database / System Result.** None. No SQL, no API change in the ERP.
+
+**Safety Status.** tsc 0 errors (shared, api, web); vitest 87 + 793 + 199 pass; biome 0 errors on the changed files. Checks were run
+with the installed tools directly, because `node_modules/.bin` in the main checkout is empty after an `npm install` that reported
+"up to date" (`npm rebuild` in the main checkout should restore `npm run typecheck` and `npm test`). Not deployed.
+
 ## 2026-11-24 — AI busy: try again (scanning fix)
 
 **Objective.** After the model fix, Ben's scan failed with "Gemini refused the request (answer 503)": Google's model was overloaded

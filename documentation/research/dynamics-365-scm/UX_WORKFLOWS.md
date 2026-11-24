@@ -1,6 +1,7 @@
 # Dynamics 365: user experience and workflows (the base for the new Bellvox ERP UI)
 
 **Part of:** [TEARDOWN.md](TEARDOWN.md) (same product family; that file covers purchase features, this one covers how people work).
+**Round 2 (24 Nov 2026):** [DOCS_ROUND_2.md](DOCS_ROUND_2.md): the same subjects from Microsoft's own documentation (page rules, approvals, stock, accounting, AI, Arabic). It answers most open points in section 4.
 **Why:** Ben, 23 Nov 2026: the new UI takes Dynamics 365 as its base for **user experience and workflow**. Visuals matter less and
 stay Bellvox (red, Rubik). Not Odoo.
 **Sources (seen, 23 Nov 2026, read only, in a browser):** Microsoft's public guided tours at guidedtour.microsoft.com:
