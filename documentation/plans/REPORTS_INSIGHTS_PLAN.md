@@ -67,7 +67,7 @@ index that starts with `org_id`, and an isolation test.
 | `org_id` | uuid | no | references `organizations` |
 | `name` | text | no | 1 to 100 characters; unique among the company's live reports that the same person can see |
 | `description` | text | yes | up to 500 characters |
-| `definition` | jsonb | no | the builder settings (section 7.1). Checked by `rpt__check_definition` on every save. |
+| `definition` | jsonb | no | the builder settings (section 7.1). Checked by `rpt__check` on every save. |
 | `template_key` | text | yes | set when the report was copied from a ready-made template |
 | `visibility` | text | no | `company` (everyone who may use its source) or `private` (only `owner_id`) |
 | `owner_id` | uuid | no | the person who made it |
@@ -171,14 +171,14 @@ For each screen I add one short line to the new UI plan (`.temp/2026-11-23-new-u
 }
 ```
 
-Rules, checked in the API (shared Zod schema) **and again in the database** (`rpt__check_definition`):
+Rules, checked in the API (the shared check `reportDefinitionProblem`, packages/shared/src/reports.ts; the repo uses plain checks, not Zod) **and again in the database** (`rpt__check`):
 - `source` and every column name must be in the fixed list (7.2). Anything else is refused with `INVALID_INPUT`.
 - Filter operators: `eq`, `ne`, `in`, `gt`, `gte`, `lt`, `lte`, `between`, `contains` (text only), `is_empty`. Each column allows only
   the operators that fit its type.
 - Filter values are always passed as **parameters**, never put into the SQL text. Column and table names come only from our own list.
 - Up to 20 columns, 10 filters, 2 group-by columns, 5 totals. A date range is required, at most 3 years.
 - Total functions: `sum`, `count`, `avg`, `min`, `max`. Only `count` on text columns.
-- Result: at most 5,000 rows (`truncated: true` above that, as `sql/070`). Each run stops after 10 seconds (`statement_timeout`).
+- Result: at most 5,000 rows (`truncated: true` above that, as `sql/070`). Time limit: Supabase's statement timeout for signed-in users (found at build time: a timeout set inside the function would not stop the statement already running).
 - The chart only reads the result. Types: bar, line, pie. No new package: our own small SVG chart.
 
 ### 7.2 Data sources (the fixed list)
@@ -193,7 +193,7 @@ Each source is one fixed query inside the database. Each one has the permission 
 | `stock_on_hand` | item, item group, warehouse, on hand, reserved, available, reorder level | `inventory.items.read` |
 | `stock_moves` | date, item, warehouse, kind, quantity | `inventory.items.read` |
 | `receivables` | customer, invoice, due date, days overdue, age band (0–30, 31–60, 61–90, 90+), amount still owed | `finance.reports.view` |
-| `expenses` | date, category, amount, currency, branch | `finance.reports.view` |
+| `expenses` | date, category, supplier, net, VAT, amount, currency (expenses have no branch) | `finance.reports.view` |
 | `payments` | date, in or out, party, method, amount, currency | `finance.reports.view` |
 | `ledger_lines` | date, account, account type, debit, credit, entry | `accounting.ledger.view` |
 
@@ -270,7 +270,7 @@ No customer names, currencies or rules are written into the code.
   - an alert does not reach a recipient who may not see the source;
   - test 092 (column-grant guard) still passes.
 - **API tests:** every new route has its permission (the existing `route_permissions.test.ts` checks this); 503 `not_set_up` when the
-  function is missing; the Zod schema refuses bad definitions.
+  function is missing; the shared check refuses bad definitions.
 - **Web tests:** the Excel writer makes a file that our own .xlsx reader (`statementFiles.ts`) reads back the same; every new label has
   Arabic.
 - Each step: `npm run typecheck`, `npm test`, the SQL tests (`node .temp/pglite-sql-tests.mjs <worktree>`) and biome.
@@ -308,7 +308,7 @@ the treasury balances. Plain statistics in our code. Its own plan section and mi
 ### 12.2 AI on reports (plan only; Ben's rules are fixed)
 - **The AI only chooses and explains. Our code computes every number. The AI never writes SQL and never changes data.**
 - **Ask a question** in Arabic or English ("which products sold less this month?"). The AI gets our list of sources and templates and
-  answers only with a report definition (7.1). That definition goes through the same checks (`rpt__check_definition`) and runs with the
+  answers only with a report definition (7.1). That definition goes through the same checks (`rpt__check`) and runs with the
   person's own rights. If the check fails, nothing runs.
 - **"Explain this":** the AI gets only the report's result (the numbers already on the screen, no keys, no personal data) and writes
   2 or 3 sentences. The screen marks the text as written by AI.

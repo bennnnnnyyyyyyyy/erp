@@ -31,12 +31,8 @@ export const ACCOUNTING_UI_AR: Record<string, string> = {
   Draft: 'مسودة',
   'Hide the preview': 'إخفاء المعاينة',
   'Preview posting': 'معاينة الترحيل',
-  // trial balance
-  Filters: 'عوامل التصفية',
-  'This month': 'هذا الشهر',
-  'Last month': 'الشهر الماضي',
+  // trial balance ("Filters", "This month", "Last month", "This year": translated by the Reports table, i18nReports.ts)
   'This quarter': 'هذا الربع',
-  'This year': 'هذه السنة',
   'Choose dates': 'اختيار التواريخ',
   '{from} to {to}, in {currency}': 'من {from} إلى {to}، بعملة {currency}',
   'Your books balance.': 'دفاترك متوازنة.',

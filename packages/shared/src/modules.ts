@@ -263,7 +263,17 @@ export const MODULES: readonly ModuleManifest[] = [
     description: 'All your reports in one place: sales, buying, stock, money and tax.',
     core: false,
     dependsOn: [],
-    permissions: ['reports.library.read'],
+    permissions: [
+      'reports.library.read',
+      // Step 2, the report builder (sql/109): everyone runs reports on the sources they may use; members save private reports; owners
+      // and admins save company reports. The database checks the role and each source again.
+      'reports.custom.read',
+      'reports.custom.create',
+      'reports.custom.manage',
+      // Step 4, the sales forecast (sql/110): everyone who may read sales invoices (the database checks the sales module again).
+      'reports.forecast.read',
+    ],
+    memberGrants: ['reports.custom.create'],
     suite: 'Core',
   },
 ];

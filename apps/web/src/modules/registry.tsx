@@ -89,6 +89,8 @@ const VatSummaryPage = lazyNamed(() => import('./finance/VatSummary'), 'VatSumma
 const ImportFromFile = lazyNamed(() => import('./core/settings/ImportFromFile'), 'ImportFromFile');
 const PeoplePage = lazyNamed(() => import('./hr/People'), 'PeoplePage');
 const ReportLibraryPage = lazyNamed(() => import('./reports/Library'), 'ReportLibraryPage');
+const ReportBuilderPage = lazyNamed(() => import('./reports/Builder'), 'ReportBuilderPage');
+const SalesForecastPage = lazyNamed(() => import('./reports/SalesForecast'), 'SalesForecastPage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/SetupGuide'), 'AccountingSetupPage');
@@ -355,6 +357,15 @@ export const APPS: AppDef[] = [
     key: 'reports', module: 'reports', name: 'Reports & Insights', description: 'All your reports in one place, by area',
     suite: 'Core', basePath: '/reports', pages: [
       { path: '', label: 'Report library', permission: 'reports.library.read', component: ReportLibraryPage },
+      // Step 2 (sql/109): the report builder; a saved report opens in it. Real API only (the sample-data build has no report database).
+      ...(demoMode ? [] : [
+        { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
+        // Step 4 (sql/110): the sales forecast.
+        { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage },
+        { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
+        // Step 3: a ready-made report opens in the builder and runs at once.
+        { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
+      ]),
     ],
   },
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.

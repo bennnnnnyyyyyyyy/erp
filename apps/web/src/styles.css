@@ -680,3 +680,17 @@ tr.scan-row-warn > td { background: color-mix(in srgb, var(--signal-soft) 60%, t
 .attachment-meta { display: grid; flex: 1; min-inline-size: 0; overflow-wrap: anywhere; }
 /* Scanning step 2: the camera picture in the barcode scanner */
 .scanner-video { inline-size: 100%; max-block-size: 50vh; border-radius: 0.5rem; background: #000; object-fit: cover; }
+/* Reports & Insights: the report builder (modules/reports/Builder.tsx). Logical properties only (right-to-left safe). */
+.report-builder { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-block: 1rem; }
+.report-panel { border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.75rem 1rem 1rem; background: var(--card); display: grid; gap: 0.6rem; align-content: start; }
+.report-panel legend { font-weight: 600; padding-inline: 0.3rem; }
+.report-panel label { display: grid; gap: 0.25rem; }
+.report-row, .report-period, .report-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 0.5rem; }
+.report-period { align-items: center; }
+.report-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.35rem 0.75rem; }
+.report-checks label.check { display: flex; align-items: center; gap: 0.4rem; }
+.report-actions { margin-block: 0.75rem; }
+.report-sheet { background: var(--card); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border); margin-block-start: 1rem; }
+.report-title { margin-block: 0 0.25rem; font-size: 1.2rem; }
+.report-chart { margin: 0.5rem 0 1rem; }
+.report-chart svg { inline-size: 100%; max-block-size: 320px; color: var(--foreground); }

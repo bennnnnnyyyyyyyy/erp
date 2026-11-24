@@ -59,6 +59,134 @@ and show Grant what we learned. Keep `feat/bellvox-look` up to date with main.
 with the installed tools directly, because `node_modules/.bin` in the main checkout is empty after an `npm install` that reported
 "up to date" (`npm rebuild` in the main checkout should restore `npm run typecheck` and `npm test`). Not deployed.
 
+## 2026-11-24 — Reports & Insights: `sql/109`, `110`, `111` applied to live
+
+**Objective.** Ben's "yes 109", "yes 110", "yes 111": put the report builder, the sales forecast and report alerts on the live database.
+
+**Actions Completed.** Read-only check first (live had 108, none of 109-111). For each migration in order: a rolled-back dry run on live
+(the file up to its `commit`, ending in `rollback`), then the real apply with `npx supabase db query --linked -f <file>` from the
+main checkout (project ggoerp), then its SQL tests on live (each rolls back). `sql/README.md` rows updated.
+
+**Database / System Result.** Applied to live: `sql/109` (check: 9 sources), `sql/110` (signed-in users run the forecast, anonymous
+not), `sql/111` (new alert columns present; users create report alerts but cannot run the job; only the service role runs `alr_run`;
+anonymous cannot create). Tests on live: 106, 107, 108, 092, and the alert tests 024, 026 and 101: all passed (rolled back).
+
+**Safety Status.** No data changed apart from the schema (tests rolled back). The Reports & Insights app is still off for existing
+companies: an owner switches it on in Settings → Apps (new companies get it with "all apps on"). The code for steps 2-5 is not pushed
+yet (Ben pushes `feat/reports`); until it is deployed, live has the database functions but no screens for them. Browser check by Ben
+still needed (list in the step 5 report).
+
+## 2026-11-24 — Reports & Insights step 5: "alert me when" on a saved report (`sql/111`, not applied)
+
+**Objective.** Step 5 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) (section 7.5): tell people when a number on a
+saved company report goes above or below a limit, through the existing alert engine.
+
+**Actions Completed.**
+- `sql/111_rpt_report_alerts.sql`: alert kind `report_value` (report, total, above/below, limit in minor units for money, currency,
+  rolling period). `alr_create_report_rule` (owners and admins; audited) checks the report, the total and the period, and refuses any
+  recipient who may not see the report's data; `alr_set_rule_recipients` does the same for these rules. `rpt__alert_run` runs each
+  rule's report for its company with the maker's role, compares the total (money in the rule's currency only), and tells only recipients
+  who may still see the data; same repeat rules as the other kinds (`alr_firings`); one broken rule does not stop the others.
+  `alr_run` (the job's entry point) is now a small wrapper: the previous evaluator is unchanged, renamed `alr__run_core`.
+- `sql/tests/108_rpt_report_alerts.sql`: making a rule and its audit; 8 refusals; a member refused as recipient of a money report (on
+  making and on changing recipients); the job tells the right people once, linked to the rule (sql/104); a limit not passed says
+  nothing; currency kept apart; a recipient who lost the right is skipped; a deleted report stops its rule; the existing alert kinds
+  still run; another company cannot make a rule on this company's report; users cannot run the job.
+- API `POST /v1/reports/saved/:id/alert` (key `alerts.rules.manage`). Web: "Alert me when" in the builder (saved company reports with a
+  total, no unsaved changes; `ReportAlert.tsx`); the Alerts page lists these rules as "Report alert" (switch off, retire; not made
+  there); the bell opens Reports & Insights. Arabic for every new text.
+
+**Database / System Result.** None on live. `sql/111` waits for Ben's "yes 111" (after 109 and 110). The Alerts page does not read the
+new columns, so it keeps working before 111 is applied.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (109 + 808 + 212); SQL tests 106 of 106 on pglite (109, 110, 111 rerun);
+biome clean on the changed files; production web build OK. Not checked in a browser or on live. After "yes 111": dry run, apply, tests
+108 and 092 and the alert tests on live; then make an alert from a saved report and wait for the five-minute job.
+
+## 2026-11-24 — Reports & Insights step 4: sales forecast (`sql/110`, not applied)
+
+**Objective.** Step 4 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) (section 7.4; Ben: sales first, company-wide):
+what the company is likely to sell next, by product and by customer.
+
+**Actions Completed.**
+- `sql/110_rpt_sales_forecast.sql`: `rpt_sales_forecast(by, horizon)`, the stock forecast's method (sql/029) on sales: issued invoice
+  lines of the last 90 days minus approved credit notes (net of VAT), weighted 50/30/20 per 30-day block, times 30, 60 or 90 days;
+  quantity for products only; value per currency; trend and confidence as in the plan. Read-only; everyone who may read sales
+  invoices; sales module on; only the caller's company.
+- `sql/tests/107_rpt_sales_forecast.sql`: the plan's worked example (1.5 a day, 45 in 30 days, up, thin), an approved credit note taken
+  off (1.4) and a waiting one not, good and flat with 10 invoices, nothing listed after 90 days, a void invoice not counted, two
+  currencies kept apart, by customer without quantity, 60 days, refusals, members and viewers, another company, sales off, anonymous.
+- Shared types `packages/shared/src/salesForecast.ts`; key `reports.forecast.read`; API `GET /v1/reports/forecast/sales`.
+- Web: `/reports/forecast` (`SalesForecast.tsx`): by product or customer, 30/60/90 days, the last 30 days, the forecast, trend,
+  confidence, the method in plain words, Excel and print; a card in the library's Sales area. Arabic for every new text.
+
+**Database / System Result.** None on live. `sql/110` waits for Ben's "yes 110" (it needs 109 first). Before that the forecast page
+shows the "not set up yet" message.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (109 + 807 + 212); SQL tests 105 of 105 on pglite (109 and 110 rerun);
+biome clean on the changed files. Not checked in a browser or on live. After "yes 110": rolled-back dry run, apply, test 107 on live;
+then open Reports & Insights → Sales forecast with real invoices.
+
+## 2026-11-24 — Reports & Insights step 3: ready-made reports (no migration)
+
+**Objective.** Step 3 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md): useful reports ready to open, made with the
+builder, that people can copy and change.
+
+**Actions Completed.**
+- `packages/shared/src/reportTemplates.ts`: 14 ready-made reports, each an ordinary builder definition with a period choice (this
+  month, last month, last 30 days, or none): sales by customer, top 20 products, sales by item group, sales day by day; purchases by
+  supplier; stock by warehouse, out of stock, stock movements by kind; money owed by age and by customer, expenses by category, money
+  in and out; VAT on sales day by day, VAT on purchases by supplier. Test `reportTemplates.test.ts` reads the source list from
+  `sql/109` itself and checks every template against it.
+- Library: each ready-made report shows in its area (marked "Ready-made"), only when the person may use its data (`rpt_sources`).
+  It opens at `/reports/template/:key` in the builder and runs at once; "Save" keeps the person's own copy with the template's key.
+- Period choices moved to `apps/web/src/modules/reports/definition.ts`, with tests. Arabic for the 27 new texts.
+
+**Database / System Result.** None. Ready-made reports run through `sql/109` (still waiting for Ben's "yes 109"); before it, the
+library does not show them.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (109 + 806 + 212); biome clean on the changed files. Not checked in a browser.
+After "yes 109": open each area's ready-made reports as owner and as a member (members see no money ones).
+
+## 2026-11-24 — Reports & Insights step 2: report builder and saved reports (`sql/109`, not applied)
+
+**Objective.** Step 2 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md): people build their own reports from a fixed,
+safe list of data, save them for themselves or the company, and export them, without SQL ever leaving our code.
+
+**Actions Completed.**
+- `sql/109_rpt_reports.sql`: the fixed list of 9 sources inside the database (`rpt__catalog`), each one fixed query with the company
+  filter, its columns, its module and the roles that may use it (copying today's table rules: money sources and the ledger for owners
+  and admins; item average cost and stock-move cost in no source). `rpt__check` refuses anything not on the list; `rpt_run` runs a
+  checked definition for the caller's company (names from the list, operators and functions from fixed lists, every value as a
+  parameter; at most 5,000 rows; money totals one line per currency). `rpt_sources()`. `rpt_reports` (saved reports, company or
+  private; RLS; select only) with `rpt_save_report` / `rpt_delete_report` (soft delete), audited before and after. "All apps on" for new
+  companies now includes `reports`.
+- `sql/tests/106_rpt_reports.sql`: sources per role; 18 refusals (unknown source, column, setting, operator, function; SQL in a column
+  name; bad date; no period; over 3 years; limit; grouping without a total; hidden sort column; bad chart); a quoted value is only a
+  value; group by; currency split; truncation; who saves and sees which report; names used once; audit rows; another company sees,
+  runs and changes nothing; no direct writes; no anonymous use; every source and column compiled at least once.
+- Shared: `packages/shared/src/reports.ts` (types and the plain check `reportDefinitionProblem`, with tests); permission keys
+  `reports.custom.read`, `reports.custom.create` (members), `reports.custom.manage` (owners and admins).
+- API: `apps/api/src/modules/reports/routes.ts` (`/v1/reports/sources`, `/run`, `/saved` list, get, run, create, change, delete), each
+  with its permission; `DUPLICATE_NAME` → 409. Test `apps/api/test/reports.test.ts`.
+- Web: the builder `apps/web/src/modules/reports/Builder.tsx` at `/reports/new` and `/reports/:id` (source, period with quick choices,
+  columns, group by, totals, filters, sort, row limit, chart; Run, Save, Save as new, Delete, Excel, PDF, Print); the library shows
+  "My reports" and "Company reports" and a "New report" button. Excel is our own small writer (`xlsx.ts`, no package; a test reads
+  it back with our .xlsx reader); PDF reuses the invoice PDF helper (Arabic correct); the chart is our own SVG (bars and lines right to
+  left in Arabic). Arabic for every new text (machine draft) in `i18nReports.ts`, `i18nNav.ts`, `i18nErrors.ts`.
+- Worktrees: `@erp/shared` now points at this checkout's own `packages/shared` (`tsconfig.base.json` paths, `apps/web/vite.config.ts`
+  alias, new `apps/api/vitest.config.ts`). In the main checkout it is the same folder as before; in a git worktree the package name
+  used to load the main checkout's copy, so a new module or type failed there.
+- Plan corrected: plain shared check (the repo has no Zod); time limit is Supabase's statement timeout for signed-in users.
+
+**Database / System Result.** None on live. `sql/109` is written, not applied: it waits for Ben's "yes 109". Until then every
+`/v1/reports` builder route answers 503 `not_set_up`, and the library simply hides the saved-report sections.
+
+**Safety Status.** `npm run typecheck` and `npm test` pass (92 + 806 + 210); SQL tests on pglite pass, including 106 and 092; biome clean
+on the changed files (warnings only, as elsewhere); a production web build succeeds. Not checked in a browser or on live. After "yes 109":
+rolled-back dry run on live, apply with the CLI, run tests 106 and 092 on live, then switch on Reports & Insights (Settings → Apps) for
+the test company and try: a grouped sales report with a chart, save it, export Excel and PDF, as owner and as a member.
+
 ## 2026-11-24 — Reports & Insights step 1: report library (no migration)
 
 **Objective.** Ben approved the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) and all five suggested answers (24 Nov,
