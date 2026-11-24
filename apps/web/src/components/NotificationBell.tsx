@@ -6,6 +6,7 @@ import { formatDateTime, formatDay } from '../lib/format';
 import { Link, navigate } from '../lib/router';
 import { useSession } from '../session';
 import { LOW_STOCK_EVENT } from './LowStockPopup';
+import { readyReportOr } from '../modules/reports/reportLinks';
 
 import { tr, trf } from '../lib/i18n';
 /** `reportId`: for a report alert, the saved report it watches (sent to owners and admins, who may read alert rules). */
@@ -22,7 +23,8 @@ const ALERT_TARGET: Record<string, string> = {
 };
 
 /** Where a notification leads when clicked. */
-export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId' | 'reportId'>): string | null {
+/** `access`: the person's modules and permissions, so a shortcut about a report opens it in Reports & Insights when they can. */
+export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId' | 'reportId'>, access?: { modules: readonly string[]; permissions: readonly string[] }): string | null {
   if (n.entityType === 'stock_request' && n.entityId) return `/inventory/requests/${n.entityId}`;
   if (n.entityType === 'task' && n.entityId) return `/tasks/${n.entityId}`;
   // Shortcut audit 24 Nov: transfers, counts and adjustments notified people but opened nothing (sql/033, 042, 012).
@@ -30,6 +32,8 @@ export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'enti
   if (n.entityType === 'stock_count' && n.entityId) return `/inventory/counts/${n.entityId}`;
   if (n.entityType === 'stock_adjustment') return '/inventory/adjustments';
   if (n.entityType === 'alert:report_value' && n.reportId) return `/reports/${n.reportId}`;
+  // Ben, 24 Nov: money overdue opens the ready-made "Money owed by age" (when Reports & Insights is on for this person).
+  if (n.entityType === 'alert:receivable_overdue' && access) return readyReportOr(access, 'receivables_ageing', '/finance/owed');
   // Alerts (sql/104 gives them "alert:<rule kind>"; UX audit 20 Nov: they opened nothing).
   if (n.entityType?.startsWith('alert:')) return ALERT_TARGET[n.entityType.slice(6)] ?? '/alerts';
   return null;
@@ -88,7 +92,7 @@ export function NotificationBell() {
     setOpen(false);
     if (!n.readAt) await api('/v1/messaging/notifications/read', { method: 'POST', body: JSON.stringify({ id: n.id }) }).catch(() => undefined);
     load();
-    const to = notificationTarget(n);
+    const to = notificationTarget(n, session);
     if (to) navigate(to);
   }
 

@@ -5,7 +5,7 @@ import type { ReportDefinition } from './reports';
 // company. Opening one runs it; "Save" keeps the person's own copy (it remembers the template's key). The period is a choice
 // ("this month"), turned into dates when the template is opened. Names and descriptions are English; the Arabic is in the web app.
 
-export type ReportPeriodPreset = 'this_month' | 'last_month' | 'last_30' | 'this_year';
+export type ReportPeriodPreset = 'this_month' | 'last_month' | 'last_30' | 'last_90' | 'last_12_months' | 'this_year';
 export type ReportArea = 'sales' | 'buy' | 'stock' | 'money' | 'tax';
 
 export type ReportTemplate = {
@@ -40,8 +40,8 @@ export const REPORT_TEMPLATES: readonly ReportTemplate[] = [
     key: 'top_items',
     area: 'sales',
     name: 'Top 20 products',
-    description: 'The 20 products that brought in the most in the last 30 days.',
-    period: 'last_30',
+    description: 'The 20 products that brought in the most in the last 90 days.',
+    period: 'last_90', // Ben, 24 Nov: the same 90 days as the home card "Top products"
     definition: {
       source: 'sales_lines',
       groupBy: ['item'],
@@ -86,8 +86,8 @@ export const REPORT_TEMPLATES: readonly ReportTemplate[] = [
     key: 'purchases_by_supplier',
     area: 'buy',
     name: 'Purchases by supplier',
-    description: 'How much was billed by each supplier this month.',
-    period: 'this_month',
+    description: 'How much was billed by each supplier in the last 12 months.',
+    period: 'last_12_months', // Ben, 24 Nov: the same 12 months as the home card "Your main suppliers"
     definition: {
       source: 'purchase_lines',
       groupBy: ['supplier'],

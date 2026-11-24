@@ -2,7 +2,7 @@ import type { ReportDefinition, ReportPeriodPreset, ReportSource, ReportTotal, R
 import { presetPeriod } from './definition';
 
 /** The period choices the sentence offers, in order. */
-export const REPORT_PERIOD_PRESETS_SHOWN: ReportPeriodPreset[] = ['this_month', 'last_month', 'last_30', 'this_year'];
+export const REPORT_PERIOD_PRESETS_SHOWN: ReportPeriodPreset[] = ['this_month', 'last_month', 'last_30', 'last_90', 'last_12_months', 'this_year'];
 
 // The report builder as one sentence (Ben's choice, 24 Nov 2026: option A): "Show [what] by [split] for [period]". These helpers turn
 // the sentence's choices into the same report definition as before (sql/109 is unchanged), and read a saved or ready-made report back

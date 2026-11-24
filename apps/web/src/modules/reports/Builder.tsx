@@ -62,7 +62,7 @@ type Panel = { kind: 'filter'; index: number } | { kind: 'also' } | { kind: 'spl
 const NEW_META: Meta = { id: null, name: '', description: '', visibility: 'private', mine: true, templateKey: null };
 const PDF_MAX_ROWS = 1000;
 const RUN_DELAY_MS = 350;
-const PERIOD_LABELS: Record<string, string> = { this_month: 'This month', last_month: 'Last month', last_30: 'Last 30 days', this_year: 'This year' };
+const PERIOD_LABELS: Record<string, string> = { this_month: 'This month', last_month: 'Last month', last_30: 'Last 30 days', last_90: 'Last 90 days', last_12_months: 'Last 12 months', this_year: 'This year' };
 const CHART_LABELS: Record<ReportChartType, string> = { bar: 'Bars', line: 'Line', pie: 'Pie' };
 
 /** A new report on a source: its whole amount added up, every line, this month. */

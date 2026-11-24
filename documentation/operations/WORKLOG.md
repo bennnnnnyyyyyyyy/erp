@@ -11,6 +11,25 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Shortcuts, Ben's answers: report periods match the home cards; overdue alert and sent documents link (no migration)
+
+**Objective.** Ben answered the 8 open items of the shortcut check (via erp-master, `.temp/2026-11-24-shortcuts-check.md`).
+
+**Actions Completed.**
+- Item 3: ready-made "Top 20 products" now covers the last 90 days and "Purchases by supplier" the last 12 months, like their home cards
+  (`packages/shared/src/reportTemplates.ts`; new period choices `last_90` and `last_12_months`, also offered in the builder's "for";
+  `definition.ts`, with tests; Arabic).
+- Item 4: the bell's "Money overdue" alert opens the ready-made "Money owed by age" when the person can open Reports & Insights, else
+  /finance/owed (`NotificationBell.tsx`, also the Messages page).
+- Item 6: the Messages page links a sent invoice to its page and a sent credit or debit note to its print page. `GET
+  /v1/messaging/outbox` now sends `entityType` and `entityId` (columns already readable, sql/008).
+- Items 2, 7, 8: kept as they are (Ben). Items 1 (members' report alert link) and 5 (stop the old "Low stock: <code>" notification
+  from sql/013's job) need SQL: they go into migration 112 with step 6, as Ben asked.
+
+**Database / System Result.** None (no SQL).
+
+**Safety Status.** `tsc` 0 errors (shared, api, web); tests: shared 109, api 808, web 218 passed; biome 0 errors. Not checked on real data.
+
 ## 2026-11-24 — Report builder as one sentence (Ben's option A; no migration)
 
 **Objective.** Ben found the report builder's controls confusing (six boxes of settings before the report, technical words, a Run button
