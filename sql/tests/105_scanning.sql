@@ -17,7 +17,7 @@ declare
   x uuid := gen_random_uuid();  -- owner of B
   vw uuid := gen_random_uuid(); -- viewer of A
   o uuid; ob uuid; w uuid; i1 uuid; i2 uuid; sup uuid; sup2 uuid; po1 uuid; po2 uuid; pl uuid; bill uuid; att uuid; ex uuid;
-  n bigint; ok boolean; j jsonb; p text;
+  n bigint; ok boolean; j jsonb; p text; p2 text;
 begin
   insert into auth.users (id, aud, role, email) values
     (u, 'authenticated', 'authenticated', 'sc-o@tests.invalid'), (a, 'authenticated', 'authenticated', 'sc-a@tests.invalid'),
@@ -142,6 +142,17 @@ begin
 
   -- ---- B1: attachments
   p := format('org/%s/supplier_bill/%s/%s.jpg', o, bill, gen_random_uuid());
+  p2 := format('org/%s/supplier_bill/%s/%s.pdf', o, bill, gen_random_uuid());
+  -- Where Supabase Storage exists (CI, live), core_add_attachment also checks that the file was really uploaded: put the two test
+  -- files in its index (as the test runner; rolled back), and check that a path with no file is refused.
+  if to_regclass('storage.objects') is not null then
+    reset role;
+    execute 'insert into storage.objects (bucket_id, name) values (''doc-files'', $1), (''doc-files'', $2)' using p, p2;
+    set local role authenticated;
+    ok := false; begin perform public.core_add_attachment('supplier_bill', bill, format('org/%s/supplier_bill/%s/%s.jpg', o, bill, gen_random_uuid()), 'x.jpg', 'image/jpeg', 10, repeat('c', 64));
+    exception when others then ok := (sqlerrm = 'NOT_FOUND'); end;
+    if not ok then raise exception 'FAIL B1m: a file that was never uploaded was accepted'; end if;
+  end if;
   ok := false; begin perform public.core_add_attachment('supplier_bill', bill, format('org/%s/supplier_bill/%s/%s.jpg', ob, bill, gen_random_uuid()), 'x.jpg', 'image/jpeg', 10, repeat('c', 64));
   exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL B1a: a file in another company''s folder was accepted'; end if;
@@ -187,7 +198,7 @@ begin
   -- a member may not remove someone else's file
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  att := public.core_add_attachment('supplier_bill', bill, format('org/%s/supplier_bill/%s/%s.pdf', o, bill, gen_random_uuid()), 'b.pdf', 'application/pdf', 5, repeat('f', 64));
+  att := public.core_add_attachment('supplier_bill', bill, p2, 'b.pdf', 'application/pdf', 5, repeat('f', 64));
   perform set_config('request.jwt.claims', json_build_object('sub', m, 'role', 'authenticated')::text, true);
   ok := false; begin perform public.core_remove_attachment(att); exception when others then ok := (sqlerrm = 'FORBIDDEN'); end;
   if not ok then raise exception 'FAIL B1l: a member removed someone else''s file'; end if;
