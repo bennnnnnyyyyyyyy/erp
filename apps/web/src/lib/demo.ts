@@ -1,6 +1,7 @@
 import { handleInventory, ACTOR_NAMES } from './demoInventory';
 import { handleTrade } from './demoTrade';
 import { demoDocSettings } from './demoPrint';
+import { handleReports } from './demoReports';
 import { MODULES, type AuditEntry, type InviteResult, type Member, type ModuleStatus, type OrgSettings, type Role } from '@erp/shared';
 
 // Demo mode (`npm run dev:demo -w apps/web`): the web app runs on sample data held in memory, with no
@@ -47,7 +48,7 @@ const DEMO_MODULES: Omit<ModuleStatus, 'enabled'>[] = [
 // The shared list (MODULES) now has purchasing and sales too; the demo versions replace them instead of appearing twice (two
 // entries with the same key broke Settings > Apps; found by the smoke test).
 const ALL_DEMO_MODULES = [...MODULES.filter((m) => !DEMO_MODULES.some((d) => d.key === m.key)), ...DEMO_MODULES];
-const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales']);
+const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales', 'reports']);
 
 let auditId = 0;
 const audit: (AuditEntry & { before: unknown; after: unknown })[] = [];
@@ -71,6 +72,10 @@ export async function demoApi<T>(path: string, init: RequestInit = {}): Promise<
   await new Promise((r) => setTimeout(r, 120)); // so loading states are visible
   const method = (init.method ?? 'GET').toUpperCase();
   const [pathname] = path.split('?');
+  if (/^\/v1\/reports\//.test(pathname ?? '')) {
+    const rest = (pathname ?? '').replace(/^\/v1\/reports\/?/, '').split('/').filter(Boolean);
+    return structuredClone(handleReports(method, rest, body<Record<string, unknown>>(init))) as T;
+  }
   const area0 = /^\/v1\/(inventory|purchasing|sales)(?:\/|$)/.exec(pathname ?? '')?.[1] as 'inventory' | 'purchasing' | 'sales' | undefined;
   if (area0) {
     const rest = (pathname ?? '').replace(/^\/v1\/[a-z]+\/?/, '').split('/').filter(Boolean);

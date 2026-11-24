@@ -32,7 +32,7 @@ const DOC_LINK: Record<string, (id: string) => string | null> = {
   customer_invoice: (id) => `/sales/invoices/${id}`,
   supplier_invoice: (id) => `/purchasing/invoices/${id}`,
   expense: (id) => `/finance/expenses/${id}`,
-  sales_note: () => null,
+  sales_note: (id) => `/sales/print/note/${id}`, // its print page (sql/103); shortcut audit 24 Nov
 };
 const DOC_TYPE: Record<string, string> = { customer_invoice: 'Sales invoice', sales_note: 'Credit or debit note', supplier_invoice: 'Purchase invoice', expense: 'Expense' };
 

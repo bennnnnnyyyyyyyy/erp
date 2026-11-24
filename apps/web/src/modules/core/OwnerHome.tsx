@@ -9,6 +9,7 @@ import { cn } from '../../lib/cn';
 import { useSession } from '../../session';
 
 import { Rich } from '../../components/Rich';
+import { readyReportOr } from '../reports/reportLinks';
 import { dateLocale, tr, trf } from '../../lib/i18n';
 // The owner's first screen (documentation/plans/OWNER_INSIGHTS_PLAN.md): am I making or losing money, who owes me, what
 // needs my decision, what is about to go wrong. Plain words, big numbers, every card opens the list behind it.
@@ -116,7 +117,7 @@ export function OwnerSummary() {
         ) : <span className="text-sm text-muted-foreground">{tr('No transactions yet. Net profit appears once sales are invoiced and expenses recorded.')}</span>}
       </Card>
 
-      <Card to="/finance/owed" title={tr('Receivables and payables')} subtitle={tr('Accounts receivable and accounts payable')} period={trf('open balances as of {date}', { date: asOfDay })} tone={moneyTone}>
+      <Card to={readyReportOr(session, 'owed_by_customer', '/finance/owed')} title={tr('Receivables and payables')} subtitle={tr('Accounts receivable and accounts payable')} period={trf('open balances as of {date}', { date: asOfDay })} tone={moneyTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.owedToMeMinor)}</span>
         <span className="text-sm text-muted-foreground"><Rich text={s.overdueMinor > 0 ? trf('receivable from customers, of which **{late}** is more than 30 days overdue.', { late: money(s.overdueMinor) }) : tr('receivable from customers.')} /></span>
         <span className="text-sm"><Rich text={trf('Accounts payable (suppliers and expenses): **{amount}**.', { amount: money(s.iOweMinor) })} /></span>
@@ -130,7 +131,7 @@ export function OwnerSummary() {
         </span>
       </Card>
 
-      <Card to="/inventory/batches" title={tr('Inventory value and expiry')} subtitle={tr('Inventory valuation at cost and batches nearing expiry')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
+      <Card to={readyReportOr(session, 'stock_by_warehouse', '/inventory/batches')} title={tr('Inventory value and expiry')} subtitle={tr('Inventory valuation at cost and batches nearing expiry')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
         <span className="text-sm text-muted-foreground">{tr('inventory value at cost.')}</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
@@ -142,7 +143,7 @@ export function OwnerSummary() {
         </ul>
       </Card>
 
-      <Card to="/finance/product-sales" title={tr('Top products')} subtitle={tr('Products ranked by sales revenue')} period={tr('last 90 days')}>
+      <Card to={readyReportOr(session, 'top_items', '/finance/product-sales')} title={tr('Top products')} subtitle={tr('Products ranked by sales revenue')} period={tr('last 90 days')}>
         {s.topProducts.length === 0 ? <span className="text-sm text-muted-foreground">{tr('No sales yet.')}</span> : (
           <ol className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
             {s.topProducts.map((p, i) => (
@@ -152,7 +153,7 @@ export function OwnerSummary() {
         )}
       </Card>
 
-      <Card to="/purchasing/suppliers" title={tr('Your main suppliers')} subtitle={tr('Who you buy from most, by amount spent')} period={tr('last 12 months')} tone={supplierTone}>
+      <Card to={readyReportOr(session, 'purchases_by_supplier', '/purchasing/suppliers')} title={tr('Your main suppliers')} subtitle={tr('Who you buy from most, by amount spent')} period={tr('last 12 months')} tone={supplierTone}>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
           {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{trf('{pct}% of purchases', { pct: p.sharePercent })}</b></li>)}
           {s.topSuppliers.length === 0 && <li className="text-muted-foreground">{tr('No purchases yet.')}</li>}

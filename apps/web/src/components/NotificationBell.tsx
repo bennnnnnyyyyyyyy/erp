@@ -8,7 +8,8 @@ import { useSession } from '../session';
 import { LOW_STOCK_EVENT } from './LowStockPopup';
 
 import { tr, trf } from '../lib/i18n';
-export type AppNotification = { id: string; title: string; body: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string };
+/** `reportId`: for a report alert, the saved report it watches (sent to owners and admins, who may read alert rules). */
+export type AppNotification = { id: string; title: string; body: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string; reportId?: string | null };
 
 /** The page each kind of alert rule opens. */
 const ALERT_TARGET: Record<string, string> = {
@@ -21,9 +22,14 @@ const ALERT_TARGET: Record<string, string> = {
 };
 
 /** Where a notification leads when clicked. */
-export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId'>): string | null {
+export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'entityId' | 'reportId'>): string | null {
   if (n.entityType === 'stock_request' && n.entityId) return `/inventory/requests/${n.entityId}`;
   if (n.entityType === 'task' && n.entityId) return `/tasks/${n.entityId}`;
+  // Shortcut audit 24 Nov: transfers, counts and adjustments notified people but opened nothing (sql/033, 042, 012).
+  if (n.entityType === 'stock_transfer' && n.entityId) return `/inventory/transfers/${n.entityId}`;
+  if (n.entityType === 'stock_count' && n.entityId) return `/inventory/counts/${n.entityId}`;
+  if (n.entityType === 'stock_adjustment') return '/inventory/adjustments';
+  if (n.entityType === 'alert:report_value' && n.reportId) return `/reports/${n.reportId}`;
   // Alerts (sql/104 gives them "alert:<rule kind>"; UX audit 20 Nov: they opened nothing).
   if (n.entityType?.startsWith('alert:')) return ALERT_TARGET[n.entityType.slice(6)] ?? '/alerts';
   return null;

@@ -63,6 +63,8 @@ export function sourcePath(type: string, id: string): string | null {
       return `/finance/expenses/${id}`;
     case 'payment':
       return `/finance/payments/${id}`;
+    case 'sales_note':
+      return `/sales/print/note/${id}`; // a credit or debit note has no page of its own; its print page (sql/103) shows it
     case 'manual_journal':
       return `/accounting/journals/${id}`;
     case 'stock_move':

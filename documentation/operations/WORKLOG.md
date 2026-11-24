@@ -11,6 +11,35 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Shortcuts: home cards open Reports & Insights; broken and empty links fixed (no migration)
+
+**Objective.** Ben's feedback on Reports steps 1-5 (via erp-master): tiles and cards about a report must open it in Reports & Insights, and
+every shortcut in the app that should point to a newer page must do so. A read-only sweep of `apps/web/src` listed every shortcut.
+
+**Actions Completed.**
+- Home (owner summary, `modules/core/OwnerHome.tsx`): "Receivables and payables" opens the ready-made report "Money owed by customer",
+  "Inventory value and expiry" opens "Stock by warehouse", "Top products" opens "Top 20 products", "Your main suppliers" opens "Purchases by
+  supplier", but only when the company has Reports & Insights switched on and the person has `reports.custom.read`; otherwise the old page
+  (new `modules/reports/reportLinks.ts`). "Profit and loss" (no ready-made report) and "Pending approvals" are unchanged.
+- Notifications (`components/NotificationBell.tsx`, also the Messages page): transfers, counts and adjustments now open their page (they
+  opened nothing). A report alert opens its saved report: `GET /v1/messaging/notifications` adds `reportId`, read with the person's own
+  sign-in from `alr_rules` (owners and admins only, sql/028); others still get the library.
+- Alerts page: a report alert links to its report (`GET /v1/alerts/rules` sends `reportId`, sql/111's column).
+- Broken link: "← Sales orders" (sales order page, new order form) went to `/sales/orders`, which the real app does not have ("Page not
+  found"); `registry.tsx` adds a hidden `/sales/orders` page with the same list.
+- Credit and debit notes: the VAT summary and the ledger (also statements and treasury, through `sourcePath`) link a note to its print page.
+- Guide (`help/helpContent.ts`, English and Arabic): removed "No printing or PDF of invoices yet"; importing from a file now exists
+  (Settings → Import from a file).
+- Sample-data build: the report builder now opens there on two made-up sources (`lib/demoReports.ts`), to look at the builder on
+  127.0.0.1 without a database (used for the builder options for Ben, `.temp/reports-builder/`).
+
+**Database / System Result.** None (no SQL). The two API changes read existing columns with the caller's own sign-in.
+
+**Safety Status.** `tsc` 0 errors (shared, api, web); tests: shared 109, api 808, web 212 passed; biome 0 errors on changed files (7 old web
+warnings). Not checked in a browser on real data. Open for Ben (unclear): members' report alerts need the report id stored on the
+notification (a migration, suggested with step 6); "Inventory value" card also shows expiry, which the stock report does not; card periods
+(90 days, 12 months) differ from the reports' (30 days, this month).
+
 ## 2026-11-24 — Reports & Insights: `sql/109`, `110`, `111` applied to live
 
 **Objective.** Ben's "yes 109", "yes 110", "yes 111": put the report builder, the sales forecast and report alerts on the live database.

@@ -214,6 +214,8 @@ const SALES_APP: AppDef = {
   key: 'sales', module: 'sales', name: 'Sales', description: 'Sales orders, invoicing and customers',
   suite: 'Sales & Purchasing', basePath: '/sales', pages: [
     { path: '', label: 'Sales orders', permission: 'sales.orders.read', component: SalesOrders },
+    // The "← Sales orders" links (order page, new order form) go to /sales/orders: the same list (shortcut audit, 24 Nov 2026).
+    { path: '/orders', label: 'Sales orders', permission: 'sales.orders.read', component: SalesOrders, nav: false, parent: '' },
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
@@ -325,15 +327,14 @@ export const APPS: AppDef[] = [
     key: 'reports', module: 'reports', name: 'Reports & Insights', description: 'All your reports in one place, by area',
     suite: 'Core', basePath: '/reports', pages: [
       { path: '', label: 'Report library', permission: 'reports.library.read', component: ReportLibraryPage },
-      // Step 2 (sql/109): the report builder; a saved report opens in it. Real API only (the sample-data build has no report database).
-      ...(demoMode ? [] : [
-        { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
-        // Step 4 (sql/110): the sales forecast.
-        { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage },
-        { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
-        // Step 3: a ready-made report opens in the builder and runs at once.
-        { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
-      ]),
+      // Step 2 (sql/109): the report builder; a saved report opens in it. The sample-data build runs it on two made-up sources
+      // (lib/demoReports.ts), so the builder can be looked at without a database.
+      { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
+      // Step 4 (sql/110): the sales forecast. Real API only.
+      ...(demoMode ? [] : [{ path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage }]),
+      { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
+      // Step 3: a ready-made report opens in the builder and runs at once.
+      { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
     ],
   },
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.

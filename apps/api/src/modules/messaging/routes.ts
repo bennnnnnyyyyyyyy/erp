@@ -51,7 +51,20 @@ messagingRoutes.get('/notifications', requirePermission('messaging.notifications
     entityId: n.entity_id,
     readAt: n.read_at,
     createdAt: n.created_at,
+    reportId: null as string | null,
   }));
+  // A report alert opens its saved report (shortcut audit, 24 Nov 2026). The notification holds the alert rule's id; the rule names the
+  // report. Read with the person's own sign-in: alert rules are readable by owners and admins only (sql/028), so others keep the library link.
+  const ruleIds = items.filter((n) => n.entityType === 'alert:report_value' && n.entityId).map((n) => n.entityId as string);
+  if (ruleIds.length > 0) {
+    const rules = await userDb(c)
+      .from('alr_rules')
+      .select('id, report_id')
+      .eq('org_id', c.var.tenant.orgId)
+      .in('id', [...new Set(ruleIds)]);
+    const byRule = new Map(((rules.data ?? []) as { id: string; report_id: string | null }[]).map((r) => [r.id, r.report_id]));
+    for (const n of items) if (n.entityId && byRule.has(n.entityId)) n.reportId = byRule.get(n.entityId) ?? null;
+  }
   return ok(c, { items, unread: items.filter((n) => !n.readAt).length });
 });
 
