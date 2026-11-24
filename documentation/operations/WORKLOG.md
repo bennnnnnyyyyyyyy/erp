@@ -11,6 +11,23 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Reports & Insights: `sql/109`, `110`, `111` applied to live
+
+**Objective.** Ben's "yes 109", "yes 110", "yes 111": put the report builder, the sales forecast and report alerts on the live database.
+
+**Actions Completed.** Read-only check first (live had 108, none of 109-111). For each migration in order: a rolled-back dry run on live
+(the file up to its `commit`, ending in `rollback`), then the real apply with `npx supabase db query --linked -f <file>` from the
+main checkout (project ggoerp), then its SQL tests on live (each rolls back). `sql/README.md` rows updated.
+
+**Database / System Result.** Applied to live: `sql/109` (check: 9 sources), `sql/110` (signed-in users run the forecast, anonymous
+not), `sql/111` (new alert columns present; users create report alerts but cannot run the job; only the service role runs `alr_run`;
+anonymous cannot create). Tests on live: 106, 107, 108, 092, and the alert tests 024, 026 and 101: all passed (rolled back).
+
+**Safety Status.** No data changed apart from the schema (tests rolled back). The Reports & Insights app is still off for existing
+companies: an owner switches it on in Settings → Apps (new companies get it with "all apps on"). The code for steps 2-5 is not pushed
+yet (Ben pushes `feat/reports`); until it is deployed, live has the database functions but no screens for them. Browser check by Ben
+still needed (list in the step 5 report).
+
 ## 2026-11-24 — Reports & Insights step 5: "alert me when" on a saved report (`sql/111`, not applied)
 
 **Objective.** Step 5 of the [Reports & Insights plan](../plans/REPORTS_INSIGHTS_PLAN.md) (section 7.5): tell people when a number on a
