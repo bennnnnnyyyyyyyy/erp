@@ -96,4 +96,17 @@ export const SCANNING_AR: Record<string, string> = {
   'Yes, remove': 'نعم، أزل',
   'Remove this file from the record? It is kept in the history.': 'إزالة هذا الملف من السجل؟ يبقى محفوظًا في السجل التاريخي.',
   'No files attached yet.': 'لا توجد ملفات مرفقة بعد.',
+  // step 2: barcodes
+  'Scan a barcode': 'مسح باركود',
+  'Starting the camera…': 'جارٍ تشغيل الكاميرا…',
+  'Hold the barcode inside the picture.': 'ضع الباركود داخل الصورة.',
+  'The camera could not start. Allow the camera in the browser, or type the barcode.':
+    'تعذّر تشغيل الكاميرا. اسمح بالكاميرا في المتصفح، أو اكتب الباركود.',
+  Barcode: 'الباركود',
+  'Or type the barcode': 'أو اكتب الباركود',
+  Use: 'استخدام',
+  'Barcode (optional)': 'الباركود (اختياري)',
+  Scan: 'مسح',
+  'No item has the barcode {code}.': 'لا يوجد صنف بالباركود {code}.',
+  'Added {item}.': 'تمت إضافة {item}.',
 };

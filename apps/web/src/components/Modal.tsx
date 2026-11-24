@@ -26,6 +26,9 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
     (items.find((el) => !el.classList.contains('icon-btn')) ?? items[0] ?? box).focus();
 
     const keys = (e: KeyboardEvent) => {
+      // A dialog opened over another (the barcode scanner over an item form): only the top one answers, so Escape closes just it.
+      const open = document.querySelectorAll('.modal');
+      if (open[open.length - 1] !== box) return;
       if (e.key === 'Escape') {
         onCloseRef.current();
         return;
