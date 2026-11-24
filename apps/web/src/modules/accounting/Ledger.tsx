@@ -195,12 +195,14 @@ export function JournalsPage() {
   );
 }
 
-type Party = { id: string; name: string };
-type DraftLine = { accountId: string; debit: string; credit: string; party: string; memo: string };
-const blankLine = (): DraftLine => ({ accountId: '', debit: '', credit: '', party: '', memo: '' });
+export type Party = { id: string; name: string };
+export type DraftLine = { accountId: string; debit: string; credit: string; party: string; memo: string };
+export const blankLine = (): DraftLine => ({ accountId: '', debit: '', credit: '', party: '', memo: '' });
+export type JournalForm = { entryDate: string; memo: string; kind: 'manual' | 'opening'; currency: string; lines: DraftLine[] };
 
-/** The journal editor: new (no id) or one's own draft. Running totals show whether it balances before saving. */
-export function JournalEditPage() {
+/** The journal editor's logic, shared by the old page (JournalEditPage) and the new-UI versions (JournalFormNew). New (no id) or
+ *  one's own draft; running totals show whether it balances before saving. Nothing is saved until save() is called. */
+export function useJournalEditor() {
   const session = useSession();
   const id = useParam('id');
   const accounts = useAccounts();
@@ -208,14 +210,11 @@ export function JournalEditPage() {
   const suppliers = useLoad(() => api<Party[]>('/v1/purchasing/suppliers').catch(() => [] as Party[]));
   const existing = useLoad(() => (id ? api<ManualJournal>(`/v1/accounting/journals/${id}`) : Promise.resolve(null)));
   const { message, busy, run } = useNotice();
-  const [form, setForm] = useState<{ entryDate: string; memo: string; kind: 'manual' | 'opening'; currency: string; lines: DraftLine[] } | null>(null);
+  const [form, setForm] = useState<JournalForm | null>(null);
   const currencyDefault = session.org?.defaultCurrency ?? 'EGP';
   const canPost = usePostsDirect();
-
-  if (!accounts.data || !customers.data || !suppliers.data || existing.loading) {
-    return <section className="page"><Loading error={accounts.error ?? existing.error} /></section>;
-  }
-  const f = form ?? (existing.data
+  const ready = Boolean(accounts.data && customers.data && suppliers.data && !existing.loading);
+  const f: JournalForm = form ?? (existing.data
     ? {
         entryDate: existing.data.entryDate, memo: existing.data.memo, kind: existing.data.kind, currency: existing.data.currency,
         lines: (existing.data.lines ?? []).map((l) => ({
@@ -224,7 +223,7 @@ export function JournalEditPage() {
         })),
       }
     : { entryDate: today(), memo: '', kind: 'manual' as const, currency: currencyDefault, lines: [blankLine(), blankLine()] });
-  const set = (patch: Partial<typeof f>) => setForm({ ...f, ...patch });
+  const set = (patch: Partial<JournalForm>) => setForm({ ...f, ...patch });
   const setLine = (i: number, patch: Partial<DraftLine>) => set({ lines: f.lines.map((l, k) => (k === i ? { ...l, ...patch } : l)) });
 
   const lines: JournalLineInput[] = f.lines
@@ -252,11 +251,20 @@ export function JournalEditPage() {
     navigate(`/accounting/journals/${r.id}`);
     return r.status === 'posted' ? trf('{number} posted.', { number: r.number }) : trf('{number} saved and waiting for approval.', { number: r.number });
   });
+  const currencies = [...new Set([currencyDefault, f.currency, ...COMMON_CURRENCIES])];
+  return {
+    id, ready, error: accounts.error ?? existing.error, existing: existing.data, accounts: accounts.data ?? [], customers: customers.data ?? [], suppliers: suppliers.data ?? [],
+    f, set, setLine, lines, dr, cr, problem, problemText, canPost, save, message, busy, currencies,
+  };
+}
 
+export function JournalEditPage() {
+  const { id, ready, error, existing, accounts, customers, suppliers, f, set, setLine, dr, cr, problem, problemText, canPost, save, message, busy, currencies } = useJournalEditor();
+  if (!ready) return <section className="page"><Loading error={error} /></section>;
   return (
     <section className="page wide">
       <p><Link to="/accounting/journals">← {tr('Manual journals')}</Link></p>
-      <h1>{id ? trf('Change draft {number}', { number: existing.data?.number ?? '' }) : tr('New manual journal')}</h1>
+      <h1>{id ? trf('Change draft {number}', { number: existing?.number ?? '' }) : tr('New manual journal')}</h1>
       <Notice message={message} />
       <div className="form-card stack">
         <div className="form-row">
@@ -269,7 +277,7 @@ export function JournalEditPage() {
           </label>
           <label>{tr('Currency')}
             <select value={f.currency} onChange={(e) => set({ currency: e.target.value })}>
-              {[...new Set([currencyDefault, f.currency, ...COMMON_CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}
+              {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
         </div>
@@ -280,14 +288,14 @@ export function JournalEditPage() {
         </tr></thead><tbody>
           {f.lines.map((l, i) => (
             <tr key={i}>
-              <td><AccountSelect accounts={accounts.data!} value={l.accountId} onChange={(v) => setLine(i, { accountId: v })} /></td>
+              <td><AccountSelect accounts={accounts} value={l.accountId} onChange={(v) => setLine(i, { accountId: v })} /></td>
               <td><input inputMode="decimal" placeholder="0.00" value={l.debit} onChange={(e) => setLine(i, { debit: e.target.value, credit: e.target.value ? '' : l.credit })} aria-label={tr('Debit')} /></td>
               <td><input inputMode="decimal" placeholder="0.00" value={l.credit} onChange={(e) => setLine(i, { credit: e.target.value, debit: e.target.value ? '' : l.debit })} aria-label={tr('Credit')} /></td>
               <td>
                 <select value={l.party} onChange={(e) => setLine(i, { party: e.target.value })} aria-label={tr('Customer or supplier (optional)')}>
                   <option value="">{tr('None')}</option>
-                  {customers.data!.length ? <optgroup label={tr('Customers')}>{customers.data!.map((c) => <option key={c.id} value={`customer:${c.id}`}>{c.name}</option>)}</optgroup> : null}
-                  {suppliers.data!.length ? <optgroup label={tr('Suppliers')}>{suppliers.data!.map((s) => <option key={s.id} value={`supplier:${s.id}`}>{s.name}</option>)}</optgroup> : null}
+                  {customers.length ? <optgroup label={tr('Customers')}>{customers.map((c) => <option key={c.id} value={`customer:${c.id}`}>{c.name}</option>)}</optgroup> : null}
+                  {suppliers.length ? <optgroup label={tr('Suppliers')}>{suppliers.map((s) => <option key={s.id} value={`supplier:${s.id}`}>{s.name}</option>)}</optgroup> : null}
                 </select>
               </td>
               <td><input value={l.memo} onChange={(e) => setLine(i, { memo: e.target.value })} aria-label={tr('Note')} /></td>
@@ -406,7 +414,9 @@ export function JournalPage() {
 
 // ------------------------------------------------------------------ trial balance and account lines
 
-export function TrialBalancePage() {
+/** The trial balance's logic, shared by the old page and the new-UI versions (TrialBalanceNew). show() loads another period;
+ *  download() saves the CSV the API makes. Only leaf (detail) accounts are added up, so groups are never counted twice. */
+export function useTrialBalance() {
   const session = useSession();
   const [from, setFrom] = useState(query('from') || firstOfYear());
   const [to, setTo] = useState(query('to') || today());
@@ -419,6 +429,22 @@ export function TrialBalancePage() {
   const leaves = (rows.data ?? []).filter((r) => r.isLeaf);
   const total = (k: 'openingMinor' | 'debitMinor' | 'creditMinor' | 'closingMinor') => leaves.reduce((s, r) => s + r[k], 0);
   const balanced = total('debitMinor') === total('creditMinor') && total('closingMinor') === 0;
+  const canShow = Boolean(from && to && to >= from && currency.length === 3);
+  const show = (next?: { from: string; to: string }) => {
+    const p = { from: next?.from ?? from, to: next?.to ?? to, currency };
+    if (next) { setFrom(p.from); setTo(p.to); }
+    setShown(p);
+    rows.reload();
+  };
+  const download = () => run(async () => {
+    await apiDownload(`/v1/accounting/trial-balance?from=${shown.from}&to=${shown.to}&currency=${shown.currency}&format=csv`, `trial-balance-${shown.from}-to-${shown.to}.csv`);
+    return tr('Downloaded.');
+  });
+  return { from, setFrom, to, setTo, currency, setCurrency, leafOnly, setLeafOnly, shown, setShown, rows, message, busy, run, list, leaves, total, balanced, canShow, show, download };
+}
+
+export function TrialBalancePage() {
+  const { from, setFrom, to, setTo, currency, setCurrency, leafOnly, setLeafOnly, shown, setShown, rows, message, busy, run, list, total, balanced } = useTrialBalance();
 
   return (
     <section className="page wide">

@@ -11,6 +11,33 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-24 — Grant's accounting screens in versions: journal entry, trial balance, VAT month (track-c, feat/bellvox-look; no SQL)
+
+**Objective.** erp-master (Ben's answer, 24 Nov): no scanning screens yet; mark every accounting screen "Needs Grant's sign-off" on the
+team page; make 2 or 3 versions of journal entry, trial balance and VAT month for Grant; then stop until Ben or Grant pick.
+
+**Actions Completed.**
+- Shared logic first (old pages keep their markup): `useJournalEditor` and `useTrialBalance` (accounting/Ledger.tsx), `useVatSummary`
+  (finance/VatSummary.tsx), `useVatMonth` (finance/VatReturnPanel.tsx).
+- New screens, new UI only (`newComponent`): `accounting/JournalFormNew.tsx` (A Dynamics journal with live totals, problems bar and
+  "Preview posting"; B two sides with a balance bar; C one sentence "from → to", split into the grid), `accounting/TrialBalanceNew.tsx`
+  (A period presets, figures strip, folding class groups; B read first; C debit/credit-balance tree), `finance/VatMonthNew.tsx` (A month
+  with Open → Closed → Paid; B numbered boxes like the return; C twelve months). Design Lab keys `journal`, `tb`, `vatmonth`.
+  Styles `accounting/acc.css` (hairlines; amounts keep their own direction inside Arabic, so a minus never jumps to the end).
+- Arabic: `lib/i18nAccountingUi.ts` (72 texts) and its test (Arabic, placeholders, no duplicate of another table, every text on the
+  three screens covered). `AR` in i18n.tsx is now exported for that test.
+- Sample books for the new UI's demo only (`lib/demoAccounting.ts`: a small Egyptian-style chart, a year of entries, VAT months closed
+  and paid, manual journals); `demo.ts` and `registry.tsx` show accounting and the VAT page in the demo only when the new UI is on. The
+  old UI and its demo are unchanged.
+- Merged origin/main (PR #117, Reports): the new menu's "Money" translation was dropped for the one Reports owns.
+- Team page (outside the repo): group "Screen 8 · Accounting (Grant signs off)" with the three questions, screenshots (English and
+  Arabic), a "Needs Grant's sign-off" mark, a "What Dynamics does" line each, and the sign-off state in Team results.
+
+**Database / System Result.** None. No SQL, no API change.
+
+**Safety Status.** tsc 0 errors (shared, api, web); vitest 87 + 793 + 210 pass; biome 0 errors on the changed files. Screens checked in
+the demo dev server (headless) in English and Arabic. Not deployed; never on main.
+
 ## 2026-11-24 — Dynamics 365 research round 2; main merged into the new UI (track-c, branch feat/bellvox-look; no SQL)
 
 **Objective.** Ben (24 Nov): study the full Dynamics 365 (Finance and Supply Chain, not Business Central) beyond the guided tours,

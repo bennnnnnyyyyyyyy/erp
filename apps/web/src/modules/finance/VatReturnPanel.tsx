@@ -15,7 +15,8 @@ import { AccountSelect } from '../accounting/common';
 // and input VAT cleared to the VAT settlement account) that someone else approves, or that the owner or head accountant posts at once.
 // Payments to the tax authority are journals too. Everything can be reversed like any journal.
 
-export function VatReturnPanel({ month }: { month: string }) {
+/** Closing a VAT month and paying it: the logic shared by this panel and the new-UI "VAT month" versions (VatMonthNew). */
+export function useVatMonth(month: string) {
   const session = useSession();
   const canPostDirect = hasPermission(session.permissions, 'accounting.journal.post_direct');
   const canCreate = hasPermission(session.permissions, 'accounting.journal.create');
@@ -27,11 +28,8 @@ export function VatReturnPanel({ month }: { month: string }) {
   const [payOn, setPayOn] = useState(() => todayIn());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-
-  if (m.error) return <p className="muted small">{m.error}</p>;
   const v = m.data;
-  if (!v) return null;
-  const money = (x: number) => formatMoney({ amountMinor: x, currency: v.currency });
+  const money = (x: number) => formatMoney({ amountMinor: x, currency: v?.currency ?? session.org?.defaultCurrency ?? 'EGP' });
   const run = async (fn: () => Promise<string>) => {
     setBusy(true);
     setMessage(null);
@@ -44,8 +42,34 @@ export function VatReturnPanel({ month }: { month: string }) {
       setBusy(false);
     }
   };
-  const live = v.period && (v.period.journalStatus === 'draft' || v.period.journalStatus === 'posted') ? v.period : null;
+  const live = v?.period && (v.period.journalStatus === 'draft' || v.period.journalStatus === 'posted') ? v.period : null;
   const leafAccounts = (accounts.data ?? []).filter((a) => a.active !== false);
+  const canCloseNow = Boolean(v && v.ended && (v.ledgerOutputMinor !== 0 || v.ledgerInputMinor !== 0));
+  const close = () =>
+    run(async () => {
+      await api(`/v1/accounting/vat-months/${month.slice(0, 7)}/close`, { method: 'POST', body: JSON.stringify({ post: canPostDirect && postNow }) });
+      return canPostDirect && postNow ? tr('Month closed.') : tr('Closing journal saved for approval.');
+    });
+  const pay = () =>
+    run(async () => {
+      if (!live) return '';
+      const amountMinor = payAmount.trim() ? Math.round(Number(payAmount) * 100) : live.leftMinor;
+      await api(`/v1/accounting/vat-periods/${live.id}/payments`, {
+        method: 'POST',
+        body: JSON.stringify({ accountId: payFrom, amountMinor, paidOn: payOn, post: canPostDirect && postNow }),
+      });
+      setPayAmount('');
+      return canPostDirect && postNow ? tr('Payment recorded.') : tr('Payment journal saved for approval.');
+    });
+  return { m, v, money, canPostDirect, canCreate, postNow, setPostNow, payFrom, setPayFrom, payAmount, setPayAmount, payOn, setPayOn, busy, message, run, live, leafAccounts, canCloseNow, close, pay };
+}
+
+export function VatReturnPanel({ month }: { month: string }) {
+  const session = useSession();
+  const { m, v, money, canPostDirect, canCreate, postNow, setPostNow, payFrom, setPayFrom, payAmount, setPayAmount, payOn, setPayOn, busy, message, run, live, leafAccounts } = useVatMonth(month);
+
+  if (m.error) return <p className="muted small">{m.error}</p>;
+  if (!v) return null;
 
   return (
     <div className="form-card stack">

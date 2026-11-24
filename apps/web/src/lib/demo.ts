@@ -1,6 +1,8 @@
 import { handleInventory, ACTOR_NAMES } from './demoInventory';
 import { handleTrade } from './demoTrade';
 import { demoDocSettings } from './demoPrint';
+import { handleAccounting } from './demoAccounting';
+import { newUi } from './uiMode';
 import { MODULES, type AuditEntry, type InviteResult, type Member, type ModuleStatus, type OrgSettings, type Role } from '@erp/shared';
 
 // Demo mode (`npm run dev:demo -w apps/web`): the web app runs on sample data held in memory, with no
@@ -48,6 +50,8 @@ const DEMO_MODULES: Omit<ModuleStatus, 'enabled'>[] = [
 // entries with the same key broke Settings > Apps; found by the smoke test).
 const ALL_DEMO_MODULES = [...MODULES.filter((m) => !DEMO_MODULES.some((d) => d.key === m.key)), ...DEMO_MODULES];
 const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales']);
+// New UI only (24 Nov): sample books for the accounting screens Grant signs off (lib/demoAccounting.ts). The old UI's demo is unchanged.
+if (newUi) for (const k of ['accounting', 'finance']) enabledModules.add(k);
 
 let auditId = 0;
 const audit: (AuditEntry & { before: unknown; after: unknown })[] = [];
@@ -70,7 +74,10 @@ function body<T>(init: RequestInit): T {
 export async function demoApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   await new Promise((r) => setTimeout(r, 120)); // so loading states are visible
   const method = (init.method ?? 'GET').toUpperCase();
-  const [pathname] = path.split('?');
+  const [pathname, search] = path.split('?');
+  if (newUi && /^\/v1\/(accounting(\/|$)|finance\/vat-summary$)/.test(pathname ?? '')) {
+    return structuredClone(handleAccounting(method, pathname ?? '', new URLSearchParams(search ?? ''), body<Record<string, unknown>>(init), demoActor.id)) as T;
+  }
   const area0 = /^\/v1\/(inventory|purchasing|sales)(?:\/|$)/.exec(pathname ?? '')?.[1] as 'inventory' | 'purchasing' | 'sales' | undefined;
   if (area0) {
     const rest = (pathname ?? '').replace(/^\/v1\/[a-z]+\/?/, '').split('/').filter(Boolean);

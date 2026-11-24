@@ -1,0 +1,119 @@
+/* Accounting screens in the new UI (journal entry, trial balance, VAT month; Grant signs off). Seamless: hairlines, no boxes.
+   Logical properties only (RTL-safe); colours from theme.css tokens (light and dark). Used with ../sales/pagekit.css. */
+.ac .back-link { align-self: flex-start; }
+.ac-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--muted-foreground); margin: 0; }
+.ac-field > span b { color: var(--primary-text); }
+.ac-field input, .ac-field select { margin: 0; }
+.ac-field input[aria-invalid='true'] { border-color: color-mix(in srgb, var(--primary) 45%, var(--input)); }
+.ac-general { display: grid; grid-template-columns: repeat(3, minmax(0, 12rem)) minmax(0, 1fr); gap: 0.75rem 1.25rem; align-items: end; }
+.ac-wide { grid-column: 1 / -1; }
+.ac-general .ac-wide:nth-child(4) { grid-column: auto; }
+.ac-general-c { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); }
+.ac-lines-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.ac-grid td { padding: 0.35rem 0.5rem; vertical-align: top; }
+.ac-grid tbody tr { cursor: default; }
+.ac-grid tbody tr:hover { background: none; }
+.ac-grid input, .ac-grid select { margin: 0; width: 100%; }
+.ac-acct { min-width: 16rem; }
+.ac-amt { text-align: end; font-variant-numeric: tabular-nums; min-width: 7rem; }
+.ac-x { all: unset; cursor: pointer; padding: 0.4rem 0.5rem; color: var(--muted-foreground); border-radius: 6px; }
+.ac-x:hover { background: var(--accent); color: var(--foreground); }
+.ac-x:focus-visible { outline: 2px solid var(--ring); }
+.ac-totals { position: sticky; inset-block-end: 0; display: flex; justify-content: flex-end; gap: 2.5rem; padding: 0.75rem 0.5rem; background: var(--background); border-block-start: 2px solid var(--foreground); font-variant-numeric: tabular-nums; z-index: 1; }
+.ac-totals div { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; }
+.ac-totals span { font-size: 0.8rem; color: var(--muted-foreground); }
+.ac-totals strong { font-size: 1.1rem; }
+.ac-totals.off div:last-child strong { color: var(--primary-text); }
+.ac-msgbar { margin: 0; padding: 0.6rem 0.9rem; border-inline-start: 3px solid var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); font-size: 0.92rem; }
+.ac-msgbar.bad { border-inline-start-color: var(--primary); background: var(--primary-soft); }
+.ac-msgbar ul { margin: 0.25rem 0 0; padding-inline-start: 1.1rem; }
+.ac-voucher { display: flex; flex-direction: column; gap: 0.5rem; border-block: 1px solid var(--border); padding-block: 0.75rem; }
+.ac-voucher tbody tr { cursor: default; }
+.ac-indent { padding-inline-start: 2.2rem !important; }
+.ac-foot { position: sticky; inset-block-end: 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding-block: 0.75rem; background: var(--background); border-block-start: 1px solid var(--border); }
+.ac-foot .pk-muted { margin: 0; }
+
+/* B: two sides */
+.ac-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-block: 1px solid var(--border); }
+.ac-side { display: flex; flex-direction: column; gap: 0.6rem; padding: 1rem 1.25rem 1rem 0; }
+.ac-side + .ac-side { border-inline-start: 1px solid var(--border); padding-inline: 1.25rem 0; }
+.ac-side h2 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.ac-side h2 .pk-muted { font-size: 0.85rem; font-weight: 400; }
+.ac-side-row { display: grid; grid-template-columns: minmax(0, 1fr) 8rem auto; gap: 0.4rem; align-items: start; }
+.ac-side-row input { margin: 0; }
+.ac-more { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted-foreground); }
+.ac-more summary { cursor: pointer; width: max-content; }
+.ac-more-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-block-start: 0.35rem; }
+.ac-more-body select, .ac-more-body input { margin: 0; }
+.ac-side-total { margin: auto 0 0; padding-block-start: 0.5rem; border-block-start: 1px solid var(--border); text-align: end; font-variant-numeric: tabular-nums; }
+.ac-scale { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; }
+.ac-scale-bar { display: flex; justify-content: flex-end; height: 10px; background: color-mix(in srgb, var(--foreground) 6%, transparent); border-radius: 5px; overflow: hidden; }
+.ac-scale-bar i { display: block; height: 100%; background: var(--foreground); }
+.ac-scale-cr { justify-content: flex-start; }
+.ac-scale strong { text-align: center; }
+
+/* C: simple sentence */
+.ac-simple { max-width: 980px; }
+.ac-sentence { display: grid; grid-template-columns: minmax(0, 11rem) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 0.75rem; align-items: end; padding-block: 1rem; border-block: 2px solid var(--foreground); }
+.ac-word { padding-block-end: 0.6rem; font-size: 1.1rem; color: var(--muted-foreground); }
+.ac-big { font-size: 1.4rem; font-weight: 600; }
+.ac-plain { margin: 0; font-size: 1.1rem; }
+
+/* trial balance */
+.ac-check { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.9rem; cursor: pointer; }
+.ac-check input { margin: 0; width: auto; }
+.ac-balance { margin: 0; font-size: 0.9rem; }
+.ac-balance.ok, .ac-ok { color: var(--success-foreground); }
+.ac-balance.bad, .ac-bad { color: var(--primary-text); font-weight: 600; }
+.ac-grouprow td { font-weight: 600; }
+.ac-totalrow th, .ac-totalrow td { font-weight: 700; border-block-start: 2px solid var(--foreground); }
+.ac-moved { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--border); }
+.ac-moved li button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; gap: 1rem; width: 100%; padding: 0.6rem 0.25rem; border-block-end: 1px solid var(--border); }
+.ac-moved li button:hover { background: var(--accent); }
+.ac-moved li button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.ac-treebar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ac-tree tbody tr { cursor: default; }
+.ac-twisty, .ac-leaf { all: unset; cursor: pointer; }
+.ac-twisty span { display: inline-block; width: 1rem; color: var(--muted-foreground); }
+.ac-leaf { padding-inline-start: 1rem; }
+.ac-leaf:hover, .ac-twisty:hover { color: var(--primary-text); }
+.ac-twisty:focus-visible, .ac-leaf:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* VAT month */
+.ac-monthpick { display: flex; align-items: center; gap: 0.5rem; }
+.ac-monthpick h1 { min-width: 12ch; }
+[dir='rtl'] .ac-flip { display: inline-block; transform: scaleX(-1); }
+.ac-vat-act { display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; padding-block: 0.75rem; border-block: 1px solid var(--border); }
+.ac-vat-act.big { flex-direction: column; align-items: stretch; border: 0; }
+.ac-vat-act .pk-muted { align-self: center; }
+.ac-return { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1.5rem; align-items: start; }
+.ac-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.ac-boxno { width: 3rem; font-weight: 700; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.ac-boxhead th { background: none; padding-block-start: 1.1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.ac-return-side { position: sticky; inset-block-start: 1rem; }
+.ac-showall { margin-inline-start: 1rem; font-size: 0.85rem; }
+.ac-year tbody tr.ac-yeardetail { cursor: default; background: none; }
+.ac-yeardetail td { padding-block: 0.25rem 1rem; }
+.ac-yeardl { flex-direction: row; gap: 2rem; flex-wrap: wrap; }
+.ac-status { font-size: 0.85rem; }
+.ac-status.s2 { color: var(--success-foreground); }
+.ac-status.late { color: var(--primary-text); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .ac-general, .ac-general-c { grid-template-columns: 1fr 1fr; }
+  .ac-sides, .ac-return { grid-template-columns: 1fr; }
+  .ac-side + .ac-side { border-inline-start: 0; border-block-start: 1px solid var(--border); padding-inline: 0; }
+  .ac-side { padding-inline: 0; }
+  .ac-sentence { grid-template-columns: 1fr; }
+  .ac-word { padding: 0; }
+  .ac-totals { gap: 1.25rem; }
+}
+@media print { .pk-bar, .ac-treebar, .ac-monthpick button { display: none; } }
+.ac-add { all: unset; cursor: pointer; align-self: flex-start; font-size: 0.9rem; font-weight: 600; color: var(--primary-text); padding: 0.35rem 0; }
+.ac-add:hover { text-decoration: underline; }
+.ac-add:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ac-totals, .ac-foot { background: var(--card); }
+.ac-payfrom { min-width: 16rem; }
+/* Amounts keep their own direction inside Arabic text: "-EGP 118,700.00" never shows its minus at the far end (mixed-direction
+   text, a known right-to-left problem; Dynamics docs flag the same). Alignment still follows the page. */
+.ac .pk-num, .ac .pk-strip strong, .ac-totals strong, .ac-side-total strong, .ac-plain, .ac .pk-dl dd { unicode-bidi: plaintext; }

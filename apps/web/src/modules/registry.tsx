@@ -100,6 +100,10 @@ const JournalsPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalsPag
 const JournalEditPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalEditPage');
 const JournalPage = lazyNamed(() => import('./accounting/Ledger'), 'JournalPage');
 const TrialBalancePage = lazyNamed(() => import('./accounting/Ledger'), 'TrialBalancePage');
+// New UI, Grant's accounting screens (24 Nov 2026): versions for Grant to sign off (lib/designLab.ts 'journal', 'tb', 'vatmonth').
+const TrialBalanceNew = lazyNamed(() => import('./accounting/TrialBalanceNew'), 'TrialBalanceNew');
+const JournalFormNew = lazyNamed(() => import('./accounting/JournalFormNew'), 'JournalFormNew');
+const VatMonthNew = lazyNamed(() => import('./finance/VatMonthNew'), 'VatMonthNew');
 const AccountLinesPage = lazyNamed(() => import('./accounting/Ledger'), 'AccountLinesPage');
 const IncomeStatementPage = lazyNamed(() => import('./accounting/Statements'), 'IncomeStatementPage');
 const BalanceSheetPage = lazyNamed(() => import('./accounting/Statements'), 'BalanceSheetPage');
@@ -278,13 +282,17 @@ const MESSAGING_APP: AppDef = {
   ],
 };
 
+/** Pages the new UI's demo can show from its sample books (lib/demoAccounting.ts). */
+const DEMO_BOOKS = new Set(['finance/vat', 'accounting', 'accounting/trial-balance', 'accounting/entries', 'accounting/entries/:id', 'accounting/journals',
+  'accounting/journals/new', 'accounting/journals/:id', 'accounting/journals/:id/edit', 'accounting/accounts/:id']);
 export const APPS: AppDef[] = [
   INVENTORY_APP,
   ...(demoMode ? [] : [TASKS_APP, MESSAGING_APP]),
   PURCHASING_APP,
   ...(demoMode ? [DEMO_SALES_APP] : [SALES_APP]),
-  // Real API only (no sample-data version). Owner and admin only.
-  ...(demoMode ? [] : [{
+  // Real API only (no sample-data version). Owner and admin only. In the new UI's demo, only the pages with sample books
+  // (lib/demoAccounting.ts: Grant's accounting screens, 24 Nov); the old UI's demo has neither app.
+  ...(demoMode && !newUi ? [] : [{
     key: 'finance', module: 'finance', name: 'Finance', description: 'Expenses, payments and profit and loss',
     suite: 'Finance', basePath: '/finance', pages: [
       { path: '', label: 'Expenses', permission: 'finance.reports.view', component: ExpensesPage },
@@ -293,34 +301,34 @@ export const APPS: AppDef[] = [
       { path: '/payments', label: 'Payments', permission: 'finance.reports.view', component: PaymentsPage },
       { path: '/payments/:id', label: 'Payment', permission: 'finance.reports.view', component: PaymentPage, nav: false, parent: '/payments' },
       { path: '/statements', label: 'Statement of account', permission: 'finance.statements.view', component: StatementsPage },
-      { path: '/vat', label: 'VAT summary', permission: 'finance.reports.view', component: VatSummaryPage },
+      { path: '/vat', label: 'VAT summary', permission: 'finance.reports.view', component: VatSummaryPage, newComponent: VatMonthNew },
       // Home tile targets (UX audit 20 Nov, phase 0)
       { path: '/owed', label: 'Money owed', permission: 'finance.reports.view', component: MoneyOwedPage },
       { path: '/product-sales', label: 'Sales by product', permission: 'finance.reports.view', component: ProductSalesPage },
-    ],
+    ].filter((p) => !demoMode || DEMO_BOOKS.has(`finance${p.path}`)),
   } satisfies AppDef]),
   // Accounting (documentation/plans/ACCOUNTING_PLAN.md section 6). Real API only. Owner and admin only. Set-up and the chart show
   // before accounting is on, so the company can prepare and switch on; the rest needs it on.
-  ...(demoMode ? [] : [{
+  ...(demoMode && !newUi ? [] : [{
     key: 'accounting', module: 'accounting', name: 'Accounting', description: 'Chart of accounts, journal, manual entries and trial balance',
     suite: 'Finance', basePath: '/accounting', pages: [
-      { path: '', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage },
-      { path: '/trial-balance', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage, nav: false, parent: '' },
+      { path: '', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage, newComponent: TrialBalanceNew },
+      { path: '/trial-balance', label: 'Trial balance', permission: 'accounting.ledger.view', component: TrialBalancePage, newComponent: TrialBalanceNew, nav: false, parent: '' },
       { path: '/income-statement', label: 'Income statement', permission: 'accounting.ledger.view', component: IncomeStatementPage },
       { path: '/balance-sheet', label: 'Balance sheet', permission: 'accounting.ledger.view', component: BalanceSheetPage },
       { path: '/statement-lines', label: 'Statement lines', permission: 'accounting.ledger.view', component: StatementLinesPage, nav: false, parent: '/income-statement' },
       { path: '/entries', label: 'Journal', permission: 'accounting.ledger.view', component: EntriesPage },
       { path: '/entries/:id', label: 'Journal entry', permission: 'accounting.ledger.view', component: EntryPage, nav: false, parent: '/entries' },
       { path: '/journals', label: 'Manual journals', permission: 'accounting.ledger.view', component: JournalsPage },
-      { path: '/journals/new', label: 'New manual journal', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
+      { path: '/journals/new', label: 'New manual journal', permission: 'accounting.journal.create', component: JournalEditPage, newComponent: JournalFormNew, nav: false, parent: '/journals' },
       { path: '/journals/:id', label: 'Manual journal', permission: 'accounting.ledger.view', component: JournalPage, nav: false, parent: '/journals' },
-      { path: '/journals/:id/edit', label: 'Change draft', permission: 'accounting.journal.create', component: JournalEditPage, nav: false, parent: '/journals' },
+      { path: '/journals/:id/edit', label: 'Change draft', permission: 'accounting.journal.create', component: JournalEditPage, newComponent: JournalFormNew, nav: false, parent: '/journals' },
       { path: '/setup', label: 'Accounting setup', permission: 'accounting.ledger.view', component: AccountingSetupPage, beforeEnabled: true },
       { path: '/accounts', label: 'Chart of accounts', permission: 'accounting.ledger.view', component: ChartPage, beforeEnabled: true },
       { path: '/accounts/:id', label: 'Account', permission: 'accounting.ledger.view', component: AccountLinesPage, nav: false, parent: '/accounts' },
       // Decision D8 (9 Nov 2026): the stock value check has its own page; only the owner or head accountant can post from it.
       { path: '/stock-value', label: 'Stock value', permission: 'accounting.ledger.view', component: StockValuePage },
-    ],
+    ].filter((p) => !demoMode || DEMO_BOOKS.has(`accounting${p.path}`)),
   } satisfies AppDef]),
   // Treasury (documentation/plans/TREASURY_PLAN.md §6). Real API only. Owner and admin only; needs accounting on.
   ...(demoMode ? [] : [{

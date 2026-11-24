@@ -58,6 +58,10 @@ export const GROUPS: Group[] = [
   { key: 'clerk', section: 'Screens being decided', label: 'Send goods out (phone)', default: 'A', options: [c('A', 'A: Phone form + bottom bar'), c('B', 'B: Steps'), c('C', 'C: Items first, + / −')] },
   { key: 'phone', section: 'Screens being decided', label: 'Phone menu (phone width only)', default: 'A', options: [c('A', 'A: Drawer from the menu button'), c('B', 'B: Bottom tab bar'), c('C', 'C: Swipe rows of sections and pages')] },
   { key: 'confirm', section: 'Screens being decided', label: 'Confirm a risky action (e.g. Cancel order)', default: 'A', options: [c('A', 'A: Ask in place'), c('B', 'B: Dialog'), c('C', 'C: Undo for 6 seconds')] },
+  // Grant's accounting screens (erp-master, 24 Nov): Grant signs off on these.
+  { key: 'journal', section: 'Screens being decided', label: 'Journal entry (Accounting > Manual journals > New)', default: 'A', options: [c('A', 'A: Dynamics journal, preview posting'), c('B', 'B: Two sides, debit and credit'), c('C', 'C: Simple, from one account to another')] },
+  { key: 'tb', section: 'Screens being decided', label: 'Trial balance (Accounting)', default: 'A', options: [c('A', 'A: Dynamics report, folding groups'), c('B', 'B: Read first'), c('C', 'C: Accountant’s sheet, tree')] },
+  { key: 'vatmonth', section: 'Screens being decided', label: 'VAT month (Money > VAT summary)', default: 'A', options: [c('A', 'A: Dynamics period, status path'), c('B', 'B: Like the return, numbered boxes'), c('C', 'C: Twelve months in one list')] },
   { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------

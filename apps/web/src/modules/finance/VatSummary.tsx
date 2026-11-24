@@ -36,13 +36,15 @@ const DOC_LINK: Record<string, (id: string) => string | null> = {
 };
 const DOC_TYPE: Record<string, string> = { customer_invoice: 'Sales invoice', sales_note: 'Credit or debit note', supplier_invoice: 'Purchase invoice', expense: 'Expense' };
 
-function monthOf(day: string) {
+export function monthOf(day: string) {
   const [y, m] = day.split('-').map(Number) as [number, number];
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return { from: `${y}-${String(m).padStart(2, '0')}-01`, to: `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}` };
 }
+export { WARNING as VAT_WARNING, SALES_KIND, PURCHASE_KIND, DOC_LINK, DOC_TYPE };
 
-export function VatSummaryPage() {
+/** The VAT summary's logic, shared by the old page and the new-UI "VAT month" versions (VatMonthNew). */
+export function useVatSummary() {
   const session = useSession();
   const [range, setRange] = useState(() => monthOf(todayIn()));
   const [shown, setShown] = useState(range);
@@ -57,6 +59,29 @@ export function VatSummaryPage() {
   const pick = (k: string) => setSection(section === k ? null : k);
   // closing (part 4) works on whole calendar months only
   const wholeMonth = shown.from.endsWith('-01') && monthOf(shown.from).to === shown.to;
+  /** Show another period; with a day, the whole calendar month that holds it. */
+  const show = (next?: { from: string; to: string }) => {
+    const r = next ?? range;
+    setRange(r);
+    setShown(r);
+    setSection(null);
+    data.reload();
+  };
+  const download = async () => {
+    try {
+      await apiDownload(`/v1/finance/vat-summary?from=${shown.from}&to=${shown.to}&format=csv`, `vat-summary-${shown.from}-to-${shown.to}.csv`);
+      setMessage(tr('Downloaded.'));
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+  };
+  const canClose = wholeMonth && Boolean(s?.vatRegistered) && session.modules.includes('accounting') && hasPermission(session.permissions, 'accounting.ledger.view');
+  return { range, setRange, shown, setShown, section, setSection, message, setMessage, data, s, cur, money, key, docs, pick, wholeMonth, show, download, canClose };
+}
+
+export function VatSummaryPage() {
+  const session = useSession();
+  const { range, setRange, shown, setShown, section, setSection, message, setMessage, data, s, money, key, docs, pick, wholeMonth } = useVatSummary();
 
   return (
     <section className="page wide">
