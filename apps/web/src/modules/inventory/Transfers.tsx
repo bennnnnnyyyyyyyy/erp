@@ -12,6 +12,7 @@ import type { DemoTransfer, InTransitRow, StockRow, TransferStatus } from '../..
 import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { usePeople } from '../../lib/people';
 import { BackLink, Link, navigate, useParam } from '../../lib/router';
+import { readTransferLink } from '../../lib/orderLink';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { useCatalog } from './Inventory';
@@ -120,10 +121,12 @@ export function TransfersList() {
 export function NewTransfer() {
   const cat = useCatalog();
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  // Filled in from a sales order's stock shortage ("Move from <warehouse>"): the person checks it and submits.
+  const [link] = useState(() => readTransferLink(window.location.search));
+  const [from, setFrom] = useState(link.fromId);
+  const [to, setTo] = useState(link.toId);
   const [reason, setReason] = useState('');
-  const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
+  const [lines, setLines] = useState([{ itemId: link.itemId, qty: link.qty || '1' }]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -163,7 +166,10 @@ export function NewTransfer() {
           <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
         </div>
-        {same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
+        {/* Dead-ends audit: with one warehouse there is nothing to move between; say so and where warehouses are added. */}
+        {warehouses.length < 2 ? (
+          <p className="error small">{tr('You need a second warehouse to move stock.')} <Link to="/inventory/stock">{tr('Stock on hand')}</Link></p>
+        ) : same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
         <strong>{tr('Items')}</strong>
         {lines.map((l, i) => (
           <div className="form-row" key={i}>

@@ -15,6 +15,7 @@ import { useSession } from '../session';
 import { FirstRunLanguage } from './LanguageChooser';
 import { LowStockPopup } from './LowStockPopup';
 import { NotificationBell } from './NotificationBell';
+import { NextStepBar } from './NextStepBar';
 
 /** Two letters for the avatar: from the person's name when there is one ("Chris Johnson" -> CJ), else from the email. */
 function initials(email: string, name?: string | null): string {
@@ -147,6 +148,7 @@ export function Shell({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; onS
           {dark ? '☀' : '☾'}
         </button>
         <NotificationBell canOpen={(p) => !!resolveRoute(p.split("?")[0] ?? p, apps)?.page} />
+        <NextStepBar canOpen={(p) => !!resolveRoute(p.split("?")[0] ?? p, apps)?.page} />
         <LowStockPopup />
         <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
       </header>

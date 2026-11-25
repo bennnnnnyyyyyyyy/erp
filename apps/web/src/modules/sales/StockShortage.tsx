@@ -1,6 +1,6 @@
 import { hasPermission } from '@erp/shared';
 import { api } from '../../lib/api';
-import { orderLink } from '../../lib/orderLink';
+import { orderLink, transferLink } from '../../lib/orderLink';
 import { formatQty } from '../../lib/numbers';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
@@ -40,7 +40,7 @@ export function StockShortage({ lines, warehouseId, itemName, warehouseName }: {
             {canMove && s.elsewhere.length > 0 && (
               <>
                 {canOrder ? ' · ' : ''}
-                <Link to="/inventory/transfers/new">
+                <Link to={transferLink(s.itemId, Math.min(s.short, s.elsewhere[0]?.available ?? 0), s.elsewhere[0]?.warehouseId ?? '', warehouseId)}>
                   {trf('Move from {warehouse} ({qty} available)', { warehouse: warehouseName(s.elsewhere[0]?.warehouseId ?? ''), qty: formatQty(s.elsewhere[0]?.available ?? 0) })}
                 </Link>
               </>

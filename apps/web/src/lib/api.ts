@@ -1,6 +1,7 @@
 import type { ApiResponse } from '@erp/shared';
 import { demoApi, demoMode } from './demo';
 import { currentLanguage, tr, trf } from './i18n';
+import { NEXT_STEP_EVENT, nextStepFor } from './nextStep';
 import { supabase } from './supabase';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
@@ -77,16 +78,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 /**
- * A blocked action says what unblocks it (dead-ends audit, 25 Nov 2026): the server's message says what is wrong; this adds who can
- * change it and where. Only for blocks that a setting removes. The texts below are listed for the Arabic check (tr literal calls).
+ * A blocked action says what unblocks it (lib/nextStep.ts, one table for every error): the sentence is added to the message every
+ * screen shows, and a page that fixes it is offered once in the Shell's bar (components/NextStepBar.tsx).
  */
-const NEXT_STEP: Record<string, () => string> = {
-  period_locked: () => tr('Change the date, or ask an owner to move the lock date (Settings → General).'),
-  module_disabled: () => tr('An owner can switch the app on in Settings → Apps.'),
-};
 export function withNextStep(message: string, code?: string): string {
-  const next = code ? NEXT_STEP[code] : undefined;
-  return next ? `${message.replace(/\.$/, '')}. ${next()}` : message;
+  const next = nextStepFor(code);
+  if (!next) return message;
+  if (next.to && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(NEXT_STEP_EVENT, { detail: next }));
+  return `${message.replace(/\.$/, '')}. ${tr(next.text)}`;
 }
 
 /**

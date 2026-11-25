@@ -1481,4 +1481,17 @@ export const SCREENS_AR: Record<string, string> = {
   " is approved. The warehouse now issues the goods; then the order can be invoiced.": " تمت الموافقة عليه. يصرف المستودع البضاعة الآن، ثم يمكن فوترة الأمر.",
   "Change the date, or ask an owner to move the lock date (Settings → General).": "غيّر التاريخ، أو اطلب من المالك تغيير تاريخ الإقفال (الإعدادات ← عام).",
   "An owner can switch the app on in Settings → Apps.": "يمكن للمالك تفعيل التطبيق من الإعدادات ← التطبيقات.",
+  // What to do when an action is blocked (lib/nextStep.ts)
+  "Choose the missing account in Accounting setup.": "اختر الحساب الناقص في إعداد المحاسبة.",
+  "Enter the missing receipt costs in Accounting setup.": "أدخل تكاليف الاستلام الناقصة في إعداد المحاسبة.",
+  "Choose a cash box or bank account, or add one in Treasury.": "اختر خزنة أو حسابًا بنكيًا، أو أضف واحدًا في الخزينة.",
+  "Receive goods, or move stock here from another warehouse.": "استلم بضاعة، أو انقل مخزونًا إلى هنا من مستودع آخر.",
+  "Check the batches: quarantined and expired ones cannot move.": "راجع التشغيلات: المحجوزة والمنتهية لا يمكن نقلها.",
+  "Check the item's storage needs and the warehouse's storage places.": "راجع متطلبات تخزين الصنف وأماكن التخزين في المستودع.",
+  "An owner chooses the default VAT rate in Settings.": "يختار المالك نسبة ضريبة القيمة المضافة الافتراضية في الإعدادات.",
+  "Deliver the order first: its stock request must be issued.": "سلّم الأمر أولًا: يجب صرف طلب المخزون الخاص به.",
+  "Receive the goods on the purchase order first.": "استلم البضاعة على أمر الشراء أولًا.",
+  "Another owner or admin must approve it.": "يجب أن يوافق عليه مالك أو مدير آخر.",
+  "Enter a counted quantity on every line, then try again.": "أدخل الكمية المعدودة في كل سطر، ثم حاول مرة أخرى.",
+  "You need a second warehouse to move stock.": "تحتاج إلى مستودع ثانٍ لنقل المخزون.",
 };
