@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   DOC_LANGUAGES,
   DOC_LAYOUTS,
@@ -20,7 +20,8 @@ import { BackLink as HistoryBackLink, Link, useParam } from '../../../lib/router
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 import { PrintDocument } from './PrintDocument';
-import { pdfName, saveBlob, sheetToPdf } from './pdf';
+import { docFileBase, pdfFileName } from './docFileName';
+import { saveBlob, sheetToPdf } from './pdf';
 import { emailSubject, looksLikeEmail, mailtoUrl, sendMessage, waPhone, whatsappUrl } from './sendText';
 
 // Print, download and send one document (step 1c). Drafts print with the DRAFT mark and cannot be sent. An issued invoice or an approved
@@ -54,6 +55,16 @@ export function InvoicePrintPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  // The document's own name ("INV-2026-00001 - Nile Foods"): the page title, which the browser's "Save as PDF" offers, and the PDF file name.
+  const fileBase = data.data ? docFileBase(data.data.document, data.data.customer?.name, language ?? data.data.settings.language) : null;
+  useEffect(() => {
+    if (!fileBase) return;
+    const before = document.title;
+    document.title = fileBase;
+    return () => {
+      document.title = before;
+    };
+  }, [fileBase]);
 
   if (data.error) return <section className="page"><BackLink type={type} id={id} invoiceId={null} /><Loading error={data.error} /></section>;
   if (!data.data) return <section className="page"><Loading /></section>;
@@ -101,6 +112,7 @@ export function InvoicePrintPage() {
   const sheet = () => sheetRef.current?.querySelector<HTMLElement>('.print-sheet') ?? null;
 
   const doPrint = () => run('print', async () => {
+    if (fileBase) document.title = fileBase;
     window.print();
     await record('print');
     return null;
@@ -108,7 +120,7 @@ export function InvoicePrintPage() {
   const doPdf = () => run('pdf', async () => {
     const el = sheet();
     if (!el) throw new Error(tr('This layout cannot be printed yet: fill in what is missing first.'));
-    saveBlob(await sheetToPdf(el), pdfName(d.document.number));
+    saveBlob(await sheetToPdf(el), pdfFileName(d.document, d.customer?.name, lang));
     await record('download');
     return tr('PDF downloaded.');
   });

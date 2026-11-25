@@ -50,5 +50,3 @@ export function saveBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** A safe file name from a document number: "INV-2026-00001.pdf". */
-export const pdfName = (number: string | null): string => `${(number ?? 'DRAFT').replace(/[^A-Za-z0-9._-]/g, '_')}.pdf`;

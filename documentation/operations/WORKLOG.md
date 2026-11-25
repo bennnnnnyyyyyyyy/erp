@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Reports tidy-up (old UI) and document file names (no migration)
+
+**Objective.** Ben: "ui very bad and everything feels like you made a canvas and spit all options on it, please fix before i test";
+"the name of the printed pdf is stupid".
+
+**Actions Completed.**
+- Library (`modules/reports/Library.tsx`): a calm list by area (name and one line, small "Ready-made" label), no tiles or icons; "New
+  report" a real button beside the title (the old link-button showed as a dark bar without text).
+- Builder, saved and ready-made reports (`Builder.tsx`): title with Save and a "More" menu (Excel, PDF, Print, Alert me when, Delete;
+  new `components/MoreMenu.tsx`); one sentence "From [data] show [what] by [split] for [period]"; one "Options" control (count, and a
+  one-line summary when closed) holding filters, also show, split again, order and rows, chart type. Delete confirms in a line.
+- Sales forecast (`SalesForecast.tsx`): title with More (Excel, Print); "Forecast sales by [..] for [..]".
+- Sample-data build: a made-up sales forecast (`lib/demoReports.ts`, query passed through in `lib/demo.ts`), so the page can be seen.
+- File names (`sales/print/docFileName.ts`, tests): "INV-2026-00001 - <customer>.pdf"; "Credit note …" / "إشعار دائن …" and "Debit
+  note …" / "إشعار مدين …" by document language; "Draft - <customer>"; Windows-safe (no <>:"/\|?*, control characters, trailing dot
+  or space, reserved names; Arabic kept). The print page's title is the same name (the browser's "Save as PDF" uses it); the public
+  invoice page too. Report exports use the same safe name.
+- Arabic for every new text (`i18nReports.ts`).
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 235 passed (4 new); print and smoke browser tests 10 passed; biome 0 errors. Before/after
+pictures (sample build, English and Arabic, desktop and phone): `.temp/reports-declutter/`. PDF download checked in the sample build:
+"INV-2026-00001 - شركة النيل للتوزيع.pdf". Not checked on live.
+
 ## 2026-11-25 — Printed documents: the logo sits above the company name (no migration)
 
 **Objective.** Ben (screenshot, 25 Nov): a wide logo beside the company name squeezed the name and address into a strip one or two
