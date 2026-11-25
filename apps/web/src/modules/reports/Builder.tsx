@@ -57,13 +57,13 @@ import { XLSX_TYPE, xlsxBytes } from './xlsx';
 // The settings are one sentence (Ben, 24 Nov 2026, option A): "Show [what] by [split] for [period]", with "Only include", "Also show" and
 // "Split again" under it. The report runs by itself a moment after each change.
 
-type Meta = { id: string | null; name: string; description: string; visibility: ReportVisibility; mine: boolean; templateKey: string | null };
+export type Meta = { id: string | null; name: string; description: string; visibility: ReportVisibility; mine: boolean; templateKey: string | null };
 type Panel = { kind: 'filter'; index: number } | { kind: 'also' } | { kind: 'split2' } | { kind: 'more' } | null;
-const NEW_META: Meta = { id: null, name: '', description: '', visibility: 'private', mine: true, templateKey: null };
-const PDF_MAX_ROWS = 1000;
-const RUN_DELAY_MS = 350;
-const PERIOD_LABELS: Record<string, string> = { this_month: 'This month', last_month: 'Last month', last_30: 'Last 30 days', last_90: 'Last 90 days', last_12_months: 'Last 12 months', this_year: 'This year' };
-const CHART_LABELS: Record<ReportChartType, string> = { bar: 'Bars', line: 'Line', pie: 'Pie' };
+export const NEW_META: Meta = { id: null, name: '', description: '', visibility: 'private', mine: true, templateKey: null };
+export const PDF_MAX_ROWS = 1000;
+export const RUN_DELAY_MS = 350;
+export const PERIOD_LABELS: Record<string, string> = { this_month: 'This month', last_month: 'Last month', last_30: 'Last 30 days', last_90: 'Last 90 days', last_12_months: 'Last 12 months', this_year: 'This year' };
+export const CHART_LABELS: Record<ReportChartType, string> = { bar: 'Bars', line: 'Line', pie: 'Pie' };
 
 /** A new report on a source: its whole amount added up, every line, this month. */
 export function startingDefinition(s: ReportSource): ReportDefinition {
@@ -72,7 +72,7 @@ export function startingDefinition(s: ReportSource): ReportDefinition {
 }
 
 /** The name of a "what" choice: the column for a sum ("Total"), "Number of lines" for a count, else "Average of Net". */
-function measureLabel(key: string): string {
+export function measureLabel(key: string): string {
   if (key === LIST) return tr('Each line (a list)');
   return headerLabel(key);
 }
@@ -658,7 +658,7 @@ export function ReportBuilderPage() {
 }
 
 /** A filter as a short sentence for its chip: "Customer contains Nile", "Total is more than 500". */
-function filterText(f: ReportFilter, type: ReportColumnType, org: { dateFormat: string } | null): string {
+export function filterText(f: ReportFilter, type: ReportColumnType, org: { dateFormat: string } | null): string {
   const one = (v: string | number | null | undefined): string => {
     if (v === null || v === undefined || v === '') return '…';
     if (type === 'money') return (Number(v) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -673,7 +673,7 @@ function filterText(f: ReportFilter, type: ReportColumnType, org: { dateFormat: 
 }
 
 /** One filter: column, operator and value (or values), each fitting the column's type. Money is typed in pounds, sent in minor units. */
-function FilterRow({ source, filter, onChange }: { source: ReportSource; filter: ReportFilter; onChange: (f: ReportFilter) => void }) {
+export function FilterRow({ source, filter, onChange }: { source: ReportSource; filter: ReportFilter; onChange: (f: ReportFilter) => void }) {
   const type: ReportColumnType = source.columns.find((c) => c.key === filter.column)?.type ?? 'text';
   const ops = reportOpsFor(type);
   const values = VALUE_LABELS[filter.column];

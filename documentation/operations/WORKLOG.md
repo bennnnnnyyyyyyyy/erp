@@ -11,6 +11,31 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — New UI: report builder in versions; dead-end rules on the report screens (track-c, feat/bellvox-look; no SQL)
+
+**Objective.** Ben's order via erp-master: the Reports & Insights screens in versions (library, builder, forecast), with the new "Dead
+ends" rules from the new-UI plan section 2.4. Reports are Ben's pick, not Grant's.
+
+**Actions Completed.**
+- Report builder in three versions, Design Lab key `rbuild` (`reports/BuilderNew.tsx`). All start from Ben's pick A, the one sentence
+  "Show [what] by [split] for [period]": A sentence and command bar (Dynamics); B sentence with an always-open Refine pane; C answer
+  first (the sentence is the title, totals in large figures, actions in a footer). Saved and ready-made reports open in it too.
+- Logic in `reports/useReportBuilder.ts`, same API and rules as the old page. The old `Builder.tsx` only gained `export` on its helpers;
+  it keeps its own copy of the logic until a version is picked (to avoid clashes with the reports chat), then both use the hook.
+- Dead ends: "← Report library" is a `BackLink` (returns where you came from) on the builder and the forecast; an empty result says why
+  and offers "Remove them" (filters) or "Look at the last 12 months"; "Alert me when" says what it needs instead of hiding; a name
+  already used opens the name box with a plain message; the library says why it is empty, offers "Clear the search" and explains
+  "My reports"; an empty forecast links to Sales invoices (with the permission). Errors with a fix page show the shell's next-step bar.
+- Arabic for every new text (`lib/i18nReportsUi.ts`); `BuilderNew.tsx` added to the translation coverage test.
+- Sample build: the saved "Sales by customer" report has a bar chart, so the builder shows one.
+
+**Database / System Result.** None.
+
+**Safety Status.** tsc 0 errors (web); vitest web 238 pass; biome: warnings only (index keys, as in the old builder; two role
+suggestions). Sample build, headless: builder, library and forecast, versions A-C, English and Arabic, 1360/390/360 px: nothing wider
+than the screen, no page errors. Screenshots in `.temp/track-c-shots/reports-25nov/` (outside the repo). Not checked: the duplicate-name
+path (the sample build does not refuse duplicates). Not pushed.
+
 ## 2026-11-25 — Main (PR #123, dead ends) merged into the new UI again (track-c, feat/bellvox-look; no SQL)
 
 **Objective.** erp-master's order for Ben: merge main again before the Reports versions.

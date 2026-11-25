@@ -110,6 +110,7 @@ const VatMonthNew = lazyNamed(() => import('./finance/VatMonthNew'), 'VatMonthNe
 // New UI, reports (24 Nov 2026): versions of the library and the sales forecast (lib/designLab.ts 'rlib', 'rfc').
 const ReportLibraryNew = lazyNamed(() => import('./reports/LibraryNew'), 'ReportLibraryNew');
 const SalesForecastNew = lazyNamed(() => import('./reports/ForecastNew'), 'SalesForecastNew');
+const ReportBuilderNew = lazyNamed(() => import('./reports/BuilderNew'), 'ReportBuilderNew');
 const AccountLinesPage = lazyNamed(() => import('./accounting/Ledger'), 'AccountLinesPage');
 const IncomeStatementPage = lazyNamed(() => import('./accounting/Statements'), 'IncomeStatementPage');
 const BalanceSheetPage = lazyNamed(() => import('./accounting/Statements'), 'BalanceSheetPage');
@@ -365,12 +366,12 @@ export const APPS: AppDef[] = [
       { path: '', label: 'Report library', permission: 'reports.library.read', component: ReportLibraryPage, newComponent: ReportLibraryNew },
       // Step 2 (sql/109): the report builder; a saved report opens in it. The sample-data build runs it on two made-up sources
       // (lib/demoReports.ts), so the builder can be looked at without a database.
-      { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
+      { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage, newComponent: ReportBuilderNew },
       // Step 4 (sql/110): the sales forecast. Real API only, except the new UI's sample build, which has a sample forecast (lib/demoReports.ts).
       ...(demoMode && !newUi ? [] : [{ path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage, newComponent: SalesForecastNew }]),
-      { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
+      { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, newComponent: ReportBuilderNew, nav: false, parent: '' },
       // Step 3: a ready-made report opens in the builder and runs at once.
-      { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
+      { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, newComponent: ReportBuilderNew, nav: false, parent: '' },
     ],
   },
   // The getting-started tutorial: only in companies created through sign-up (flag set by sql/032), never in the sample companies.

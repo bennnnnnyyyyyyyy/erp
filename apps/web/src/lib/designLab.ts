@@ -64,6 +64,7 @@ export const GROUPS: Group[] = [
   { key: 'vatmonth', section: 'Screens being decided', label: 'VAT month (Money > VAT summary)', default: 'A', options: [c('A', 'A: Dynamics period, status path'), c('B', 'B: Like the return, numbered boxes'), c('C', 'C: Twelve months in one list')] },
   { key: 'rlib', section: 'Screens being decided', label: 'Report library (Reports)', default: 'A', options: [c('A', 'A: Dynamics explorer, areas at the side'), c('B', 'B: One list, search first'), c('C', 'C: Every area in columns')] },
   { key: 'rfc', section: 'Screens being decided', label: 'Sales forecast (Reports > Sales forecast)', default: 'A', options: [c('A', 'A: Dynamics report, figures strip'), c('B', 'B: Read first'), c('C', 'C: Chart first')] },
+  { key: 'rbuild', section: 'Screens being decided', label: 'Report builder (Reports > New report)', default: 'A', options: [c('A', 'A: Sentence and command bar'), c('B', 'B: Sentence and a Refine pane'), c('C', 'C: Answer first')] },
   { key: 'createco', section: 'Screens being decided', label: 'Create company', default: 'A', help: 'Open the app with ?preview=create-company to see it.', options: [c('A', 'A: Wizard, steps at the side (Dynamics)'), c('B', 'B: One question at a time'), c('C', 'C: One page with a live preview')] },
 
   // ---------- Colour ----------

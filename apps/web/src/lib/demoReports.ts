@@ -87,7 +87,7 @@ const ROWS: Record<string, Row[]> = {
 const last30 = { from: day(29), to: day(0) };
 const saved: SavedReport[] = newUi
   ? [
-      { id: 'demo-report-r1', name: 'Sales by customer', description: 'Net sales per customer, last 30 days.', definition: { source: 'sales_lines', period: last30, groupBy: ['customer'], totals: [{ fn: 'sum', column: 'net' }] }, templateKey: null, visibility: 'private', mine: true, updatedAt: new Date().toISOString() },
+      { id: 'demo-report-r1', name: 'Sales by customer', description: 'Net sales per customer, last 30 days.', definition: { source: 'sales_lines', period: last30, groupBy: ['customer'], totals: [{ fn: 'sum', column: 'net' }], chart: { type: 'bar', x: 'customer', y: 'sum_net' } }, templateKey: null, visibility: 'private', mine: true, updatedAt: new Date().toISOString() },
       { id: 'demo-report-r2', name: 'Expenses by category', description: 'What we spent, per category, last 30 days.', definition: { source: 'expenses', period: last30, groupBy: ['category'], totals: [{ fn: 'sum', column: 'amount' }] }, templateKey: null, visibility: 'company', mine: false, updatedAt: new Date().toISOString() },
     ]
   : [];

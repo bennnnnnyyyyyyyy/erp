@@ -1,8 +1,9 @@
-import { SALES_FORECAST_HORIZONS, type SalesForecastBy, type SalesForecastHorizon, type SalesForecastRow } from '@erp/shared';
+import { SALES_FORECAST_HORIZONS, hasPermission, type SalesForecastBy, type SalesForecastHorizon, type SalesForecastRow } from '@erp/shared';
 import { Loading } from '../../components/Loading';
 import { formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
 import { useLabChoice } from '../../lib/labChoice';
+import { BackLink, Link } from '../../lib/router';
 import { formatQty } from '../../lib/numbers';
 import { useSession } from '../../session';
 import { TREND, TREND_MARK, money, nameOf, useSalesForecast } from './SalesForecast';
@@ -40,7 +41,20 @@ export function SalesForecastNew() {
       <button type="button" className="pk-act" disabled={!f} onClick={() => window.print()}>{tr('Print')}</button>
     </div>
   );
-  const head = <div className="pk-head"><div><p className="pk-kind">{tr('Report')}</p><h1>{tr('Sales forecast')}</h1></div></div>;
+  // Dead ends (Ben, 25 Nov): Back returns where you came from (the library, a report, the bell); opened from outside, it opens the library.
+  const head = (
+    <>
+      <p className="no-print"><BackLink to="/reports" label={`← ${tr('Report library')}`} backLabel={tr('← Back')} /></p>
+      <div className="pk-head"><div><p className="pk-kind">{tr('Report')}</p><h1>{tr('Sales forecast')}</h1></div></div>
+    </>
+  );
+  // An empty forecast says why and links to the invoices that fill it, when the person may open them.
+  const noSales = (
+    <>
+      {tr('No sales in the last 90 days, so there is nothing to forecast yet.')}{' '}
+      {hasPermission(session.permissions, 'sales.invoices.read') ? <Link to="/sales/invoices" className="pk-link">{tr('Open sales invoices')}</Link> : null}
+    </>
+  );
   const how = (
     <details className="pk-fold">
       <summary>{tr('How this is worked out')}</summary>
@@ -84,7 +98,7 @@ export function SalesForecastNew() {
               <td className={r.confidence === 'good' ? undefined : 'pk-muted-cell'}>{tr(r.confidence === 'good' ? 'Good' : 'Thin: a guess')}</td>
             </tr>
           ))}
-          {f.rows.length === 0 ? <tr><td colSpan={items ? 7 : 5} className="pk-empty">{tr('No sales in the last 90 days, so there is nothing to forecast yet.')}</td></tr> : null}
+          {f.rows.length === 0 ? <tr><td colSpan={items ? 7 : 5} className="pk-empty">{noSales}</td></tr> : null}
         </tbody>
       </table>
     </div>
@@ -99,7 +113,7 @@ export function SalesForecastNew() {
           {[...totals].map(([cur, t]) => (
             <p key={cur}>{trf('In the next {n} days you are likely to sell about {next}. In the last 30 days you sold {last}.', { n: f.horizon, next: money(t.next, cur), last: money(t.last, cur) })}</p>
           ))}
-          {!f.rows.length ? <p>{tr('No sales in the last 90 days, so there is nothing to forecast yet.')}</p> : null}
+          {!f.rows.length ? <p>{noSales}</p> : null}
           {up.length ? <p><span className="rf-trend up">▲</span> {trf('Going up: {names}.', { names: names(up) })}</p> : null}
           {down.length ? <p><span className="rf-trend down">▼</span> {trf('Going down: {names}.', { names: names(down) })}</p> : null}
           {thin.length ? <p className="pk-muted">{trf('{n} of them have little history, so their number is a guess.', { n: thin.length })}</p> : null}

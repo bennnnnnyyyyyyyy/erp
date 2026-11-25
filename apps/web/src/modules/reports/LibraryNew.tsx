@@ -42,16 +42,27 @@ export function ReportLibraryNew() {
     <input type="search" className={big ? 'st-search' : 'pk-search'} value={lib.search} onChange={(e) => lib.setSearch(e.target.value)}
       placeholder={tr('For example: VAT, stock, owed')} aria-label={tr('Find a report')} />
   );
+  // Dead ends (Ben, 25 Nov): an empty list says why and offers the step that fills it.
   const empty = !lib.anyAtAll
-    ? <p className="pk-empty">{tr('No reports are open to you yet. Ask an admin for access.')}</p>
-    : all.length === 0 && lib.q ? <p className="pk-empty">{tr('No report matches your search.')}</p> : null;
+    ? (
+      <div className="pk-empty">
+        <p>{tr('No reports are open to you yet. Ask an admin for access.')}</p>
+        <p className="pk-muted">{tr('A report shows when you can open the page its data comes from. An owner or admin gives access in Settings → Users.')}</p>
+      </div>
+    )
+    : all.length === 0 && lib.q
+      ? <p className="pk-empty">{tr('No report matches your search.')} <button type="button" className="pk-link" onClick={() => lib.setSearch('')}>{tr('Clear the search')}</button></p>
+      : null;
+  const noneSaved = lib.canBuild && !lib.q && lib.mine.length === 0
+    ? <p className="pk-muted rl-hint">{tr('You have no saved reports yet. Open a report, change it, and press Save: it shows here under "My reports".')}</p>
+    : null;
 
   if (version === 'B') {
     return (
       <section className="page pk rl rl-b">
         {head}
         {search(true)}
-        {empty}
+        {empty}{noneSaved}
         {groups.map((g) => (
           <section key={g.key} className="rl-group">
             <h2 className="pk-h2">{tr(g.label)} <span className="pk-group-n">{g.rows.length}</span></h2>
@@ -77,7 +88,7 @@ export function ReportLibraryNew() {
       <section className="page pk pk-wide rl rl-c">
         {head}
         <div className="pk-bar">{search()}<span className="pk-bar-gap" /><span className="pk-muted">{trf('{n} reports', { n: all.length })}</span></div>
-        {empty}
+        {empty}{noneSaved}
         <div className="rl-cols">
           {groups.map((g) => (
             <section key={g.key} className="rl-col">
@@ -103,7 +114,7 @@ export function ReportLibraryNew() {
     <section className="page pk pk-wide rl rl-a">
       {head}
       <div className="pk-bar">{search()}<span className="pk-bar-gap" /><span className="pk-muted">{trf('{n} reports', { n: rows.length })}</span></div>
-      {empty}
+      {empty}{noneSaved}
       <div className="rl-explorer">
         <nav className="rl-areas" aria-label={tr('Areas')}>
           <button type="button" className={`st-row${areaKey === 'all' ? ' active' : ''}`} onClick={() => { setAreaKey('all'); setPicked(null); }}>

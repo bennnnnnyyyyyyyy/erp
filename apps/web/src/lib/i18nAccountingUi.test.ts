@@ -37,7 +37,7 @@ describe('new-UI accounting and report translations', () => {
   });
 
   it('covers every text on the new accounting and report screens', () => {
-    const files = ['../modules/accounting/JournalFormNew.tsx', '../modules/accounting/TrialBalanceNew.tsx', '../modules/finance/VatMonthNew.tsx', '../modules/reports/LibraryNew.tsx', '../modules/reports/ForecastNew.tsx'];
+    const files = ['../modules/accounting/JournalFormNew.tsx', '../modules/accounting/TrialBalanceNew.tsx', '../modules/finance/VatMonthNew.tsx', '../modules/reports/LibraryNew.tsx', '../modules/reports/ForecastNew.tsx', '../modules/reports/BuilderNew.tsx'];
     for (const f of files) for (const en of stringsIn(f)) expect(en in AR, `${f}: ${en}`).toBe(true);
   });
 });
