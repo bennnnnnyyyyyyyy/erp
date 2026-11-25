@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — sql/116 applied to live (customer and supplier detail rules)
+
+**Objective.** Ben's "yes 116" (via erp-master), after the rolled-back dry run in the entry below. Ben: names stay at 200 characters.
+
+**Actions Completed.** Applied `sql/116_party_detail_rules.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran
+tests 113, 092, 072 and 075 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Verification after the apply: "lskalmsalsasm.,ma" refused and a normal email accepted; "123-456-789"
+accepted and "12a4" refused as a registry number; an Egyptian IBAN of 29 accepted and a short one refused; both rules in place (NOT
+VALID; 0 existing rows break them). The four tests pass on live.
+
+**Safety Status.** The screen part (747bc2e) reaches live when Ben merges and CI deploys. Next free numbers: migration 117, test 114.
+
 ## 2026-11-25 — Boxes that guide while typing, on every form; database rules for customer and supplier details (sql/116 NOT applied)
 
 **Objective.** Ben on live (via erp-master, urgent): the "Edit customer" dialog still let him type a 50-digit phone and a very long
