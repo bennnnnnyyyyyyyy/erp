@@ -11,6 +11,18 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Main (PR #123, dead ends) merged into the new UI again (track-c, feat/bellvox-look; no SQL)
+
+**Objective.** erp-master's order for Ben: merge main again before the Reports versions.
+
+**Actions Completed.** Only this file clashed (both entries kept). The new shell (`ShellNew.tsx`) gets the same two lines as the old
+one: the bell's `canOpen` (a page the person cannot open goes to messages) and `NextStepBar` (an error offers the page that fixes it).
+
+**Database / System Result.** None.
+
+**Safety Status.** tsc 0 errors (shared, api, web); vitest shared 109, api 811 (`boundaries.test.ts` failed once in the full run under
+load and passed alone), web 238. Not pushed.
+
 ## 2026-11-25 — Main merged into the new UI (track-c, feat/bellvox-look; no SQL)
 
 **Objective.** Ben: merge main (PRs #121 and #122: report builder as one sentence, shortcuts, phone width, print and QR code, bell on
@@ -98,6 +110,106 @@ and show Grant what we learned. Keep `feat/bellvox-look` up to date with main.
 **Safety Status.** tsc 0 errors (shared, api, web); vitest 87 + 793 + 199 pass; biome 0 errors on the changed files. Checks were run
 with the installed tools directly, because `node_modules/.bin` in the main checkout is empty after an `npm install` that reported
 "up to date" (`npm rebuild` in the main checkout should restore `npm run typecheck` and `npm test`). Not deployed.
+
+## 2026-11-25 — Settings → E-invoicing: the company's ETA tax registration and branch address (no migration)
+
+**Objective.** Found in the dead-ends audit: no screen set the company's tax registration number, legal name and ETA activity code,
+though the API existed and the ETA print layout asks for them. Ben's yes (via erp-master): build a small settings page in the old UI.
+
+**Actions Completed.**
+- New `apps/web/src/modules/core/settings/EInvoicingSettings.tsx`, Settings → E-invoicing (after "Invoices and documents";
+  permission `einvoicing.settings.read`, changes only with `einvoicing.settings.manage`; real app only): tax registration number,
+  legal name, ETA activity code and mode (test / live; the server refuses live until credentials and a signer exist) through the
+  existing `PUT /v1/einvoicing/profile`; the branch address that prints on ETA invoices through the existing
+  `POST/PUT /v1/einvoicing/branches`; readiness counts (items without ETA codes, customers without a tax identity) with links. With
+  the E-invoicing app off, the page says so and links to Settings → Apps.
+- Correction: the ETA print layout's "branch address" reads the ETA branch (tax_branches), not the company branch on Settings →
+  Branches; the "Fix it" link from this morning pointed there. Company tax number, activity code and branch address now link to the
+  new page through `lib/nextStep.ts` (`eta_company_missing`).
+- Arabic for every new text (`i18nScreens.ts`, page label in `i18nNav.ts`).
+
+**Database / System Result.** None (existing API and tables).
+
+**Safety Status.** `tsc` 0 errors; web tests 231 passed; biome 0 errors. Not checked in a browser (the sample build has no e-invoicing
+API); check on live: Settings → E-invoicing, save, then print an invoice with the ETA layout.
+
+## 2026-11-25 — Dead ends, Ben's answers: next-step helper for every error, filled-in transfer, the 19 open findings (no migration)
+
+**Objective.** Ben answered the audit's 4 questions (via erp-master): build one next-step helper for every error; "which state is
+needed" goes into sql/112 with step 6; fill in the transfer from a sales order shortage; do the 19 open findings now.
+
+**Actions Completed.**
+- Next-step helper (commit d6ed392): `lib/nextStep.ts` maps error codes to what unblocks them (period locked, app off, account role,
+  receipt costs, cash box, not enough stock, batches, storage, VAT rate, not delivered, not received, own approval, count). `lib/api.ts`
+  adds the sentence to every error message; `components/NextStepBar.tsx` (in the Shell) offers the page that fixes it, only when the
+  person can open it, and closes on the next page. Test: every step has Arabic and a link is an app page.
+- Transfer (d6ed392): "Move from <warehouse>" opens the new transfer with item, quantity, from and to filled in (`lib/orderLink.ts`
+  `transferLink`, tests); with one warehouse the form says a second one is needed (link to Stock on hand).
+- The 19 findings (this commit; table `.temp/2026-11-25-dead-ends-audit.md`, all ticked): tour and Guide links only to pages the person
+  can open; Getting started steps link only to open pages; home summary needs Finance on and cards link only into apps that are on;
+  "Pending approvals" opens the requests waiting for approval; filtered request and transfer lists say what the filter found; approved
+  request shows "waiting for the warehouse"; sales order says who does the next step; payments box and credit-note list show their
+  error instead of "Loading…"; credit note asks for the return warehouse; purchase bill lines start at what is left to bill and the
+  button says what is missing; "Paid now" with no cash box points to Treasury; new orders say when there are no customers, suppliers,
+  items or warehouse; Receive goods with no warehouse no longer says "no permission"; ETA print checklist links each missing field
+  to its page; credit-note print Back returns where you came from; server details no longer show raw ids or role keys, and bank
+  statement refusals have their own messages (`apps/api/src/lib/rpc.ts`, 3 tests).
+- Arabic for every new text (`i18nScreens.ts`, `i18nErrors.ts`).
+
+**Database / System Result.** None. Into sql/112 with step 6: state errors that say which state is needed, the credit note's invoice
+id in its print data, the item name in stock shortage errors.
+
+**Safety Status.** `tsc` 0 errors (api, web); tests: api 811, web 231 passed; biome 0 errors. Not checked in a browser on real data.
+Found: no screen sets the company tax number and ETA activity code (API `PUT /v1/einvoicing/profile` exists): question for Ben.
+
+## 2026-11-25 — Dead-ends audit of the old UI: 10 small fixes (no migration)
+
+**Objective.** erp-master (Ben's request): look across the old UI for Back links to dead pages, empty pickers with no reason, and blocked
+actions that do not point to the step that unblocks them; fix the small, clear ones, list the rest. Table:
+`.temp/2026-11-25-dead-ends-audit.md` (32 findings, 13 fixed with the entry below, 19 open, 4 questions for Ben).
+
+**Actions Completed.**
+- Purchase invoices (`purchasing/SupplierInvoices.tsx`): with no received goods to bill, the form says so and links to Purchase orders;
+  the page takes `?order=` like sales. Received purchase order (`PurchasingDemo.tsx`): "Record the supplier's invoice".
+- Payments (`finance/Finance.tsx`): an empty "For" list says which documents show there; an empty "Paid into / from" says there is
+  no active cash box or bank account for that method and currency, with a link to Treasury.
+- Back: journal entry, ledger account, statement lines, treasury account use `BackLink`; a sales order, purchase order, stock request
+  or transfer that fails to load now has a way back.
+- Sales order: once its stock request is approved, it no longer says "needs a manager to approve it".
+- Bell (`NotificationBell.tsx`, `Shell.tsx`): a link to a page the person cannot open goes to Messages instead of "Page not found".
+- Errors (`lib/api.ts` `withNextStep`): "locked period" adds who moves the lock date and where; "app not enabled" adds Settings → Apps.
+- Arabic for every new text (`i18nScreens.ts`).
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 227 passed; biome 0 errors. Not checked in a browser on real data.
+
+## 2026-11-25 — Dead ends found by Ben: empty invoice picker, Back from a sales order, not enough stock (no migration)
+
+**Objective.** Ben, testing invoices on live: "choose an order doesn't show anything", "going back from a sales order takes me to a dead
+page", "when there isn't enough stock suggest the step that gets us stock".
+
+**Actions Completed.**
+- Empty picker (`sales/CustomerInvoices.tsx`): cause confirmed, not a bug in the data: the picker lists only delivered orders with
+  something left to invoice (an order is delivered when its stock request is issued, `packages/shared/src/billing.ts`); Ben had none,
+  as his orders could not be delivered for lack of stock. With none, the form now says so in plain words and links to the orders
+  waiting for delivery (with their number), or to a new sales order.
+- Back (`lib/router.tsx` `BackLink`, 23 back links on detail pages: sales and purchase orders, invoices, bills, payments, expenses,
+  stock requests, transfers, counts, items, tasks, bank statements): "← Back" returns to the page the person came from in this tab
+  (an invoice, the bell, a report), like the browser's back button. Opened from outside (QR code, email or WhatsApp link, reload),
+  it opens the list and names it ("← Sales orders"). The router counts in-app pages in the browser history (`erpDepth`). The dead
+  page itself: "← Sales orders" pointed to /sales/orders, which the real app lacked; fixed 24 Nov (PR #121, on live since 21:43 UTC).
+  `navigate()` no longer ignores a link to the same page with a different query.
+- Not enough stock (`sales/StockShortage.tsx`, `sales/shortage.ts`): an order that has not asked the warehouse yet shows, per item
+  short in its warehouse, needed / available / short, with "Create purchase order" for the missing quantity (filled in, as the low
+  stock pop-up does; only with `purchasing.orders.create` and Purchasing on) and "Move from <warehouse> (n available)" when another
+  warehouse has it (only with `inventory.transfers.create`; the transfer form is not filled in). Without either right: "Ask a manager".
+  (Stock is reserved when the request is made, so a shortage made "Request stock from warehouse" fail; it now shows before.)
+- Arabic for every new text (`i18nScreens.ts`). Tests: `StockShortage.test.ts` (shortage arithmetic, history depth).
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 227 passed. Not checked in a browser on real data (the sample build has no stock check).
 
 ## 2026-11-24 — Phone: bell panel fixed; deep links survive sign-in (no migration)
 

@@ -112,7 +112,7 @@ export function InvoiceNotes({ invoice, itemOf, onChanged }: { invoice: NoteInvo
               </td>
             </tr>
           ))}
-          {!list.length && <tr><td colSpan={8} className="muted empty">{notes.data ? tr('No credit or debit notes on this invoice.') : tr('Loading…')}</td></tr>}
+          {!list.length && <tr><td colSpan={8} className="muted empty">{notes.data ? tr('No credit or debit notes on this invoice.') : notes.error ? <span className="error">{notes.error}</span> : tr('Loading…')}</td></tr>}
         </tbody>
       </table></div>
 
@@ -210,6 +210,7 @@ function NoteForm({ kind, invoice, notes, itemOf, onClose, onError, onDone }: {
               </label>
             )}
             {returnGoods && <p className="muted small">{tr('The stock is added back only when the note is approved, at the cost it left at.')}</p>}
+            {needsWarehouse && <p className="error small">{tr('Choose the warehouse to return into.')}</p>}
           </>
         )}
         {totals.taxMinor > 0 ? (

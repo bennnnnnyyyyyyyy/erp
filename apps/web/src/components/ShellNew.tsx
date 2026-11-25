@@ -17,6 +17,7 @@ import { TableLabels } from './TableLabels';
 import { useSession } from '../session';
 import { FirstRunLanguage } from './LanguageChooser';
 import { LowStockPopup } from './LowStockPopup';
+import { NextStepBar } from './NextStepBar';
 import { NotificationBell } from './NotificationBell';
 
 /** Two letters for the avatar: from the person's name when there is one ("Chris Johnson" -> CJ), else from the email. */
@@ -127,7 +128,9 @@ export function ShellNew({ onSwitchOrg, onSignOut }: { onSwitchOrg: () => void; 
       <button className="icon-btn fr-icon" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Switch to light mode') : t('Switch to dark mode')}>
         {dark ? '☀' : '☾'}
       </button>
-      <NotificationBell />
+      {/* Same as the old shell (dead ends, 25 Nov): the bell sends a page the person cannot open to messages; errors offer the page that fixes them. */}
+      <NotificationBell canOpen={(p) => !!resolveRoute(p.split('?')[0] ?? p, apps)?.page} />
+      <NextStepBar canOpen={(p) => !!resolveRoute(p.split('?')[0] ?? p, apps)?.page} />
       <LowStockPopup />
       <UserMenu onSwitchOrg={onSwitchOrg} onSignOut={onSignOut} />
     </>

@@ -9,7 +9,7 @@ import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { usePeople } from '../../lib/people';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
@@ -166,7 +166,7 @@ export function TaskPage() {
     }
   }
 
-  if (task.error) return <section className="page"><Link to="/tasks" className="back-link">{tr('← Tasks')}</Link><p className="error">{task.error}</p></section>;
+  if (task.error) return <section className="page"><BackLink to="/tasks" label={tr('← Tasks')} backLabel={tr('← Back')} /><p className="error">{task.error}</p></section>;
   if (!t) return <section className="page"><Loading /></section>;
 
   const open = t.status === 'open' || t.status === 'in_progress';
@@ -175,7 +175,7 @@ export function TaskPage() {
 
   return (
     <section className="page">
-      <Link to="/tasks" className="back-link">{tr('← Tasks')}</Link>
+      <BackLink to="/tasks" label={tr('← Tasks')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1>{t.title}</h1>
         <span className={`pill st-${t.status}`}>{tr(STATUS_LABEL[t.status])}</span>

@@ -9,11 +9,12 @@ import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { Shipments } from './Shipments';
+import { StockShortage } from './StockShortage';
 import { ConfirmButton } from '../../components/FormToggle';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
@@ -159,14 +160,14 @@ export function SalesOrderPage() {
     }
   }
 
-  if (order.error) return <section className="page"><p className="error">{order.error}</p></section>;
+  if (order.error) return <section className="page"><BackLink to="/sales/orders" label={tr('← Sales orders')} backLabel={tr('← Back')} /><p className="error">{order.error}</p></section>;
   if (!o || !cat.ready || !customers.data) return <section className="page"><Loading /></section>;
 
   const customer = customers.data.find((c) => c.id === o.customerId);
 
   return (
     <section className="page">
-      <Link to="/sales/orders" className="back-link">{tr('← Sales orders')}</Link>
+      <BackLink to="/sales/orders" label={tr('← Sales orders')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{o.number}</h1>
         <Pill status={o.status} label={tr(STATUS[o.status])} />
@@ -210,7 +211,7 @@ export function SalesOrderPage() {
       {o.requestId && o.status !== 'open' && (
         <p className="notice">
           {tr('Stock request')} <Link to={`/inventory/requests/${o.requestId}`}><code>{o.requestNumber ?? tr('Open it')}</code></Link>
-          {o.status === 'delivered' ? tr(' has been issued.') : tr(' needs a manager to approve it and the warehouse to issue it. Open it to continue.')}
+          {o.status === 'delivered' ? tr(' has been issued.') : o.requestStatus === 'approved' ? tr(' is approved. The warehouse now issues the goods; then the order can be invoiced.') : tr(' needs a manager to approve it and the warehouse to issue it. Open it to continue.')}
         </p>
       )}
       {/* A rejected request used to drop the order back to "New" without a word (UX audit). */}
@@ -222,6 +223,11 @@ export function SalesOrderPage() {
         </p>
       )}
 
+      {/* Dead-ends audit, 25 Nov: say before asking the warehouse what is short, and offer the step that brings the stock. */}
+      {o.status === 'open' && !demoMode && <StockShortage lines={o.lines} warehouseId={o.warehouseId} itemName={cat.itemName} warehouseName={cat.warehouseName} />}
+      {/* Dead-ends audit, 25 Nov: a person who cannot take the next step is told who does. */}
+      {o.status === 'open' && !canFulfil && !canManageOrder && <p className="muted small">{tr('A sales manager asks the warehouse for the stock.')}</p>}
+      {o.status === 'delivered' && !hasPermission(session.permissions, 'sales.invoices.manage') && <p className="muted small">{tr('An owner or admin creates the invoice.')}</p>}
       {o.status === 'open' && (canFulfil || canManageOrder) && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
           {canFulfil && <Button type="submit" disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</Button>}

@@ -8,6 +8,7 @@ import { cn } from '../../lib/cn';
 import {useI18n, tr } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useReloadSession, useSession } from '../../session';
+import { resolveRoute, visibleApps } from '../registry';
 import { tutorialContent } from './helpContent';
 import { onboardingContent } from './onboardingContent';
 import { TourButton } from './TourHost';
@@ -57,6 +58,8 @@ export function GettingStartedPage() {
   const reload = useReloadSession();
   const { lang, asked } = useI18n();
   const can = (p: string) => hasPermission(session.permissions, p);
+  // Dead-ends audit, 25 Nov 2026: a step links only to a page this person can open (app on, permission held); else it has no link.
+  const stepRoute = (to?: string) => (to && resolveRoute(to, visibleApps(session))?.page ? to : undefined);
   const canHide = can('core.org.manage');
   const warehouses = useCount('/v1/inventory/warehouses', can('inventory.items.read'));
   const items = useCount('/v1/inventory/items', can('inventory.items.read'));
@@ -144,7 +147,7 @@ export function GettingStartedPage() {
 
       <ol className="m-0 mt-6 flex list-none flex-col gap-4 p-0">
         {c.steps.map((s, i) => (
-          <Step key={i} n={i + 1} title={s.title} to={STEP_ROUTES[i]} toLabel={s.toLabel}>
+          <Step key={i} n={i + 1} title={s.title} to={stepRoute(STEP_ROUTES[i])} toLabel={s.toLabel}>
             <Rich text={s.body} />
           </Step>
         ))}

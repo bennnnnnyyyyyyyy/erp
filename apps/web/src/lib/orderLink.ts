@@ -25,3 +25,22 @@ export function orderLink(base: string, itemId: string, qty: number, supplierId?
   if (supplierId) q.set('supplier', supplierId);
   return `${base}?${q}`;
 }
+
+/** A new transfer filled in from a link (a sales order's stock shortage, Ben 25 Nov 2026): ?item=<id>&qty=<n>&from=<id>&to=<id>. */
+export type TransferLink = { itemId: string; qty: string; fromId: string; toId: string };
+
+export function readTransferLink(search: string): TransferLink {
+  const q = new URLSearchParams(search);
+  const base = readOrderLink(search);
+  const id = (k: string) => {
+    const v = q.get(k) ?? '';
+    return UUID.test(v) ? v : '';
+  };
+  return { itemId: base.itemId, qty: base.qty, fromId: id('from'), toId: id('to') };
+}
+
+export function transferLink(itemId: string, qty: number, fromId: string, toId: string): string {
+  const q = new URLSearchParams({ item: itemId, from: fromId, to: toId });
+  if (qty > 0) q.set('qty', String(Math.round(qty * 1000) / 1000));
+  return `/inventory/transfers/new?${q}`;
+}

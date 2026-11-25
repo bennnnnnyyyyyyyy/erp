@@ -9,7 +9,7 @@ import { api, apiDownload } from '../../lib/api';
 import { formatDay } from '../../lib/format';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
 import { usePeople } from '../../lib/people';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill, toMinor } from '../trade/common';
@@ -146,7 +146,7 @@ export function TreasuryAccountPage() {
 
   return (
     <section className="page wide">
-      <p><Link to="/treasury">← {tr('Treasury')}</Link></p>
+      <p><BackLink to="/treasury" label={`← ${tr('Treasury')}`} backLabel={tr('← Back')} /></p>
       <h1><code>{a.code}</code> · {nameOf(a)}</h1>
       <p className="muted">
         {tr(KIND_LABEL[a.kind])} · {a.currency}

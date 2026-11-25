@@ -93,6 +93,7 @@ const ReportBuilderPage = lazyNamed(() => import('./reports/Builder'), 'ReportBu
 const SalesForecastPage = lazyNamed(() => import('./reports/SalesForecast'), 'SalesForecastPage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
+const EInvoicingSettings = lazyNamed(() => import('./core/settings/EInvoicingSettings'), 'EInvoicingSettings');
 const AccountingSetupPage = lazyNamed(() => import('./accounting/SetupGuide'), 'AccountingSetupPage');
 const StockValuePage = lazyNamed(() => import('./accounting/Setup'), 'StockValuePage');
 const ChartPage = lazyNamed(() => import('./accounting/Setup'), 'ChartPage');
@@ -419,6 +420,8 @@ export const APPS: AppDef[] = [
       ...(demoMode ? [] : [{ path: '/import', label: 'Import from a file', anyPermission: ['inventory.items.manage', 'sales.customers.manage', 'purchasing.suppliers.manage'], component: ImportFromFile }]),
       // Invoice printing (sql/103): logo, letterhead, texts, language and digits of the company's documents. Real API only.
       ...(demoMode ? [] : [{ path: '/documents', label: 'Invoices and documents', permission: 'core.templates.manage', component: DocumentSettings }]),
+      // The company's ETA tax registration and branch address (Ben, 25 Nov 2026): the API existed, no screen called it.
+      ...(demoMode ? [] : [{ path: '/einvoicing', label: 'E-invoicing', permission: 'einvoicing.settings.read', component: EInvoicingSettings }]),
       { path: '/apps', label: 'Apps', permission: 'core.org.manage', component: AppsSettings },
       { path: '/audit', label: 'Audit log', permission: 'core.org.manage', component: AuditLog },
     ],
@@ -442,7 +445,7 @@ export const MENU_GROUPS: Record<string, Record<string, string>> = {
   },
   // Ben, 10 Nov 2026 walkthrough: "the settings menu is stupidly arranged". Four clear groups; staff see only "Your account".
   settings: {
-    '': 'Company', '/branches': 'Company', '/users': 'Company', '/documents': 'Company', '/apps': 'Company',
+    '': 'Company', '/branches': 'Company', '/users': 'Company', '/documents': 'Company', '/einvoicing': 'Company', '/apps': 'Company',
     '/me': 'Your account',
     '/integrations': 'Connections', '/import': 'Connections',
     '/audit': 'Records',

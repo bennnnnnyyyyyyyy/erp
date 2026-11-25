@@ -82,6 +82,7 @@ export function ExpensesPage() {
   const supplier = (id: string | null) => (id ? suppliers.data?.find((s) => s.id === id)?.name ?? '—' : '');
   // With treasury on, "Paid from" is a box: start on the remembered one if it still exists, else the first.
   const payBoxes = (boxes.data ?? []).filter((b) => b.active && (b.kind === 'cash' || b.kind === 'bank'));
+  const noBox = treasuryOn && !!boxes.data && payBoxes.length === 0;
   const fromValue = treasuryOn && !payBoxes.some((b) => b.id === payFrom) ? (payBoxes[0]?.id ?? '') : payFrom;
   const total = expenses.data.filter((e) => e.status === 'recorded').reduce((n, e) => n + e.amountMinor, 0);
   const currency = expenses.data[0]?.currency ?? session.org?.defaultCurrency ?? 'EGP';
@@ -115,7 +116,10 @@ export function ExpensesPage() {
         {canPay ? (
           <div className="form-row">
             <label className="flex items-center gap-2"><input type="checkbox" checked={paidNow} onChange={(e) => setPaidNow(e.target.checked)} />{tr('Paid now')}</label>
-            {paidNow ? (
+            {/* Dead-ends audit, 25 Nov: with Treasury on and no cash box or bank account, the expense saved and its payment failed. */}
+            {paidNow && noBox ? (
+              <p className="error small">{tr('Add a cash box or bank account in Treasury first.')} <Link to="/treasury">{tr('Treasury')}</Link></p>
+            ) : paidNow ? (
               <label>{tr('Paid from')}
                 <select value={fromValue} onChange={(e) => setPayFrom(e.target.value)}>
                   {treasuryOn
@@ -127,7 +131,7 @@ export function ExpensesPage() {
           </div>
         ) : null}
         <div className="form-row">
-          <Button disabled={busy || !categoryId || toMinor(amount) <= 0} onClick={() => run(async () => {
+          <Button disabled={busy || !categoryId || toMinor(amount) <= 0 || (paidNow && noBox)} onClick={() => run(async () => {
             const made = await api<{ id: string; number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note, vat: purchaseVatPayload(vatIn) }) });
             if (!paidNow) return trf('Expense {number} recorded.', { number: made.number });
             // The payment is a second step: if it is refused, the expense stays recorded and unpaid, and the message says so.
@@ -254,6 +258,12 @@ export function PaymentsPage() {
               <option value="">{tr('Choose…')}</option>
               {open.map((t) => <option key={t.value} value={t.value}>{t.label} {tr('· outstanding')} {money(t.left, t.currency)}</option>)}
             </select>
+            {/* Dead-ends audit, 25 Nov: only issued, unpaid documents can be paid; with none the list was just "Choose…". */}
+            {open.length === 0 && (
+              <span className="muted small">
+                {direction === 'in' ? tr('Nothing is waiting for payment: only issued sales invoices that are not fully paid show here.') : tr('Nothing is waiting for payment: only recorded supplier bills and expenses that are not fully paid show here.')}
+              </span>
+            )}
           </label>
           <label>{tr('Amount')}<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
         </div>
@@ -266,6 +276,7 @@ export function PaymentsPage() {
                 <option value="">{tr('Choose…')}</option>
                 {boxes.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}
               </select>
+              {boxes.length === 0 && <span className="muted small">{tr('No active cash box or bank account for this method and currency.')} <Link to="/treasury">{tr('Treasury')}</Link></span>}
             </label>
           ) : null}
           <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
