@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { formatMoney, hasPermission, type ProviderSettings } from '@erp/shared';
+import { FIELD_MAX, formatMoney, hasPermission, type ProviderSettings } from '@erp/shared';
+import { PhoneField, TextField, fieldOk } from '../../components/Fields';
 import { ConfirmButton } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
@@ -125,14 +126,14 @@ export function Shipments({ orderId, customerName, customerPhone, customerCity }
             }}
           >
             <div className="form-row">
-              <label>{tr('Recipient')}<input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-              <label>{tr('Phone')}<input required value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
-              <label>{tr('City')}<input required value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} /></label>
+              <TextField label={tr('Recipient')} required max={FIELD_MAX.name} value={f.name} onChange={(v) => setF({ ...f, name: v })} />
+              <PhoneField label={tr('Phone')} required mobileOnly value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
+              <TextField label={tr('City')} required max={100} value={f.city} onChange={(v) => setF({ ...f, city: v })} />
             </div>
-            <label>{tr('Address')}<input required value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></label>
+            <TextField label={tr('Address')} required max={FIELD_MAX.address} value={f.address} onChange={(v) => setF({ ...f, address: v })} />
             <label>{tr('Cash on delivery (leave empty if already paid)')}<input type="number" min="0" step="0.01" value={f.cod} onChange={(e) => setF({ ...f, cod: e.target.value })} /></label>
             <div className="form-row">
-              <Button type="submit" disabled={busy}>{tr('Create shipment')}</Button>
+              <Button type="submit" disabled={busy || !f.phone.trim() || !fieldOk.mobile(f.phone)}>{tr('Create shipment')}</Button>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>{tr('Close')}</Button>
             </div>
           </form>

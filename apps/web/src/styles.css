@@ -87,6 +87,11 @@ main.content:focus { outline: none; }
 /* ---- utilities ---- */
 .muted { color: var(--muted-foreground); }
 .error { color: var(--danger); }
+/* Live field checks (components/Fields.tsx): a red line under the box while it cannot be valid, and a counter near the limit. */
+.field-error { display: block; color: var(--danger); font-size: 0.85em; margin-block-start: 0.25rem; }
+.field-count { display: block; font-size: 0.8em; color: var(--muted-foreground); text-align: end; margin-block-start: 0.15rem; }
+.field-count.full { color: var(--danger); }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--danger); outline-color: var(--danger); }
 .small { font-size: 0.85rem; }
 .hint { display: block; margin-block-start: 0.25rem; font-size: 0.85rem; }
 .spacer { flex: 1; }

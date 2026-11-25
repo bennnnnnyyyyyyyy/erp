@@ -11,6 +11,37 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Boxes that guide while typing, on every form; database rules for customer and supplier details (sql/116 NOT applied)
+
+**Objective.** Ben on live (via erp-master, urgent): the "Edit customer" dialog still let him type a 50-digit phone and a very long
+name; checking only when Save is pressed is not enough. The box itself must guide the person while they type, on every form.
+
+**Actions Completed.**
+- Shared rules, `packages/shared/src/fieldRules.ts`: `FIELD_MAX` (name 200, contact 120, city 80, phone 20, email 200, address 500,
+  notes 500, tax and registry numbers 40, bank account 60), `phoneState` (empty / ok / incomplete / invalid while typing: invalid as
+  soon as the number can no longer be valid), `phoneCharsOnly`, `emailOk` (the tester's "lskalmsalsasm.,ma" refused), `registryOk`,
+  `bankAccountOk` (an Egyptian IBAN is 29), `egMobileOk`. Tests in `fieldRules.test.ts`.
+- One set of boxes, `apps/web/src/components/Fields.tsx`: `TextField` (limit, counter near it, e.g. "180/200"), `PhoneField` (only
+  phone characters, at most 20, a red line at once when the number cannot be valid), `EmailField`, `RegistryField` (digits; exact
+  length for ETA numbers), `BankAccountField`; `fieldOk` keeps Save off while a box is not valid. Styles in `styles.css`.
+- Used on: customers and suppliers (add and edit, and the quick add in the order form), company settings, branches, members (invite),
+  E-invoicing (registration 9 digits, activity 4, branch address parts 100), invoice printing settings, shipments (Egyptian mobile),
+  treasury accounts, onboarding (team invite; the supplier and customer rows get limits by column), connect WhatsApp, invoice sending
+  (WhatsApp, email), expense VAT fields and note, party item codes, accounting set-up.
+- API: customer and supplier details use `emailOk`, `registryOk`, `bankAccountOk`; member invitations `emailOk`. Arabic for every new
+  message.
+- The sample build edits customers and suppliers in memory with the same dialog and checks; new browser test
+  `apps/web/e2e/input-boxes.e2e.ts` (Ben's case: 50-digit phone, long name, Save off).
+- `sql/116_party_detail_rules.sql` + `sql/tests/113_party_detail_rules.sql`: email, registry numbers and bank account on customers
+  and suppliers, NOT VALID; tests 072 and 075 use a digits-only registry number ("5544" instead of "CR-5544").
+
+**Database / System Result.** sql/116 not applied. Rolled-back dry run on live, 25 Nov: 0 existing customers or suppliers break the
+new rules; the tester's email is refused. Tests 113, 092, 072 and 075 pass on live inside rolled-back transactions.
+
+**Safety Status.** `tsc` 0 errors; tests shared 124, api 838, web 236; SQL (PGlite) 111 passed; `biome ci` 0 errors; browser (sample
+build, desktop and phone): the input-boxes test and the smoke test pass; screenshots in `.temp/input-boxes/`. The real (non-sample)
+edit dialog was not opened in a browser here; it is the same component.
+
 ## 2026-11-25 — sql/115 applied to live (phone as a barcode scanner)
 
 **Objective.** Ben's "yes 115" (via erp-master), after the rolled-back dry run in the entry below.

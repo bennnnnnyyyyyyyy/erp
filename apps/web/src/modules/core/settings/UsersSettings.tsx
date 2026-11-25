@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Loading } from '../../../components/Loading';
+import { EmailField, TextField, fieldOk } from '../../../components/Fields';
 import { ROLES, hasPermission, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
 import { ListView, type Column } from '../../../components/views/ListView';
 import { api } from '../../../lib/api';
@@ -72,14 +73,8 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
     <form className="form-card stack" onSubmit={submit}>
       <strong>{tr('Invite someone')}</strong>
       <div className="form-row">
-        <label>
-          {tr('Full name')}
-          <input required minLength={2} maxLength={120} autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          {tr('Email')}
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
+        <TextField label={tr('Full name')} required max={120} value={name} onChange={setName} />
+        <EmailField label={tr('Email')} required value={email} onChange={setEmail} />
         <label>
           {tr('Role')}
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
@@ -94,7 +89,7 @@ function InviteForm({ canInviteOwner, onInvited }: { canInviteOwner: boolean; on
       <p className="hint muted small">{tr(ROLE_HELP[role])}</p>
       {error && <p className="error">{error}</p>}
       <div className="form-actions">
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy || name.trim().length < 2 || !email.trim() || !fieldOk.email(email)}>
           {busy ? tr('Inviting…') : tr('Invite')}
         </Button>
       </div>

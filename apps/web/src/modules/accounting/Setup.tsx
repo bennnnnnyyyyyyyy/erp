@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ACCOUNT_KINDS, type Account } from '@erp/shared';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
+import { TextField } from '../../components/Fields';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
@@ -61,7 +62,7 @@ function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
           <p className="small"><strong>{trf('Effect on profit this month: {diff}.', { diff: money(sum('differenceMinor'), currency) })}</strong> {tr('The difference is booked as a stock adjustment, which changes this month\'s profit by the same amount.')}</p>
           {canRevalue ? (
             <div className="form-row">
-              <label>{tr('Reason')}<input value={note} maxLength={300} placeholder={tr('e.g. Correct sample-data costs')} onChange={(e) => setNote(e.target.value)} /></label>
+              <TextField label={tr('Reason')} max={300} value={note} placeholder={tr('e.g. Correct sample-data costs')} onChange={setNote} />
               <ConfirmButton label={tr('Revalue stock to average cost')} confirmLabel={tr('Yes, post the correction')} disabled={busy || !note.trim()}
                 question={trf('Post one entry of {diff} to bring stock to average cost? Profit this month changes by the same amount. It cannot be edited afterwards, only reversed by another entry.', { diff: money(sum('differenceMinor'), currency) })}
                 onConfirm={() => run(async () => {
@@ -77,6 +78,9 @@ function StockValueCard({ canRevalue }: { canRevalue: boolean }) {
 }
 
 // ------------------------------------------------------------------ chart of accounts
+
+/** An account's name, in English or Arabic: at most 160 characters (sql/045). */
+const ACCOUNT_NAME_MAX = 160;
 
 /** 'asset' is shown as "Asset" (or its Arabic), not the raw database value. */
 const kindLabel = (k: string) => tr(k.charAt(0).toUpperCase() + k.slice(1));
@@ -117,9 +121,9 @@ export function ChartPage() {
                 {list.map((a) => <option key={a.id} value={a.id}>{accountLabel(a)}</option>)}
               </select>
             </label>
-            <label>{tr('Code')}<input inputMode="numeric" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\D/g, '') })} /></label>
-            <label>{tr('Name')}<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-            <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} /></label>
+            <label>{tr('Code')}<input inputMode="numeric" maxLength={20} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\D/g, '').slice(0, 20) })} /></label>
+            <TextField label={tr('Name')} max={ACCOUNT_NAME_MAX} value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+            <TextField label={tr('Name in Arabic (optional)')} max={ACCOUNT_NAME_MAX} dir="rtl" value={form.nameAr} onChange={(v) => setForm({ ...form, nameAr: v })} />
             {!form.parentId || parent?.kind === 'equity' || parent?.kind === 'liability' ? (
               <label>{tr('Kind')}
                 <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
@@ -148,8 +152,8 @@ export function ChartPage() {
             <td style={{ paddingInlineStart: `${0.75 + (depth.get(a.id) ?? 0) * 1.25}rem` }}>
               {editing?.id === a.id ? (
                 <span className="flex flex-wrap items-center gap-2">
-                  <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label={tr('Name')} />
-                  <input dir="rtl" value={editing.nameAr} onChange={(e) => setEditing({ ...editing, nameAr: e.target.value })} aria-label={tr('Name in Arabic (optional)')} />
+                  <TextField label={<span className="sr-only">{tr('Name')}</span>} max={ACCOUNT_NAME_MAX} value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
+                  <TextField label={<span className="sr-only">{tr('Name in Arabic (optional)')}</span>} max={ACCOUNT_NAME_MAX} dir="rtl" value={editing.nameAr} onChange={(v) => setEditing({ ...editing, nameAr: v })} />
                   <Button size="sm" disabled={busy || !editing.name.trim()} onClick={() => save(a, { name: editing.name, nameAr: editing.nameAr })}>{tr('Save')}</Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>{tr('Cancel')}</Button>
                 </span>

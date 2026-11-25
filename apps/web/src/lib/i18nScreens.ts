@@ -1567,6 +1567,17 @@ export const SCREENS_AR: Record<string, string> = {
   "Unknown record type": "نوع سجل غير معروف",
   "Unknown record": "سجل غير معروف",
   "Unknown note": "ملاحظة غير معروفة",
+  // Boxes that check while the person types (components/Fields.tsx; Ben, 25 Nov 2026)
+  "An Egyptian mobile is 11 digits: 01x xxxx xxxx. A landline is its area code and number. A number in another country starts with + and its country code.": "المحمول المصري 11 رقمًا: 01x xxxx xxxx. الأرضي كود المنطقة ثم الرقم. رقم أي دولة أخرى يبدأ بـ + ثم كود الدولة.",
+  "An Egyptian mobile is 11 digits: 01x xxxx xxxx.": "المحمول المصري 11 رقمًا: 01x xxxx xxxx.",
+  "An email address looks like name@company.com.": "البريد الإلكتروني يكون بهذا الشكل: name@company.com.",
+  "Digits only (spaces or dashes between groups are fine).": "أرقام فقط (المسافات أو الشرطات بين المجموعات مقبولة).",
+  "An account number is digits; an IBAN starts with the country letters (an Egyptian IBAN is 29 characters).": "رقم الحساب أرقام فقط؛ والآيبان يبدأ بحروف الدولة (الآيبان المصري 29 حرفًا ورقمًا).",
+  "Exactly {n} digits.": "{n} أرقام بالضبط.",
+  "Commercial registry number": "رقم السجل التجاري",
+  "That email address is not valid": "عنوان البريد الإلكتروني غير صحيح",
+  "digits only (spaces or dashes between groups are fine)": "أرقام فقط (المسافات أو الشرطات بين المجموعات مقبولة)",
+  "an account number is digits; an IBAN starts with the country letters (an Egyptian IBAN is 29 characters)": "رقم الحساب أرقام فقط؛ والآيبان يبدأ بحروف الدولة (الآيبان المصري 29 حرفًا ورقمًا)",
   // The phone as a barcode scanner (sql/115)
   "Scan with my phone": "امسح بهاتفي",
   "Stop the phone scanner": "أوقف المسح بالهاتف",

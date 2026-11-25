@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { WorkWeekCard } from './WorkWeekCard';
 import { Button } from '../../../components/ui/button';
 import { Loading } from '../../../components/Loading';
-import { DATE_FORMATS, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
+import { TextField } from '../../../components/Fields';
+import { DATE_FORMATS, FIELD_MAX, hasPermission, type OrgSettings, type OrgSettingsUpdate } from '@erp/shared';
 import { api } from '../../../lib/api';
 import { demoMode } from '../../../lib/demo';
 import { useI18n, type Lang, tr } from '../../../lib/i18n';
@@ -117,10 +118,7 @@ export function GeneralSettings() {
       <form className="form-card stack" onSubmit={save}>
         <h2>{tr('Company')}</h2>
         <fieldset disabled={!canEdit || saving} className="stack">
-          <label>
-            {tr('Organization name')}
-            <input required maxLength={200} value={form.name} onChange={(e) => set('name', e.target.value)} />
-          </label>
+          <TextField label={tr('Organization name')} required max={FIELD_MAX.name} value={form.name} onChange={(v) => set('name', v)} />
           <div className="form-row">
             <label>
               {tr('Default currency')}

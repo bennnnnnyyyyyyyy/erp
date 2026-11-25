@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '../../components/ui/button';
+import { TextField } from '../../components/Fields';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import { tr, trf } from '../../lib/i18n';
@@ -118,8 +119,8 @@ export function ItemPartyCodes({ itemId, canManage }: { itemId: string; canManag
                 {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </label>
-            <label>{tr('Their code')}<input required maxLength={64} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
-            <label>{tr('Their name (optional)')}<input maxLength={200} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+            <TextField label={tr('Their code')} required max={64} value={form.code} onChange={(v) => setForm({ ...form, code: v })} />
+            <TextField label={tr('Their name (optional)')} max={200} value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           </div>
           <div className="form-actions">
             <Button type="submit">{tr('Save code')}</Button>

@@ -1,3 +1,4 @@
+import { BANK_RULE, REGISTRY_RULE, bankAccountOk, emailOk, registryOk } from '@erp/shared';
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { MAX_MINOR, invalid, isGoodQty, isIsoDay, jsonBody, partyBasics } from '../../lib/body';
@@ -136,16 +137,23 @@ function customerDetails(body: Record<string, unknown>) {
     return v || null;
   };
   const email = limited(text(body.email), 200, 'Email');
-  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) invalid('That email address is not valid');
+  // The shared rules (packages/shared/src/fieldRules.ts), the same as the screen checks while the person types.
+  if (email && !emailOk(email)) invalid('That email address is not valid');
   const currency = text(body.defaultCurrency).toUpperCase();
   if (currency && !/^[A-Z]{3}$/.test(currency)) invalid('A currency is a 3-letter code, for example EGP');
+  const taxNumber = limited(text(body.taxNumber), 40, 'Tax registration number');
+  if (taxNumber && !registryOk(taxNumber)) invalid(`Tax registration number: ${REGISTRY_RULE}`);
+  const registry = limited(text(body.commercialRegistry), 40, 'Commercial registry number');
+  if (registry && !registryOk(registry)) invalid(`Commercial registry number: ${REGISTRY_RULE}`);
+  const bankAccount = limited(text(body.bankAccount), 60, 'Bank account');
+  if (bankAccount && !bankAccountOk(bankAccount)) invalid(`Bank account: ${BANK_RULE}`);
   const all = {
-    p_tax_number: limited(text(body.taxNumber), 40, 'Tax registration number'),
-    p_commercial_registry: limited(text(body.commercialRegistry), 40, 'Commercial registry number'),
+    p_tax_number: taxNumber,
+    p_commercial_registry: registry,
     p_email: email,
     p_address: limited(text(body.address), 500, 'Address'),
     p_bank_name: limited(text(body.bankName), 120, 'Bank name'),
-    p_bank_account: limited(text(body.bankAccount), 60, 'Bank account'),
+    p_bank_account: bankAccount,
     p_default_currency: currency || null,
     p_notes: limited(text(body.notes), 2000, 'Notes'),
   };

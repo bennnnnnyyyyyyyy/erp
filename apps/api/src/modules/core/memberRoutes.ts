@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono';
-import { ROLES, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
+import { ROLES, emailOk, type Invitation, type InviteResult, type Member, type Role } from '@erp/shared';
 import type { AppEnv } from '../../env';
 import { createInvitedAccount, recoveryLink } from '../../lib/authAdmin';
 import { invalid, jsonBody } from '../../lib/body';
@@ -86,7 +86,8 @@ memberRoutes.get('/invitations', requirePermission('core.users.manage'), async (
 memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
   const body = await jsonBody(c);
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-  if (!EMAIL_RE.test(email) || email.length > 254) invalid('Enter a valid email address');
+  // the shared email rule (packages/shared/src/fieldRules.ts), the same as the invite box checks while the person types
+  if (!EMAIL_RE.test(email) || !emailOk(email)) invalid('Enter a valid email address');
   const role = body.role as Role;
   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
   // The person's name is required (system audit 2026-11-03, finding 8): without it every screen shows an email prefix.

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
+import { EmailField, TextField, fieldOk } from '../../components/Fields';
 import { api } from '../../lib/api';
 import { Link, navigate } from '../../lib/router';
 import { useSession } from '../../session';
@@ -188,12 +189,8 @@ export function TeamStep({ c, onDone }: { c: OnboardingContent; onDone: () => vo
   return (
     <form onSubmit={invite} className="grid gap-4 sm:grid-cols-2">
       {members ? <p className="m-0 text-sm sm:col-span-2">{c.team.existing(members.length)}</p> : null}
-      <Field label={c.team.email}>
-        <input className={inputClass} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" />
-      </Field>
-      <Field label={c.team.fullName}>
-        <input className={inputClass} required maxLength={120} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="off" />
-      </Field>
+      <EmailField label={c.team.email} required value={email} onChange={setEmail} />
+      <TextField label={c.team.fullName} required max={120} value={fullName} onChange={setFullName} />
       <Field label={c.team.role}>
         <select className={inputClass} value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
           {(['admin', 'member', 'viewer'] as const).map((r) => (
@@ -204,7 +201,7 @@ export function TeamStep({ c, onDone }: { c: OnboardingContent; onDone: () => vo
         </select>
       </Field>
       <div className="flex items-end">
-        <Button type="submit" variant="outline" disabled={busy || !email.trim() || !fullName.trim()}>
+        <Button type="submit" variant="outline" disabled={busy || !email.trim() || !fieldOk.email(email) || !fullName.trim()}>
           {busy ? c.saving : c.team.invite}
         </Button>
       </div>
