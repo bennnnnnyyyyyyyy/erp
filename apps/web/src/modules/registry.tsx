@@ -80,6 +80,7 @@ const ReportLibraryPage = lazyNamed(() => import('./reports/Library'), 'ReportLi
 const ReportBuilderPage = lazyNamed(() => import('./reports/Builder'), 'ReportBuilderPage');
 const SalesForecastPage = lazyNamed(() => import('./reports/SalesForecast'), 'SalesForecastPage');
 const ReportSchedulesPage = lazyNamed(() => import('./reports/Schedules'), 'ReportSchedulesPage');
+const PhoneScanPage = lazyNamed(() => import('../components/PhoneScanner'), 'PhoneScanPage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const EInvoicingSettings = lazyNamed(() => import('./core/settings/EInvoicingSettings'), 'EInvoicingSettings');
@@ -188,6 +189,8 @@ const PURCHASING_APP: AppDef = {
     { path: '/suppliers', label: 'Suppliers', component: Suppliers },
     // Real API only: the sample build has no purchase-invoice data (its page stayed on "Loading…"; found by the smoke test).
     ...(demoMode ? [] : [
+      // sql/115: the phone page of the phone scanner (opened from the QR on the computer's order form). Not in the menu.
+      { path: '/scan/:code', label: 'Phone scanner', permission: 'core.scanner.use', component: PhoneScanPage, nav: false, parent: '' },
       { path: '/invoices', label: 'Purchase invoices', permission: 'purchasing.invoices.read', component: SupplierInvoices },
       { path: '/invoices/:id', label: 'Purchase invoice', permission: 'purchasing.invoices.read', component: SupplierInvoicePage, nav: false, parent: '/invoices' },
     ]),
@@ -221,6 +224,8 @@ const SALES_APP: AppDef = {
     { path: '/orders/new', label: 'New sales order', permission: 'sales.orders.create', component: NewSalesOrder, nav: false, parent: '' },
     { path: '/orders/:id', label: 'Sales order', permission: 'sales.orders.read', component: SalesOrderPage, nav: false, parent: '' },
     { path: '/customers', label: 'Customers', permission: 'sales.customers.read', component: Customers },
+    // sql/115: the phone page of the phone scanner (opened from the QR on the computer's order form). Not in the menu.
+    { path: '/scan/:code', label: 'Phone scanner', permission: 'core.scanner.use', component: PhoneScanPage, nav: false, parent: '' },
     // Customer groups, price lists and the markup (sql/097).
     { path: '/prices', label: 'Prices', permission: 'sales.prices.read', component: PricesPage },
     // Moved from Settings (Ben, 9 Nov 2026): Settings connects an integration, the apps use it. Same permission as its API route.

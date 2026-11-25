@@ -11,6 +11,33 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — The phone as a barcode scanner for the computer (sql/115, test 112; NOT applied)
+
+**Objective.** Ben's request ("a QR on the computer that a phone scans to connect and scan barcodes into the order"), planned in
+`.temp/2026-11-25-phone-scanner-plan.md`; Ben's answers (via erp-master): polling every 1.5 s, sales and purchase orders first, the same
+person only.
+
+**Actions Completed.**
+- `sql/115_core_phone_scanner.sql`: `core_scan_sessions` and `core_scan_events` (RLS: a person reads only their own; select only);
+  `core_scan_start` (owners, admins, members; the form's module on; ends the person's other open sessions; returns a random code
+  once, keeps only its SHA-256; removes the company's sessions older than 7 days; audited), `core_scan_join` and `core_scan_add` (the
+  same person in the same company, an open session; barcode text 1-64 printable characters; at most 5 a second; each scan extends the
+  session to 10 minutes after it, at most 2 hours), `core_scan_poll` (new scans after an id, and whether the session is open),
+  `core_scan_end` (audited). A scan never changes a record; no master key.
+- Shared: key `core.scanner.use` (members too). API: `/v1/core/scan-sessions` (start, join, scans, poll, end;
+  `apps/api/src/modules/core/scanRoutes.ts`); 503 not_set_up before sql/115.
+- Web: `components/PhoneScanner.tsx`: "Scan with my phone" on the sales and purchase order form (QR of the link, polls every 1.5 s,
+  each barcode goes through the form's own scan handling, stops when the form closes); the phone page `/sales/scan/<code>` and
+  `/purchasing/scan/<code>` (camera, the same barcode once within 2.5 s, list of what was sent). Hidden in the sample build. Arabic.
+- Test: `sql/tests/112_core_phone_scanner.sql`.
+
+**Database / System Result.** Nothing applied. Rolled-back dry run on live (erp-live / ggoerp), 25 Nov: RLS on both tables, users may
+scan through the function but not insert, anonymous can neither read nor start. Tests 112 and 092 pass on live inside rolled-back
+transactions.
+
+**Safety Status.** SQL tests (PGlite) 110 passed, 0 failed; `tsc` 0 errors; tests shared 116, api 838, web 236; `biome ci` 0 errors.
+Not checked with a real phone. After "yes 115": apply, tests 112 and 092 on live; Ben's phone test (in the reply to erp-master).
+
 ## 2026-11-25 — sql/114 applied to live (input and speed rules)
 
 **Objective.** Ben's "yes 114" (via erp-master), after the rolled-back dry run in the entry below.
