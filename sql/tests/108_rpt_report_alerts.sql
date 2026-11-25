@@ -3,7 +3,7 @@
 -- Covers: C1 an owner makes a rule on a company report (audited); C2 refusals: a total the report does not have, money without a
 -- currency, a private report, no period on a dated source, an unknown comparison, a member making a rule; C3 a recipient who may not see
 -- the report's data is refused (on making the rule and on changing its recipients); F1 the five-minute job (alr_run) tells the
--- recipients when the total is past the limit, linked to the rule (sql/104); F2 not again at once; F3 a rule whose limit is not passed
+-- recipients when the total is past the limit, linked to the report (sql/112); F2 not again at once; F3 a rule whose limit is not passed
 -- says nothing; F4 money is compared in the rule's currency only; F5 a recipient who lost the right to the data is skipped at send time;
 -- F6 a deleted report stops its rule without breaking the others; F7 the existing alert kinds still run; I1 another company cannot make
 -- a rule on this company's report; N1 users cannot run the job.
@@ -96,33 +96,33 @@ begin
   -- F1: the job (service role)
   reset role;
   j := public.alr_run(o);
-  select count(*) into n from public.msg_outbox where org_id = o and kind = 'alert' and entity_id = r1;
-  if n <> 1 or not exists (select 1 from public.msg_outbox where org_id = o and entity_id = r1 and recipient_id = u and entity_type = 'alert:report_value'
+  select count(*) into n from public.msg_outbox where org_id = o and kind = 'alert' and idempotency_key like 'alr:' || r1 || ':%';
+  if n <> 1 or not exists (select 1 from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r1 || ':%' and recipient_id = u and entity_type = 'report' and entity_id = rexp
                                                             and body like '%70.00 EGP%above your limit of 60.00 EGP%') then
-    raise exception 'FAIL F1: % messages for the spending rule; %', n, (select string_agg(body, ' | ') from public.msg_outbox where org_id = o and entity_id = r1);
+    raise exception 'FAIL F1: % messages for the spending rule; %', n, (select string_agg(body, ' | ') from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r1 || ':%');
   end if;
-  select count(*) into n from public.msg_outbox where org_id = o and kind = 'alert' and entity_id = r2;
-  if n <> 1 or not exists (select 1 from public.msg_outbox where org_id = o and entity_id = r2 and recipient_id = m) then raise exception 'FAIL F1b: stock rule told % people', n; end if;
+  select count(*) into n from public.msg_outbox where org_id = o and kind = 'alert' and idempotency_key like 'alr:' || r2 || ':%';
+  if n <> 1 or not exists (select 1 from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r2 || ':%' and recipient_id = m) then raise exception 'FAIL F1b: stock rule told % people', n; end if;
   if (j ->> 'alerts')::int < 2 then raise exception 'FAIL F1c: job result %', j; end if;
 
   -- F2: not again at once; F3: the "below" rule said nothing; F4: the USD rule said nothing
   perform public.alr_run(o);
-  if (select count(*) from public.msg_outbox where org_id = o and entity_id = r1) <> 1 then raise exception 'FAIL F2: told again at once'; end if;
-  if exists (select 1 from public.msg_outbox where org_id = o and entity_id = r3) then raise exception 'FAIL F3: a limit not passed was told'; end if;
-  if exists (select 1 from public.msg_outbox where org_id = o and entity_id = r4) then raise exception 'FAIL F4: EGP spending counted in USD'; end if;
+  if (select count(*) from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r1 || ':%') <> 1 then raise exception 'FAIL F2: told again at once'; end if;
+  if exists (select 1 from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r3 || ':%') then raise exception 'FAIL F3: a limit not passed was told'; end if;
+  if exists (select 1 from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r4 || ':%') then raise exception 'FAIL F4: EGP spending counted in USD'; end if;
 
   -- F4b and F5: one expense moved to USD; the admin recipient is now only a member, so is skipped; the owner is told
   update public.fin_expenses set currency = 'USD' where id = e2;
   update public.memberships set role = 'member' where org_id = o and user_id = a;
   perform public.alr_run(o);
-  if not exists (select 1 from public.msg_outbox where org_id = o and entity_id = r4 and recipient_id = u and body like '%20.00 USD%') then raise exception 'FAIL F4b: USD not told'; end if;
-  if exists (select 1 from public.msg_outbox where org_id = o and entity_id = r4 and recipient_id = a) then raise exception 'FAIL F5: a person who may no longer see the data was told'; end if;
+  if not exists (select 1 from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r4 || ':%' and recipient_id = u and body like '%20.00 USD%') then raise exception 'FAIL F4b: USD not told'; end if;
+  if exists (select 1 from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r4 || ':%' and recipient_id = a) then raise exception 'FAIL F5: a person who may no longer see the data was told'; end if;
 
   -- F6: a deleted report stops its rule; the job still runs
   update public.rpt_reports set deleted_at = now() where id = rstock;
   update public.alr_firings set last_fired_at = now() - interval '2 days' where rule_id = r2;
   j := public.alr_run(o);
-  if (select count(*) from public.msg_outbox where org_id = o and entity_id = r2) <> 1 then raise exception 'FAIL F6: a deleted report still alerts'; end if;
+  if (select count(*) from public.msg_outbox where org_id = o and idempotency_key like 'alr:' || r2 || ':%') <> 1 then raise exception 'FAIL F6: a deleted report still alerts'; end if;
 
   -- F7: the existing kinds still run through alr_run (a low stock rule)
   perform set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);

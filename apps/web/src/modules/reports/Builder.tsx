@@ -291,6 +291,10 @@ export function ReportBuilderPage() {
     ...(meta.id && meta.visibility === 'company' && canAlert && (def.totals ?? []).length > 0
       ? [{ label: tr('Alert me when'), onClick: () => setAlertOpen(true), disabled: busy !== null || dirty, title: dirty ? tr('Save your changes first.') : undefined }]
       : []),
+    // Step 6 (sql/112): send this company report on a schedule (the schedules page opens with it chosen).
+    ...(meta.id && meta.visibility === 'company' && hasPermission(session.permissions, 'reports.schedules.manage')
+      ? [{ label: tr('Send on a schedule'), onClick: () => navigate(`/reports/schedules?report=${meta.id}`), disabled: busy !== null || dirty, title: dirty ? tr('Save your changes first.') : undefined }]
+      : []),
     ...(meta.id && canEditSaved ? [{ label: tr('Delete'), onClick: () => setConfirmDelete(true), disabled: busy !== null, danger: true }] : []),
   ];
   const hint = !meta.id && meta.templateKey

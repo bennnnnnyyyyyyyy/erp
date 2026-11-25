@@ -5,6 +5,7 @@ import { MoreMenu } from '../../components/MoreMenu';
 import { api } from '../../lib/api';
 import { formatDay } from '../../lib/format';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
+import { unitAllowsDecimals } from '../../lib/lineUnits';
 import { formatQty } from '../../lib/numbers';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -18,6 +19,8 @@ const TREND: Record<SalesForecastRow['trend'], string> = { up: 'Up', down: 'Down
 const TREND_MARK: Record<SalesForecastRow['trend'], string> = { up: '▲', down: '▼', flat: '■' };
 
 const money = (minor: number, currency: string) => formatMoney({ amountMinor: Math.round(minor), currency });
+/** A forecast of a whole-unit item (piece, box) reads as a whole number; kg and litre keep their decimals (Ben, 25 Nov 2026). */
+const forecastQty = (r: SalesForecastRow, q: number | null) => (q !== null && r.uom && !unitAllowsDecimals(r.uom) ? Math.round(q) : q);
 const nameOf = (r: SalesForecastRow) => (currentLanguage() === 'ar' && r.nameAr ? r.nameAr : r.name);
 
 export function SalesForecastPage() {
@@ -51,7 +54,7 @@ export function SalesForecastPage() {
       r.values.map((v) => [
         nameOf(r),
         r.code,
-        ...(items ? [r.qtyLast30, r.forecastQty] : []),
+        ...(items ? [r.qtyLast30, forecastQty(r, r.forecastQty)] : []),
         v.currency,
         v.last30Minor / 100,
         v.forecastMinor / 100,
@@ -118,7 +121,7 @@ export function SalesForecastPage() {
                       {nameOf(r)} {r.code && <span className="muted small"><bdi>{r.code}</bdi></span>}
                     </td>
                     {items && <td className="right">{formatQty(r.qtyLast30)} {r.uom}</td>}
-                    {items && <td className="right"><b>{formatQty(r.forecastQty)}</b> {r.uom}</td>}
+                    {items && <td className="right"><b>{formatQty(forecastQty(r, r.forecastQty))}</b> {r.uom}</td>}
                     <td className="right">{r.values.map((v) => <div key={v.currency}>{money(v.last30Minor, v.currency)}</div>)}</td>
                     <td className="right">{r.values.map((v) => <div key={v.currency}><b>{money(v.forecastMinor, v.currency)}</b></div>)}</td>
                     <td><span aria-hidden="true">{TREND_MARK[r.trend]}</span> {tr(TREND[r.trend])}</td>

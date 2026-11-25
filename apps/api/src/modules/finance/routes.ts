@@ -716,7 +716,9 @@ financeRoutes.post('/payment-links/:id/cancel', requirePermission('finance.entri
 financeRoutes.get('/product-sales', requirePermission('finance.reports.view'), async (c) => {
   const days = Math.min(Math.max(Number(c.req.query('days') ?? 90) || 90, 1), 3660);
   const org = orgOf(c);
-  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  // The last `days` days with today (as the ready-made report and, since sql/112, the home card count them): 90 days is today and the
+  // 89 before it, not 91 days.
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
   const invoices = await fetchAll<{ id: string }>((from, to) =>
     userDb(c)
       .from('sal_invoices')

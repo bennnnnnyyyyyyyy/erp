@@ -146,6 +146,7 @@ export const NAV_AR: Record<string, string> = {
   'Report library': 'مكتبة التقارير',
   'New report': 'تقرير جديد',
   'Sales forecast': 'توقع المبيعات',
+  'Scheduled reports': 'التقارير المجدولة',
   Report: 'تقرير',
   General: 'عام',
   Users: 'المستخدمون',

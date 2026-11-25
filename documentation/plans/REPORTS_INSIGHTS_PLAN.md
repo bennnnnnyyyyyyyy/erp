@@ -99,6 +99,11 @@ one is added before step 5, the new columns get their grant in the same migratio
 | `next_run_at`, `last_sent_at` | timestamptz | | `next_run_at` is computed by the database on every change and after every send |
 | `created_by`, `created_at`, `updated_at`, `deleted_at` | | | |
 
+**As built (sql/112, 25 Nov 2026):** `weekday` is the ISO weekday (1 = Monday), chosen on the screen (no work-week default yet).
+`period` may be empty for a snapshot report (stock on hand, money owed), as with report alerts. Recipients are a separate table,
+`rpt_schedule_recipients`, the same shape as `alr_rule_recipients`. Periods are whole days before the send day, except "this month",
+which runs to the send day. The message's target is the report, so the bell opens it.
+
 **Migration files:** `sql/109_rpt_reports.sql` (step 2), then the next free numbers for steps 4, 5 and 6, checked in `sql/README.md`
 at build time. One SQL test for each migration (next free test now `106`).
 

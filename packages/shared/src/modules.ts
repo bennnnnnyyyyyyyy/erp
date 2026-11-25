@@ -272,6 +272,8 @@ export const MODULES: readonly ModuleManifest[] = [
       'reports.custom.manage',
       // Step 4, the sales forecast (sql/110): everyone who may read sales invoices (the database checks the sales module again).
       'reports.forecast.read',
+      // Step 6, scheduled reports (sql/112): owners and admins make, pause and delete them (the database checks the role again).
+      'reports.schedules.manage',
     ],
     memberGrants: ['reports.custom.create'],
     suite: 'Core',

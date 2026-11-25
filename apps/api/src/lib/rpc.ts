@@ -127,13 +127,20 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
 export const trimQty = (text: string): string =>
   text.replace(/(\d+)\.(\d*?)0+(?!\d)/g, (_m, i: string, d: string) => (d ? `${i}.${d}` : i));
 
-/** The plain sentence for a stock shortage, from the database's "0.000 available, 1.000 requested" detail. */
+/**
+ * The plain sentence for a stock shortage, from the database's detail: "0.000 available, 1.000 requested", or since sql/112 with the
+ * item first, "RS-1 Cream: 0.000 available, 1.000 requested" (so a form with many lines says which one).
+ */
 export function stockShortMessage(details: string): string | null {
-  const m = /^(-?[\d.]+) available, (-?[\d.]+) requested$/.exec(details.trim());
+  const m = /^(?:(.{1,260}): )?(-?[\d.]+) available, (-?[\d.]+) requested$/.exec(details.trim());
   if (!m) return null;
-  const available = trimQty(m[1] as string);
-  const asked = trimQty(m[2] as string);
-  return `Not enough stock: you asked for ${asked}, but only ${available} ${available === '1' ? 'is' : 'are'} available in this warehouse.`;
+  const item = m[1]?.trim();
+  const available = trimQty(m[2] as string);
+  const asked = trimQty(m[3] as string);
+  const verb = available === '1' ? 'is' : 'are';
+  return item
+    ? `Not enough stock of ${item}: you asked for ${asked}, but only ${available} ${verb} available in this warehouse.`
+    : `Not enough stock: you asked for ${asked}, but only ${available} ${verb} available in this warehouse.`;
 }
 
 export const VAT_MISMATCH_MESSAGE =

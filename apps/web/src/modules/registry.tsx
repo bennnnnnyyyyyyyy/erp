@@ -79,6 +79,7 @@ const PeoplePage = lazyNamed(() => import('./hr/People'), 'PeoplePage');
 const ReportLibraryPage = lazyNamed(() => import('./reports/Library'), 'ReportLibraryPage');
 const ReportBuilderPage = lazyNamed(() => import('./reports/Builder'), 'ReportBuilderPage');
 const SalesForecastPage = lazyNamed(() => import('./reports/SalesForecast'), 'SalesForecastPage');
+const ReportSchedulesPage = lazyNamed(() => import('./reports/Schedules'), 'ReportSchedulesPage');
 const IntegrationsSettings = lazyNamed(() => import('./core/settings/IntegrationsSettings'), 'IntegrationsSettings');
 const BranchesSettings = lazyNamed(() => import('./core/settings/BranchesSettings'), 'BranchesSettings');
 const EInvoicingSettings = lazyNamed(() => import('./core/settings/EInvoicingSettings'), 'EInvoicingSettings');
@@ -333,6 +334,8 @@ export const APPS: AppDef[] = [
       { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
       // Step 4 (sql/110): the sales forecast (the sample build has a made-up one, lib/demoReports.ts).
       { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage },
+      // Step 6 (sql/112): scheduled reports (owners and admins).
+      { path: '/schedules', label: 'Scheduled reports', permission: 'reports.schedules.manage', component: ReportSchedulesPage },
       { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
       // Step 3: a ready-made report opens in the builder and runs at once.
       { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },

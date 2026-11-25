@@ -77,6 +77,11 @@ export async function runOutboxPass(env: Bindings, opts: { orgId?: string; limit
   if (rules.error) console.error('alert rules failed', rules.error.message);
   else alerts = ((rules.data ?? {}) as { alerts?: number }).alerts ?? 0;
 
+  // Scheduled reports (sql/112): send the ones that are due (only this organization's on an on-demand pass). A failure here, or the
+  // function not being there yet (before sql/112 is applied), must not stop delivery.
+  const schedules = await client.rpc('rpt_run_schedules', { p_org: opts.orgId ?? null });
+  if (schedules.error && schedules.error.code !== 'PGRST202') console.error('scheduled reports failed', schedules.error.message);
+
   const claim = opts.orgId
     ? await client.rpc('msg_claim_due_for_org', { p_org: opts.orgId, p_limit: opts.limit ?? 50 })
     : await client.rpc('msg_claim_due', { p_limit: opts.limit ?? 50 });

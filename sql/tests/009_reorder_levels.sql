@@ -1,5 +1,5 @@
 -- sql/tests/009_reorder_levels.sql
--- I6: reorder levels and low-stock messages. Always rolls back. Needs sql/001-013.
+-- I6: reorder levels; since sql/112 the chasing job sends no low-stock message (the alert engine does). Always rolls back. Needs sql/001-112.
 
 do $$
 declare
@@ -59,39 +59,16 @@ begin
   if not ok then raise exception 'FAIL S1e: a reorder level could be changed directly'; end if;
   reset role;
 
-  -- ---- S2: the job messages the managers about the low item only, once
+  -- ---- S2: since sql/112 the chasing job sends no low-stock message of its own (the alert engine's low stock rule does, sql/028);
+  -- before, people got the same news twice. The item is low (18 at level 20), the job runs, nothing is queued about it.
   j := public.msg_run_chasing(oa);
-  if (j ->> 'low_stock')::int <> 2 then raise exception 'FAIL S2a: expected 2 low-stock messages (owner and admin), got %', j; end if;
-  select count(*) into n from public.msg_outbox where org_id = oa and kind = 'info' and entity_id = i1 and recipient_id in (ua, ub) and body like 'Available 18%';
-  if n <> 2 then raise exception 'FAIL S2b: the managers did not get "Available 18" for the low item'; end if;
-  select count(*) into n from public.msg_outbox where org_id = oa and entity_id in (i2, i3) and kind = 'info';
-  if n <> 0 then raise exception 'FAIL S2c: an item above its level or with no level was reported'; end if;
-  select count(*) into n from public.msg_outbox where org_id = oa and entity_id = i1 and recipient_id = uc;
-  if n <> 0 then raise exception 'FAIL S2d: a plain member was messaged about low stock'; end if;
-  j := public.msg_run_chasing(oa);
-  if (j ->> 'low_stock')::int <> 0 then raise exception 'FAIL S2e: the same low-stock message was queued twice in one day: %', j; end if;
+  if (j ->> 'low_stock')::int <> 0 then raise exception 'FAIL S2a: the chasing job still counts low-stock messages: %', j; end if;
+  select count(*) into n from public.msg_outbox where org_id = oa and entity_id in (i1, i2, i3);
+  if n <> 0 then raise exception 'FAIL S2b: the chasing job queued % low-stock messages', n; end if;
   select count(*) into n from public.audit_log where org_id = oa and action = 'messaging.lowstock.queued';
-  if n <> 2 then raise exception 'FAIL S2f: expected 2 audit rows, found %', n; end if;
+  if n <> 0 then raise exception 'FAIL S2c: a low-stock message was audited as queued'; end if;
 
-  -- ---- S3: reserved stock counts against the level; clearing the level stops it
-  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
-  set local role authenticated;
-  perform public.inv_set_reorder_level(i2, 90);
-  perform public.inv_set_reorder_level(i1, null);
-  reset role;
-  perform set_config('request.jwt.claims', json_build_object('sub', uc, 'role', 'authenticated')::text, true);
-  set local role authenticated;
-  perform public.inv_submit_request(w1, 'reserve most', jsonb_build_array(jsonb_build_object('itemId', i2, 'qty', 20)));
-  reset role;
-  j := public.msg_run_chasing(oa);
-  if (j ->> 'low_stock')::int <> 2 then raise exception 'FAIL S3a: after reserving, available 80 is below level 90 for 2 managers: %', j; end if;
-  select count(*) into n from public.msg_outbox where org_id = oa and entity_id = i1 and kind = 'info' and created_at >= now();
-  if n <> 2 then raise exception 'FAIL S3b: the item whose level was cleared was reported again (rows today %, expected only the 2 from before)', n; end if;
-
-  -- ---- S4: another day produces a new message; messaging off means none; no data crosses organizations
-  update public.msg_outbox set idempotency_key = replace(idempotency_key, to_char(now() at time zone 'utc', 'YYYYMMDD'), '20000101') where org_id = oa and idempotency_key like 'lowstock:%';
-  j := public.msg_run_chasing(oa);
-  if (j ->> 'low_stock')::int <> 2 then raise exception 'FAIL S4a: a new day did not produce a new low-stock message: %', j; end if;
+  -- ---- S4: messaging off means no messages at all; no data crosses organizations
   perform set_config('request.jwt.claims', json_build_object('sub', uf, 'role', 'authenticated')::text, true);
   perform set_config('request.headers', json_build_object('x-org-id', ofx)::text, true);
   set local role authenticated;

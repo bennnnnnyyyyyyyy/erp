@@ -284,7 +284,8 @@ function isSendable(d: DocPrintData): boolean {
 
 function BackLink({ type, id, invoiceId }: { type: PrintDocType; id: string; invoiceId: string | null }) {
   if (type === 'invoice') return <Link to={`/sales/invoices/${id}`} className="back-link">{tr('← Sales invoice')}</Link>;
-  if (type === 'draft' && invoiceId) return <Link to={`/sales/invoices/${invoiceId}`} className="back-link">{tr('← Sales invoice')}</Link>;
-  // A credit or debit note (or a draft not issued yet) is usually opened from its invoice: go back there (dead-ends audit, 25 Nov).
+  // An issued draft, and since sql/112 a credit or debit note, carry their invoice's id: go back to that invoice.
+  if ((type === 'draft' || type === 'note') && invoiceId) return <Link to={`/sales/invoices/${invoiceId}`} className="back-link">{tr('← Sales invoice')}</Link>;
+  // A draft not issued yet (or a note printed before sql/112 is applied) is usually opened from its invoice (dead-ends audit, 25 Nov).
   return <HistoryBackLink to="/sales/invoices" label={tr('← Sales invoices')} backLabel={tr('← Back')} />;
 }

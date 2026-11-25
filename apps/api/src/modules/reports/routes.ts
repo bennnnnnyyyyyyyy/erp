@@ -1,7 +1,10 @@
 import { Hono } from 'hono';
 import {
   SALES_FORECAST_HORIZONS,
+  SCHEDULE_FREQUENCIES,
+  SCHEDULE_PERIODS,
   hasPermission,
+  type ReportSchedule,
   reportDefinitionProblem,
   type SalesForecast,
   type ReportDefinition,
@@ -218,5 +221,81 @@ reportsRoutes.get('/forecast/sales', requirePermission('reports.forecast.read'),
 reportsRoutes.delete('/saved/:id', requirePermission('reports.custom.create'), async (c) => {
   const id = uuidParam(c.req.param('id'));
   await callRpc<null>(userDb(c), 'rpt_delete_report', { p_id: id });
+  return ok<{ id: string }>(c, { id });
+});
+
+/**
+ * Scheduled reports (step 6, sql/112): a saved company report sent daily, weekly or monthly, at an hour in the company's time zone, to
+ * company members who may see its data. Owners and admins. The database checks the report, the period and every recipient again, and
+ * audits each change; the five-minute job (jobs/outbox.ts) sends them.
+ */
+function scheduleArgs(b: Record<string, unknown>, id: string | null) {
+  const reportId = typeof b.reportId === 'string' && UUID_RE.test(b.reportId) ? b.reportId : invalid('Choose a report');
+  const frequency = b.frequency;
+  if (typeof frequency !== 'string' || !(SCHEDULE_FREQUENCIES as readonly string[]).includes(frequency))
+    invalid('Choose daily, weekly or monthly');
+  const weekday = frequency === 'weekly' ? Number(b.weekday) : null;
+  if (weekday !== null && !(Number.isInteger(weekday) && weekday >= 1 && weekday <= 7)) invalid('Choose the day of the week');
+  const monthDay = frequency === 'monthly' ? Number(b.monthDay) : null;
+  if (monthDay !== null && !(Number.isInteger(monthDay) && monthDay >= 1 && monthDay <= 28))
+    invalid('Choose a day of the month from 1 to 28');
+  const sendHour = Number(b.sendHour);
+  if (b.sendHour === null || b.sendHour === '' || !Number.isInteger(sendHour) || sendHour < 0 || sendHour > 23)
+    invalid('Choose the hour, 0 to 23');
+  const period = b.period === null || b.period === undefined || b.period === '' ? null : String(b.period);
+  if (period && !(SCHEDULE_PERIODS as readonly string[]).includes(period)) invalid('Unknown period');
+  if (!Array.isArray(b.recipients) || b.recipients.length === 0 || b.recipients.length > 50) invalid('Choose who gets the report');
+  const enabled = b.enabled === undefined ? true : b.enabled === true;
+  return {
+    p_id: id,
+    p_report_id: reportId,
+    p_frequency: frequency,
+    p_weekday: weekday,
+    p_month_day: monthDay,
+    p_send_hour: sendHour,
+    p_period: period,
+    p_recipients: b.recipients,
+    p_enabled: enabled,
+  };
+}
+
+reportsRoutes.get('/schedules', requirePermission('reports.schedules.manage'), async (c) => {
+  return ok<ReportSchedule[]>(c, await callRpc<ReportSchedule[]>(userDb(c), 'rpt_schedule_list'));
+});
+
+reportsRoutes.post('/schedules', requirePermission('reports.schedules.manage'), async (c) => {
+  const id = await callRpc<string>(userDb(c), 'rpt_save_schedule', scheduleArgs(await jsonBody(c), null));
+  return ok<{ id: string }>(c, { id }, 201);
+});
+
+/** `{ enabled }` alone pauses or resumes; anything else changes the schedule (the fields not sent keep their values). */
+reportsRoutes.patch('/schedules/:id', requirePermission('reports.schedules.manage'), async (c) => {
+  const id = uuidParam(c.req.param('id'));
+  const body = await jsonBody(c);
+  const db = userDb(c);
+  if (Object.keys(body).length === 1 && typeof body.enabled === 'boolean') {
+    await callRpc<null>(db, 'rpt_set_schedule_enabled', { p_id: id, p_enabled: body.enabled });
+    return ok<{ id: string }>(c, { id });
+  }
+  const current = (await callRpc<ReportSchedule[]>(db, 'rpt_schedule_list')).find((s) => s.id === id);
+  if (!current) throw new HttpError(404, 'Not found', 'not_found');
+  const merged: Record<string, unknown> = {
+    reportId: current.reportId,
+    frequency: current.frequency,
+    weekday: current.weekday,
+    monthDay: current.monthDay,
+    sendHour: current.sendHour,
+    period: current.period,
+    recipients: current.recipients,
+    enabled: current.enabled,
+    ...body,
+  };
+  await callRpc<string>(db, 'rpt_save_schedule', scheduleArgs(merged, id));
+  return ok<{ id: string }>(c, { id });
+});
+
+reportsRoutes.delete('/schedules/:id', requirePermission('reports.schedules.manage'), async (c) => {
+  const id = uuidParam(c.req.param('id'));
+  await callRpc<null>(userDb(c), 'rpt_delete_schedule', { p_id: id });
   return ok<{ id: string }>(c, { id });
 });

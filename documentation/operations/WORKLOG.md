@@ -11,6 +11,46 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Reports step 6: scheduled reports, plus small audit fixes (sql/112, test 109; NOT applied)
+
+**Objective.** Step 6 of the Reports & Insights plan (sections 3.3 and 7.6): send a saved company report on a schedule. With it, the
+small fixes the 25 Nov audits put into 112: report-alert links for members, the duplicate "Low stock" message, the item name in stock
+shortage errors, a credit note's way back to its invoice, whole-unit forecast numbers, and the home card "Top products" not matching
+the ready-made report. Also the PR #126 lint fix.
+
+**Actions Completed.**
+- Lint (PR #126): `apps/api/test/input_checks.test.ts` formatted (LF lines inside a CRLF file, one long line); `biome ci` 0 errors.
+- `sql/112_rpt_schedules.sql`: `rpt_schedules` and `rpt_schedule_recipients` (RLS: owners and admins read; select only; writes through
+  `rpt_save_schedule`, `rpt_set_schedule_enabled`, `rpt_delete_schedule`, each audited); `rpt_schedule_list`; `rpt_run_schedules`
+  (service role): runs each due report with the maker's role, one outbox message per recipient who may see the data (name, period,
+  totals, first 5 rows; target `report:<id>`, so the bell opens it), audited; a deleted report or a maker who left switches the
+  schedule off (audited); a failure is audited and retried at the next send time. Next send time in the company's time zone.
+- Same migration, copies of the latest functions with one change each: `rpt__alert_run` (sql/111: report alerts target the report;
+  old messages and notifications moved over), `msg_run_chasing` (sql/013: its own low stock message removed, `low_stock` stays 0),
+  `inv_submit_request` (sql/006) and `inv_submit_transfer` (sql/034): shortage detail "<code> <name>: x available, y requested",
+  `sal__doc_print_data` (sql/103): `invoiceId` on notes, `insights_home` (sql/094): top products from today − 89 days, company time.
+- Why the top products differed: on 24 Nov the home card counted from 26 Aug (91 days, server date) and the report from 27 Aug; one
+  invoice of 26 Aug (EGP 81,259.20 of sunscreen) was the whole gap (712,192 against 630,933). Read-only queries on live, 25 Nov.
+- API: `GET/POST /v1/reports/schedules`, `PATCH/DELETE /v1/reports/schedules/:id` (`reports.schedules.manage`, new key, owners and
+  admins); `jobs/outbox.ts` calls `rpt_run_schedules` after the alerts (a missing function is ignored); `lib/rpc.ts` names the item in
+  the shortage sentence; `/v1/finance/product-sales` counts 90 days with today (was 91).
+- Web: `/reports/schedules` (list, add, pause, resume, delete; "Send on a schedule" in the report's More menu); the bell opens
+  `report` targets; the note print page goes back to its invoice; the forecast shows whole numbers for whole-unit items; Arabic.
+- Tests: new `sql/tests/109_rpt_schedules.sql`; `sql/tests/009` (the chasing job sends no low stock message) and `sql/tests/108` (report
+  alerts found by their rule key, target the report) changed with the behaviour; API tests for the routes and the shortage sentence.
+- Not done (proposed to erp-master as its own slice): "which state is needed" in INVALID_STATE / APPROVAL_REQUIRED errors. It is raised
+  at about 200 places in some 30 posting functions; copying them into a reports migration was judged too risky.
+
+**Database / System Result.** Nothing applied. Rolled-back dry run of sql/112 on live (erp-live / ggoerp), 25 Nov: tables with RLS,
+users may save but not run the job or insert, anonymous cannot list, the 2 old report-alert messages and notifications move to the
+report, the job runs with no schedules, the chasing job reports `low_stock` 0; after the rollback nothing is left. Tests 109 and 092
+also pass on live inside rolled-back transactions.
+
+**Safety Status.** SQL tests (PGlite): 107 passed, 0 failed; 112 reruns cleanly. `tsc` 0 errors (shared, api, web); tests: api 820+,
+web 236, shared 109; `biome ci` 0 errors. Not checked: a real scheduled send through WhatsApp/email delivery and the new screen in a
+browser. After Ben's "yes 112": apply, run tests 109 and 092 on live, then Ben checks `/reports/schedules` (add a daily schedule at the
+next hour, wait for the message in the bell).
+
 ## 2026-11-25 — Audit answers: server search on invoices, bills, expenses, payments; Save blocked on a bad date (no migration)
 
 **Objective.** Ben's answers to the input and speed audit (via erp-master): move invoices, bills, expenses and payments to the shared
