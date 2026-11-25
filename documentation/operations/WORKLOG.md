@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Ben's live test of the audit fixes: phone rule by country; long names in the form and the sample build (no migration)
+
+**Objective.** Ben's live test of PR #126 (via erp-master): item 25, "+2015556487744" (+20 and 11 digits) saved as a phone; item 26, a
+customer with a pasted paragraph as its name saved.
+
+**Actions Completed.**
+- Item 26, cause: on live nothing longer than 40 characters is stored as a customer or supplier name (read-only check, 25 Nov), and both
+  the API (`partyBasics`, 200) and the database (`check length between 1 and 200`, sql/019, sql/017) refuse longer names. The sample
+  build (`apps/web/src/lib/demoTrade.ts`) checked only that the name is not empty, and the form had no length limit, so a long name
+  "saved" there. Fixed: the form's inputs stop at 200 / 120 / 80 characters (name, contact, city); the sample build refuses the same as
+  the API. A name of 200 characters or fewer that looks like a paragraph is still a valid name.
+- Item 25: one shared rule, `packages/shared/src/phone.ts` `checkPhone`: spaces, dashes, dots, brackets and Arabic digits are fine;
+  +20 / 0020 / a leading 0 must be an Egyptian mobile (1 + 0/1/2/5 + 8 digits) or landline (2 + 8, 3 + 7, or another area code + 7
+  digits); other countries + (or 00) and the country code, 8 to 15 digits. Used by the API (`lib/body.ts` `phoneOrNull`, customers
+  and suppliers), the form (checked before sending) and the sample build. Arabic for the message. A customer saved before with a
+  phone that does not fit must have its phone corrected the next time it is changed.
+- Tests: `packages/shared/src/phone.test.ts`; `apps/api/test/input_checks.test.ts` updated.
+
+**Database / System Result.** None. The database checks (phone, lengths) come with sql/114.
+
+**Safety Status.** `tsc` 0 errors (shared, api, web); tests: shared 116, api 832, web 236; biome 0 errors. Not checked in a browser.
+
 ## 2026-11-25 — sql/113 applied to live (notes on records)
 
 **Objective.** Ben's "yes 113" (via erp-master), after the rolled-back dry run in the entry "Notes on records" below. Ben confirmed

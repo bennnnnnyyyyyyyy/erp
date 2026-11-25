@@ -1,3 +1,4 @@
+import { checkPhone, PHONE_RULE_MESSAGE } from '@erp/shared';
 import { demoPrintData } from './demoPrint';
 import { catalog, createRequest, getRequest, receiveGoods, DemoRuleError, type Actor, type RequestStatus } from './demoInventory';
 
@@ -144,6 +145,11 @@ export function handleTrade(domain: 'purchasing' | 'sales', method: string, part
     if (!canWrite(actor)) throw forbid();
     const name = String(body.name ?? '').trim();
     if (!name) throw new DemoRuleError(400, 'Name is required', 'invalid_input');
+    // The same limits as the API (lib/body.ts partyBasics): the sample build saved a pasted paragraph as a name (Ben, 25 Nov 2026).
+    for (const [field, label, max] of [['name', 'Name', 200], ['contact', 'Contact', 120], ['city', 'City', 80]] as const) {
+      if (String(body[field] ?? '').trim().length > max) throw new DemoRuleError(400, `${label}: at most ${max} characters`, 'invalid_input');
+    }
+    if (!checkPhone(body.phone).ok) throw new DemoRuleError(400, `Phone: ${PHONE_RULE_MESSAGE}`, 'invalid_input');
     const party: Party = { id: `${kind[0]}${parties.length + 1}`, kind, name, contact: String(body.contact ?? '').trim(), city: String(body.city ?? '').trim(), phone: String(body.phone ?? '').trim() };
     parties.push(party);
     actor.log(`${domain}.${kind}.created`, kind, party.id, `${kind === 'supplier' ? 'Supplier' : 'Customer'} ${name} added`);
