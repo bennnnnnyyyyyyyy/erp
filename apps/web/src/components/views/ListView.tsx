@@ -35,7 +35,7 @@ type Props<T> = {
   /** Where clicking the row goes. Rows without it do not react to the pointer. */
   rowHref?: (row: T) => string;
   /** Older rows on the server (lib/usePaged.ts): a "Load more" button under the table. Search and sort cover the loaded rows only. */
-  more?: { hasMore: boolean; loading: boolean; onMore: () => void };
+  more?: { hasMore: boolean; loading: boolean; onMore: () => void; error?: string | null };
 };
 
 function csvCell(v: string | number | null): string {
@@ -132,7 +132,15 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
             {shown.length === 0 && (
               <tr>
                 <td colSpan={visible.length + (actions ? 1 : 0)} className="muted empty">
-                  {rows.length === 0 ? (empty ?? tr('Nothing here yet.')) : tr('No matches.')}
+                  {rows.length === 0
+                    ? (empty ?? tr('Nothing here yet.'))
+                    : more?.hasMore
+                      // Search covers the loaded rows only: say so, so an older record is not taken as missing (input and speed audit).
+                      ? trf('No match in the newest {n} rows. Load more to search older ones.', { n: rows.length })
+                      : trf('No rows match "{q}".', { q: query.trim() })}
+                  {rows.length > 0 && query.trim() && (
+                    <div className="empty-action"><Button variant="outline" size="sm" onClick={() => setQuery('')}>{tr('Clear search')}</Button></div>
+                  )}
                   {rows.length === 0 && emptyAction && <div className="empty-action">{emptyAction}</div>}
                 </td>
               </tr>
@@ -140,6 +148,11 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
           </tbody>
         </table>
       </div>
+      {more?.error && rows.length > 0 && (
+        <p className="error notice" role="alert">
+          {more.error} <Button variant="outline" size="sm" onClick={more.onMore}>{tr('Try again')}</Button>
+        </p>
+      )}
       {more?.hasMore && (
         <div className="form-actions list-more">
           <Button variant="outline" disabled={more.loading} onClick={more.onMore}>{more.loading ? tr('Loading…') : tr('Load more')}</Button>

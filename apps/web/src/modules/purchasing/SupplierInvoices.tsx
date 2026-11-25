@@ -1,10 +1,11 @@
 import { DateInput } from '../../components/DateInput';
+import { todayIn } from '../../lib/dates';
 import { Attachments } from '../../components/Attachments';
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { formatDateTime, formatDay } from '../../lib/format';
 import { Pill } from '../trade/common';
@@ -53,7 +54,7 @@ export function SupplierInvoices(){
     try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(qtyFor(l))>0).map(l=>({orderLineId:l.orderLineId,qty:Number(qtyFor(l)),...(lineRate[l.orderLineId]?{taxRateId:lineRate[l.orderLineId]}:{}),...(lineKind[l.orderLineId]?{vatClass:lineKind[l.orderLineId]}:{})})),vat:purchaseVatPayload(vatIn)})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});setVatIn(emptyPurchaseVat);setLineRate({});setLineKind({});summaries.reload();invoices.reload();}
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
-  if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading error={summaries.error??invoices.error??suppliers.error??items.error} /></section>;
+  if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading {...failed(summaries, invoices, suppliers, items)} /></section>;
   const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
   const toBill=billingRows.filter(r=>r.billed<r.received);
   const billable=summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty));
@@ -67,7 +68,7 @@ export function SupplierInvoices(){
         {/* Dead-ends audit, 25 Nov: only orders with received goods not yet billed can be billed; with none, say why and where to go. */}
         {billable.length===0?<div className="notice" role="status"><p style={{marginBlock:0}}>{tr('No received goods are waiting for a bill. Receive the goods on the purchase order first.')}</p><Link to="/purchasing/orders">{tr('Purchase orders')}</Link></div>:<label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{billable.map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>}
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
-        <label>{tr('Invoice date')}<DateInput value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
+        <label>{tr('Invoice date')}<DateInput value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} max={todayIn()} required /></label>
       </div>
       {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={qtyFor(l)} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" />{message&&!message.ok&&<p className="error notice" role="alert">{message.text}</p>}<Button type="submit" disabled={busy||!number.trim()||!anyQty} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button>{!busy&&(!number.trim()||!anyQty)&&<p className="muted small">{!number.trim()?tr('Enter the supplier\'s invoice number.'):''} {!anyQty?tr('Enter a quantity on at least one line.'):''}</p>}</>}
     </FormToggle>}
@@ -100,7 +101,7 @@ export function SupplierInvoicePage() {
   const theirCodes = codesFor(usePartyCodes('supplier', invoice.data?.supplierId), (invoice.data?.lines ?? []).map((l) => l.itemId ?? undefined));
 
   if (invoice.error) return <section className="page"><BackLink to="/purchasing/invoices" label={tr('← Purchase invoices')} backLabel={tr('← Back')} /><Loading error={invoice.error} /></section>;
-  if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
+  if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading {...failed(suppliers, items)} /></section>;
   const inv = invoice.data;
   const order = { number: inv.orderNumber };
   // VAT (sql/087): shown only when the bill carries any, so bills without VAT look as before.

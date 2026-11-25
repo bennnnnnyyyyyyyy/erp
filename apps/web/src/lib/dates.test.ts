@@ -37,4 +37,12 @@ describe('dates in the company format (UX audit 20 Nov: date boxes showed month/
     expect(readDay('20/11/26', 'DD/MM/YYYY')).toBeNull();
     expect(readDay('tomorrow', 'DD/MM/YYYY')).toBeNull();
   });
+  it('ignores direction marks from right-to-left keyboards and refuses years outside 1900-2100', () => {
+    expect(readDay('\u200f20/11/2026\u200e', 'DD/MM/YYYY')).toBe('2026-11-20');
+    expect(readDay('20\u061c/11/2026', 'DD/MM/YYYY')).toBe('2026-11-20');
+    expect(readDay('01/01/0001', 'DD/MM/YYYY')).toBeNull();
+    expect(readDay('01/01/9999', 'DD/MM/YYYY')).toBeNull();
+    expect(readDay('14/14/2026', 'DD/MM/YYYY')).toBeNull();
+    expect(readDay('01/01/2100', 'DD/MM/YYYY')).toBe('2100-01-01');
+  });
 });

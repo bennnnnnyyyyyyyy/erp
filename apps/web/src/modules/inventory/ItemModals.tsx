@@ -7,6 +7,7 @@ import { SkuFormatForm, useCanSetSkuFormat, useSkuFormat } from '../../component
 import { UnitSelect } from '../../components/UnitSelect';
 import { hasPermission, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
+import { parseAmount } from '../../lib/numbers';
 import { demoMode } from '../../lib/demo';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -53,9 +54,17 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    // Typed the way people type ("1,500", Arabic digits): a cost or opening stock that is not a number of 0 or more is refused, not saved
+    // as "no cost" or 0 without a word (input and speed audit, 25 Nov 2026).
+    const qty = form.openingQty.trim() === '' ? 0 : parseAmount(form.openingQty);
+    const cost = form.cost.trim() === '' ? null : parseAmount(form.cost);
+    if (!Number.isFinite(qty) || qty < 0 || (cost !== null && (!Number.isFinite(cost) || cost < 0))) {
+      setError(tr('Enter a number of 0 or more.'));
+      return;
+    }
     let made: { id: string };
     try {
-      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, groupId: groupId || null, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: Number(form.openingQty), unitCostMinor: form.cost.trim() ? Math.round(Number(form.cost) * 100) : null, ...(form.barcode.trim() ? { barcode: form.barcode.trim() } : {}) }) });
+      made = await api<{ id: string }>('/v1/inventory/items', { method: 'POST', body: JSON.stringify({ sku: form.sku, groupId: groupId || null, name: form.name, nameAr: form.nameAr, uom: form.uom, warehouseId: form.warehouseId, openingQty: qty, unitCostMinor: cost === null ? null : Math.round(cost * 100), ...(form.barcode.trim() ? { barcode: form.barcode.trim() } : {}) }) });
     } catch (err) {
       setError((err as Error).message);
       return;
@@ -94,7 +103,7 @@ export function AddItemModal({ warehouses, onClose, onDone }: { warehouses: Demo
         <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={set('nameAr')} /></label>
         {demoMode ? null : <BarcodeField value={form.barcode} onChange={(barcode) => setForm((f) => ({ ...f, barcode }))} />}
         <div className="form-row">
-          <label>{tr('Opening stock (optional)')}<input type="number" min="0" value={form.openingQty} onChange={set('openingQty')} /></label>
+          <label>{tr('Opening stock (optional)')}<input inputMode="decimal" value={form.openingQty} onChange={set('openingQty')} /></label>
           {/* sql/046: opening stock is a receipt, so it carries a unit cost (required once accounting is on). */}
           <label>{tr('Unit cost (needed with accounting)')}<input inputMode="decimal" placeholder="0.00" value={form.cost} onChange={set('cost')} /></label>
           <label>

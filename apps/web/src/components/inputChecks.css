@@ -1,0 +1,2 @@
+/* Visible input checks (input and speed audit, 25 Nov 2026): a date box says what is wrong under it, not only in a tooltip. */
+.date-input-msg { display: block; margin-block-start: 0.2rem; color: var(--danger); font-size: 0.8rem; font-weight: 500; }

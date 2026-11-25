@@ -14,7 +14,7 @@ import type { DemoRequest, StockRow } from '../../lib/demoInventory';
 import { usePeople } from '../../lib/people';
 import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { BackLink, Link, navigate, useParam } from '../../lib/router';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { parseAmount } from '../../lib/numbers';
@@ -58,7 +58,7 @@ export function RequestsList() {
           columns={columns}
           rowKey={(r) => r.id}
           rowHref={(r) => `/inventory/requests/${r.id}`}
-          more={{ hasMore: requests.hasMore, loading: requests.loading, onMore: requests.more }}
+          more={{ hasMore: requests.hasMore, loading: requests.loading, onMore: requests.more, error: requests.error }}
           empty={filter === 'submitted' ? tr('No requests are waiting for approval.') : tr('No requests yet. A request takes goods out of a warehouse; a manager approves it first.')}
           emptyAction={filter === 'all' && hasPermission(session.permissions, 'inventory.request.create') ? <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button> : undefined}
           toolbar={
@@ -72,7 +72,7 @@ export function RequestsList() {
           }
         />
       ) : (
-        <Loading />
+        <Loading {...failed(requests, cat.items, cat.warehouses)} />
       )}
     </section>
   );
@@ -134,7 +134,7 @@ export function NewRequest() {
     }
   }
 
-  if (!cat.ready || !stock.data || !past.data) return <section className="page"><Loading /></section>;
+  if (!cat.ready || !stock.data || !past.data) return <section className="page"><Loading {...failed(stock, past, cat.items, cat.warehouses)} /></section>;
 
   return (
     <section className="page">
@@ -212,7 +212,7 @@ export function RequestPage() {
   }
 
   if (request.error) return <section className="page"><BackLink to="/inventory/requests" label={tr('← Stock requests')} backLabel={tr('← Back')} /><p className="error">{request.error}</p></section>;
-  if (!r || !cat.ready) return <section className="page"><Loading /></section>;
+  if (!r || !cat.ready) return <section className="page"><Loading {...failed(request, cat.items, cat.warehouses)} /></section>;
 
   const open = r.status === 'submitted' || r.status === 'approved';
 

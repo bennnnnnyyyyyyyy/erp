@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
 import type { ApprovalPolicy } from '../../lib/demoInventory';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { FormToggle } from '../../components/FormToggle';
 import { tr, trf } from '../../lib/i18n';
@@ -48,7 +48,7 @@ export function ApprovalPoliciesPage() {
 
   const warehouseName = (id: string | null) => id ? cat.warehouseName(id) : tr('All warehouses');
 
-  if (!cat.warehouses.data || !policies.data) return <section className="page"><Loading /></section>;
+  if (!cat.warehouses.data || !policies.data) return <section className="page"><Loading {...failed(policies, cat.warehouses)} /></section>;
 
   return (
     <section className="page">

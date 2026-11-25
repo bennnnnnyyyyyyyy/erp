@@ -14,6 +14,12 @@ import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 
 import { tr, trf } from '../../lib/i18n';
+/** Now in the browser's own time, as a datetime-local value (YYYY-MM-DDTHH:mm). */
+function localNow(): string {
+  const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000);
+  return d.toISOString().slice(0, 16);
+}
+
 // Tasks (documentation/plans/TASKS_AND_OUTBOX_PLAN.md): a manager assigns work with a due time; the assignee gets a
 // notification, updates the status, and a reminder goes out if it is overdue. Rules live in the database.
 
@@ -36,7 +42,15 @@ function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose
     setBusy(true);
     setError(null);
     try {
-      await api('/v1/tasks', { method: 'POST', body: JSON.stringify(form) });
+      // The box gives local time without a zone: send it as a full time (Cairo, not UTC on the server), never in the past, a sane year
+      // (input and speed audit, 25 Nov 2026).
+      const due = form.dueAt ? new Date(form.dueAt) : null;
+      if (due && (Number.isNaN(due.getTime()) || due.getFullYear() > 2100 || due.getTime() < Date.now() - 60_000)) {
+        setError(tr('Choose a due time from now on.'));
+        setBusy(false);
+        return;
+      }
+      await api('/v1/tasks', { method: 'POST', body: JSON.stringify({ ...form, dueAt: due ? due.toISOString() : '' }) });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -55,7 +69,7 @@ function NewTaskModal({ members, onClose, onDone }: { members: Member[]; onClose
               {choices.map((m) => <option key={m.userId} value={m.userId}>{m.name ?? m.email} ({m.role})</option>)}
             </select>
           </label>
-          <label>{tr('Due')}<input type="datetime-local" value={form.dueAt} onChange={set('dueAt')} /></label>
+          <label>{tr('Due')}<input type="datetime-local" value={form.dueAt} min={localNow()} max="2100-12-31T23:59" onChange={set('dueAt')} /></label>
         </div>
         <label>{tr('Details (optional)')}<input value={form.description} onChange={set('description')} /></label>
         {error && <p className="error">{error}</p>}

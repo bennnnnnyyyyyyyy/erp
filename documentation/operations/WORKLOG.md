@@ -11,6 +11,44 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Input, dates, search, notes and speed audit: server-side checks, 1000-row cut-off, timeouts (no migration)
+
+**Objective.** Ben forwarded a tester's notes on another product (month 14 and 6-digit years accepted, 40-digit phones, any text as
+email, lists on "Loading…" for a minute, "canceling statement due to statement timeout"). Check the ERP for the same kinds of problem;
+fix the small ones, list the rest. Table and questions: `.temp/2026-11-25-input-speed-audit.md`.
+
+**Actions Completed.**
+- API checks (`apps/api/src/lib/body.ts`): `isIsoDay`/`ISO_DAY` (a real calendar day, years 1900-2100) replaces the shape-only date
+  check in every module and the inline ones in sales and purchasing; `phoneOrNull` (7-15 digits, spaces, dashes, brackets, +, Arabic
+  digits); `textUpTo` (too long is refused, never cut); `partyBasics` (customer/supplier name 200, contact 120, city 80, phone);
+  `MAX_MINOR` (10 billion in a two-decimal currency) and `isGoodQty` (above 0, at most 3 decimals, at most 1 billion).
+- Sales and purchase orders: a bad line refuses the order and names the line (bad lines were dropped silently). Payments and expenses:
+  amounts capped; notes at most 500. Treasury notes and journal memos/comments: too long is refused (was cut at 500). Tasks: title 200,
+  description 4000. Supplier invoice number 60. Invite email at most 254. E-invoicing: registration number 9 digits, activity code
+  4 digits; customer tax ID by type (business 9 digits, person 14-digit national ID, foreign 30), address parts at most 100.
+- Database errors (`lib/rpc.ts` `plainDbError`, used in `index.ts` onError): statement timeout, deadlock and busy server (503),
+  permission (403), duplicate and still-linked (409), check/length/date/number/format (400) get plain messages; the raw text is only
+  logged (they all showed "Something went wrong on our side").
+- 1000-row cut-off (`lib/paging.ts` `fetchAllPages`/`readAllPages`): items, stock on hand, customers, suppliers and item units are
+  read page by page (PostgREST stopped each read at 1000 rows without saying so).
+- Web (`lib/api.ts`): a 30-second limit with "The server is taking too long. Try again in a moment"; a non-JSON 5xx says the server
+  is busy; the API's line and length messages translate in both parts. `Loading` has "Try again" and 11 pages now pass their error
+  (a failed load showed the skeleton forever). `ListView`: "No rows match "…"" with Clear search, and "No match in the newest N
+  rows. Load more…" when older rows are not loaded; load-more errors shown. `DateInput`: a visible message for a bad or out-of-range
+  date; `readDay` removes right-to-left marks and refuses years outside 1900-2100. Posting dates (sales invoice, purchase bill,
+  expense, payment, manual journal and reversal, treasury transfer) cannot be picked after today. New item: cost and opening
+  quantity read like other amounts (a bad value blocks saving; "1,500" saved the item without a cost). Task due time: not in the past,
+  sent with its time zone (it was read as UTC).
+- Arabic for every new text (`i18nErrors.ts`, `i18nScreens.ts`). Tests: `apps/api/test/input_checks.test.ts` (7), `lib/dates.test.ts`.
+
+**Database / System Result.** None. For sql/112 (with step 6): the same checks in the database, server checks on future posting
+dates and past due dates, lock date on non-posting documents, list indexes, money and forecast reports summed in SQL, a time limit on
+the report builder and forecast, set-returning functions as JSON (listed in the audit file).
+
+**Safety Status.** `tsc` 0 errors (api, web); tests: api 818 (7 new), web 236; biome 0 errors. Not checked in a browser on real data.
+Not done (listed): server search and column filters, notes on records, invoices/bills/expenses/payments as paged lists, a body-size
+limit per route.
+
 ## 2026-11-25 — Reports: the report title above the chart shows only in print and PDF (no migration)
 
 **Objective.** Ben's answer on the tidy-up: the title above the chart repeats the page title on screen; keep it in print and PDF.

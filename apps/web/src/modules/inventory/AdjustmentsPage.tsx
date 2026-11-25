@@ -6,7 +6,7 @@ import { Loading } from '../../components/Loading';
 import { hasPermission } from '@erp/shared';
 import { api } from '../../lib/api';
 import type { StockAdjustment, StockRow } from '../../lib/demoInventory';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { FormToggle } from '../../components/FormToggle';
 import { tr } from '../../lib/i18n';
@@ -59,7 +59,7 @@ export function AdjustmentsPage() {
     }
   }
 
-  if (!cat.ready || !cat.warehouses.data || !adjustments.data || !stock.data) return <section className="page"><Loading /></section>;
+  if (!cat.ready || !cat.warehouses.data || !adjustments.data || !stock.data) return <section className="page"><Loading {...failed(adjustments, stock, cat.items, cat.warehouses)} /></section>;
 
   return (
     <section className="page">

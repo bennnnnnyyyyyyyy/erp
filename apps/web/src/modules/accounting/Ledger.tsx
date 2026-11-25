@@ -1,4 +1,5 @@
 import { DateInput } from '../../components/DateInput';
+import { todayIn } from '../../lib/dates';
 import { useState } from 'react';
 import {
   hasPermission,
@@ -260,7 +261,7 @@ export function JournalEditPage() {
       <Notice message={message} />
       <div className="form-card stack">
         <div className="form-row">
-          <label>{tr('Date')}<DateInput value={f.entryDate} onChange={(e) => set({ entryDate: e.target.value })} /></label>
+          <label>{tr('Date')}<DateInput value={f.entryDate} onChange={(e) => set({ entryDate: e.target.value })} max={todayIn()} /></label>
           <label>{tr('Type')}
             <select value={f.kind} onChange={(e) => set({ kind: e.target.value as 'manual' | 'opening' })}>
               <option value="manual">{tr('Manual journal')}</option>
@@ -390,7 +391,7 @@ export function JournalPage() {
           <h2>{tr('Reverse')}</h2>
           <p className="muted small">{tr('A posted journal is never changed. Reversing posts the opposite entry on the date you choose. Owner or head accountant, once.')}</p>
           <div className="form-row">
-            <label>{tr('Date')}<DateInput value={reverse.date} onChange={(e) => setReverse({ ...reverse, date: e.target.value })} /></label>
+            <label>{tr('Date')}<DateInput value={reverse.date} onChange={(e) => setReverse({ ...reverse, date: e.target.value })} max={todayIn()} /></label>
             <label>{tr('Reason')}<input value={reverse.memo} maxLength={500} onChange={(e) => setReverse({ ...reverse, memo: e.target.value })} /></label>
             <ConfirmButton label={tr('Reverse')} confirmLabel={tr('Yes, reverse')} question={tr('Post a reversing entry?')} disabled={busy || !reverse.memo.trim() || !reverse.date}
               onConfirm={() => run(async () => {

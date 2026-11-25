@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { dayPattern, readDay, showDay } from '../lib/dates';
 import { tr, trf } from '../lib/i18n';
 import { SessionContext } from '../session';
+import './inputChecks.css';
 
 // A date box that follows the company's Date format setting (UX audit 20 Nov 2026: the browser's own date box showed 11/20/2026 on
 // an English computer while the company uses 20/11/2026). The person types in the company format, or picks from the browser's
@@ -23,6 +24,8 @@ export function DateInput({ value, onChange, min, max, required, disabled, class
   const format = useContext(SessionContext)?.session.org?.dateFormat ?? 'DD/MM/YYYY';
   const [text, setText] = useState(() => showDay(value, format));
   const [bad, setBad] = useState(false);
+  // Why the typed text is not taken: not a date, or outside the allowed range (shown under the box).
+  const [why, setWhy] = useState<'format' | 'range' | null>(null);
   const picker = useRef<HTMLInputElement>(null);
 
   // A new value from outside (a reset, a preset, the calendar) replaces what is typed.
@@ -30,6 +33,7 @@ export function DateInput({ value, onChange, min, max, required, disabled, class
     if (readDay(text, format) !== value) {
       setText(showDay(value, format));
       setBad(false);
+      setWhy(null);
     }
     // Only when the value or the format changes; `text` follows the person's typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -40,6 +44,7 @@ export function DateInput({ value, onChange, min, max, required, disabled, class
     const day = readDay(next, format);
     const outOfRange = day && ((min && day < min) || (max && day > max));
     setBad(day === null || !!outOfRange);
+    setWhy(day === null ? 'format' : outOfRange ? 'range' : null);
     if (day !== null && !outOfRange && day !== value) onChange({ target: { value: day } });
   }
 
@@ -53,7 +58,12 @@ export function DateInput({ value, onChange, min, max, required, disabled, class
     }
   }
 
+  const rangeText =
+    min && max ? trf('Choose a date from {min} to {max}.', { min: showDay(min, format), max: showDay(max, format) })
+    : max ? trf('Choose a date on or before {max}.', { max: showDay(max, format) })
+    : min ? trf('Choose a date on or after {min}.', { min: showDay(min, format) }) : '';
   return (
+    <>
     <span className={`date-input${className ? ` ${className}` : ''}`}>
       <input
         type="text"
@@ -88,5 +98,11 @@ export function DateInput({ value, onChange, min, max, required, disabled, class
         onChange={(e) => onChange({ target: { value: e.target.value } })}
       />
     </span>
+    {bad && why && text.trim() !== '' && (
+      <span className="date-input-msg" role="alert">
+        {why === 'format' ? trf('Not a valid date. Use the format {format}.', { format: dayPattern(format) }) : rangeText}
+      </span>
+    )}
+    </>
   );
 }

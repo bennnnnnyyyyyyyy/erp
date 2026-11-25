@@ -4,7 +4,7 @@ import { Loading } from '../../components/Loading';
 import { billingFor, formatMoney, type BillingFlag, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { todayIn } from '../../lib/dates';
 import { Button, buttonVariants } from '../../components/ui/button';
@@ -73,7 +73,7 @@ export function CustomerInvoices() {
     return m;
   }, [invoices.data]);
 
-  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><Loading error={orders.error ?? invoices.error} /></section>;
+  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><Loading {...failed(orders, invoices, customers, items)} /></section>;
 
   const customer = (id: string) => customers.data?.find((c) => c.id === id)?.name ?? 'Unknown customer';
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
@@ -144,7 +144,7 @@ export function CustomerInvoices() {
                 </select>
               </label>
             )}
-            <label>{tr('Invoice date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} required /></label>
+            <label>{tr('Invoice date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} max={todayIn()} required /></label>
           </div>
           {chosen && (
             <>
@@ -226,7 +226,7 @@ export function CustomerInvoicePage() {
   const theirCodes = codesFor(usePartyCodes('customer', record.data?.invoice.customerId), (record.data?.invoice.lines ?? []).map((l) => lineItem(l.orderLineId)));
 
   if (record.error) return <section className="page"><BackLink to="/sales/invoices" label={tr('← Sales invoices')} backLabel={tr('← Back')} /><Loading error={record.error} /></section>;
-  if (!record.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
+  if (!record.data || !customers.data || !items.data) return <section className="page"><Loading {...failed(customers, items)} /></section>;
   const inv = record.data.invoice;
   const order = record.data.order;
   const customer = customers.data.find((c) => c.id === inv.customerId)?.name ?? tr('Unknown customer');

@@ -1,4 +1,5 @@
 import { DateInput } from '../../components/DateInput';
+import { todayIn } from '../../lib/dates';
 import { useState } from 'react';
 import { hasPermission, type AccountLine, type Branch, type TreasuryAccount, type TreasuryKind, type TreasuryTransfer } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
@@ -257,7 +258,7 @@ export function TransfersPage() {
               </select>
             </label>
             <label>{tr('Amount')}<input inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
-            <label>{tr('Date')}<DateInput value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
+            <label>{tr('Date')}<DateInput value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} max={todayIn()} /></label>
           </div>
           <label>{tr('Note (optional)')}<input value={form.note} maxLength={500} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
           <div><Button disabled={busy || !form.fromAccountId || !form.toAccountId || toMinor(form.amount) <= 0 || !form.date} onClick={() => run(async () => {

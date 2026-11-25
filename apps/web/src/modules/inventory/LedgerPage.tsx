@@ -5,7 +5,7 @@ import type { LedgerMove } from '../../lib/demoInventory';
 import { usePeople } from '../../lib/people';
 import { formatDateTime } from '../../lib/format';
 import { Link } from '../../lib/router';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { tr } from '../../lib/i18n';
@@ -39,7 +39,7 @@ export function LedgerPage() {
     <section className="page">
       <h1>{tr('Stock ledger')}</h1>
       <p className="muted">{tr('Every stock movement, newest first. Entries are never edited.')}</p>
-      {moves.data && cat.ready ? <ListView title={tr('Stock ledger')} rows={moves.data} columns={columns} rowKey={(m) => String(m.id)} more={{ hasMore: moves.hasMore, loading: moves.loading, onMore: moves.more }} /> : <Loading />}
+      {moves.data && cat.ready ? <ListView title={tr('Stock ledger')} rows={moves.data} columns={columns} rowKey={(m) => String(m.id)} more={{ hasMore: moves.hasMore, loading: moves.loading, onMore: moves.more, error: moves.error }} /> : <Loading {...failed(moves, cat.items, cat.warehouses)} />}
     </section>
   );
 }

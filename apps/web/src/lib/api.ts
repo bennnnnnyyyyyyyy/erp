@@ -64,15 +64,24 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   // a file upload sets its own multipart type; everything else is JSON
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
+  // A request that hangs ends after 30 s with a plain message (input and speed audit, 25 Nov 2026: "Saving…" stayed for minutes).
+  const timeout = AbortSignal.timeout(30_000);
+  const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
-  } catch {
+    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, signal });
+  } catch (e) {
+    if (init.signal?.aborted) throw e;
+    if (timeout.aborted) throw new ApiError(0, tr('The server is taking too long. Try again in a moment.'), 'timeout');
     // The browser's own "Failed to fetch" means nothing to a person (UX audit).
     throw new ApiError(0, tr('Cannot reach the server. Check your internet connection and try again.'), 'offline');
   }
   const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
-  if (!body) throw new ApiError(res.status, tr('The server sent an unreadable response'));
+  // Not JSON: a gateway page (502, 503, 504, Cloudflare 524 after about 100 s). Say it was busy or slow, not "unreadable".
+  if (!body) {
+    if (res.status >= 500) throw new ApiError(res.status, tr('The server is busy or took too long. Try again in a moment.'), 'server_busy');
+    throw new ApiError(res.status, tr('The server sent an unreadable response'));
+  }
   if (!body.success) throw new ApiError(body.status, withNextStep(translateServerError(body.error), body.code), body.code);
   return body.data;
 }
@@ -100,9 +109,16 @@ export function translateServerError(message: string): string {
   if (short && currentLanguage() === 'ar') {
     return trf('Not enough stock: you asked for {asked}, but only {available} available in this warehouse.', { asked: short[1] as string, available: short[2] as string });
   }
+  // The API's input checks (input audit, 25 Nov 2026): "Line 2: choose an item", "Contact: at most 120 characters". Both parts translate.
+  const line = /^Line (\d+): (.+)$/.exec(message);
+  if (line) return `${trf('Line {n}', { n: line[1] as string })}: ${tr(line[2] as string)}`;
+  const most = /^(.+): at most (\d+) characters$/.exec(message);
+  if (most) return trf('{field}: at most {n} characters', { field: tr(most[1] as string), n: most[2] as string });
   const cut = message.indexOf(': ');
   if (cut < 0) return message;
   const head = message.slice(0, cut);
+  const tail = message.slice(cut + 2);
   const translated = tr(head);
-  return translated === head ? message : `${translated}: ${message.slice(cut + 2)}`;
+  const tailTranslated = tr(tail);
+  return translated === head && tailTranslated === tail ? message : `${translated}: ${tailTranslated}`;
 }

@@ -10,7 +10,7 @@ import { demoMode } from '../../lib/demo';
 import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { BackLink, Link, navigate, useParam } from '../../lib/router';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { Shipments } from './Shipments';
@@ -60,7 +60,7 @@ export function SalesOrders() {
         <ListView
           title={tr('Sales orders')}
           rows={orders.data}
-          more={{ hasMore: orders.hasMore, loading: orders.loading, onMore: orders.more }}
+          more={{ hasMore: orders.hasMore, loading: orders.loading, onMore: orders.more, error: orders.error }}
           columns={columns}
           rowKey={(o) => o.id}
           rowHref={(o) => `/sales/orders/${o.id}`}
@@ -68,7 +68,7 @@ export function SalesOrders() {
           toolbar={hasPermission(session.permissions, 'sales.orders.create') ? <Button type="submit" onClick={() => navigate('/sales/orders/new')}>{tr('New sales order')}</Button> : undefined}
         />
       ) : (
-        <Loading />
+        <Loading {...failed(orders, customers, cat.items, cat.warehouses)} />
       )}
     </section>
   );
@@ -161,7 +161,7 @@ export function SalesOrderPage() {
   }
 
   if (order.error) return <section className="page"><BackLink to="/sales/orders" label={tr('← Sales orders')} backLabel={tr('← Back')} /><p className="error">{order.error}</p></section>;
-  if (!o || !cat.ready || !customers.data) return <section className="page"><Loading /></section>;
+  if (!o || !cat.ready || !customers.data) return <section className="page"><Loading {...failed(order, customers, cat.items, cat.warehouses)} /></section>;
 
   const customer = customers.data.find((c) => c.id === o.customerId);
 
