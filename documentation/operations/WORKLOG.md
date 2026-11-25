@@ -11,6 +11,19 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — sql/115 applied to live (phone as a barcode scanner)
+
+**Objective.** Ben's "yes 115" (via erp-master), after the rolled-back dry run in the entry below.
+
+**Actions Completed.** Applied `sql/115_core_phone_scanner.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran
+tests 112 and 092 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Verification after the apply: row level security on `core_scan_sessions` and `core_scan_events`; users
+may scan through `core_scan_add` but not insert rows; anonymous can neither read nor start a session. Tests 112 and 092 pass on live.
+
+**Safety Status.** The button, the phone page and the routes reach live when Ben merges and CI deploys. Ben's phone test is in his
+checklist (part I, via erp-master). Not yet tried with a real phone.
+
 ## 2026-11-25 — The phone as a barcode scanner for the computer (sql/115, test 112; NOT applied)
 
 **Objective.** Ben's request ("a QR on the computer that a phone scans to connect and scan barcodes into the order"), planned in
