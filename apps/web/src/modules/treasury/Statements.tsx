@@ -16,7 +16,7 @@ import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
@@ -127,7 +127,7 @@ export function BankStatementPage() {
 
   return (
     <section className="page wide">
-      <Link to="/treasury/statements" className="back-link">{tr('← Bank statements')}</Link>
+      <BackLink to="/treasury/statements" label={tr('← Bank statements')} backLabel={tr('← Back')} />
       <h1>{d.fileName}</h1>
       <dl className="facts">
         <div><dt>{tr('Period')}</dt><dd>{formatDay(d.periodFrom, session.org)} – {formatDay(d.periodTo, session.org)}</dd></div>

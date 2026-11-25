@@ -4,6 +4,7 @@ import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import { tr } from '../../lib/i18n';
+import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { ActionCards, type ActionCard } from './ActionCards';
@@ -42,7 +43,10 @@ export function ReceiveGoods() {
     <section className="page">
       <h1>{tr('Receive goods')}</h1>
       <p className="muted">{tr('Stock comes in. Choose how the goods arrived.')}</p>
-      {cards.length === 0 ? <p className="notice">{tr('You do not have permission to receive goods. Ask an owner or admin.')}</p> : <ActionCards cards={cards} label={tr('Ways to receive goods')} />}
+      {/* Dead-ends audit, 25 Nov: with no warehouse, stock has nowhere to go; that was shown as "no permission". */}
+      {warehouses.data.length === 0 ? (
+        <p className="notice">{tr('Add a warehouse first: received goods go into a warehouse.')} <Link to="/inventory/stock">{tr('Stock on hand')}</Link></p>
+      ) : cards.length === 0 ? <p className="notice">{tr('You do not have permission to receive goods. Ask an owner or admin.')}</p> : <ActionCards cards={cards} label={tr('Ways to receive goods')} />}
       {asBatch && <ReceiveBatchForm items={items.data} warehouses={warehouses.data} open={batchOpen} onOpenChange={setBatchOpen} />}
       {adding && <AddItemModal warehouses={warehouses.data} onClose={() => setAdding(false)} onDone={() => { setAdding(false); items.reload(); }} />}
     </section>

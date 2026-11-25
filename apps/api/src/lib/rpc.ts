@@ -67,6 +67,9 @@ const REASONS: Record<string, { status: number; message: string; code: string }>
   NOT_LEAF: { status: 400, message: 'Post to a detail account, not a group account', code: 'not_leaf' },
   ACCOUNT_INACTIVE: { status: 400, message: 'That account is inactive or not part of this company', code: 'account_inactive' },
   ACCOUNT_ROLE_MISSING: { status: 409, message: 'An account role is not set up in Accounting setup', code: 'account_role_missing' },
+  // sql/067 bank statements (dead-ends audit, 25 Nov 2026: both showed "Something went wrong on our side").
+  DUPLICATE_FILE: { status: 409, message: 'This file was already imported for this account', code: 'duplicate_file' },
+  RECONCILE_DIFFERENCE: { status: 409, message: 'The statement does not match the books yet', code: 'reconcile_difference' },
   HAS_ENTRIES: { status: 409, message: 'That account already has entries', code: 'has_entries' },
   APPEND_ONLY: { status: 409, message: 'Posted entries cannot be changed; reverse them instead', code: 'append_only' },
   UNCOSTED_RECEIPTS: {
@@ -151,7 +154,14 @@ export async function callRpc<T>(client: SupabaseClient, fn: string, args: Recor
       if (reason.code === 'vat_mismatch') throw new HttpError(reason.status, VAT_MISMATCH_MESSAGE, reason.code);
       // A detail that only repeats the message (e.g. NOT_APPROVED: "this purchase order needs approval…") is left out, so the person
       // does not read the same sentence twice (Ben's walkthrough, 10 Nov 2026).
-      const detail = error.details ? trimQty(error.details) : '';
+      // People read the detail: no raw record ids ("stock receipt 3f2a… has no cost"), and an account role key reads as words
+      // ("inventory_asset" -> "inventory asset"; dead-ends audit, 25 Nov 2026).
+      let detail = error.details
+        ? trimQty(error.details)
+            .replace(/\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '')
+            .trim()
+        : '';
+      if (reason.code === 'account_role_missing') detail = detail.replace(/_/g, ' ');
       const repeats = detail && reason.message.toLowerCase().includes(detail.toLowerCase().replace(/\.$/, ''));
       throw new HttpError(reason.status, detail && !repeats ? `${reason.message}: ${detail}` : reason.message, reason.code);
     }

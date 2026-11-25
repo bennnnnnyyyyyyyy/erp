@@ -10,8 +10,8 @@ describe('who sees which step', () => {
   it('gives an admin the whole tour', () => {
     expect(ids('admin')).toEqual(['home', 'new-request', 'approve', 'ledger', 'audit', 'alerts', 'guide']);
   });
-  it('gives staff the stock steps and the audit log (any member may read it) but no finance home or alerts', () => {
-    expect(ids('member')).toEqual(['new-request', 'approve', 'ledger', 'audit', 'guide']);
+  it('gives staff the stock steps but no finance home, alerts or audit log (the audit log page is for owners and admins)', () => {
+    expect(ids('member')).toEqual(['new-request', 'approve', 'ledger', 'guide']);
   });
   it('gives a viewer only what they can look at: no request form', () => {
     const v = ids('viewer');

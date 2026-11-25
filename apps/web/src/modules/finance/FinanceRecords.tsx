@@ -9,7 +9,7 @@ import { ConfirmButton } from '../../components/FormToggle';
 import { ErrorToast } from '../../components/Toast';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
@@ -34,7 +34,8 @@ export function PaymentStatus({ status }: { status: 'recorded' | 'void' }) {
 /** Payments recorded against one invoice or expense, with what is paid and what is still owed. Hidden for people without finance access. */
 export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'customerInvoiceId' | 'supplierInvoiceId' | 'expenseId'; id: string; totalMinor: number; currency: string }) {
   const session = useSession();
-  const allowed = hasPermission(session.permissions, 'finance.reports.view');
+  // Finance switched off: nothing to show, and the request would only fail (dead-ends audit, 25 Nov).
+  const allowed = session.modules.includes('finance') && hasPermission(session.permissions, 'finance.reports.view');
   const prefix = field === 'customerInvoiceId' ? 'c' : field === 'supplierInvoiceId' ? 's' : 'e';
   // Every payment against this one record, from the server (the general list holds the newest 300 only).
   const payments = useLoad(() => (allowed ? api<Payment[]>(`/v1/finance/payments?for=${prefix}:${id}`) : none<Payment>()));
@@ -52,7 +53,7 @@ export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'c
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td><td><PaymentStatus status={p.status} /></td>
           </ClickRow>
         ))}
-        {!rows.length && <tr><td colSpan={5} className="muted empty">{payments.data ? tr('No payments recorded yet.') : tr('Loading…')}</td></tr>}
+        {!rows.length && <tr><td colSpan={5} className="muted empty">{payments.data ? tr('No payments recorded yet.') : payments.error ? <span className="error">{payments.error}</span> : tr('Loading…')}</td></tr>}
       </tbody></table></div>
       {left > 0 && hasPermission(session.permissions, 'finance.entries.manage') && (
         <p className="small"><Link to={`/finance/payments?for=${prefix}:${id}`}>{tr('Record a payment →')}</Link></p>
@@ -90,7 +91,7 @@ export function PaymentPage() {
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));
   const voiding = useVoid(`/v1/finance/payments/${id}/void`, () => record.reload());
 
-  if (record.error) return <section className="page"><Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link><Loading error={record.error} /></section>;
+  if (record.error) return <section className="page"><BackLink to="/finance/payments" label={tr('← Payments')} backLabel={tr('← Back')} /><Loading error={record.error} /></section>;
   if (!record.data) return <section className="page"><Loading /></section>;
   const p = record.data.pay;
 
@@ -105,7 +106,7 @@ export function PaymentPage() {
 
   return (
     <section className="page">
-      <Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link>
+      <BackLink to="/finance/payments" label={tr('← Payments')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{p.number}</h1>
         <Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Customer receipt') : tr('Payment to supplier or expense')} />
@@ -136,7 +137,7 @@ export function ExpensePage() {
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));
   const voiding = useVoid(`/v1/finance/expenses/${id}/void`, () => expense.reload());
 
-  if (expense.error) return <section className="page"><Link to="/finance" className="back-link">{tr('← Expenses')}</Link><Loading error={expense.error} /></section>;
+  if (expense.error) return <section className="page"><BackLink to="/finance" label={tr('← Expenses')} backLabel={tr('← Back')} /><Loading error={expense.error} /></section>;
   if (!expense.data) return <section className="page"><Loading /></section>;
   const e = expense.data;
   const category = categories.data?.find((c) => c.id === e.categoryId)?.name ?? '—';
@@ -145,7 +146,7 @@ export function ExpensePage() {
 
   return (
     <section className="page">
-      <Link to="/finance" className="back-link">{tr('← Expenses')}</Link>
+      <BackLink to="/finance" label={tr('← Expenses')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{e.number}</h1>
         <PaymentStatus status={e.status} />

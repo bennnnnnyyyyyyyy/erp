@@ -11,7 +11,8 @@ import { demoMode } from '../../lib/demo';
 import type { DemoTransfer, InTransitRow, StockRow, TransferStatus } from '../../lib/demoInventory';
 import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { usePeople } from '../../lib/people';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
+import { readTransferLink } from '../../lib/orderLink';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { useCatalog } from './Inventory';
@@ -97,8 +98,8 @@ export function TransfersList() {
           columns={columns}
           rowKey={(t) => t.id}
           rowHref={(t) => `/inventory/transfers/${t.id}`}
-          empty={tr('No transfers yet. A transfer moves stock from one warehouse to another; a manager approves it first.')}
-          emptyAction={canCreate ? <Button onClick={() => navigate('/inventory/transfers/new')}>{tr('Move between warehouses')}</Button> : undefined}
+          empty={filter === 'submitted' ? tr('No transfers are waiting for approval.') : filter === 'dispatched' ? tr('No transfers are in transit.') : tr('No transfers yet. A transfer moves stock from one warehouse to another; a manager approves it first.')}
+          emptyAction={filter === 'all' && canCreate ? <Button onClick={() => navigate('/inventory/transfers/new')}>{tr('Move between warehouses')}</Button> : undefined}
           toolbar={
             <>
               <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label={tr('Filter')}>
@@ -120,10 +121,12 @@ export function TransfersList() {
 export function NewTransfer() {
   const cat = useCatalog();
   const stock = useLoad(() => api<StockRow[]>('/v1/inventory/stock'));
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  // Filled in from a sales order's stock shortage ("Move from <warehouse>"): the person checks it and submits.
+  const [link] = useState(() => readTransferLink(window.location.search));
+  const [from, setFrom] = useState(link.fromId);
+  const [to, setTo] = useState(link.toId);
   const [reason, setReason] = useState('');
-  const [lines, setLines] = useState([{ itemId: '', qty: '1' }]);
+  const [lines, setLines] = useState([{ itemId: link.itemId, qty: link.qty || '1' }]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -154,7 +157,7 @@ export function NewTransfer() {
 
   return (
     <section className="page">
-      <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
+      <BackLink to="/inventory/transfers" label={tr('← Stock transfers')} backLabel={tr('← Back')} />
       <h1>{tr('Move between warehouses')}</h1>
       <p className="muted">{tr('Your manager will be asked to approve this. The quantities are reserved at the first warehouse until then; the stock arrives at the second one when it is received there.')}</p>
       {error && <p className="error notice">{error}</p>}
@@ -163,7 +166,10 @@ export function NewTransfer() {
           <label>{tr('From warehouse')}<select required value={fromId} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('To warehouse')}<select required value={toId} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
         </div>
-        {same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
+        {/* Dead-ends audit: with one warehouse there is nothing to move between; say so and where warehouses are added. */}
+        {warehouses.length < 2 ? (
+          <p className="error small">{tr('You need a second warehouse to move stock.')} <Link to="/inventory/stock">{tr('Stock on hand')}</Link></p>
+        ) : same && <p className="error small">{tr('Choose two different warehouses.')}</p>}
         <strong>{tr('Items')}</strong>
         {lines.map((l, i) => (
           <div className="form-row" key={i}>
@@ -208,7 +214,7 @@ export function TransferPage() {
     }
   }
 
-  if (transfer.error) return <section className="page"><p className="error">{transfer.error}</p></section>;
+  if (transfer.error) return <section className="page"><BackLink to="/inventory/transfers" label={tr('← Stock transfers')} backLabel={tr('← Back')} /><p className="error">{transfer.error}</p></section>;
   if (!t || !cat.ready) return <section className="page"><Loading /></section>;
 
   const open = t.status === 'submitted' || t.status === 'approved';
@@ -216,7 +222,7 @@ export function TransferPage() {
 
   return (
     <section className="page">
-      <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
+      <BackLink to="/inventory/transfers" label={tr('← Stock transfers')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{t.number}</h1>
         <StatusPill status={t.status} />

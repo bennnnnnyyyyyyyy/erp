@@ -18,7 +18,7 @@ import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { api, apiDownload } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
-import { Link } from '../../lib/router';
+import { BackLink, Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Notice, accountName, firstOfYear, money, today, useNotice } from './common';
@@ -220,7 +220,7 @@ export function StatementLinesPage() {
 
   return (
     <section className="page wide">
-      <p><Link to="/accounting/income-statement">← {tr('Income statement')}</Link> · <Link to="/accounting/balance-sheet">{tr('Balance sheet')}</Link></p>
+      <p><BackLink to="/accounting/income-statement" label={`← ${tr('Income statement')}`} backLabel={tr('← Back')} /> · <Link to="/accounting/balance-sheet">{tr('Balance sheet')}</Link></p>
       <h1>{tr('Statement lines')}</h1>
       <p className="muted">{tr('Where each account appears on the income statement and balance sheet. "Default" follows the parent account, or the Egyptian chart group. Set a line only where an account belongs elsewhere.')}</p>
       <Notice message={message} />

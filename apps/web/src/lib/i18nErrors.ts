@@ -75,4 +75,6 @@ export const ERRORS_AR: Record<string, string> = {
   'Too many requests. Wait a minute and try again.': 'طلبات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.',
   'Cannot reach the server. Check your internet connection and try again.': 'تعذّر الوصول إلى الخادم. تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.',
   'The server sent an unreadable response': 'أرسل الخادم ردًا غير مفهوم',
+  'This file was already imported for this account': 'تم استيراد هذا الملف من قبل لهذا الحساب',
+  'The statement does not match the books yet': 'الكشف لا يطابق الدفاتر بعد',
 };

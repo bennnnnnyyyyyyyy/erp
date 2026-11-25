@@ -11,7 +11,7 @@ import { demoMode } from '../../lib/demo';
 import type { Party, PurchaseOrder } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { todayIn } from '../../lib/dates';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
@@ -241,14 +241,14 @@ export function PurchaseOrderPage() {
     }
   }
 
-  if (order.error) return <section className="page"><p className="error">{order.error}</p></section>;
+  if (order.error) return <section className="page"><BackLink to="/purchasing/orders" label={tr('← Purchase orders')} backLabel={tr('← Back')} /><p className="error">{order.error}</p></section>;
   if (!o || !cat.ready || !suppliers.data) return <section className="page"><Loading /></section>;
 
   const supplier = suppliers.data.find((s) => s.id === o.supplierId);
 
   return (
     <section className="page">
-      <Link to="/purchasing/orders" className="back-link">{tr('← Purchase orders')}</Link>
+      <BackLink to="/purchasing/orders" label={tr('← Purchase orders')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{o.number}</h1>
         {statusPill(o)}
@@ -332,6 +332,12 @@ export function PurchaseOrderPage() {
       )}
       {o.status === 'received' && (
         <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory/stock">{tr('check stock on hand')}</Link>.</p>
+      )}
+      {/* Dead-ends audit, 25 Nov: the next step after receiving is the supplier's bill; the order is chosen on the bills page. */}
+      {o.status === 'received' && !demoMode && hasPermission(session.permissions, 'purchasing.invoices.record') && (
+        <div className="form-actions" style={{ marginBlockStart: '0.5rem' }}>
+          <Button onClick={() => navigate(`/purchasing/invoices?order=${o.id}`)}>{tr("Record the supplier's invoice")}</Button>
+        </div>
       )}
 
       {demoMode ? null : <Attachments entityType="purchase_order" entityId={o.id} />}

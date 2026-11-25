@@ -13,7 +13,7 @@ import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import type { Party } from '../../lib/demoTrade';
-import { Link, navigate } from '../../lib/router';
+import { BackLink, Link, navigate } from '../../lib/router';
 import { parseAmount, toMinor } from '../../lib/numbers';
 import { SearchSelect } from '../../components/SearchSelect';
 import { useLoad } from '../../lib/useLoad';
@@ -443,7 +443,7 @@ export function NewOrderForm(props: {
 
   return (
     <section className="page">
-      <Link to={props.backTo} className="back-link">← {props.backLabel}</Link>
+      <BackLink to={props.backTo} label={`← ${props.backLabel}`} backLabel={tr('← Back')} />
       <h1>{props.title}</h1>
       <p className="muted">{props.intro}</p>
       <form className="form-card stack" onSubmit={submit}>
@@ -460,6 +460,8 @@ export function NewOrderForm(props: {
               />
               {canQuickAdd ? <Button type="button" variant="outline" size="sm" onClick={() => setQuickAdd(true)}>{tr('+ New')}</Button> : null}
             </span>
+            {/* Dead-ends audit, 25 Nov: with no customers or suppliers yet the picker only said "Nothing matches". */}
+            {parties.data.length === 0 && !canQuickAdd ? <span className="muted small">{props.partyLabel === 'Customer' ? tr('No customers yet.') : tr('No suppliers yet.')} <Link to={props.partyLabel === 'Customer' ? '/sales/customers' : '/purchasing/suppliers'}>{props.partyLabel === 'Customer' ? tr('Customers') : tr('Suppliers')}</Link></span> : null}
             {/* Ben, 23 Nov: an item with no supplier yet opens the order and asks for one. */}
             {link.itemId && !partyId ? <span className="notice small" role="status">{trf('Choose a {party}.', { party: tr(props.partyLabel).toLowerCase() })}</span> : null}
           </label>
@@ -468,9 +470,11 @@ export function NewOrderForm(props: {
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               {cat.warehouses.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
+            {(cat.warehouses.data ?? []).length === 0 ? <span className="error small">{tr('Add a warehouse first.')} <Link to="/inventory/stock">{tr('Stock on hand')}</Link></span> : null}
           </label>
         </div>
         <strong>{tr('Items')}</strong>
+        {(cat.items.data ?? []).length === 0 ? <p className="muted small">{tr('No items yet.')} <Link to="/inventory/stock">{tr('Stock on hand')}</Link></p> : null}
         {lines.map((l, i) => (
           <div className="form-row three" key={i}>
             <label>
@@ -527,7 +531,7 @@ export function NewOrderForm(props: {
         {scanned ? <p className="notice small" role="status">{scanned}</p> : null}
         {scanning ? <BarcodeScanner onCode={(code) => void addScanned(code)} onClose={() => setScanning(false)} /> : null}
         <ErrorToast message={error} onClose={() => setError(null)} />
-        <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
+        <div className="form-actions"><Button type="submit" disabled={busy || (cat.warehouses.data ?? []).length === 0}>{busy ? tr('Saving…') : props.submitLabel}</Button></div>
       </form>
       {quickAdd ? (
         <QuickAddParty

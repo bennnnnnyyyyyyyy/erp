@@ -12,7 +12,7 @@ import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { RecordHistory } from '../../components/RecordHistory';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { UnpaidBills } from './UnpaidBills';
 import { SupplierNotes } from './SupplierNotes';
@@ -37,21 +37,26 @@ export function SupplierInvoices(){
   const vat=useLoad(()=>api<VatSettings>('/v1/core/org/vat').catch(()=>null));
   const [vatIn,setVatIn]=useState<PurchaseVat>(emptyPurchaseVat);const [lineRate,setLineRate]=useState<Record<string,string>>({});const [lineKind,setLineKind]=useState<Record<string,string>>({});
   const session=useSession();
-  const [orderId,setOrderId]=useState('');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
+  // "Record the supplier's invoice" on a received purchase order opens this page with ?order=… chosen (dead-ends audit, 25 Nov).
+  const [orderId,setOrderId]=useState(()=>new URLSearchParams(window.location.search).get('order')??'');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
   const [quantities,setQuantities]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [message,setMessage]=useState<{ok:boolean;text:string}|null>(null);
-  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(false);const [scanOpen,setScanOpen]=useState(false);
+  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(()=>new URLSearchParams(window.location.search).has('order'));const [scanOpen,setScanOpen]=useState(false);
   const summary=summaries.data?.find(o=>o.orderId===orderId);
   const summaryRows=summaries.data??[];
+  // Each line starts with what is left to bill (received - billed), as sales does (dead-ends audit, 25 Nov); a typed value wins.
+  const qtyFor=(l:{orderLineId:string;receivedQty:number;billedQty:number})=>quantities[l.orderLineId]??String(Math.max(0,l.receivedQty-l.billedQty));
+  const anyQty=!!summary&&summary.lines.some(l=>Number(qtyFor(l))>0);
   const supplierName=(id:string)=>suppliers.data?.find(s=>s.id===id)?.name??id;
   const itemName=(id:string)=>{const i=items.data?.find(v=>v.id===id);return i?`${i.sku} · ${i.name}`:id};
   async function submit(){
     if(!summary)return;setBusy(true);setMessage(null);
-    try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(quantities[l.orderLineId])>0).map(l=>({orderLineId:l.orderLineId,qty:Number(quantities[l.orderLineId]),...(lineRate[l.orderLineId]?{taxRateId:lineRate[l.orderLineId]}:{}),...(lineKind[l.orderLineId]?{vatClass:lineKind[l.orderLineId]}:{})})),vat:purchaseVatPayload(vatIn)})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});setVatIn(emptyPurchaseVat);setLineRate({});setLineKind({});summaries.reload();invoices.reload();}
+    try{await api('/v1/purchasing/supplier-invoices',{method:'POST',body:JSON.stringify({supplierId:summary.supplierId,orderId,number,invoiceDate,lines:summary.lines.filter(l=>Number(qtyFor(l))>0).map(l=>({orderLineId:l.orderLineId,qty:Number(qtyFor(l)),...(lineRate[l.orderLineId]?{taxRateId:lineRate[l.orderLineId]}:{}),...(lineKind[l.orderLineId]?{vatClass:lineKind[l.orderLineId]}:{})})),vat:purchaseVatPayload(vatIn)})});setMessage({ok:true,text:tr('Purchase invoice recorded.')});setOrderId('');setNumber('');setQuantities({});setVatIn(emptyPurchaseVat);setLineRate({});setLineKind({});summaries.reload();invoices.reload();}
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
   if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading error={summaries.error??invoices.error??suppliers.error??items.error} /></section>;
   const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
   const toBill=billingRows.filter(r=>r.billed<r.received);
+  const billable=summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty));
   const shownBilling=showAll?billingRows:toBill;
   return <section className="page">
     <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Bills from suppliers for the goods you received.')}</p>
@@ -59,11 +64,12 @@ export function SupplierInvoices(){
     {hasPermission(session.permissions,'purchasing.bills.scan')&&hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Scan a bill')} open={scanOpen} onOpenChange={setScanOpen}><ScanBill suppliers={suppliers.data} onSaved={()=>{summaries.reload();invoices.reload();}} /></FormToggle>}
     {hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
-        <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
+        {/* Dead-ends audit, 25 Nov: only orders with received goods not yet billed can be billed; with none, say why and where to go. */}
+        {billable.length===0?<div className="notice" role="status"><p style={{marginBlock:0}}>{tr('No received goods are waiting for a bill. Receive the goods on the purchase order first.')}</p><Link to="/purchasing/orders">{tr('Purchase orders')}</Link></div>:<label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{billable.map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>}
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<DateInput value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>
-      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={quantities[l.orderLineId]??''} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" />{message&&!message.ok&&<p className="error notice" role="alert">{message.text}</p>}<Button type="submit" disabled={busy||!number.trim()||!Object.values(quantities).some(q=>Number(q)>0)} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button></>}
+      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={qtyFor(l)} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" />{message&&!message.ok&&<p className="error notice" role="alert">{message.text}</p>}<Button type="submit" disabled={busy||!number.trim()||!anyQty} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button>{!busy&&(!number.trim()||!anyQty)&&<p className="muted small">{!number.trim()?tr('Enter the supplier\'s invoice number.'):''} {!anyQty?tr('Enter a quantity on at least one line.'):''}</p>}</>}
     </FormToggle>}
     <UnpaidBills supplierName={supplierName} />
     <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Purchase order')}</th><th scope="col">{tr('Date recorded')}</th><th scope="col" className="right">{tr('Amount')}</th></tr></thead><tbody>
@@ -93,7 +99,7 @@ export function SupplierInvoicePage() {
   // The supplier's own codes for these items (sql/099), as a "Their code" column when a line has one.
   const theirCodes = codesFor(usePartyCodes('supplier', invoice.data?.supplierId), (invoice.data?.lines ?? []).map((l) => l.itemId ?? undefined));
 
-  if (invoice.error) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><Loading error={invoice.error} /></section>;
+  if (invoice.error) return <section className="page"><BackLink to="/purchasing/invoices" label={tr('← Purchase invoices')} backLabel={tr('← Back')} /><Loading error={invoice.error} /></section>;
   if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoice.data;
   const order = { number: inv.orderNumber };
@@ -112,7 +118,7 @@ export function SupplierInvoicePage() {
 
   return (
     <section className="page">
-      <Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link>
+      <BackLink to="/purchasing/invoices" label={tr('← Purchase invoices')} backLabel={tr('← Back')} />
       <div className="page-head"><h1 className="mono">{inv.number}</h1></div>
       <dl className="facts">
         <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>

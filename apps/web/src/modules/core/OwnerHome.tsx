@@ -40,9 +40,11 @@ const TONE: Record<Tone, { dot: string; word: string }> = {
 };
 
 // Every card has a visible title, a one-line plain-words subtitle, and the period its figures cover.
+// `to` empty: the card shows its figures but opens nothing (its app is switched off; dead-ends audit, 25 Nov 2026).
 function Card({ to, title, subtitle, period, tone, children }: { to: string; title: string; subtitle: string; period: string; tone?: Tone | undefined; children: ReactNode }) {
-  return (
-    <Link to={to} className="flex min-w-0 flex-col gap-3 break-words rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors hover:bg-accent">
+  const className = cn('flex min-w-0 flex-col gap-3 break-words rounded-xl border border-border bg-card p-5 text-card-foreground no-underline shadow-xs transition-colors', to ? 'hover:bg-accent' : '');
+  const body = (
+    <>
       <span className="flex flex-col gap-0.5">
         <span className="flex items-center justify-between gap-2 text-base font-semibold tracking-tight text-foreground">
           {title}
@@ -56,15 +58,19 @@ function Card({ to, title, subtitle, period, tone, children }: { to: string; tit
         <span className="text-xs text-muted-foreground">{subtitle} · {period}</span>
       </span>
       {children}
-    </Link>
+    </>
   );
+  return to ? <Link to={to} className={className}>{body}</Link> : <div className={className}>{body}</div>;
 }
 
 const monthName = (key: string) => new Date(`${key}-01T12:00:00Z`).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 export function OwnerSummary() {
   const session = useSession();
-  const allowed = !demoMode && hasPermission(session.permissions, 'finance.reports.view');
+  // The summary comes from the Finance app: with it switched off the home page said "Could not load the summary" (dead-ends audit).
+  const allowed = !demoMode && session.modules.includes('finance') && hasPermission(session.permissions, 'finance.reports.view');
+  // A card links only into an app that is on (else it shows its figures and opens nothing).
+  const linkIf = (module: string, to: string) => (to.startsWith('/reports/') || session.modules.includes(module) ? to : '');
   const data = useLoad(() => (allowed ? api<Insights>('/v1/finance/insights') : Promise.resolve(null as Insights | null)));
   if (!allowed) return null;
   if (data.error) return <p className="error notice">{tr('Could not load the summary:')} {data.error}</p>;
@@ -123,7 +129,7 @@ export function OwnerSummary() {
         <span className="text-sm"><Rich text={trf('Accounts payable (suppliers and expenses): **{amount}**.', { amount: money(s.iOweMinor) })} /></span>
       </Card>
 
-      <Card to="/inventory/requests" title={tr('Pending approvals')} subtitle={tr('Stock requests awaiting manager approval')} period={trf('right now, {date}', { date: asOfDay })} tone={decisionTone}>
+      <Card to={linkIf('inventory', '/inventory/requests?status=submitted')} title={tr('Pending approvals')} subtitle={tr('Stock requests awaiting manager approval')} period={trf('right now, {date}', { date: asOfDay })} tone={decisionTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{trf(s.decisions.submitted === 1 ? '{n} request' : '{n} requests', { n: s.decisions.submitted })}</span>
         <span className="text-sm text-muted-foreground">
           {s.decisions.submitted === 0 ? tr('Nothing is waiting for approval.') : (oldWait < 1 ? tr('The oldest has been waiting less than an hour.') : trf(oldWait === 1 ? 'The oldest has been waiting 1 hour.' : 'The oldest has been waiting {n} hours.', { n: oldWait }))}
@@ -131,7 +137,7 @@ export function OwnerSummary() {
         </span>
       </Card>
 
-      <Card to={readyReportOr(session, 'stock_by_warehouse', '/inventory/batches')} title={tr('Inventory value and expiry')} subtitle={tr('Inventory valuation at cost and batches nearing expiry')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
+      <Card to={linkIf('inventory', readyReportOr(session, 'stock_by_warehouse', '/inventory/batches'))} title={tr('Inventory value and expiry')} subtitle={tr('Inventory valuation at cost and batches nearing expiry')} period={trf('as of {date}, looking 90 days ahead', { date: asOfDay })} tone={stockTone}>
         <span className="font-semibold leading-tight tracking-tight" style={{ fontSize: 'clamp(1.4rem, 2.2vw, 1.875rem)' }}>{money(s.stockValueMinor)}</span>
         <span className="text-sm text-muted-foreground">{tr('inventory value at cost.')}</span>
         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
@@ -153,7 +159,7 @@ export function OwnerSummary() {
         )}
       </Card>
 
-      <Card to={readyReportOr(session, 'purchases_by_supplier', '/purchasing/suppliers')} title={tr('Your main suppliers')} subtitle={tr('Who you buy from most, by amount spent')} period={tr('last 12 months')} tone={supplierTone}>
+      <Card to={linkIf('purchasing', readyReportOr(session, 'purchases_by_supplier', '/purchasing/suppliers'))} title={tr('Your main suppliers')} subtitle={tr('Who you buy from most, by amount spent')} period={tr('last 12 months')} tone={supplierTone}>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
           {s.topSuppliers.map((p) => <li key={p.name} className="flex justify-between gap-3"><span>{p.name}</span><b>{trf('{pct}% of purchases', { pct: p.sharePercent })}</b></li>)}
           {s.topSuppliers.length === 0 && <li className="text-muted-foreground">{tr('No purchases yet.')}</li>}

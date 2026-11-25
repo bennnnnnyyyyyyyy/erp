@@ -1,6 +1,7 @@
 import type { ApiResponse } from '@erp/shared';
 import { demoApi, demoMode } from './demo';
 import { currentLanguage, tr, trf } from './i18n';
+import { NEXT_STEP_EVENT, nextStepFor } from './nextStep';
 import { supabase } from './supabase';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787';
@@ -72,8 +73,19 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
   if (!body) throw new ApiError(res.status, tr('The server sent an unreadable response'));
-  if (!body.success) throw new ApiError(body.status, translateServerError(body.error), body.code);
+  if (!body.success) throw new ApiError(body.status, withNextStep(translateServerError(body.error), body.code), body.code);
   return body.data;
+}
+
+/**
+ * A blocked action says what unblocks it (lib/nextStep.ts, one table for every error): the sentence is added to the message every
+ * screen shows, and a page that fixes it is offered once in the Shell's bar (components/NextStepBar.tsx).
+ */
+export function withNextStep(message: string, code?: string): string {
+  const next = nextStepFor(code);
+  if (!next) return message;
+  if (next.to && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(NEXT_STEP_EVENT, { detail: next }));
+  return `${message.replace(/\.$/, '')}. ${tr(next.text)}`;
 }
 
 /**
