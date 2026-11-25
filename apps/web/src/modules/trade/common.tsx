@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Attachments } from '../../components/Attachments';
+import { Notes } from '../../components/Notes';
 import { BarcodeScanner } from '../../components/BarcodeScanner';
 import { readOrderLink } from '../../lib/orderLink';
 import { unitLabel } from '../../lib/names';
@@ -18,7 +19,7 @@ import { parseAmount, toMinor } from '../../lib/numbers';
 import { SearchSelect } from '../../components/SearchSelect';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
-import { formatMoney, hasPermission, vatLine, vatLineInclusive } from '@erp/shared';
+import { checkPhone, formatMoney, hasPermission, PHONE_RULE_MESSAGE, vatLine, vatLineInclusive } from '@erp/shared';
 
 import { tr, trf } from '../../lib/i18n';
 import { usePartyCodes } from '../inventory/PartyCodes';
@@ -131,6 +132,11 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    // The phone by the shared rule (Egyptian or international), before anything is sent (Ben's live test, 25 Nov 2026).
+    if (!checkPhone(form.phone).ok) {
+      setError(`${tr('Phone')}: ${tr(PHONE_RULE_MESSAGE)}`);
+      return;
+    }
     try {
       // Only the lists that show the details (suppliers, customers) send them; the sample-data demo does not.
       const { taxNumber, commercialRegistry, email, address, bankName, bankAccount, defaultCurrency, notes, ...core } = form;
@@ -210,7 +216,7 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
                 {editing.code ? <> <code>{editing.code}</code></> : null}
               </p>
             )}
-            <label>{tr('Name')}<input required value={form.name} onChange={set('name')} /></label>
+            <label>{tr('Name')}<input required maxLength={200} value={form.name} onChange={set('name')} /></label>
             {editing && canSetTerms ? (
               // Saved on its own as soon as it changes (owners and admins; the database checks again), as before in the list.
               <label>{tr('Payment terms')} <span className="muted small">{tr('(days; empty = company default)')}</span>
@@ -218,8 +224,8 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
               </label>
             ) : null}
             <div className="form-row">
-              <label>{tr('Contact person (optional)')}<input value={form.contact} onChange={set('contact')} /></label>
-              <label>{tr('City (optional)')}<input value={form.city} onChange={set('city')} /></label>
+              <label>{tr('Contact person (optional)')}<input maxLength={120} value={form.contact} onChange={set('contact')} /></label>
+              <label>{tr('City (optional)')}<input maxLength={80} value={form.city} onChange={set('city')} /></label>
             </div>
             <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
             {withDetails ? (
@@ -247,6 +253,7 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
             <div className="form-actions"><Button type="submit">{editing ? tr('Save changes') : <>{tr('Add')} {noun}</>}</Button></div>
           </form>
           {editing && !demoMode ? <Attachments entityType={endpoint.includes('/suppliers') ? 'supplier' : 'customer'} entityId={editing.id} /> : null}
+          {editing && !demoMode ? <Notes entityType={endpoint.includes('/suppliers') ? 'supplier' : 'customer'} entityId={editing.id} /> : null}
         </Modal>
       )}
     </section>

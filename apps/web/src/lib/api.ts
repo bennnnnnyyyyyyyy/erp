@@ -109,6 +109,15 @@ export function translateServerError(message: string): string {
   if (short && currentLanguage() === 'ar') {
     return trf('Not enough stock: you asked for {asked}, but only {available} available in this warehouse.', { asked: short[1] as string, available: short[2] as string });
   }
+  // Since sql/112 the sentence names the item (its code and name stay as they are).
+  const shortOf = /^Not enough stock of (.+): you asked for (\S+), but only (\S+) (?:is|are) available in this warehouse\.$/.exec(message);
+  if (shortOf && currentLanguage() === 'ar') {
+    return trf('Not enough stock of {item}: you asked for {asked}, but only {available} available in this warehouse.', {
+      item: shortOf[1] as string,
+      asked: shortOf[2] as string,
+      available: shortOf[3] as string,
+    });
+  }
   // The API's input checks (input audit, 25 Nov 2026): "Line 2: choose an item", "Contact: at most 120 characters". Both parts translate.
   const line = /^Line (\d+): (.+)$/.exec(message);
   if (line) return `${trf('Line {n}', { n: line[1] as string })}: ${tr(line[2] as string)}`;

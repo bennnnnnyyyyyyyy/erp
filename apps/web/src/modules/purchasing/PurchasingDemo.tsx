@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Attachments } from '../../components/Attachments';
+import { Notes } from '../../components/Notes';
 import { parseAmount } from '../../lib/numbers';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
@@ -341,6 +342,7 @@ export function PurchaseOrderPage() {
       )}
 
       {demoMode ? null : <Attachments entityType="purchase_order" entityId={o.id} />}
+      {demoMode ? null : <Notes entityType="purchase_order" entityId={o.id} />}
       <RecordHistory key={`${o.id}:${o.status}`} id={o.id} />
     </section>
   );

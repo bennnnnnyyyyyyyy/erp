@@ -20,6 +20,12 @@ describe('stock shortage message', () => {
     );
   });
 
+  it('names the item when the database gives it (sql/112)', () => {
+    expect(stockShortMessage('RS-1 Cream: 3.000 available, 8.000 requested')).toBe(
+      'Not enough stock of RS-1 Cream: you asked for 8, but only 3 are available in this warehouse.',
+    );
+  });
+
   it('leaves unknown details alone', () => {
     expect(stockShortMessage('something else')).toBeNull();
   });

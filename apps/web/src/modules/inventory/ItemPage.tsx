@@ -1,5 +1,6 @@
 import { formatQty } from '../../lib/numbers';
 import { Attachments } from '../../components/Attachments';
+import { Notes } from '../../components/Notes';
 import { localName, unitLabel } from '../../lib/names';
 import { useState, type CSSProperties } from 'react';
 import { formatMoney, hasPermission } from '@erp/shared';
@@ -190,7 +191,7 @@ export function ItemPage() {
           ) : costs.data ? <p className="muted">{tr('No cost recorded for this item yet.')}</p> : <Loading />
         )}
 
-        {tab === 'files' && <Attachments entityType="item" entityId={item.id} />}
+        {tab === 'files' && <><Attachments entityType="item" entityId={item.id} /><Notes entityType="item" entityId={item.id} /></>}
         {tab === 'history' && <RecordHistory id={item.id} />}
       </div>
 

@@ -31,6 +31,9 @@ export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'enti
   if (n.entityType === 'stock_transfer' && n.entityId) return `/inventory/transfers/${n.entityId}`;
   if (n.entityType === 'stock_count' && n.entityId) return `/inventory/counts/${n.entityId}`;
   if (n.entityType === 'stock_adjustment') return '/inventory/adjustments';
+  // A scheduled report and, since sql/112, a report alert carry the report itself, so members open it too.
+  if (n.entityType === 'report' && n.entityId) return `/reports/${n.entityId}`;
+  // Report alerts queued before sql/112 carry the alert rule; the API looks up its report (owners and admins only).
   if (n.entityType === 'alert:report_value' && n.reportId) return `/reports/${n.reportId}`;
   // Ben, 24 Nov: money overdue opens the ready-made "Money owed by age" (when Reports & Insights is on for this person).
   if (n.entityType === 'alert:receivable_overdue' && access) return readyReportOr(access, 'receivables_ageing', '/finance/owed');

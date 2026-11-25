@@ -11,6 +11,123 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Ben's live test of the audit fixes: phone rule by country; long names in the form and the sample build (no migration)
+
+**Objective.** Ben's live test of PR #126 (via erp-master): item 25, "+2015556487744" (+20 and 11 digits) saved as a phone; item 26, a
+customer with a pasted paragraph as its name saved.
+
+**Actions Completed.**
+- Item 26, cause: on live nothing longer than 40 characters is stored as a customer or supplier name (read-only check, 25 Nov), and both
+  the API (`partyBasics`, 200) and the database (`check length between 1 and 200`, sql/019, sql/017) refuse longer names. The sample
+  build (`apps/web/src/lib/demoTrade.ts`) checked only that the name is not empty, and the form had no length limit, so a long name
+  "saved" there. Fixed: the form's inputs stop at 200 / 120 / 80 characters (name, contact, city); the sample build refuses the same as
+  the API. A name of 200 characters or fewer that looks like a paragraph is still a valid name.
+- Item 25: one shared rule, `packages/shared/src/phone.ts` `checkPhone`: spaces, dashes, dots, brackets and Arabic digits are fine;
+  +20 / 0020 / a leading 0 must be an Egyptian mobile (1 + 0/1/2/5 + 8 digits) or landline (2 + 8, 3 + 7, or another area code + 7
+  digits); other countries + (or 00) and the country code, 8 to 15 digits. Used by the API (`lib/body.ts` `phoneOrNull`, customers
+  and suppliers), the form (checked before sending) and the sample build. Arabic for the message. A customer saved before with a
+  phone that does not fit must have its phone corrected the next time it is changed.
+- Tests: `packages/shared/src/phone.test.ts`; `apps/api/test/input_checks.test.ts` updated.
+
+**Database / System Result.** None. The database checks (phone, lengths) come with sql/114.
+
+**Safety Status.** `tsc` 0 errors (shared, api, web); tests: shared 116, api 832, web 236; biome 0 errors. Not checked in a browser.
+
+## 2026-11-25 — sql/113 applied to live (notes on records)
+
+**Objective.** Ben's "yes 113" (via erp-master), after the rolled-back dry run in the entry "Notes on records" below. Ben confirmed
+that viewers read notes but do not add them.
+
+**Actions Completed.** Applied `sql/113_core_notes.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran tests
+110 and 092 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Before: no `core_notes`. After: `core_notes` with RLS; users add through `core_add_note`; anonymous
+neither reads nor adds; direct inserts refused (test 110). Tests 110 and 092 pass on live.
+
+**Safety Status.** The Notes panel and `/v1/core/notes` reach live when Ben merges and CI deploys (until then the old app shows no
+panel). Browser check after the deploy: as a member, add a note on a sales invoice; another member sees it; an admin deletes it.
+
+## 2026-11-25 — sql/112 applied to live (scheduled reports and fixes)
+
+**Objective.** Ben's "yes 112" (via erp-master), after the rolled-back dry run in the entry "Reports step 6" below.
+
+**Actions Completed.** Applied `sql/112_rpt_schedules.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran tests
+109, 092, 108, 009 and 024 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Before: no `rpt_schedules`; 2 report-alert messages and 2 notifications with target
+`alert:report_value`. Verification after: `rpt_schedules` with RLS; users may save schedules but not insert rows or run the job;
+anonymous cannot list; the service role runs `rpt_run_schedules`; 0 report-alert targets left (the 2 now target the report). Tests
+109, 092, 108, 009 and 024 pass on live.
+
+**Safety Status.** The API and web parts (schedule routes, `/reports/schedules`, the job call in `jobs/outbox.ts`) reach live when Ben
+merges and CI deploys; until then the old API does not call `rpt_run_schedules`, so no schedule is sent. Ben's browser check after
+the deploy: Reports & Insights → Scheduled reports → add a daily schedule at the next hour to yourself; the message comes into the
+bell within about 5 minutes after that hour and opens the report. Open, separate slice (Ben chose option a, 25 Nov): "which state is
+needed" in state errors, in the database, one flow at a time, starting with stock requests, transfers, counts, orders and invoices.
+
+## 2026-11-25 — Notes on records (sql/113, test 110; NOT applied)
+
+**Objective.** Ben's decisions of 25 Nov (via erp-master): short notes on records, one shared table, soft delete, audited; a Notes panel
+beside Attachments.
+
+**Actions Completed.**
+- `sql/113_core_notes.sql`: `core_notes` (RLS, select only); `core_add_note`, `core_delete_note` (audited with the text). Who reads a
+  note copies the record table's own read rule (checked 25 Nov): expenses, payments, manual journals owners and admins; the rest every
+  member. Viewers read but do not add (viewers change nothing in the app). The writer deletes their own; owners and admins any.
+- Shared: `packages/shared/src/notes.ts` (14 record types), keys `core.notes.read` and `core.notes.add` (member grant).
+- API: `GET/POST /v1/core/notes`, `DELETE /v1/core/notes/:id` (`apps/api/src/modules/core/noteRoutes.ts`); 503 `not_set_up` before 113.
+- Web: `components/Notes.tsx` (hidden before 113 and in the sample build); shown beside Attachments on sales and purchase orders,
+  sales invoices, purchase bills, items (Files tab), customers, suppliers, expenses, and on payments, stock requests, transfers,
+  counts, tasks and manual journals. Arabic.
+- Test: `sql/tests/110_core_notes.sql`; API tests in `apps/api/test/reports.test.ts`.
+
+**Database / System Result.** Nothing applied. Rolled-back dry run on live, 25 Nov: RLS on, users select but cannot insert, users may
+add through the function, anonymous cannot; nothing left after the rollback. Tests 110 and 092 pass on live inside rolled-back
+transactions.
+
+**Safety Status.** SQL tests (PGlite) 108 passed, 0 failed; `tsc` 0 errors (api, web); tests api 832, web 236; `biome ci` 0 errors. Not
+checked in a browser. After "yes 113": apply, tests 110 and 092 on live; Ben adds and deletes a note on an invoice as a member.
+
+## 2026-11-25 — Reports step 6: scheduled reports, plus small audit fixes (sql/112, test 109; NOT applied)
+
+**Objective.** Step 6 of the Reports & Insights plan (sections 3.3 and 7.6): send a saved company report on a schedule. With it, the
+small fixes the 25 Nov audits put into 112: report-alert links for members, the duplicate "Low stock" message, the item name in stock
+shortage errors, a credit note's way back to its invoice, whole-unit forecast numbers, and the home card "Top products" not matching
+the ready-made report. Also the PR #126 lint fix.
+
+**Actions Completed.**
+- Lint (PR #126): `apps/api/test/input_checks.test.ts` formatted (LF lines inside a CRLF file, one long line); `biome ci` 0 errors.
+- `sql/112_rpt_schedules.sql`: `rpt_schedules` and `rpt_schedule_recipients` (RLS: owners and admins read; select only; writes through
+  `rpt_save_schedule`, `rpt_set_schedule_enabled`, `rpt_delete_schedule`, each audited); `rpt_schedule_list`; `rpt_run_schedules`
+  (service role): runs each due report with the maker's role, one outbox message per recipient who may see the data (name, period,
+  totals, first 5 rows; target `report:<id>`, so the bell opens it), audited; a deleted report or a maker who left switches the
+  schedule off (audited); a failure is audited and retried at the next send time. Next send time in the company's time zone.
+- Same migration, copies of the latest functions with one change each: `rpt__alert_run` (sql/111: report alerts target the report;
+  old messages and notifications moved over), `msg_run_chasing` (sql/013: its own low stock message removed, `low_stock` stays 0),
+  `inv_submit_request` (sql/006) and `inv_submit_transfer` (sql/034): shortage detail "<code> <name>: x available, y requested",
+  `sal__doc_print_data` (sql/103): `invoiceId` on notes, `insights_home` (sql/094): top products from today − 89 days, company time.
+- Why the top products differed: on 24 Nov the home card counted from 26 Aug (91 days, server date) and the report from 27 Aug; one
+  invoice of 26 Aug (EGP 81,259.20 of sunscreen) was the whole gap (712,192 against 630,933). Read-only queries on live, 25 Nov.
+- API: `GET/POST /v1/reports/schedules`, `PATCH/DELETE /v1/reports/schedules/:id` (`reports.schedules.manage`, new key, owners and
+  admins); `jobs/outbox.ts` calls `rpt_run_schedules` after the alerts (a missing function is ignored); `lib/rpc.ts` names the item in
+  the shortage sentence; `/v1/finance/product-sales` counts 90 days with today (was 91).
+- Web: `/reports/schedules` (list, add, pause, resume, delete; "Send on a schedule" in the report's More menu); the bell opens
+  `report` targets; the note print page goes back to its invoice; the forecast shows whole numbers for whole-unit items; Arabic.
+- Tests: new `sql/tests/109_rpt_schedules.sql`; `sql/tests/009` (the chasing job sends no low stock message) and `sql/tests/108` (report
+  alerts found by their rule key, target the report) changed with the behaviour; API tests for the routes and the shortage sentence.
+- Not done (proposed to erp-master as its own slice): "which state is needed" in INVALID_STATE / APPROVAL_REQUIRED errors. It is raised
+  at about 200 places in some 30 posting functions; copying them into a reports migration was judged too risky.
+
+**Database / System Result.** Nothing applied. Rolled-back dry run of sql/112 on live (erp-live / ggoerp), 25 Nov: tables with RLS,
+users may save but not run the job or insert, anonymous cannot list, the 2 old report-alert messages and notifications move to the
+report, the job runs with no schedules, the chasing job reports `low_stock` 0; after the rollback nothing is left. Tests 109 and 092
+also pass on live inside rolled-back transactions.
+
+**Safety Status.** SQL tests (PGlite): 107 passed, 0 failed; 112 reruns cleanly. `tsc` 0 errors (shared, api, web); tests: api 820+,
+web 236, shared 109; `biome ci` 0 errors. Not checked: a real scheduled send through WhatsApp/email delivery and the new screen in a
+browser. After Ben's "yes 112": apply, run tests 109 and 092 on live, then Ben checks `/reports/schedules` (add a daily schedule at the
+next hour, wait for the message in the bell).
+
 ## 2026-11-25 — Audit answers: server search on invoices, bills, expenses, payments; Save blocked on a bad date (no migration)
 
 **Objective.** Ben's answers to the input and speed audit (via erp-master): move invoices, bills, expenses and payments to the shared

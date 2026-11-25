@@ -53,8 +53,10 @@ messagingRoutes.get('/notifications', requirePermission('messaging.notifications
     createdAt: n.created_at,
     reportId: null as string | null,
   }));
-  // A report alert opens its saved report (shortcut audit, 24 Nov 2026). The notification holds the alert rule's id; the rule names the
-  // report. Read with the person's own sign-in: alert rules are readable by owners and admins only (sql/028), so others keep the library link.
+  // A report alert opens its saved report (shortcut audit, 24 Nov 2026). Since sql/112 the notification carries the report itself
+  // (entity 'report') and sql/112 moved the old ones over; this lookup only serves notifications made before sql/112 is applied. The
+  // notification holds the alert rule's id; the rule names the report. Read with the person's own sign-in: alert rules are readable
+  // by owners and admins only (sql/028), so others keep the library link.
   const ruleIds = items.filter((n) => n.entityType === 'alert:report_value' && n.entityId).map((n) => n.entityId as string);
   if (ruleIds.length > 0) {
     const rules = await userDb(c)

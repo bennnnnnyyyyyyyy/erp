@@ -14,14 +14,15 @@ describe('dates', () => {
 });
 
 describe('phone numbers', () => {
-  it('accepts 7 to 15 digits with spaces, dashes, brackets, a leading + and Arabic digits', () => {
+  it('accepts Egyptian and international numbers with spaces, dashes, brackets and Arabic digits', () => {
     expect(phoneOrNull('+20 100 123 4567')).toBe('+20 100 123 4567');
     expect(phoneOrNull('(02) 2345-6789')).toBe('(02) 2345-6789');
     expect(phoneOrNull('٠١٠٠١٢٣٤٥٦٧')).toBe('01001234567');
     expect(phoneOrNull('')).toBeNull();
   });
-  it('refuses 40 digits, letters and too few digits', () => {
-    for (const bad of ['1'.repeat(40), 'call me', '12345', '+20 10x 123']) expect(() => phoneOrNull(bad), bad).toThrow(/7 to 15 digits/);
+  it('refuses 40 digits, letters, too few digits and +20 with 11 digits (Ben, 25 Nov)', () => {
+    for (const bad of ['1'.repeat(40), 'call me', '12345', '+20 10x 123', '+2015556487744'])
+      expect(() => phoneOrNull(bad), bad).toThrow(/an Egyptian number is/);
   });
 });
 

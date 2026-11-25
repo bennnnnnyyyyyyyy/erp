@@ -2,6 +2,7 @@ import { localName } from '../../lib/names';
 import { readOrderLink } from '../../lib/orderLink';
 import { useState, type FormEvent } from 'react';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
+import { Notes } from '../../components/Notes';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -284,6 +285,7 @@ export function RequestPage() {
         </div>
       )}
 
+      <Notes entityType="stock_request" entityId={r.id} />
       <RecordHistory key={`${r.id}:${r.status}`} id={r.id} />
     </section>
   );

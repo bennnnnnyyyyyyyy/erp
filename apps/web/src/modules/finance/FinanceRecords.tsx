@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Attachments } from '../../components/Attachments';
+import { Notes } from '../../components/Notes';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission } from '@erp/shared';
@@ -124,6 +125,7 @@ export function PaymentPage() {
       </dl>
       {p.status === 'void' && <p className="muted">{tr('This payment was voided. It no longer counts towards what has been paid.')}</p>}
       {canVoid && <div className="form-actions"><ConfirmButton label={tr('Void payment')} confirmLabel={tr('Yes, void it')} question={tr('Void this payment? It can not be undone.')} disabled={voiding.busy} onConfirm={() => voiding.run(p.number)} /></div>}
+      <Notes entityType="payment" entityId={p.id} />
       <RecordHistory key={p.id} id={p.id} currency={p.currency} />
     </section>
   );
@@ -166,6 +168,7 @@ export function ExpensePage() {
       {canVoid && <div className="form-actions"><ConfirmButton label={tr('Void expense')} confirmLabel={tr('Yes, void it')} question={tr('Void this expense? It can not be undone.')} disabled={voiding.busy} onConfirm={() => voiding.run(e.number)} /></div>}
       {e.status === 'recorded' && <PaymentsAgainst field="expenseId" id={e.id} totalMinor={e.amountMinor} currency={e.currency} />}
       <Attachments entityType="expense" entityId={e.id} />
+      <Notes entityType="expense" entityId={e.id} />
       <RecordHistory key={e.id} id={e.id} currency={e.currency} />
     </section>
   );

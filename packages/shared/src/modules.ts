@@ -46,8 +46,11 @@ export const MODULES: readonly ModuleManifest[] = [
       // Attachments (sql/108): files on records. Everyone in the company reads them; members, admins and owners add them.
       'core.attachments.read',
       'core.attachments.add',
+      // Notes on records (sql/113): whoever can see the record reads its notes; members, admins and owners add them.
+      'core.notes.read',
+      'core.notes.add',
     ],
-    memberGrants: ['core.attachments.add'],
+    memberGrants: ['core.attachments.add', 'core.notes.add'],
     suite: 'Core',
   },
   // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for
@@ -272,6 +275,8 @@ export const MODULES: readonly ModuleManifest[] = [
       'reports.custom.manage',
       // Step 4, the sales forecast (sql/110): everyone who may read sales invoices (the database checks the sales module again).
       'reports.forecast.read',
+      // Step 6, scheduled reports (sql/112): owners and admins make, pause and delete them (the database checks the role again).
+      'reports.schedules.manage',
     ],
     memberGrants: ['reports.custom.create'],
     suite: 'Core',

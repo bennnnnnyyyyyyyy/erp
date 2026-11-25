@@ -1,4 +1,4 @@
-import type { ReportCell, ReportDefinition, ReportResult, ReportSource, SalesForecast, SavedReport } from '@erp/shared';
+import type { ReportCell, ReportDefinition, ReportResult, ReportSchedule, ReportSource, SalesForecast, SavedReport } from '@erp/shared';
 
 // Demo mode only (see demo.ts): two sample report sources with made-up rows, and a small in-memory "run", so the Reports & Insights
 // screens can be looked at with no API and no database. The real run is in the database (sql/109, rpt_run); this is not a copy of it.
@@ -84,6 +84,38 @@ const ROWS: Record<string, Row[]> = {
 
 const saved: SavedReport[] = [];
 
+// Scheduled reports (sql/112) in the sample build: kept in memory, never sent. Starts empty, like the saved reports.
+const schedules: ReportSchedule[] = [];
+function demoSchedules(method: string, id: string | undefined, data: Record<string, unknown>): unknown {
+  if (!id && method === 'GET') return schedules;
+  if (!id && method === 'POST') {
+    const report = saved.find((r) => r.id === data.reportId);
+    const s: ReportSchedule = {
+      id: `demo-schedule-${schedules.length + 1}`,
+      reportId: String(data.reportId ?? ''),
+      reportName: report?.name ?? '',
+      reportDeleted: false,
+      frequency: (data.frequency as ReportSchedule['frequency']) ?? 'daily',
+      weekday: data.frequency === 'weekly' ? Number(data.weekday) : null,
+      monthDay: data.frequency === 'monthly' ? Number(data.monthDay) : null,
+      sendHour: Number(data.sendHour ?? 8),
+      period: (data.period as ReportSchedule['period']) ?? null,
+      enabled: true,
+      nextRunAt: null,
+      lastSentAt: null,
+      createdAt: new Date().toISOString(),
+      recipients: (data.recipients as ReportSchedule['recipients']) ?? [],
+    };
+    schedules.push(s);
+    return { id: s.id };
+  }
+  const s = schedules.find((x) => x.id === id);
+  if (!s) throw new Error('Not found');
+  if (method === 'PATCH') Object.assign(s, data);
+  if (method === 'DELETE') schedules.splice(schedules.indexOf(s), 1);
+  return { id: s.id };
+}
+
 function matches(r: Row, def: ReportDefinition, src: ReportSource): boolean {
   if (def.period && src.period) {
     const d = String(r[src.period]);
@@ -163,6 +195,7 @@ function run(def: ReportDefinition): ReportResult {
 /** `/v1/reports/...` in demo mode. */
 export function handleReports(method: string, rest: string[], data: Record<string, unknown>): unknown {
   const [area, id] = rest;
+  if (area === 'schedules') return demoSchedules(method, id, data);
   if (area === 'forecast') return forecast(data as { by?: string; horizon?: string });
   if (area === 'sources') return SOURCES;
   if (area === 'run') return run(data.definition as ReportDefinition);

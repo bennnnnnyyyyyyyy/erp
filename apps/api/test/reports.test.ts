@@ -21,7 +21,47 @@ const routes: [string, string][] = [
   ['DELETE', `/v1/reports/saved/${ID}`],
   ['GET', '/v1/reports/forecast/sales?by=item&horizon=30'],
   ['POST', `/v1/reports/saved/${ID}/alert`],
+  ['GET', '/v1/reports/schedules'],
+  ['POST', '/v1/reports/schedules'],
+  ['PATCH', `/v1/reports/schedules/${ID}`],
+  ['DELETE', `/v1/reports/schedules/${ID}`],
 ];
+
+describe('notes on records API (sql/113)', () => {
+  const notes = readFileSync(join(__dirname, '../src/modules/core/noteRoutes.ts'), 'utf8');
+  it.each([
+    ['GET', `/v1/core/notes?entityType=item&entityId=${ID}`],
+    ['POST', '/v1/core/notes'],
+    ['DELETE', `/v1/core/notes/${ID}`],
+  ])('%s %s needs a signed-in user', async (method, path) => {
+    const res = await app.request(path, { method }, env);
+    expect(res.status).toBe(401);
+  });
+  it('reads with the notes key, writes only through the database functions', () => {
+    expect(notes).toContain("get('/', requirePermission('core.notes.read')");
+    expect(notes).toContain("post('/', requirePermission('core.notes.add')");
+    expect(notes).toContain("delete('/:id', requirePermission('core.notes.add')");
+    expect(notes).toContain("'core_add_note'");
+    expect(notes).toContain("'core_delete_note'");
+    expect(notes.replaceAll('noteRoutes.delete(', '')).not.toMatch(/\.(insert|update|upsert|delete)\(/);
+  });
+});
+
+describe('scheduled reports API (sql/112)', () => {
+  it('owners and admins only, through the database functions', () => {
+    for (const r of ["get('/schedules'", "post('/schedules'", "patch('/schedules/:id'", "delete('/schedules/:id'"]) {
+      expect(src).toContain(`${r}, requirePermission('reports.schedules.manage')`);
+    }
+    for (const fn of ['rpt_schedule_list', 'rpt_save_schedule', 'rpt_set_schedule_enabled', 'rpt_delete_schedule'])
+      expect(src).toContain(`'${fn}'`);
+  });
+
+  it('the five-minute job sends them, and a missing function does not stop delivery', () => {
+    const job = readFileSync(join(__dirname, '../src/jobs/outbox.ts'), 'utf8');
+    expect(job).toContain("client.rpc('rpt_run_schedules', { p_org: opts.orgId ?? null })");
+    expect(job).toContain("schedules.error.code !== 'PGRST202'");
+  });
+});
 
 describe('report builder API', () => {
   it.each(routes)('%s %s needs a signed-in user', async (method, path) => {

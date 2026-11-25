@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { checkPhone, PHONE_RULE_MESSAGE } from '@erp/shared';
 import { HttpError } from './errors';
 
 /** Reads a JSON object body, or fails with 400. Field checks are up to the route. */
@@ -27,19 +28,16 @@ export function isIsoDay(v: unknown): v is string {
 /** Stands in for the old `/^\d{4}-\d{2}-\d{2}$/` in the routes (`DATE_RE.test(x)`), with the calendar and year checks above. */
 export const ISO_DAY = { test: (v: unknown): boolean => isIsoDay(v) };
 
-const ARABIC_DIGITS = /[٠-٩۰-۹]/g;
-const toWesternDigits = (s: string) => s.replace(ARABIC_DIGITS, (ch) => String((ch.charCodeAt(0) & 0xf) % 10));
-
 /**
- * A phone number as people type it (spaces, dashes, brackets, a leading +, Arabic digits): 7 to 15 digits (the international maximum).
- * Returns the trimmed text as typed (Western digits), null when empty; refuses anything else with a plain 400.
+ * A phone number as people type it (spaces, dashes, brackets, Arabic digits), by the shared rule (`checkPhone`, packages/shared):
+ * Egyptian numbers (+20, 0020 or a leading 0) must have the Egyptian shape, other countries the international one. Returns the trimmed
+ * text as typed (Western digits), null when empty; refuses anything else with a plain 400. (Ben's live test, 25 Nov 2026: the old
+ * "7 to 15 digits" rule accepted +20 with 11 digits.)
  */
 export function phoneOrNull(v: unknown, label = 'Phone'): string | null {
-  const raw = typeof v === 'string' ? toWesternDigits(v).trim() : typeof v === 'number' ? String(v) : '';
-  if (!raw) return null;
-  const digits = raw.replace(/[\s\-().]/g, '');
-  if (!/^\+?\d{7,15}$/.test(digits)) invalid(`${label}: 7 to 15 digits (spaces, dashes and a leading + are fine)`);
-  return raw;
+  const r = checkPhone(v);
+  if (!r.ok) invalid(`${label}: ${PHONE_RULE_MESSAGE}`);
+  return r.value;
 }
 
 /** Trimmed text of at most `max` characters, null when empty; longer text is refused, never cut. */

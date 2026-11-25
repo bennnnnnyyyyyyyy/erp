@@ -452,6 +452,7 @@ export const DECISIONS_AR: Record<string, string> = {
   'Change them in Settings': 'غيّرها من الإعدادات',
   // walkthrough fixes: items, suppliers, payments
   'Not enough stock: you asked for {asked}, but only {available} available in this warehouse.': 'لا يوجد مخزون كافٍ: طلبت {asked}، والمتاح في هذا المستودع {available} فقط.',
+  'Not enough stock of {item}: you asked for {asked}, but only {available} available in this warehouse.': 'لا يوجد مخزون كافٍ من {item}: طلبت {asked}، والمتاح في هذا المستودع {available} فقط.',
   // units
   piece: 'قطعة',
   box: 'علبة',
