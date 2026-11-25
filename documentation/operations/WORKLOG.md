@@ -11,6 +11,24 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — sql/112 applied to live (scheduled reports and fixes)
+
+**Objective.** Ben's "yes 112" (via erp-master), after the rolled-back dry run in the entry "Reports step 6" below.
+
+**Actions Completed.** Applied `sql/112_rpt_schedules.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran tests
+109, 092, 108, 009 and 024 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Before: no `rpt_schedules`; 2 report-alert messages and 2 notifications with target
+`alert:report_value`. Verification after: `rpt_schedules` with RLS; users may save schedules but not insert rows or run the job;
+anonymous cannot list; the service role runs `rpt_run_schedules`; 0 report-alert targets left (the 2 now target the report). Tests
+109, 092, 108, 009 and 024 pass on live.
+
+**Safety Status.** The API and web parts (schedule routes, `/reports/schedules`, the job call in `jobs/outbox.ts`) reach live when Ben
+merges and CI deploys; until then the old API does not call `rpt_run_schedules`, so no schedule is sent. Ben's browser check after
+the deploy: Reports & Insights → Scheduled reports → add a daily schedule at the next hour to yourself; the message comes into the
+bell within about 5 minutes after that hour and opens the report. Open, separate slice (Ben chose option a, 25 Nov): "which state is
+needed" in state errors, in the database, one flow at a time, starting with stock requests, transfers, counts, orders and invoices.
+
 ## 2026-11-25 — Notes on records (sql/113, test 110; NOT applied)
 
 **Objective.** Ben's decisions of 25 Nov (via erp-master): short notes on records, one shared table, soft delete, audited; a Notes panel
