@@ -21,11 +21,11 @@ begin
   set local role authenticated;
 
   -- D1: create with details; an old five-argument call still works and leaves the details empty
-  s1 := public.sal_create_customer('Nile Retail', 'Hana', 'Cairo', '+201000000001', null, '123-456-789', 'CR-5544', 'Orders@Nile.example', '12 Tahrir St, Cairo',
+  s1 := public.sal_create_customer('Nile Retail', 'Hana', 'Cairo', '+201000000001', null, '123-456-789', '5544', 'Orders@Nile.example', '12 Tahrir St, Cairo',
                                    'Bank Misr', 'EG380019000500000000263180002', 'egp', 'Pays late in August');
   s2 := public.sal_create_customer('Old Style Customer', 'Sami', 'Giza', '+201000000002', null);
   select * into r from public.sal_customers where id = s1;
-  if r.tax_number <> '123-456-789' or r.commercial_registry <> 'CR-5544' or r.email <> 'Orders@Nile.example' or r.address <> '12 Tahrir St, Cairo'
+  if r.tax_number <> '123-456-789' or r.commercial_registry <> '5544' or r.email <> 'Orders@Nile.example' or r.address <> '12 Tahrir St, Cairo'
      or r.bank_name <> 'Bank Misr' or r.bank_account <> 'EG380019000500000000263180002' or r.default_currency <> 'EGP' or r.notes <> 'Pays late in August' then
     raise exception 'FAIL D1a: details not stored as given (currency upper-cased)';
   end if;
