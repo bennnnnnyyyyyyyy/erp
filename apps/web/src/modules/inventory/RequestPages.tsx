@@ -210,7 +210,7 @@ export function RequestPage() {
     }
   }
 
-  if (request.error) return <section className="page"><p className="error">{request.error}</p></section>;
+  if (request.error) return <section className="page"><BackLink to="/inventory/requests" label={tr('← Stock requests')} backLabel={tr('← Back')} /><p className="error">{request.error}</p></section>;
   if (!r || !cat.ready) return <section className="page"><Loading /></section>;
 
   const open = r.status === 'submitted' || r.status === 'approved';

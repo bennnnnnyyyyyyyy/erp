@@ -160,7 +160,7 @@ export function SalesOrderPage() {
     }
   }
 
-  if (order.error) return <section className="page"><p className="error">{order.error}</p></section>;
+  if (order.error) return <section className="page"><BackLink to="/sales/orders" label={tr('← Sales orders')} backLabel={tr('← Back')} /><p className="error">{order.error}</p></section>;
   if (!o || !cat.ready || !customers.data) return <section className="page"><Loading /></section>;
 
   const customer = customers.data.find((c) => c.id === o.customerId);
@@ -211,7 +211,7 @@ export function SalesOrderPage() {
       {o.requestId && o.status !== 'open' && (
         <p className="notice">
           {tr('Stock request')} <Link to={`/inventory/requests/${o.requestId}`}><code>{o.requestNumber ?? tr('Open it')}</code></Link>
-          {o.status === 'delivered' ? tr(' has been issued.') : tr(' needs a manager to approve it and the warehouse to issue it. Open it to continue.')}
+          {o.status === 'delivered' ? tr(' has been issued.') : o.requestStatus === 'approved' ? tr(' is approved. The warehouse now issues the goods; then the order can be invoiced.') : tr(' needs a manager to approve it and the warehouse to issue it. Open it to continue.')}
         </p>
       )}
       {/* A rejected request used to drop the order back to "New" without a word (UX audit). */}

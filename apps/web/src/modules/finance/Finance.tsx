@@ -254,6 +254,12 @@ export function PaymentsPage() {
               <option value="">{tr('Choose…')}</option>
               {open.map((t) => <option key={t.value} value={t.value}>{t.label} {tr('· outstanding')} {money(t.left, t.currency)}</option>)}
             </select>
+            {/* Dead-ends audit, 25 Nov: only issued, unpaid documents can be paid; with none the list was just "Choose…". */}
+            {open.length === 0 && (
+              <span className="muted small">
+                {direction === 'in' ? tr('Nothing is waiting for payment: only issued sales invoices that are not fully paid show here.') : tr('Nothing is waiting for payment: only recorded supplier bills and expenses that are not fully paid show here.')}
+              </span>
+            )}
           </label>
           <label>{tr('Amount')}<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
         </div>
@@ -266,6 +272,7 @@ export function PaymentsPage() {
                 <option value="">{tr('Choose…')}</option>
                 {boxes.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}
               </select>
+              {boxes.length === 0 && <span className="muted small">{tr('No active cash box or bank account for this method and currency.')} <Link to="/treasury">{tr('Treasury')}</Link></span>}
             </label>
           ) : null}
           <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>

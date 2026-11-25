@@ -1473,4 +1473,12 @@ export const SCREENS_AR: Record<string, string> = {
   "{item}: needs {need}, available {available}, short {short}.": "{item}: المطلوب {need}، المتاح {available}، الناقص {short}.",
   "Move from {warehouse} ({qty} available)": "انقل من {warehouse} (المتاح {qty})",
   "Ask a manager to order it or move it from another warehouse.": "اطلب من المدير شراءه أو نقله من مستودع آخر.",
+  "No received goods are waiting for a bill. Receive the goods on the purchase order first.": "لا توجد بضاعة مستلمة تنتظر فاتورة. استلم البضاعة على أمر الشراء أولًا.",
+  "Record the supplier's invoice": "سجّل فاتورة المورد",
+  "Nothing is waiting for payment: only issued sales invoices that are not fully paid show here.": "لا شيء ينتظر الدفع: تظهر هنا فقط فواتير البيع الصادرة غير المدفوعة بالكامل.",
+  "Nothing is waiting for payment: only recorded supplier bills and expenses that are not fully paid show here.": "لا شيء ينتظر الدفع: تظهر هنا فقط فواتير الموردين والمصروفات المسجلة غير المدفوعة بالكامل.",
+  "No active cash box or bank account for this method and currency.": "لا توجد خزنة أو حساب بنكي نشط لهذه الطريقة وهذه العملة.",
+  " is approved. The warehouse now issues the goods; then the order can be invoiced.": " تمت الموافقة عليه. يصرف المستودع البضاعة الآن، ثم يمكن فوترة الأمر.",
+  "Change the date, or ask an owner to move the lock date (Settings → General).": "غيّر التاريخ، أو اطلب من المالك تغيير تاريخ الإقفال (الإعدادات ← عام).",
+  "An owner can switch the app on in Settings → Apps.": "يمكن للمالك تفعيل التطبيق من الإعدادات ← التطبيقات.",
 };

@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Dead-ends audit of the old UI: 10 small fixes (no migration)
+
+**Objective.** erp-master (Ben's request): look across the old UI for Back links to dead pages, empty pickers with no reason, and blocked
+actions that do not point to the step that unblocks them; fix the small, clear ones, list the rest. Table:
+`.temp/2026-11-25-dead-ends-audit.md` (32 findings, 13 fixed with the entry below, 19 open, 4 questions for Ben).
+
+**Actions Completed.**
+- Purchase invoices (`purchasing/SupplierInvoices.tsx`): with no received goods to bill, the form says so and links to Purchase orders;
+  the page takes `?order=` like sales. Received purchase order (`PurchasingDemo.tsx`): "Record the supplier's invoice".
+- Payments (`finance/Finance.tsx`): an empty "For" list says which documents show there; an empty "Paid into / from" says there is
+  no active cash box or bank account for that method and currency, with a link to Treasury.
+- Back: journal entry, ledger account, statement lines, treasury account use `BackLink`; a sales order, purchase order, stock request
+  or transfer that fails to load now has a way back.
+- Sales order: once its stock request is approved, it no longer says "needs a manager to approve it".
+- Bell (`NotificationBell.tsx`, `Shell.tsx`): a link to a page the person cannot open goes to Messages instead of "Page not found".
+- Errors (`lib/api.ts` `withNextStep`): "locked period" adds who moves the lock date and where; "app not enabled" adds Settings → Apps.
+- Arabic for every new text (`i18nScreens.ts`).
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 227 passed; biome 0 errors. Not checked in a browser on real data.
+
 ## 2026-11-25 — Dead ends found by Ben: empty invoice picker, Back from a sales order, not enough stock (no migration)
 
 **Objective.** Ben, testing invoices on live: "choose an order doesn't show anything", "going back from a sales order takes me to a dead

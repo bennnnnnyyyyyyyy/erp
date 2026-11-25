@@ -18,7 +18,7 @@ import { api, apiDownload } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
 import { usePeople } from '../../lib/people';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
@@ -112,7 +112,7 @@ export function EntryPage() {
   const lines = e.lines ?? [];
   return (
     <section className="page wide">
-      <p><Link to="/accounting/entries">← {tr('Journal')}</Link></p>
+      <p><BackLink to="/accounting/entries" label={`← ${tr('Journal')}`} backLabel={tr('← Back')} /></p>
       <h1><code>{e.number}</code> · {formatDay(e.entryDate, session.org)}</h1>
       <p>{e.memo}</p>
       <p className="muted small">
@@ -479,7 +479,7 @@ export function AccountLinesPage() {
   const account = accounts.data?.find((a) => a.id === id);
   return (
     <section className="page wide">
-      <p><Link to="/accounting/accounts">← {tr('Chart of accounts')}</Link> · <Link to={`/accounting/trial-balance?from=${shown.from}&to=${shown.to}`}>{tr('Trial balance')}</Link></p>
+      <p><BackLink to="/accounting/accounts" label={`← ${tr('Chart of accounts')}`} backLabel={tr('← Back')} /> · <Link to={`/accounting/trial-balance?from=${shown.from}&to=${shown.to}`}>{tr('Trial balance')}</Link></p>
       <h1>{account ? accountLabel(account) : tr('Account')}</h1>
       {account && !account.isLeaf ? <p className="muted small">{tr('A group account: its sub-accounts\' lines are included.')}</p> : null}
       <div className="form-row">

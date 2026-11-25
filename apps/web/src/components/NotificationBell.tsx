@@ -41,7 +41,8 @@ export function notificationTarget(n: Pick<AppNotification, 'entityType' | 'enti
 
 // The bell in the top bar: unread count, the latest notifications, mark as read. Messages are delivered into this
 // inbox by the delivery job; a notification can open the request or task, but it never approves or changes anything.
-export function NotificationBell() {
+/** `canOpen`: whether this person can open a page (the Shell knows the apps). A link to a page they cannot open goes to the messages page instead: an alert can reach staff about a page only owners open (dead-ends audit, 25 Nov 2026). */
+export function NotificationBell({ canOpen }: { canOpen?: (path: string) => boolean } = {}) {
   const session = useSession();
   const enabled = session.modules.includes('messaging') && hasPermission(session.permissions, 'messaging.notifications.read');
   const [data, setData] = useState<{ items: AppNotification[]; unread: number } | null>(null);
@@ -93,7 +94,7 @@ export function NotificationBell() {
     if (!n.readAt) await api('/v1/messaging/notifications/read', { method: 'POST', body: JSON.stringify({ id: n.id }) }).catch(() => undefined);
     load();
     const to = notificationTarget(n, session);
-    if (to) navigate(to);
+    if (to) navigate(!canOpen || canOpen(to) ? to : '/messaging');
   }
 
   async function markAll() {

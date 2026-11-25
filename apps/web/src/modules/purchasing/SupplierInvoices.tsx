@@ -37,9 +37,10 @@ export function SupplierInvoices(){
   const vat=useLoad(()=>api<VatSettings>('/v1/core/org/vat').catch(()=>null));
   const [vatIn,setVatIn]=useState<PurchaseVat>(emptyPurchaseVat);const [lineRate,setLineRate]=useState<Record<string,string>>({});const [lineKind,setLineKind]=useState<Record<string,string>>({});
   const session=useSession();
-  const [orderId,setOrderId]=useState('');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
+  // "Record the supplier's invoice" on a received purchase order opens this page with ?order=… chosen (dead-ends audit, 25 Nov).
+  const [orderId,setOrderId]=useState(()=>new URLSearchParams(window.location.search).get('order')??'');const [number,setNumber]=useState('');const [invoiceDate,setInvoiceDate]=useState(new Date().toISOString().slice(0,10));
   const [quantities,setQuantities]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [message,setMessage]=useState<{ok:boolean;text:string}|null>(null);
-  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(false);const [scanOpen,setScanOpen]=useState(false);
+  const [showAll,setShowAll]=useState(false);const [formOpen,setFormOpen]=useState(()=>new URLSearchParams(window.location.search).has('order'));const [scanOpen,setScanOpen]=useState(false);
   const summary=summaries.data?.find(o=>o.orderId===orderId);
   const summaryRows=summaries.data??[];
   const supplierName=(id:string)=>suppliers.data?.find(s=>s.id===id)?.name??id;
@@ -52,6 +53,7 @@ export function SupplierInvoices(){
   if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading error={summaries.error??invoices.error??suppliers.error??items.error} /></section>;
   const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
   const toBill=billingRows.filter(r=>r.billed<r.received);
+  const billable=summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty));
   const shownBilling=showAll?billingRows:toBill;
   return <section className="page">
     <h1>{tr('Purchase invoices')}</h1><p className="muted">{tr('Bills from suppliers for the goods you received.')}</p>
@@ -59,7 +61,8 @@ export function SupplierInvoices(){
     {hasPermission(session.permissions,'purchasing.bills.scan')&&hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Scan a bill')} open={scanOpen} onOpenChange={setScanOpen}><ScanBill suppliers={suppliers.data} onSaved={()=>{summaries.reload();invoices.reload();}} /></FormToggle>}
     {hasPermission(session.permissions,'purchasing.invoices.record')&&<FormToggle label={tr('Record an invoice')} open={formOpen} onOpenChange={setFormOpen}>
       <div className="form-row">
-        <label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty)).map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>
+        {/* Dead-ends audit, 25 Nov: only orders with received goods not yet billed can be billed; with none, say why and where to go. */}
+        {billable.length===0?<div className="notice" role="status"><p style={{marginBlock:0}}>{tr('No received goods are waiting for a bill. Receive the goods on the purchase order first.')}</p><Link to="/purchasing/orders">{tr('Purchase orders')}</Link></div>:<label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{billable.map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>}
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
         <label>{tr('Invoice date')}<DateInput value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} required /></label>
       </div>

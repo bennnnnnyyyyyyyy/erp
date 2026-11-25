@@ -208,7 +208,7 @@ export function TransferPage() {
     }
   }
 
-  if (transfer.error) return <section className="page"><p className="error">{transfer.error}</p></section>;
+  if (transfer.error) return <section className="page"><BackLink to="/inventory/transfers" label={tr('← Stock transfers')} backLabel={tr('← Back')} /><p className="error">{transfer.error}</p></section>;
   if (!t || !cat.ready) return <section className="page"><Loading /></section>;
 
   const open = t.status === 'submitted' || t.status === 'approved';

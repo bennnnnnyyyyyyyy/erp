@@ -241,7 +241,7 @@ export function PurchaseOrderPage() {
     }
   }
 
-  if (order.error) return <section className="page"><p className="error">{order.error}</p></section>;
+  if (order.error) return <section className="page"><BackLink to="/purchasing/orders" label={tr('← Purchase orders')} backLabel={tr('← Back')} /><p className="error">{order.error}</p></section>;
   if (!o || !cat.ready || !suppliers.data) return <section className="page"><Loading /></section>;
 
   const supplier = suppliers.data.find((s) => s.id === o.supplierId);
@@ -332,6 +332,12 @@ export function PurchaseOrderPage() {
       )}
       {o.status === 'received' && (
         <p className="notice">{tr('The goods are in stock.')} <Link to="/inventory/ledger">{tr('See the receipts in the stock ledger')}</Link> or <Link to="/inventory/stock">{tr('check stock on hand')}</Link>.</p>
+      )}
+      {/* Dead-ends audit, 25 Nov: the next step after receiving is the supplier's bill; the order is chosen on the bills page. */}
+      {o.status === 'received' && !demoMode && hasPermission(session.permissions, 'purchasing.invoices.record') && (
+        <div className="form-actions" style={{ marginBlockStart: '0.5rem' }}>
+          <Button onClick={() => navigate(`/purchasing/invoices?order=${o.id}`)}>{tr("Record the supplier's invoice")}</Button>
+        </div>
       )}
 
       {demoMode ? null : <Attachments entityType="purchase_order" entityId={o.id} />}

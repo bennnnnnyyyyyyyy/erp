@@ -72,8 +72,21 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
   if (!body) throw new ApiError(res.status, tr('The server sent an unreadable response'));
-  if (!body.success) throw new ApiError(body.status, translateServerError(body.error), body.code);
+  if (!body.success) throw new ApiError(body.status, withNextStep(translateServerError(body.error), body.code), body.code);
   return body.data;
+}
+
+/**
+ * A blocked action says what unblocks it (dead-ends audit, 25 Nov 2026): the server's message says what is wrong; this adds who can
+ * change it and where. Only for blocks that a setting removes. The texts below are listed for the Arabic check (tr literal calls).
+ */
+const NEXT_STEP: Record<string, () => string> = {
+  period_locked: () => tr('Change the date, or ask an owner to move the lock date (Settings → General).'),
+  module_disabled: () => tr('An owner can switch the app on in Settings → Apps.'),
+};
+export function withNextStep(message: string, code?: string): string {
+  const next = code ? NEXT_STEP[code] : undefined;
+  return next ? `${message.replace(/\.$/, '')}. ${next()}` : message;
 }
 
 /**
