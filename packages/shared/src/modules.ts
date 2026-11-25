@@ -49,8 +49,10 @@ export const MODULES: readonly ModuleManifest[] = [
       // Notes on records (sql/113): whoever can see the record reads its notes; members, admins and owners add them.
       'core.notes.read',
       'core.notes.add',
+      // The phone as a barcode scanner for the computer's order form (sql/115): members, admins and owners.
+      'core.scanner.use',
     ],
-    memberGrants: ['core.attachments.add', 'core.notes.add'],
+    memberGrants: ['core.attachments.add', 'core.notes.add', 'core.scanner.use'],
     suite: 'Core',
   },
   // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for

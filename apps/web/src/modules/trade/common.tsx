@@ -5,6 +5,7 @@ import { BarcodeScanner } from '../../components/BarcodeScanner';
 import { readOrderLink } from '../../lib/orderLink';
 import { unitLabel } from '../../lib/names';
 import { demoMode } from '../../lib/demo';
+import { PhoneScanButton } from '../../components/PhoneScanner';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { ErrorToast } from '../../components/Toast';
@@ -534,6 +535,8 @@ export function NewOrderForm(props: {
         <div className="form-actions">
           <Button variant="outline" type="button" onClick={() => setLines((ls) => [...ls, emptyLine()])}>{tr('Add another item')}</Button>
           {demoMode ? null : <Button variant="outline" type="button" onClick={() => setScanning(true)}>{tr('Scan a barcode')}</Button>}
+          {/* sql/115: the phone as a scanner for this form (same person, same company) */}
+          {demoMode ? null : <PhoneScanButton form={props.partyField === 'customerId' ? 'sales_order' : 'purchase_order'} onCode={(code) => void addScanned(code)} />}
         </div>
         {scanned ? <p className="notice small" role="status">{scanned}</p> : null}
         {scanning ? <BarcodeScanner onCode={(code) => void addScanned(code)} onClose={() => setScanning(false)} /> : null}
