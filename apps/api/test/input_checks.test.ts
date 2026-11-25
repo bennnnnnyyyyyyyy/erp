@@ -62,3 +62,15 @@ describe('database errors people read', () => {
     expect(plainDbError(new Error('plain'))).toBeNull();
   });
 });
+
+describe('search on the server (Ben, 25 Nov 2026)', () => {
+  it('keeps the search text safe inside a PostgREST filter', async () => {
+    const { searchText, orFilter } = await import('../src/lib/search');
+    const ctx = (q: string) => ({ req: { query: (k: string) => (k === 'q' ? q : undefined) } }) as unknown as Parameters<typeof searchText>[0];
+    expect(searchText(ctx('  INV-2026  '))).toBe('INV-2026');
+    expect(searchText(ctx('a,b),or(id.eq.1*%'))).toBe('a b or id.eq.1');
+    expect(searchText(ctx('x'.repeat(100))).length).toBe(60);
+    expect(orFilter('nile', ['number'], [['customer_id', ['a1', 'b2']]])).toBe('number.ilike.*nile*,customer_id.in.(a1,b2)');
+    expect(orFilter('nile', ['number', 'note'], [['supplier_id', []]])).toBe('number.ilike.*nile*,note.ilike.*nile*');
+  });
+});

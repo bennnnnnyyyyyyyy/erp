@@ -18,15 +18,23 @@ type Props = {
   disabled?: boolean;
   className?: string;
   'aria-label'?: string;
+  /** Told whether the box holds a date that cannot be used (bad or out of range), so the form can block Save (Ben, 25 Nov 2026). */
+  onBad?: (bad: boolean) => void;
 };
 
-export function DateInput({ value, onChange, min, max, required, disabled, className, 'aria-label': ariaLabel }: Props) {
+export function DateInput({ value, onChange, min, max, required, disabled, className, 'aria-label': ariaLabel, onBad }: Props) {
   const format = useContext(SessionContext)?.session.org?.dateFormat ?? 'DD/MM/YYYY';
   const [text, setText] = useState(() => showDay(value, format));
   const [bad, setBad] = useState(false);
   // Why the typed text is not taken: not a date, or outside the allowed range (shown under the box).
   const [why, setWhy] = useState<'format' | 'range' | null>(null);
   const picker = useRef<HTMLInputElement>(null);
+  // Tell the form when the typed text cannot be used: it then blocks Save (the value it holds is the last good one).
+  const shown = bad && text.trim() !== '';
+  const reported = useRef(onBad);
+  reported.current = onBad;
+  useEffect(() => reported.current?.(shown), [shown]);
+  useEffect(() => () => reported.current?.(false), []);
 
   // A new value from outside (a reset, a preset, the calendar) replaces what is typed.
   useEffect(() => {

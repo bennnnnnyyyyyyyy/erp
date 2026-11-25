@@ -22,6 +22,7 @@ import { usePeople } from '../../lib/people';
 import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
+import { useDateGuard } from '../../lib/dateGuard';
 import { useSession } from '../../session';
 import { Pill, toMinor } from '../trade/common';
 import { AccountSelect, Notice, accountLabel, accountName, eventLabel, firstOfYear, money, side, sourceLabel, sourcePath, today, useNotice } from './common';
@@ -202,6 +203,7 @@ const blankLine = (): DraftLine => ({ accountId: '', debit: '', credit: '', part
 
 /** The journal editor: new (no id) or one's own draft. Running totals show whether it balances before saving. */
 export function JournalEditPage() {
+  const dates = useDateGuard();
   const session = useSession();
   const id = useParam('id');
   const accounts = useAccounts();
@@ -261,7 +263,7 @@ export function JournalEditPage() {
       <Notice message={message} />
       <div className="form-card stack">
         <div className="form-row">
-          <label>{tr('Date')}<DateInput value={f.entryDate} onChange={(e) => set({ entryDate: e.target.value })} max={todayIn()} /></label>
+          <label>{tr('Date')}<DateInput value={f.entryDate} onChange={(e) => set({ entryDate: e.target.value })} max={todayIn()} onBad={dates.watch('entryDate')} /></label>
           <label>{tr('Type')}
             <select value={f.kind} onChange={(e) => set({ kind: e.target.value as 'manual' | 'opening' })}>
               <option value="manual">{tr('Manual journal')}</option>
@@ -306,10 +308,10 @@ export function JournalEditPage() {
         {!problem && !f.memo.trim() ? <p className="error small">{tr('Add a description to save.')}</p> : null}
         <div className="form-row">
           <Button variant="outline" onClick={() => set({ lines: [...f.lines, blankLine()] })}>{tr('Add a line')}</Button>
-          <Button disabled={busy || !!problem || !f.memo.trim() || !f.entryDate} onClick={() => save(false)}>{tr('Save for approval')}</Button>
+          <Button disabled={busy || !!problem || !f.memo.trim() || !f.entryDate || dates.blocked} onClick={() => save(false)}>{tr('Save for approval')}</Button>
           {/* Posting is permanent, so it asks first (UX audit: withdrawing a harmless draft asked, posting did not). */}
           {canPost ? (
-            <ConfirmButton label={tr('Post now')} confirmLabel={tr('Yes, post')} disabled={busy || !!problem || !f.memo.trim() || !f.entryDate}
+            <ConfirmButton label={tr('Post now')} confirmLabel={tr('Yes, post')} disabled={busy || !!problem || !f.memo.trim() || !f.entryDate || dates.blocked}
               question={trf('Post {amount} now? A posted entry cannot be changed, only reversed.', { amount: money(dr, f.currency) })} onConfirm={() => save(true)} />
           ) : null}
         </div>
@@ -320,6 +322,7 @@ export function JournalEditPage() {
 }
 
 export function JournalPage() {
+  const dates = useDateGuard();
   const session = useSession();
   const person = usePeople();
   const id = useParam('id');
@@ -391,9 +394,9 @@ export function JournalPage() {
           <h2>{tr('Reverse')}</h2>
           <p className="muted small">{tr('A posted journal is never changed. Reversing posts the opposite entry on the date you choose. Owner or head accountant, once.')}</p>
           <div className="form-row">
-            <label>{tr('Date')}<DateInput value={reverse.date} onChange={(e) => setReverse({ ...reverse, date: e.target.value })} max={todayIn()} /></label>
+            <label>{tr('Date')}<DateInput value={reverse.date} onChange={(e) => setReverse({ ...reverse, date: e.target.value })} max={todayIn()} onBad={dates.watch('reverseDate')} /></label>
             <label>{tr('Reason')}<input value={reverse.memo} maxLength={500} onChange={(e) => setReverse({ ...reverse, memo: e.target.value })} /></label>
-            <ConfirmButton label={tr('Reverse')} confirmLabel={tr('Yes, reverse')} question={tr('Post a reversing entry?')} disabled={busy || !reverse.memo.trim() || !reverse.date}
+            <ConfirmButton label={tr('Reverse')} confirmLabel={tr('Yes, reverse')} question={tr('Post a reversing entry?')} disabled={busy || !reverse.memo.trim() || !reverse.date || dates.blocked}
               onConfirm={() => run(async () => {
                 await api(`/v1/accounting/journals/${j.id}/reverse`, { method: 'POST', body: JSON.stringify(reverse) });
                 return trf('{number} reversed.', { number: j.number });

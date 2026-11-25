@@ -1522,6 +1522,7 @@ export const SCREENS_AR: Record<string, string> = {
   "Choose a date on or after {min}.": "اختر تاريخًا في {min} أو بعده.",
   "Enter a number of 0 or more.": "أدخل رقمًا يساوي صفرًا أو أكثر.",
   "Choose a due time from now on.": "اختر موعد استحقاق من الآن فصاعدًا.",
+  "(total of the {n} shown: {amount})": "(إجمالي الـ {n} المعروضة: {amount})",
   // Settings → E-invoicing (Ben, 25 Nov 2026)
   "The E-invoicing app is switched off for your company.": "تطبيق الفاتورة الإلكترونية غير مفعّل لشركتك.",
   "Your company details for the Egyptian Tax Authority (ETA). They print on invoices with the ETA layout. Sending invoices to the ETA is not switched on yet.": "بيانات شركتك لدى مصلحة الضرائب المصرية. تُطبع على الفواتير بتنسيق المصلحة. إرسال الفواتير إلى المصلحة غير مفعّل بعد.",

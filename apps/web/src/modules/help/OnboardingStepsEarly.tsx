@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { DATE_FORMATS, hasPermission } from '@erp/shared';
 import { Button } from '../../components/ui/button';
 import { tr } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { Link } from '../../lib/router';
 import { EditWarehouseModal } from '../inventory/ItemModals';
 import { api } from '../../lib/api';
@@ -212,6 +213,7 @@ type VatState = { vatRegistered: boolean; rates: { id: string; subType: string; 
 /** Walkthrough 18 Nov, fix B2: VAT is set up with the company. "Yes" creates 14% general (default), 0% export and Exempt (whichever are
  *  missing) and switches VAT on from the chosen date, through the same routes as Settings: VAT. Owners only, as there. */
 export function VatStep({ c, onDone }: { c: OnboardingContent; onDone: () => void }) {
+  const dates = useDateGuard();
   const session = useSession();
   const isOwner = session.role === 'owner';
   const [state, setState] = useState<VatState | null>(null);
@@ -239,6 +241,7 @@ export function VatStep({ c, onDone }: { c: OnboardingContent; onDone: () => voi
   };
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (dates.blocked) return;
     run(async () => {
       if (!registered) return;
       const general = await ensure('V009', 14, tr('VAT 14%'), true);
@@ -258,12 +261,12 @@ export function VatStep({ c, onDone }: { c: OnboardingContent; onDone: () => voi
         <>
           <p className="m-0 text-sm text-muted-foreground sm:col-span-2">{c.vat.creates}</p>
           <Field label={c.vat.from} hint={c.vat.fromHint}>
-            <DateInput className={inputClass} required value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput className={inputClass} required value={from} onChange={(e) => setFrom(e.target.value)} onBad={dates.watch('vatFrom')} />
           </Field>
         </>
       ) : null}
       <div className="sm:col-span-2">
-        <Saver c={c} busy={busy} error={error} />
+        <Saver c={c} busy={busy} error={error} disabled={dates.blocked} />
       </div>
     </form>
   );

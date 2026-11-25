@@ -6,6 +6,9 @@ import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { failed, useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
+import { useDateGuard } from '../../lib/dateGuard';
+import { ListView, type Column } from '../../components/views/ListView';
 import { useSession } from '../../session';
 import { formatDateTime, formatDay } from '../../lib/format';
 import { Pill } from '../trade/common';
@@ -32,7 +35,10 @@ const money=(amountMinor:number,currency:string)=>formatMoney({amountMinor,curre
 
 export function SupplierInvoices(){
   const summaries=useLoad(()=>api<Summary[]>('/v1/purchasing/billing-summary'));
-  const invoices=useLoad(()=>api<Invoice[]>('/v1/purchasing/supplier-invoices'));
+  // Paged and searched on the server (Ben, 25 Nov 2026). Save waits while the bill date box holds a bad date.
+  const [search,setSearch]=useState('');
+  const invoices=usePaged<Invoice>(`/v1/purchasing/supplier-invoices${search?`?q=${encodeURIComponent(search)}`:''}`,250);
+  const dates=useDateGuard();
   const suppliers=useLoad(()=>api<Supplier[]>('/v1/purchasing/suppliers'));
   const items=useLoad(()=>api<Item[]>('/v1/inventory/items'));
   const vat=useLoad(()=>api<VatSettings>('/v1/core/org/vat').catch(()=>null));
@@ -55,6 +61,14 @@ export function SupplierInvoices(){
     catch(e){setMessage({ok:false,text:(e as Error).message})}finally{setBusy(false)}
   }
   if(!summaries.data||!invoices.data||!suppliers.data||!items.data)return <section className="page"><Loading {...failed(summaries, invoices, suppliers, items)} /></section>;
+  const poNumber=(id:string)=>summaryRows.find(o=>o.orderId===id)?.number??'—';
+  const billColumns:Column<Invoice>[]=[
+    {key:'number',label:tr('Invoice'),value:i=>i.number,render:i=><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link>},
+    {key:'supplier',label:tr('Supplier'),value:i=>supplierName(i.supplierId)},
+    {key:'order',label:tr('Purchase order'),value:i=>poNumber(i.orderId),render:i=><Link to={`/purchasing/orders/${i.orderId}`}><code>{poNumber(i.orderId)}</code></Link>},
+    {key:'created',label:tr('Date recorded'),value:i=>i.createdAt,render:i=><span className="nowrap">{formatDateTime(i.createdAt,session.org)}</span>},
+    {key:'amount',label:tr('Amount'),value:i=>i.totalMinor/100,render:i=>money(i.totalMinor,i.currency),align:'right'},
+  ];
   const billingRows=summaryRows.map(o=>({o,received:o.lines.reduce((n,l)=>n+l.receivedQty*l.unitCostMinor,0),billed:o.lines.reduce((n,l)=>n+l.billedQty*l.unitCostMinor,0)}));
   const toBill=billingRows.filter(r=>r.billed<r.received);
   const billable=summaries.data.filter(o=>o.lines.some(l=>l.billedQty<l.receivedQty));
@@ -68,15 +82,24 @@ export function SupplierInvoices(){
         {/* Dead-ends audit, 25 Nov: only orders with received goods not yet billed can be billed; with none, say why and where to go. */}
         {billable.length===0?<div className="notice" role="status"><p style={{marginBlock:0}}>{tr('No received goods are waiting for a bill. Receive the goods on the purchase order first.')}</p><Link to="/purchasing/orders">{tr('Purchase orders')}</Link></div>:<label>{tr('Received purchase order')}<select value={orderId} onChange={e=>{setOrderId(e.target.value);setQuantities({})}}><option value="">{tr('Choose an order…')}</option>{billable.map(o=><option key={o.orderId} value={o.orderId}>{o.number} · {supplierName(o.supplierId)}</option>)}</select></label>}
         <label>{tr('Supplier\'s invoice number')}<input value={number} onChange={e=>setNumber(e.target.value)} required /></label>
-        <label>{tr('Invoice date')}<DateInput value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} max={todayIn()} required /></label>
+        <label>{tr('Invoice date')}<DateInput value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} max={todayIn()} required onBad={dates.watch('date')} /></label>
       </div>
-      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={qtyFor(l)} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" />{message&&!message.ok&&<p className="error notice" role="alert">{message.text}</p>}<Button type="submit" disabled={busy||!number.trim()||!anyQty} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button>{!busy&&(!number.trim()||!anyQty)&&<p className="muted small">{!number.trim()?tr('Enter the supplier\'s invoice number.'):''} {!anyQty?tr('Enter a quantity on at least one line.'):''}</p>}</>}
+      {summary&&<><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Item')}</th><th scope="col" className="right">{tr('Received')}</th><th scope="col" className="right">{tr('Already billed')}</th><th scope="col">{tr('Quantity on this invoice')}</th>{vat.data?.rates.length?<th scope="col">{tr('VAT')}</th>:null}<th scope="col">{tr('Kind of purchase')}</th></tr></thead><tbody>{summary.lines.map(l=><tr key={l.orderLineId}><td>{itemName(l.itemId)}</td><td className="right">{l.receivedQty}</td><td className="right">{l.billedQty}</td><td><input aria-label={trf('Quantity billed for {item}', { item: itemName(l.itemId) })} type="number" min="0" max={l.receivedQty-l.billedQty} step="0.001" value={qtyFor(l)} onChange={e=>setQuantities(q=>({...q,[l.orderLineId]:e.target.value}))} /></td>{vat.data?.rates.length?<td><select aria-label={trf('VAT for {item}',{item:itemName(l.itemId)})} value={lineRate[l.orderLineId]??''} onChange={e=>setLineRate(r=>({...r,[l.orderLineId]:e.target.value}))}><option value="">{tr('Item or company default')}</option>{vat.data.rates.map(r=><option key={r.id} value={r.id}>{r.label} ({r.rate}%)</option>)}<option value="exempt">{tr('No VAT (exempt)')}</option></select></td>:null}<td><select aria-label={trf('Kind of purchase for {item}',{item:itemName(l.itemId)})} value={lineKind[l.orderLineId]??'local'} onChange={e=>setLineKind(k=>({...k,[l.orderLineId]:e.target.value}))}><option value="local">{tr('Goods and services')}</option><option value="capital">{tr('Capital asset (equipment, machinery)')}</option><option value="import">{tr('Import (customs)')}</option></select></td></tr>)}</tbody></table></div><PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="bill" />{message&&!message.ok&&<p className="error notice" role="alert">{message.text}</p>}<Button type="submit" disabled={busy||dates.blocked||!number.trim()||!anyQty} onClick={submit}>{busy?tr('Recording…'):tr('Record purchase invoice')}</Button>{!busy&&(!number.trim()||!anyQty)&&<p className="muted small">{!number.trim()?tr('Enter the supplier\'s invoice number.'):''} {!anyQty?tr('Enter a quantity on at least one line.'):''}</p>}</>}
     </FormToggle>}
     <UnpaidBills supplierName={supplierName} />
-    <h2 className="related">{tr('Recorded invoices')}</h2><div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Purchase order')}</th><th scope="col">{tr('Date recorded')}</th><th scope="col" className="right">{tr('Amount')}</th></tr></thead><tbody>
-      {invoices.data.map(i=><ClickRow key={i.id} to={`/purchasing/invoices/${i.id}`}><td><Link to={`/purchasing/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{supplierName(i.supplierId)}</td><td><Link to={`/purchasing/orders/${i.orderId}`}><code>{summaryRows.find(o=>o.orderId===i.orderId)?.number??'—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt,session.org)}</td><td className="right">{money(i.totalMinor,i.currency)}</td></ClickRow>)}
-      {!invoices.data.length&&<tr><td colSpan={5} className="muted empty">{tr('No purchase invoices yet.')}</td></tr>}
-    </tbody></table></div>
+    <h2 className="related">{tr('Recorded invoices')}</h2>
+    {/* Paged and searched on the server (Ben, 25 Nov 2026): the supplier's invoice number or the supplier's name finds older bills
+        too (the list stopped at the newest 250). */}
+    <ListView
+      rows={invoices.data}
+      columns={billColumns}
+      rowKey={(i) => i.id}
+      title={tr('Purchase invoices')}
+      empty={tr('No purchase invoices yet.')}
+      rowHref={(i) => `/purchasing/invoices/${i.id}`}
+      more={{ hasMore: invoices.hasMore, loading: invoices.loading, onMore: invoices.more, error: invoices.error }}
+      onServerSearch={setSearch}
+    />
     {/* Billing progress: only orders not yet fully billed, unless the person asks for all (most received orders are fully billed). */}
     <div className="section-head">
       <h2 className="related">{showAll?tr('Received orders and billing progress'):tr('Received orders to bill')} <span className="muted small">({shownBilling.length})</span></h2>

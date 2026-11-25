@@ -11,6 +11,33 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Audit answers: server search on invoices, bills, expenses, payments; Save blocked on a bad date (no migration)
+
+**Objective.** Ben's answers to the input and speed audit (via erp-master): move invoices, bills, expenses and payments to the shared
+paged list with server search now; block Save while a date box shows a bad date; refuse future posting dates on screen now (server
+rule and notes on records come with sql/112).
+
+**Actions Completed.**
+- API (`apps/api/src/lib/search.ts`): `?q=` on `GET /v1/sales/invoices` (number or customer name), `GET /v1/purchasing/supplier-invoices`
+  (the supplier's number or supplier name; now paged with `?offset=`, it stopped at 250), `GET /v1/finance/expenses` (number, note,
+  supplier or category name) and `GET /v1/finance/payments` (number or note). "Contains", case ignored, through PostgREST with the
+  caller's own sign-in; the text is limited to 60 characters and stripped of filter characters. The invoice and bill line reads are
+  paged past the 1000-row cut-off. A stable order (`id`) under every paged list.
+- Web: `ListView` takes `onServerSearch` (the box sends its text 0.4 s after typing stops; an empty result says "No rows match"). Sales
+  invoices, purchase bills, expenses and payments use `ListView` + `usePaged` (search, sort, CSV, Load more). The expenses total says
+  it covers the rows shown.
+- Dates: `DateInput` reports a bad or out-of-range date through `onBad`; `lib/dateGuard.ts` `useDateGuard()`; Save is disabled while
+  any date box of the form is bad in 15 forms (sales invoice, bill, expense, payment, manual journal and reversal, accounting set-up,
+  lock date, VAT registration, VAT payment, onboarding VAT, batch receipt, promised date, scanned bill, price list, statement close,
+  treasury transfer). Posting dates already stop at today on screen, and a typed later date now blocks Save.
+- Arabic for the new text. Test: `apps/api/test/input_checks.test.ts` (search).
+
+**Database / System Result.** None. Into sql/112 with step 6: notes on records (shared table, soft delete, audited; writer or owners
+and admins delete), server rule on future posting dates.
+
+**Safety Status.** `tsc` 0 errors (api, web); tests: api 819, web 236; smoke and print browser tests 10 passed; biome 0 errors. Server
+search not checked against a real database (PostgREST `or()` with `ilike` and `in`; check on live: search an invoice by customer).
+
 ## 2026-11-25 — Input, dates, search, notes and speed audit: server-side checks, 1000-row cut-off, timeouts (no migration)
 
 **Objective.** Ben forwarded a tester's notes on another product (month 14 and 6-digit years accepted, 40-digit phones, any text as

@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { todayIn } from '../../lib/dates';
 import { formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { AccountSelect } from '../accounting/common';
@@ -16,6 +17,7 @@ import { AccountSelect } from '../accounting/common';
 // Payments to the tax authority are journals too. Everything can be reversed like any journal.
 
 export function VatReturnPanel({ month }: { month: string }) {
+  const dates = useDateGuard();
   const session = useSession();
   const canPostDirect = hasPermission(session.permissions, 'accounting.journal.post_direct');
   const canCreate = hasPermission(session.permissions, 'accounting.journal.create');
@@ -90,10 +92,10 @@ export function VatReturnPanel({ month }: { month: string }) {
               </label>
               <label>
                 {tr('Paid on')}
-                <DateInput value={payOn} onChange={(e) => setPayOn(e.target.value)} />
+                <DateInput value={payOn} onChange={(e) => setPayOn(e.target.value)} onBad={dates.watch('payOn')} />
               </label>
               <Button
-                disabled={busy || !payFrom}
+                disabled={busy || !payFrom || dates.blocked}
                 onClick={() =>
                   run(async () => {
                     const amountMinor = payAmount.trim() ? Math.round(Number(payAmount) * 100) : live.leftMinor;

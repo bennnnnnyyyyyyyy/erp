@@ -3,6 +3,7 @@ import type { AppEnv } from '../../env';
 import { MAX_MINOR, invalid, isGoodQty, isIsoDay, jsonBody, partyBasics } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange, readAllPages } from '../../lib/paging';
+import { idsMatching, orFilter, searchText } from '../../lib/search';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
@@ -307,18 +308,23 @@ type InvoiceRow = {
 };
 // Columns are read with '*' so that code shipped before sql/086 is applied still works (vatRows.ts computes the old figures then).
 salesRoutes.get('/invoices', requirePermission('sales.invoices.read'), async (c) => {
-  const { data, error } = await userDb(c)
-    .from('sal_invoices')
-    .select('*')
-    .eq('org_id', orgOf(c))
+  // ?q= searches on the server: the invoice number, or the customer's name (lib/search.ts; Ben, 25 Nov 2026).
+  const q = searchText(c);
+  let query = userDb(c).from('sal_invoices').select('*').eq('org_id', orgOf(c));
+  if (q) query = query.or(orFilter(q, ['number'], [['customer_id', await idsMatching(userDb(c), 'sal_customers', 'name', orgOf(c), q)]]));
+  const { data, error } = await query
     .order('created_at', { ascending: false })
+    .order('id')
     .range(...pageRange(c, 200));
   if (error) throw error;
   const rows = (data ?? []) as (InvoiceRow & Record<string, unknown>)[];
   const ids = rows.map((r) => r.id);
   const byInvoice = new Map<string, (LineOut & { orderLineId: string })[]>();
   if (ids.length) {
-    const { data: ls, error: le } = await userDb(c).from('sal_invoice_lines').select('*').eq('org_id', orgOf(c)).in('invoice_id', ids);
+    // 200 invoices can have more than 1000 lines: read every page (lib/paging.ts).
+    const { data: ls, error: le } = await readAllPages((from, to) =>
+      userDb(c).from('sal_invoice_lines').select('*').eq('org_id', orgOf(c)).in('invoice_id', ids).order('id').range(from, to),
+    );
     if (le) throw le;
     for (const l of (ls ?? []) as (LineRow & { invoice_id: string; order_line_id: string })[]) {
       const a = byInvoice.get(l.invoice_id) ?? [];

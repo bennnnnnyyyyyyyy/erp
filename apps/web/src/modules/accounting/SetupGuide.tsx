@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useReloadSession, useSession } from '../../session';
@@ -33,6 +34,7 @@ function StepCard({ n, done, title, children }: { n: number; done: boolean; titl
 }
 
 export function AccountingSetupPage() {
+  const dates = useDateGuard();
   const session = useSession();
   const reloadSession = useReloadSession();
   const canManage = useChartManager();
@@ -71,8 +73,8 @@ export function AccountingSetupPage() {
         {first ? <p>{trf('Your books start on {date}.', { date: formatDay(first, session.org) })}</p> : null}
         {!list.length && canManage ? (
           <div className="form-row">
-            <label>{tr('Books start on')}<DateInput value={start} onChange={(e) => setStart(e.target.value)} /></label>
-            <Button disabled={busy || !plan} onClick={() => plan && run(async () => {
+            <label>{tr('Books start on')}<DateInput value={start} onChange={(e) => setStart(e.target.value)} onBad={dates.watch('start')} /></label>
+            <Button disabled={busy || !plan || dates.blocked} onClick={() => plan && run(async () => {
               await api('/v1/accounting/fiscal-years', { method: 'POST', body: JSON.stringify(plan) });
               return trf('Fiscal year {name} added.', { name: plan.name });
             }, reloadAll)}>{tr('Save the start date')}</Button>
@@ -88,9 +90,9 @@ export function AccountingSetupPage() {
               <FormToggle label={tr('Add another fiscal year')}>
                 <div className="form-row">
                   <label>{tr('Name')}<input value={more.name} onChange={(e) => setMore({ ...more, name: e.target.value })} /></label>
-                  <label>{tr('Starts')}<DateInput value={more.startsOn} onChange={(e) => setMore({ ...more, startsOn: e.target.value })} /></label>
-                  <label>{tr('Ends')}<DateInput value={more.endsOn} onChange={(e) => setMore({ ...more, endsOn: e.target.value })} /></label>
-                  <Button variant="outline" disabled={busy || !more.name.trim() || !more.startsOn || !more.endsOn || more.endsOn < more.startsOn} onClick={() => run(async () => {
+                  <label>{tr('Starts')}<DateInput value={more.startsOn} onChange={(e) => setMore({ ...more, startsOn: e.target.value })} onBad={dates.watch('startsOn')} /></label>
+                  <label>{tr('Ends')}<DateInput value={more.endsOn} onChange={(e) => setMore({ ...more, endsOn: e.target.value })} onBad={dates.watch('endsOn')} /></label>
+                  <Button variant="outline" disabled={busy || !more.name.trim() || !more.startsOn || !more.endsOn || more.endsOn < more.startsOn || dates.blocked} onClick={() => run(async () => {
                     await api('/v1/accounting/fiscal-years', { method: 'POST', body: JSON.stringify(more) });
                     return trf('Fiscal year {name} added.', { name: more.name.trim() });
                   }, years.reload)}>{tr('Add fiscal year')}</Button>

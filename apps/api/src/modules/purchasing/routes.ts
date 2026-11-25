@@ -3,6 +3,7 @@ import type { AppEnv } from '../../env';
 import { MAX_MINOR, invalid, isGoodQty, isIsoDay, jsonBody, partyBasics } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange, readAllPages } from '../../lib/paging';
+import { idsMatching, orFilter, searchText } from '../../lib/search';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
@@ -434,22 +435,24 @@ purchasingRoutes.put('/order-approval', requirePermission('purchasing.orders.man
 
 // Bills are read with '*' so the code also answers before sql/087 is applied (then: no VAT, net = Σ round(qty × cost)).
 purchasingRoutes.get('/supplier-invoices', requirePermission('purchasing.invoices.read'), async (c) => {
-  const { data, error } = await userDb(c)
-    .from('pur_supplier_invoices')
-    .select('*')
-    .eq('org_id', orgOf(c))
+  // Paged (?offset=) and searched on the server (?q=: the supplier's invoice number or the supplier's name; Ben, 25 Nov 2026). It
+  // stopped at the newest 250 with no way to older bills.
+  const q = searchText(c);
+  let query = userDb(c).from('pur_supplier_invoices').select('*').eq('org_id', orgOf(c));
+  if (q) query = query.or(orFilter(q, ['number'], [['supplier_id', await idsMatching(userDb(c), 'pur_suppliers', 'name', orgOf(c), q)]]));
+  const { data, error } = await query
     .order('created_at', { ascending: false })
-    .limit(250);
+    .order('id')
+    .range(...pageRange(c, 250));
   if (error) throw error;
   const invoices = (data ?? []) as BillRow[];
   const ids = invoices.map((i) => i.id);
   const lineMap = new Map<string, BillLineOut[]>();
   if (ids.length) {
-    const { data: lines, error: lineError } = await userDb(c)
-      .from('pur_supplier_invoice_lines')
-      .select('*')
-      .eq('org_id', orgOf(c))
-      .in('invoice_id', ids);
+    // 250 bills can have more than 1000 lines: read every page (lib/paging.ts).
+    const { data: lines, error: lineError } = await readAllPages((from, to) =>
+      userDb(c).from('pur_supplier_invoice_lines').select('*').eq('org_id', orgOf(c)).in('invoice_id', ids).order('id').range(from, to),
+    );
     if (lineError) throw lineError;
     for (const l of (lines ?? []) as BillLineRow[]) lineMap.set(l.invoice_id, [...(lineMap.get(l.invoice_id) ?? []), billLineOut(l)]);
   }

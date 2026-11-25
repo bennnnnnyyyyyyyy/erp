@@ -3,6 +3,7 @@ import type { AppEnv } from '../../env';
 import { ISO_DAY, MAX_MINOR, invalid, jsonBody, textUpTo } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange } from '../../lib/paging';
+import { idsMatching, orFilter, searchText } from '../../lib/search';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -48,12 +49,29 @@ financeRoutes.post('/categories', requirePermission('finance.entries.manage'), a
 
 financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async (c) => {
   // '*' so the list also answers before sql/087 (then: no VAT).
-  const { data, error } = await userDb(c)
-    .from('fin_expenses')
-    .select('*')
-    .eq('org_id', orgOf(c))
+  // ?q= searches on the server: number, note, supplier or category name (lib/search.ts; Ben, 25 Nov 2026).
+  const q = searchText(c);
+  let query = userDb(c).from('fin_expenses').select('*').eq('org_id', orgOf(c));
+  if (q) {
+    const [suppliers, categories] = await Promise.all([
+      idsMatching(userDb(c), 'pur_suppliers', 'name', orgOf(c), q),
+      idsMatching(userDb(c), 'fin_categories', 'name', orgOf(c), q),
+    ]);
+    query = query.or(
+      orFilter(
+        q,
+        ['number', 'note'],
+        [
+          ['supplier_id', suppliers],
+          ['category_id', categories],
+        ],
+      ),
+    );
+  }
+  const { data, error } = await query
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id')
     .range(...pageRange(c, 300));
   if (error) throw error;
   return ok(
@@ -239,9 +257,13 @@ financeRoutes.get('/payments', requirePermission('finance.reports.view'), async 
   const rows = column
     ? await fetchAll<PaymentRow>((from, to) => base().eq(column, m![2]!).order('paid_on', { ascending: false }).order('id').range(from, to))
     : await (async () => {
-        const { data, error } = await base()
+        // ?q= searches on the server: the payment number or its note (lib/search.ts; Ben, 25 Nov 2026).
+        const q = searchText(c);
+        const searched = q ? base().or(orFilter(q, ['number', 'note'])) : base();
+        const { data, error } = await searched
           .order('paid_on', { ascending: false })
           .order('created_at', { ascending: false })
+          .order('id')
           .range(...pageRange(c, 300));
         if (error) throw error;
         return (data ?? []) as PaymentRow[];

@@ -4,6 +4,7 @@ import { DateInput } from '../../components/DateInput';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { Link } from '../../lib/router';
 
 // Scan a supplier bill (sql/108; SCANNING_PLAN.md step 1). Photo or PDF → the company's own AI reads it → OUR matching (server) → this
@@ -28,6 +29,7 @@ function Warnings({ list }: { list: BillWarning[] }) {
 }
 
 export function ScanBill({ suppliers, onSaved }: { suppliers: Supplier[]; onSaved: () => void }) {
+  const dates = useDateGuard();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<BillScanResult | null>(null);
@@ -228,7 +230,7 @@ export function ScanBill({ suppliers, onSaved }: { suppliers: Supplier[]; onSave
                 </label>
                 <label>
                   {tr('Invoice date')}
-                  <DateInput value={date} onChange={(e) => setDate(e.target.value)} required />
+                  <DateInput value={date} onChange={(e) => setDate(e.target.value)} required onBad={dates.watch('billDate')} />
                 </label>
                 <label>
                   {trf('VAT on the bill ({currency})', { currency })}
@@ -307,7 +309,7 @@ export function ScanBill({ suppliers, onSaved }: { suppliers: Supplier[]; onSave
                 </div>
               ) : null}
               <div className="form-row">
-                <Button disabled={busy || blocked || !result.order || !result.draft.supplierId || !number.trim() || !date || !chosen.length} onClick={save}>
+                <Button disabled={busy || blocked || !result.order || !result.draft.supplierId || !number.trim() || !date || !chosen.length || dates.blocked} onClick={save}>
                   {busy ? tr('Saving…') : tr('Save the bill')}
                 </Button>
                 <Button

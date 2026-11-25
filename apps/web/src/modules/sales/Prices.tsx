@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { parseAmount } from '../../lib/numbers';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -181,8 +182,10 @@ function AssignCustomerForm({ customers, groups, onSave }: { customers: Customer
 
 function AddListForm({ groups, onSave }: { groups: CustomerGroup[]; onSave: (body: Record<string, string | null>) => Promise<void> }) {
   const [form, setForm] = useState({ name: '', customerGroupId: groups[0]?.id ?? '', validFrom: new Date().toISOString().slice(0, 10), validTo: '' });
+  const dates = useDateGuard();
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (dates.blocked) return;
     await onSave({ ...form, validTo: form.validTo || null });
   }
   return (
@@ -197,11 +200,11 @@ function AddListForm({ groups, onSave }: { groups: CustomerGroup[]; onSave: (bod
         </label>
       </div>
       <div className="form-row">
-        <label>{tr('From')}<DateInput required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>
-        <label>{tr('To (optional)')}<DateInput value={form.validTo} onChange={(e) => setForm({ ...form, validTo: e.target.value })} /></label>
+        <label>{tr('From')}<DateInput required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} onBad={dates.watch('validFrom')} /></label>
+        <label>{tr('To (optional)')}<DateInput value={form.validTo} onChange={(e) => setForm({ ...form, validTo: e.target.value })} onBad={dates.watch('validTo')} /></label>
       </div>
       <p className="muted small">{tr('One price list per customer group at a time: the dates of two lists for the same group cannot overlap.')}</p>
-      <div className="form-actions"><Button type="submit">{tr('Add price list')}</Button></div>
+      <div className="form-actions"><Button type="submit" disabled={dates.blocked}>{tr('Add price list')}</Button></div>
     </form>
   );
 }
