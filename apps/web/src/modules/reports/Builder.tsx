@@ -256,11 +256,15 @@ export function ReportBuilderPage() {
   async function exportPdf() {
     if (!sheet.current) return;
     setBusy('pdf');
+    // The title above the chart is hidden on screen (it repeats the page title; Ben, 25 Nov) but belongs in the PDF: show it while drawing.
+    const el = sheet.current;
+    el.classList.add('capturing');
     try {
-      saveBlob(await sheetToPdf(sheet.current), `${fileBase}.pdf`);
+      saveBlob(await sheetToPdf(el), `.pdf`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      el.classList.remove('capturing');
       setBusy(null);
     }
   }

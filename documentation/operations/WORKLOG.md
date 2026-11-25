@@ -11,6 +11,16 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Reports: the report title above the chart shows only in print and PDF (no migration)
+
+**Objective.** Ben's answer on the tidy-up: the title above the chart repeats the page title on screen; keep it in print and PDF.
+
+**Actions Completed.** `styles.css`: `.report-sheet .report-title` hidden on screen, shown in print and while the PDF is drawn (`Builder.tsx` adds `.capturing` to the sheet during `sheetToPdf`). The chart type stays inside Options (Ben).
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests passed. Not checked on live.
+
 ## 2026-11-25 — Reports tidy-up (old UI) and document file names (no migration)
 
 **Objective.** Ben: "ui very bad and everything feels like you made a canvas and spit all options on it, please fix before i test";

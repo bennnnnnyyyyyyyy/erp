@@ -708,6 +708,10 @@ tr.scan-row-warn > td { background: color-mix(in srgb, var(--signal-soft) 60%, t
 .report-actions { margin-block: 0.75rem; }
 .report-sheet { background: var(--card); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border); margin-block-start: 1rem; }
 .report-title { margin-block: 0 0.25rem; font-size: 1.2rem; }
+/* It repeats the page title on screen (Ben, 25 Nov 2026): shown only in print and in the PDF (Builder.tsx adds .capturing while drawing). */
+.report-sheet .report-title { display: none; }
+.report-sheet.capturing .report-title { display: block; }
+@media print { .report-sheet .report-title { display: block; } }
 /* Report builder as one sentence (Ben, 24 Nov 2026, option A): "Show [what] by [split] for [period]", chips under it, the report right below. */
 .rb { display: grid; gap: 0.6rem; margin-block: 0.75rem 0.5rem; }
 .rb-data { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
