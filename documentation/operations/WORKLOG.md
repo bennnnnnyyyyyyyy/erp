@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — sql/114 applied to live (input and speed rules)
+
+**Objective.** Ben's "yes 114" (via erp-master), after the rolled-back dry run in the entry below.
+
+**Actions Completed.** Applied `sql/114_input_speed_rules.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran
+tests 111, 092, 003, 045 and 057 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Verification after the apply: Ben's "+2015556487744" refused and Egyptian and UAE numbers accepted by
+`core__phone_ok`; the customer phone rule is in place NOT VALID; 7 posting-date checks; the task due check; the invoice-date index;
+users may call `fin_open_items` and `inv_item_costs_json`. All five tests pass on live. One existing customer phone does not fit the
+new rule (from the dry run); it is left as it is until that customer is next changed.
+
+**Decisions (Ben, 25 Nov 2026, via erp-master).**
+- Posting dates: the screen stops at today; the database allows up to **tomorrow** in the company's time zone (one day of margin for
+  time-zone settings).
+- Accepted as not done: the lock date on adjustments, counts, transfers, receipts and notes (the database dates them now and a lock
+  date cannot be in the future, so they cannot land in a locked period); a time limit set on the report functions (it would not stop
+  the statement already running; Supabase's limit for signed-in users applies and the API shows a plain message).
+
+**Safety Status.** The API's use of the new SQL functions reaches live when Ben merges and CI deploys (until then the old API code runs,
+unchanged). Ben's browser checks are in the reply to erp-master (25 Nov): see the 114 checklist there.
+
 ## 2026-11-25 — The database side of the input and speed audit (sql/114, test 111; NOT applied)
 
 **Objective.** The audit's "for the database" list (`.temp/2026-11-25-input-speed-audit.md`) and Ben's answers: the database refuses
