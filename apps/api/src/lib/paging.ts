@@ -16,3 +16,34 @@ export function pageRange(c: Context<AppEnv>, size: number): [number, number] {
   const from = Number(raw);
   return [from, from + size - 1];
 }
+
+/**
+ * Every row a query returns, 1000 at a time: PostgREST (supabase/config.toml max_rows) cuts any read at 1000 rows without saying so,
+ * so the catalogue lists (items, stock, customers, suppliers, units) lost rows in bigger companies (input and speed audit, 25 Nov 2026).
+ * The query must have a stable order. Stops at `cap` rows.
+ */
+export async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+  cap = 50_000,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; from < cap; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < 1000) break;
+  }
+  return out;
+}
+
+/** `fetchAllPages` with the `{ data, error }` shape of a single read, for routes that retry with fewer columns on an older database. */
+export async function readAllPages(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+): Promise<{ data: unknown[] | null; error: unknown }> {
+  try {
+    return { data: await fetchAllPages<unknown>(page), error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}

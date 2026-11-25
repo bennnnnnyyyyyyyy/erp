@@ -5,6 +5,7 @@ import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { Link } from '../../lib/router';
 
 // The "Receive a batch" form (sql/026): stock of a batch-tracked item comes in with a batch number and an expiry date. Used on the
@@ -17,6 +18,7 @@ export function ReceiveBatchForm({ items, warehouses, open, onOpenChange, onRece
   items: Item[]; warehouses: Named[]; open?: boolean; onOpenChange?: (open: boolean) => void; onReceived?: () => void;
 }) {
   const [f, setF] = useState({ itemId: '', warehouseId: '', batchNo: '', qty: '', mfg: '', exp: '', cost: '' });
+  const dates = useDateGuard();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const tracked = items.filter((i) => i.tracksBatches);
@@ -48,12 +50,12 @@ export function ReceiveBatchForm({ items, warehouses, open, onOpenChange, onRece
           <label>{tr('Warehouse')}<select value={f.warehouseId} onChange={(e) => setF({ ...f, warehouseId: e.target.value })}><option value="">{tr('Choose…')}</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{localName(w)}</option>)}</select></label>
           <label>{tr('Batch number')}<input value={f.batchNo} onChange={(e) => setF({ ...f, batchNo: e.target.value })} /></label>
           <label>{tr('Quantity')}<input inputMode="decimal" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} /></label>
-          <label>{tr('Made on (optional)')}<DateInput value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} /></label>
-          <label>{tr('Expires on')}<DateInput value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} /></label>
+          <label>{tr('Made on (optional)')}<DateInput value={f.mfg} onChange={(e) => setF({ ...f, mfg: e.target.value })} onBad={dates.watch('mfg')} /></label>
+          <label>{tr('Expires on')}<DateInput value={f.exp} onChange={(e) => setF({ ...f, exp: e.target.value })} onBad={dates.watch('exp')} /></label>
           {/* sql/046: the cost of what was received. Required once accounting is on; otherwise optional (it also updates the average cost). */}
           <label>{tr('Unit cost (needed with accounting)')}<input inputMode="decimal" placeholder="0.00" value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} /></label>
         </div>
-        <div><Button disabled={busy || !f.itemId || !f.warehouseId || !f.batchNo.trim() || !(Number(f.qty) > 0)} onClick={receive}>{busy ? tr('Saving…') : tr('Receive batch')}</Button></div>
+        <div><Button disabled={busy || !f.itemId || !f.warehouseId || !f.batchNo.trim() || !(Number(f.qty) > 0) || dates.blocked} onClick={receive}>{busy ? tr('Saving…') : tr('Receive batch')}</Button></div>
       </FormToggle>
     </>
   );

@@ -16,6 +16,7 @@ import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
@@ -25,6 +26,7 @@ import type { ImportRow, Reconciliation } from './statementTypes';
 // ------------------------------------------------------------------ closing a period
 
 export function Periods({ account, lastClosing }: { account: TreasuryAccount; lastClosing: ImportRow | undefined }) {
+  const dates = useDateGuard();
   const session = useSession();
   const canReconcile = hasPermission(session.permissions, 'treasury.statements.reconcile');
   const recs = useLoad(() => api<Reconciliation[]>(`/v1/treasury/statements/accounts/${account.id}/reconciliations`));
@@ -65,10 +67,10 @@ export function Periods({ account, lastClosing }: { account: TreasuryAccount; la
         <div className="form-card stack">
           <p className="muted small">{tr('Close a period when every bank line up to that date is matched or ignored, and the bank balance agrees with the books.')}</p>
           <div className="form-row">
-            <label>{tr('Up to')}<DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} /></label>
+            <label>{tr('Up to')}<DateInput value={toDate} onChange={(e) => setToDate(e.target.value)} onBad={dates.watch('toDate')} /></label>
             <label>{trf('Bank balance on that date ({currency})', { currency: account.currency })}<input inputMode="decimal" value={closing} onChange={(e) => setClosing(e.target.value)} /></label>
           </div>
-          <div className="form-actions"><Button type="button" disabled={!toDate || closing.trim() === ''} onClick={close}>{tr('Reconcile and close')}</Button></div>
+          <div className="form-actions"><Button type="button" disabled={!toDate || closing.trim() === '' || dates.blocked} onClick={close}>{tr('Reconcile and close')}</Button></div>
         </div>
       )}
       {msg && <p className={msg.ok ? 'notice' : 'error notice'}>{msg.text}</p>}

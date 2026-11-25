@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { type LedgerCandidate, suggestGroups, suggestMatches } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
@@ -15,7 +15,7 @@ export const statementRoutes = new Hono<AppEnv>();
 
 type Ctx = Context<AppEnv>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 const FORMATS = ['csv', 'xlsx', 'docx', 'mt940', 'pdf'] as const;
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
 const orgOf = (c: Ctx) => c.var.tenant.orgId;

@@ -11,6 +11,71 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Audit answers: server search on invoices, bills, expenses, payments; Save blocked on a bad date (no migration)
+
+**Objective.** Ben's answers to the input and speed audit (via erp-master): move invoices, bills, expenses and payments to the shared
+paged list with server search now; block Save while a date box shows a bad date; refuse future posting dates on screen now (server
+rule and notes on records come with sql/112).
+
+**Actions Completed.**
+- API (`apps/api/src/lib/search.ts`): `?q=` on `GET /v1/sales/invoices` (number or customer name), `GET /v1/purchasing/supplier-invoices`
+  (the supplier's number or supplier name; now paged with `?offset=`, it stopped at 250), `GET /v1/finance/expenses` (number, note,
+  supplier or category name) and `GET /v1/finance/payments` (number or note). "Contains", case ignored, through PostgREST with the
+  caller's own sign-in; the text is limited to 60 characters and stripped of filter characters. The invoice and bill line reads are
+  paged past the 1000-row cut-off. A stable order (`id`) under every paged list.
+- Web: `ListView` takes `onServerSearch` (the box sends its text 0.4 s after typing stops; an empty result says "No rows match"). Sales
+  invoices, purchase bills, expenses and payments use `ListView` + `usePaged` (search, sort, CSV, Load more). The expenses total says
+  it covers the rows shown.
+- Dates: `DateInput` reports a bad or out-of-range date through `onBad`; `lib/dateGuard.ts` `useDateGuard()`; Save is disabled while
+  any date box of the form is bad in 15 forms (sales invoice, bill, expense, payment, manual journal and reversal, accounting set-up,
+  lock date, VAT registration, VAT payment, onboarding VAT, batch receipt, promised date, scanned bill, price list, statement close,
+  treasury transfer). Posting dates already stop at today on screen, and a typed later date now blocks Save.
+- Arabic for the new text. Test: `apps/api/test/input_checks.test.ts` (search).
+
+**Database / System Result.** None. Into sql/112 with step 6: notes on records (shared table, soft delete, audited; writer or owners
+and admins delete), server rule on future posting dates.
+
+**Safety Status.** `tsc` 0 errors (api, web); tests: api 819, web 236; smoke and print browser tests 10 passed; biome 0 errors. Server
+search not checked against a real database (PostgREST `or()` with `ilike` and `in`; check on live: search an invoice by customer).
+
+## 2026-11-25 — Input, dates, search, notes and speed audit: server-side checks, 1000-row cut-off, timeouts (no migration)
+
+**Objective.** Ben forwarded a tester's notes on another product (month 14 and 6-digit years accepted, 40-digit phones, any text as
+email, lists on "Loading…" for a minute, "canceling statement due to statement timeout"). Check the ERP for the same kinds of problem;
+fix the small ones, list the rest. Table and questions: `.temp/2026-11-25-input-speed-audit.md`.
+
+**Actions Completed.**
+- API checks (`apps/api/src/lib/body.ts`): `isIsoDay`/`ISO_DAY` (a real calendar day, years 1900-2100) replaces the shape-only date
+  check in every module and the inline ones in sales and purchasing; `phoneOrNull` (7-15 digits, spaces, dashes, brackets, +, Arabic
+  digits); `textUpTo` (too long is refused, never cut); `partyBasics` (customer/supplier name 200, contact 120, city 80, phone);
+  `MAX_MINOR` (10 billion in a two-decimal currency) and `isGoodQty` (above 0, at most 3 decimals, at most 1 billion).
+- Sales and purchase orders: a bad line refuses the order and names the line (bad lines were dropped silently). Payments and expenses:
+  amounts capped; notes at most 500. Treasury notes and journal memos/comments: too long is refused (was cut at 500). Tasks: title 200,
+  description 4000. Supplier invoice number 60. Invite email at most 254. E-invoicing: registration number 9 digits, activity code
+  4 digits; customer tax ID by type (business 9 digits, person 14-digit national ID, foreign 30), address parts at most 100.
+- Database errors (`lib/rpc.ts` `plainDbError`, used in `index.ts` onError): statement timeout, deadlock and busy server (503),
+  permission (403), duplicate and still-linked (409), check/length/date/number/format (400) get plain messages; the raw text is only
+  logged (they all showed "Something went wrong on our side").
+- 1000-row cut-off (`lib/paging.ts` `fetchAllPages`/`readAllPages`): items, stock on hand, customers, suppliers and item units are
+  read page by page (PostgREST stopped each read at 1000 rows without saying so).
+- Web (`lib/api.ts`): a 30-second limit with "The server is taking too long. Try again in a moment"; a non-JSON 5xx says the server
+  is busy; the API's line and length messages translate in both parts. `Loading` has "Try again" and 11 pages now pass their error
+  (a failed load showed the skeleton forever). `ListView`: "No rows match "…"" with Clear search, and "No match in the newest N
+  rows. Load more…" when older rows are not loaded; load-more errors shown. `DateInput`: a visible message for a bad or out-of-range
+  date; `readDay` removes right-to-left marks and refuses years outside 1900-2100. Posting dates (sales invoice, purchase bill,
+  expense, payment, manual journal and reversal, treasury transfer) cannot be picked after today. New item: cost and opening
+  quantity read like other amounts (a bad value blocks saving; "1,500" saved the item without a cost). Task due time: not in the past,
+  sent with its time zone (it was read as UTC).
+- Arabic for every new text (`i18nErrors.ts`, `i18nScreens.ts`). Tests: `apps/api/test/input_checks.test.ts` (7), `lib/dates.test.ts`.
+
+**Database / System Result.** None. For sql/112 (with step 6): the same checks in the database, server checks on future posting
+dates and past due dates, lock date on non-posting documents, list indexes, money and forecast reports summed in SQL, a time limit on
+the report builder and forecast, set-returning functions as JSON (listed in the audit file).
+
+**Safety Status.** `tsc` 0 errors (api, web); tests: api 818 (7 new), web 236; biome 0 errors. Not checked in a browser on real data.
+Not done (listed): server search and column filters, notes on records, invoices/bills/expenses/payments as paged lists, a body-size
+limit per route.
+
 ## 2026-11-25 — Reports: the report title above the chart shows only in print and PDF (no migration)
 
 **Objective.** Ben's answer on the tidy-up: the title above the chart repeats the page title on screen; keep it in print and PDF.

@@ -4,6 +4,7 @@ import type { VatSettings } from '@erp/shared';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { tr, trf } from '../../../lib/i18n';
+import { useDateGuard } from '../../../lib/dateGuard';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 
@@ -16,6 +17,7 @@ type RateForm = { id: string | null; subType: string; rate: string; label: strin
 const emptyRate: RateForm = { id: null, subType: 'V009', rate: '14', label: '', isDefault: false };
 
 export function VatSettingsCard() {
+  const dates = useDateGuard();
   const session = useSession();
   const isOwner = session.role === 'owner';
   const vat = useLoad(() => api<VatSettings>('/v1/core/org/vat'));
@@ -169,11 +171,11 @@ export function VatSettingsCard() {
           ) : null}
           <label>
             {tr('VAT applies from')}
-            <DateInput value={fromValue} disabled={busy} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput value={fromValue} disabled={busy} onChange={(e) => setFrom(e.target.value)} onBad={dates.watch('vatFrom')} />
             <span className="hint muted">{tr('Normally the first day of a tax month. Empty: the first day of this month.')}</span>
           </label>
           {v.vatRegistered && from !== null && from !== (v.vatFrom ?? '') ? (
-            <Button variant="outline" disabled={busy || !from} onClick={() => setVat(true, v.defaultVatRateId, from)}>
+            <Button variant="outline" disabled={busy || !from || dates.blocked} onClick={() => setVat(true, v.defaultVatRateId, from)}>
               {tr('Save the start date')}
             </Button>
           ) : null}

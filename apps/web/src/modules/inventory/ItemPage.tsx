@@ -13,7 +13,7 @@ import { formatDateTime, formatDay } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
 import { usePeople } from '../../lib/people';
 import { BackLink, Link, navigate, useParam } from '../../lib/router';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { EditItemModal, MOVE_KIND_LABEL, useCatalog } from './Inventory';
 import { ItemBatchSwitch } from './ItemBatchSwitch';
@@ -55,7 +55,7 @@ export function ItemPage() {
 
   const item = cat.items.data?.find((i) => i.id === id) as (DemoItem & { tracksBatches?: boolean; storageConditionId?: string | null }) | undefined;
   if (cat.items.error) return <section className="page"><p className="error">{cat.items.error}</p></section>;
-  if (!cat.ready || !stock.data) return <section className="page"><Loading /></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><Loading {...failed(stock, cat.items, cat.warehouses)} /></section>;
   if (!item) return <section className="page"><BackLink to="/inventory/stock" label={tr('← Stock on hand')} backLabel={tr('← Back')} /><p className="error">{tr('Item not found')}</p></section>;
 
   const rows = (stock.data ?? []).filter((s) => s.itemId === id);

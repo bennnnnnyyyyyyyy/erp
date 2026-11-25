@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button } from '../ui/button';
 import { ClickRow } from '../ClickRow';
 
@@ -35,7 +35,12 @@ type Props<T> = {
   /** Where clicking the row goes. Rows without it do not react to the pointer. */
   rowHref?: (row: T) => string;
   /** Older rows on the server (lib/usePaged.ts): a "Load more" button under the table. Search and sort cover the loaded rows only. */
-  more?: { hasMore: boolean; loading: boolean; onMore: () => void };
+  more?: { hasMore: boolean; loading: boolean; onMore: () => void; error?: string | null };
+  /**
+   * Search on the server (Ben, 25 Nov 2026: long lists searched only the loaded rows): the box sends its text here, a moment after the
+   * person stops typing, and `rows` are already the matches. Without it the box filters the loaded rows in the browser.
+   */
+  onServerSearch?: (q: string) => void;
 };
 
 function csvCell(v: string | number | null): string {
@@ -43,13 +48,22 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref, more }: Props<T>) {
+export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, toolbar, actions, rowHref, more, onServerSearch }: Props<T>) {
   const [query, setQuery] = useState('');
+  const server = !!onServerSearch;
+  const sent = useRef(onServerSearch);
+  sent.current = onServerSearch;
+  useEffect(() => {
+    if (!sent.current) return;
+    const t = setTimeout(() => sent.current?.(query.trim()), 400);
+    return () => clearTimeout(t);
+  }, [query]);
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const visible = columns.filter((c) => !c.hidden);
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // With server search the rows are already the matches.
+    const q = server ? '' : query.trim().toLowerCase();
     let out = q
       ? rows.filter((r) => columns.some((c) => String(c.value(r) ?? '').toLowerCase().includes(q)))
       : [...rows];
@@ -62,7 +76,7 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
       });
     }
     return out;
-  }, [rows, columns, query, sort]);
+  }, [rows, columns, query, sort, server]);
 
   function toggleSort(key: string) {
     setSort((s) => (s?.key === key ? (s.dir === 1 ? { key, dir: -1 } : null) : { key, dir: 1 }));
@@ -132,14 +146,29 @@ export function ListView<T>({ rows, columns, rowKey, title, empty, emptyAction, 
             {shown.length === 0 && (
               <tr>
                 <td colSpan={visible.length + (actions ? 1 : 0)} className="muted empty">
-                  {rows.length === 0 ? (empty ?? tr('Nothing here yet.')) : tr('No matches.')}
-                  {rows.length === 0 && emptyAction && <div className="empty-action">{emptyAction}</div>}
+                  {server && query.trim()
+                    ? trf('No rows match "{q}".', { q: query.trim() })
+                    : rows.length === 0
+                    ? (empty ?? tr('Nothing here yet.'))
+                    : more?.hasMore
+                      // Search covers the loaded rows only: say so, so an older record is not taken as missing (input and speed audit).
+                      ? trf('No match in the newest {n} rows. Load more to search older ones.', { n: rows.length })
+                      : trf('No rows match "{q}".', { q: query.trim() })}
+                  {(rows.length > 0 || server) && query.trim() && (
+                    <div className="empty-action"><Button variant="outline" size="sm" onClick={() => setQuery('')}>{tr('Clear search')}</Button></div>
+                  )}
+                  {rows.length === 0 && !query.trim() && emptyAction && <div className="empty-action">{emptyAction}</div>}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+      {more?.error && rows.length > 0 && (
+        <p className="error notice" role="alert">
+          {more.error} <Button variant="outline" size="sm" onClick={more.onMore}>{tr('Try again')}</Button>
+        </p>
+      )}
       {more?.hasMore && (
         <div className="form-actions list-more">
           <Button variant="outline" disabled={more.loading} onClick={more.onMore}>{more.loading ? tr('Loading…') : tr('Load more')}</Button>

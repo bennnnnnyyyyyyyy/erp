@@ -47,7 +47,7 @@ export function NotificationsPage() {
         <ListView
           title={tr('Notifications')}
           rows={inbox.data}
-          more={{ hasMore: inbox.hasMore, loading: inbox.loading, onMore: inbox.more }}
+          more={{ hasMore: inbox.hasMore, loading: inbox.loading, onMore: inbox.more, error: inbox.error }}
           columns={columns}
           rowKey={(n) => n.id}
           empty={tr('Nothing yet.')}

@@ -9,7 +9,7 @@ import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import type { DemoItem, DemoRequest, StockRow } from '../../lib/demoInventory';
 import { Link } from '../../lib/router';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
 import { ClerkActions } from './ClerkActions';
@@ -170,7 +170,7 @@ export function StockPage() {
           }
         />
       ) : (
-        <Loading />
+        <Loading {...failed(stock, cat.items, cat.warehouses)} />
       )}
       {cat.ready && (cat.warehouses.data?.length ?? 0) === 0 && (
         <p className="notice">{canAddWarehouse ? tr('Start by adding your first warehouse (any place you keep stock), then add items to it.') : tr('No warehouse exists yet. Ask an owner or admin to add one.')}</p>

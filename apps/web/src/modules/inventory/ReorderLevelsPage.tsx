@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
 import { api } from '../../lib/api';
 import type { DemoItem, StockRow } from '../../lib/demoInventory';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { tr, trf } from '../../lib/i18n';
 import { formatQty } from '../../lib/numbers';
@@ -76,7 +76,7 @@ export function ReorderLevelsPage() {
     }
   }
 
-  if (!cat.ready || !stock.data) return <section className="page"><Loading /></section>;
+  if (!cat.ready || !stock.data) return <section className="page"><Loading {...failed(stock, cat.items, cat.warehouses)} /></section>;
 
   return (
     <section className="page">

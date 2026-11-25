@@ -4,7 +4,10 @@ import { Loading } from '../../components/Loading';
 import { billingFor, formatMoney, type BillingFlag, type VatSettings } from '@erp/shared';
 import { api } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
+import { useDateGuard } from '../../lib/dateGuard';
+import { ListView, type Column } from '../../components/views/ListView';
 import { useSession } from '../../session';
 import { todayIn } from '../../lib/dates';
 import { Button, buttonVariants } from '../../components/ui/button';
@@ -48,6 +51,12 @@ export function CustomerInvoices() {
   const session = useSession();
   const orders = useLoad(() => api<Order[]>('/v1/sales/orders'));
   const invoices = useLoad(() => api<Invoice[]>('/v1/sales/invoices'));
+  // The list people read: paged and searched on the server (number or customer; Ben, 25 Nov 2026). `invoices` above stays the
+  // source of what each order has invoiced.
+  const [search, setSearch] = useState('');
+  const list = usePaged<Invoice>(`/v1/sales/invoices${search ? `?q=${encodeURIComponent(search)}` : ''}`, 200);
+  // Save waits while the invoice date box holds a bad date (Ben, 25 Nov 2026).
+  const dates = useDateGuard();
   const customers = useLoad(() => api<Customer[]>('/v1/sales/customers'));
   const items = useLoad(() => api<Item[]>('/v1/inventory/items'));
   // VAT (sql/086): when the company is registered each line may name its rate; empty means the item's, else the company default.
@@ -73,7 +82,7 @@ export function CustomerInvoices() {
     return m;
   }, [invoices.data]);
 
-  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><Loading error={orders.error ?? invoices.error} /></section>;
+  if (!orders.data || !invoices.data || !customers.data || !items.data) return <section className="page"><Loading {...failed(orders, invoices, customers, items)} /></section>;
 
   const customer = (id: string) => customers.data?.find((c) => c.id === id)?.name ?? 'Unknown customer';
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
@@ -86,6 +95,20 @@ export function CustomerInvoices() {
   const defaultRate = vat.data?.rates.find((r) => r.id === vat.data?.defaultVatRateId);
   // Each line starts with what is still to invoice (UX audit: every quantity started empty though the remainder is known).
   const left = (b: { delivered: number; invoiced: number }) => Math.max(0, b.delivered - b.invoiced);
+  const orderNumber = (id: string) => orders.data?.find((o) => o.id === id)?.number ?? '—';
+  const invoiceColumns: Column<Invoice>[] = [
+    { key: 'number', label: tr('Invoice'), value: (i) => i.number, render: (i) => <Link to={`/sales/invoices/${i.id}`}><code>{i.number}</code></Link> },
+    { key: 'customer', label: tr('Customer'), value: (i) => customer(i.customerId) },
+    { key: 'order', label: tr('Order'), value: (i) => orderNumber(i.orderId), render: (i) => <Link to={`/sales/orders/${i.orderId}`}><code>{orderNumber(i.orderId)}</code></Link> },
+    { key: 'created', label: tr('Created'), value: (i) => i.createdAt, render: (i) => <span className="nowrap">{formatDateTime(i.createdAt, session.org)}</span> },
+    { key: 'amount', label: tr('Amount'), value: (i) => i.totalMinor / 100, render: (i) => money(i.totalMinor, i.currency), align: 'right' },
+    {
+      key: 'status',
+      label: tr('Status'),
+      value: (i) => (i.status === 'void' ? tr('Void') : tr('Issued')),
+      render: (i) => <Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? tr('Void') : tr('Issued')} />,
+    },
+  ];
   const qtyFor = (b: { orderLineId: string; delivered: number; invoiced: number }) => {
     const typed = qty[b.orderLineId];
     return typed === undefined ? left(b) : Number(typed) || 0;
@@ -144,7 +167,7 @@ export function CustomerInvoices() {
                 </select>
               </label>
             )}
-            <label>{tr('Invoice date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} required /></label>
+            <label>{tr('Invoice date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} max={todayIn()} required onBad={dates.watch('date')} /></label>
           </div>
           {chosen && (
             <>
@@ -166,7 +189,7 @@ export function CustomerInvoices() {
               </tbody></table></div>
               {vatOn ? <p className="muted small">{vat.data?.pricesIncludeVat ? tr('Prices include VAT: each line is split into the amount before VAT and the VAT when the invoice is created, and never changes afterwards.') : tr('Prices are before VAT. The VAT is worked out on each line when the invoice is created and never changes afterwards.')}</p> : null}
               {!chosen.billing.some((b) => qtyFor(b) > 0) ? <p className="muted small">{tr('Nothing is left to invoice on this order.')}</p> : null}
-              <Button disabled={busy || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Saving…') : editing ? tr('Save draft') : tr('Create draft invoice')}</Button>
+              <Button disabled={busy || dates.blocked || !chosen.billing.some((b) => qtyFor(b) > 0)} onClick={create}>{busy ? tr('Saving…') : editing ? tr('Save draft') : tr('Create draft invoice')}</Button>
             </>
           )}
         </FormToggle>
@@ -174,19 +197,23 @@ export function CustomerInvoices() {
 
       <DraftInvoices key={draftsKey} canManage={canManage} customer={customer} orderNumber={(oid) => orders.data?.find((o) => o.id === oid)?.number ?? '—'}
         onEdit={(d: InvoiceDraft) => { setEditing(d.id); setOrderId(d.orderId); setDate(d.invoiceDate); setQty(Object.fromEntries(d.lines.map((l) => [l.orderLineId, String(l.qty)]))); setLineRate(Object.fromEntries(d.lines.filter((l) => l.taxRateId).map((l) => [l.orderLineId, l.taxRateId ?? '']))); setFormOpen(true); window.scrollTo({ top: 0 }); }}
-        onIssued={(number) => { setMessage({ ok: true, text: trf('Invoice {number} issued.', { number }) }); invoices.reload(); }} />
+        onIssued={(number) => { setMessage({ ok: true, text: trf('Invoice {number} issued.', { number }) }); invoices.reload(); list.reload(); }} />
 
       <div className="section-head">
         <h2 className="related">{tr('Invoices')}</h2>
         <ScanDocQr />
       </div>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Invoice')}</th><th scope="col">{tr('Customer')}</th><th scope="col">{tr('Order')}</th><th scope="col">{tr('Created')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
-        {invoices.data.map((i) => (
-          <ClickRow key={i.id} to={`/sales/invoices/${i.id}`}><td><Link to={`/sales/invoices/${i.id}`}><code>{i.number}</code></Link></td><td>{customer(i.customerId)}</td><td><Link to={`/sales/orders/${i.orderId}`}><code>{orders.data?.find((o) => o.id === i.orderId)?.number ?? '—'}</code></Link></td><td className="nowrap">{formatDateTime(i.createdAt, session.org)}</td><td className="right">{money(i.totalMinor, i.currency)}</td>
-            <td><Pill status={i.status === 'void' ? 'cancelled' : 'received'} label={i.status === 'void' ? tr('Void') : tr('Issued')} /></td></ClickRow>
-        ))}
-        {!invoices.data.length && <tr><td colSpan={6} className="muted empty">{tr('No invoices yet.')}</td></tr>}
-      </tbody></table></div>
+      {/* Paged and searched on the server (Ben, 25 Nov 2026): the number or the customer's name finds older invoices too. */}
+      {list.data ? <ListView
+        rows={list.data}
+        columns={invoiceColumns}
+        rowKey={(i) => i.id}
+        title={tr('Sales invoices')}
+        empty={tr('No invoices yet.')}
+        rowHref={(i) => `/sales/invoices/${i.id}`}
+        more={{ hasMore: list.hasMore, loading: list.loading, onMore: list.more, error: list.error }}
+        onServerSearch={setSearch}
+      /> : <Loading {...failed(list)} />}
 
       <div className="section-head">
         <h2 className="related">{showAll ? tr('Billing status') : tr('Orders to invoice')} <span className="muted small">({shownBilling.length})</span></h2>
@@ -226,7 +253,7 @@ export function CustomerInvoicePage() {
   const theirCodes = codesFor(usePartyCodes('customer', record.data?.invoice.customerId), (record.data?.invoice.lines ?? []).map((l) => lineItem(l.orderLineId)));
 
   if (record.error) return <section className="page"><BackLink to="/sales/invoices" label={tr('← Sales invoices')} backLabel={tr('← Back')} /><Loading error={record.error} /></section>;
-  if (!record.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
+  if (!record.data || !customers.data || !items.data) return <section className="page"><Loading {...failed(customers, items)} /></section>;
   const inv = record.data.invoice;
   const order = record.data.order;
   const customer = customers.data.find((c) => c.id === inv.customerId)?.name ?? tr('Unknown customer');

@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { invalid, jsonBody, textUpTo } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
@@ -77,6 +77,7 @@ tasksRoutes.get('/:id', requirePermission('tasks.tasks.read'), async (c) => {
 tasksRoutes.post('/', requirePermission('tasks.tasks.create'), async (c) => {
   const body = await jsonBody(c);
   const title = text(body.title);
+  if (title.length > 200) invalid('Task title: at most 200 characters');
   const assigneeId = text(body.assigneeId);
   if (!title) invalid('Give the task a title');
   if (!UUID_RE.test(assigneeId)) invalid('Choose who the task is for');
@@ -86,7 +87,7 @@ tasksRoutes.post('/', requirePermission('tasks.tasks.create'), async (c) => {
     p_title: title,
     p_assignee: assigneeId,
     p_due_at: dueAt ? new Date(dueAt).toISOString() : null,
-    p_description: text(body.description),
+    p_description: textUpTo(body.description, 4000, 'Description') ?? '',
   });
   // The database queued the assignee's notification in the same transaction. Deliver this organization's queue now instead of
   // waiting up to five minutes for the scheduled pass; if that fails the scheduled pass still sends it.

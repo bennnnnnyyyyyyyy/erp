@@ -12,7 +12,7 @@ import type { Party, PurchaseOrder } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { todayIn } from '../../lib/dates';
 import { BackLink, Link, navigate, useParam } from '../../lib/router';
-import { useLoad } from '../../lib/useLoad';
+import { failed, useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
@@ -71,7 +71,7 @@ export function PurchaseOrders() {
         <ListView
           title={tr('Purchase orders')}
           rows={orders.data}
-          more={{ hasMore: orders.hasMore, loading: orders.loading, onMore: orders.more }}
+          more={{ hasMore: orders.hasMore, loading: orders.loading, onMore: orders.more, error: orders.error }}
           columns={columns}
           rowKey={(o) => o.id}
           rowHref={(o) => `/purchasing/orders/${o.id}`}
@@ -79,7 +79,7 @@ export function PurchaseOrders() {
           toolbar={hasPermission(session.permissions, 'purchasing.orders.create') ? <Button type="submit" onClick={() => navigate('/purchasing/orders/new')}>{tr('New purchase order')}</Button> : undefined}
         />
       ) : (
-        <Loading />
+        <Loading {...failed(orders, suppliers, cat.items, cat.warehouses)} />
       )}
       {hasPermission(session.permissions, 'purchasing.orders.manage') && <OrderApprovalSetting currency={session.org?.defaultCurrency ?? 'EGP'} />}
     </section>
@@ -242,7 +242,7 @@ export function PurchaseOrderPage() {
   }
 
   if (order.error) return <section className="page"><BackLink to="/purchasing/orders" label={tr('← Purchase orders')} backLabel={tr('← Back')} /><p className="error">{order.error}</p></section>;
-  if (!o || !cat.ready || !suppliers.data) return <section className="page"><Loading /></section>;
+  if (!o || !cat.ready || !suppliers.data) return <section className="page"><Loading {...failed(order, suppliers, cat.items, cat.warehouses)} /></section>;
 
   const supplier = suppliers.data.find((s) => s.id === o.supplierId);
 

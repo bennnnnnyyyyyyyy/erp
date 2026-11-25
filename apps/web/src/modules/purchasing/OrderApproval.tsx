@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import type { PurchaseOrder } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { parseAmount } from '../../lib/numbers';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
@@ -81,6 +82,7 @@ export function OrderConfirmation({ order, canConfirm, late, onDone }: {
   onDone: (text: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const dates = useDateGuard();
   const [date, setDate] = useState(order.promisedDate ?? '');
   const [ref, setRef] = useState(order.supplierRef ?? '');
   const [busy, setBusy] = useState(false);
@@ -118,9 +120,9 @@ export function OrderConfirmation({ order, canConfirm, late, onDone }: {
       )}
       {open && canConfirm && editing && (
         <div className="form-row">
-          <label>{tr('Promised delivery date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>{tr('Promised delivery date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} onBad={dates.watch('promised')} /></label>
           <label>{tr("Supplier's reference (optional)")}<input value={ref} maxLength={60} onChange={(e) => setRef(e.target.value)} /></label>
-          <Button size="sm" disabled={busy || !date} onClick={save}>{tr('Save')}</Button>
+          <Button size="sm" disabled={busy || !date || dates.blocked} onClick={save}>{tr('Save')}</Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{tr('Cancel')}</Button>
         </div>
       )}

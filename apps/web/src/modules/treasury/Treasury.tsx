@@ -1,4 +1,5 @@
 import { DateInput } from '../../components/DateInput';
+import { todayIn } from '../../lib/dates';
 import { useState } from 'react';
 import { hasPermission, type AccountLine, type Branch, type TreasuryAccount, type TreasuryKind, type TreasuryTransfer } from '@erp/shared';
 import { ClickRow } from '../../components/ClickRow';
@@ -8,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import { api, apiDownload } from '../../lib/api';
 import { formatDay } from '../../lib/format';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
+import { useDateGuard } from '../../lib/dateGuard';
 import { usePeople } from '../../lib/people';
 import { BackLink, Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
@@ -222,6 +224,7 @@ export function TreasuryAccountPage() {
 }
 
 export function TransfersPage() {
+  const dates = useDateGuard();
   const session = useSession();
   const person = usePeople();
   const canCreate = hasPermission(session.permissions, 'treasury.transfers.create');
@@ -257,10 +260,10 @@ export function TransfersPage() {
               </select>
             </label>
             <label>{tr('Amount')}<input inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
-            <label>{tr('Date')}<DateInput value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
+            <label>{tr('Date')}<DateInput value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} max={todayIn()} onBad={dates.watch('date')} /></label>
           </div>
           <label>{tr('Note (optional)')}<input value={form.note} maxLength={500} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
-          <div><Button disabled={busy || !form.fromAccountId || !form.toAccountId || toMinor(form.amount) <= 0 || !form.date} onClick={() => run(async () => {
+          <div><Button disabled={busy || !form.fromAccountId || !form.toAccountId || toMinor(form.amount) <= 0 || !form.date || dates.blocked} onClick={() => run(async () => {
             const r = await api<{ number: string }>('/v1/treasury/transfers', { method: 'POST', body: JSON.stringify({
               fromAccountId: form.fromAccountId, toAccountId: form.toAccountId, amountMinor: toMinor(form.amount), date: form.date, note: form.note,
             }) });

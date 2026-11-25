@@ -1,13 +1,13 @@
 import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 import { UUID_RE, idParam, orgOf, text } from './helpers';
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 
 export function registerBatchRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/storage-conditions', requirePermission('inventory.batches.read'), async (c) => {

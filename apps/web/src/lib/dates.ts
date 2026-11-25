@@ -47,7 +47,8 @@ export function showDay(ymd: string, dateFormat: string | null | undefined): str
  */
 export function readDay(text: string, dateFormat: string | null | undefined): string | null {
   let s = '';
-  for (const ch of text.trim()) {
+  // Direction marks some right-to-left keyboards insert (U+200E, U+200F, U+061C) are not part of the date (input and speed audit).
+  for (const ch of text.replace(/[\u200e\u200f\u061c]/g, '').trim()) {
     const a = DIGITS.indexOf(ch);
     const p = PERSIAN.indexOf(ch);
     s += a >= 0 ? String(a) : p >= 0 ? String(p) : ch;
@@ -59,6 +60,8 @@ export function readDay(text: string, dateFormat: string | null | undefined): st
   const [y, mo, d] = dateFormat === 'YYYY-MM-DD' ? [a, b, c] : dateFormat === 'MM/DD/YYYY' ? [c, a, b] : [c, b, a];
   if (y.length !== 4) return null;
   const yy = Number(y);
+  // A sane year: 0001 or 9999 is a typing slip, not a business date.
+  if (yy < 1900 || yy > 2100) return null;
   const mm = Number(mo);
   const dd = Number(d);
   if (mm < 1 || mm > 12 || dd < 1) return null;

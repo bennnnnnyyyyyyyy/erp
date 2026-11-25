@@ -1,8 +1,9 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, MAX_MINOR, invalid, jsonBody, textUpTo } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange } from '../../lib/paging';
+import { idsMatching, orFilter, searchText } from '../../lib/search';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
 import { callRpc } from '../../lib/rpc';
@@ -18,7 +19,7 @@ import { type AgeBucket, ageBucket, daysOverdue, todayUtc } from './ageing';
 export const financeRoutes = new Hono<AppEnv>();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 const METHODS = ['cash', 'bank', 'card', 'cheque', 'other'];
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
 const orgOf = (c: Context<AppEnv>) => c.var.tenant.orgId;
@@ -27,9 +28,10 @@ const idParam = (c: Context<AppEnv>) => {
   if (!UUID_RE.test(id)) throw new HttpError(404, 'Not found', 'not_found');
   return id;
 };
+// Whole minor units above 0, at most MAX_MINOR (10 billion in a two-decimal currency; input audit, 25 Nov 2026).
 const minor = (x: unknown) => {
   const n = Number(x);
-  return Number.isInteger(n) && n > 0 ? n : null;
+  return Number.isInteger(n) && n > 0 && n <= MAX_MINOR ? n : null;
 };
 
 financeRoutes.get('/categories', requirePermission('finance.reports.view'), async (c) => {
@@ -47,12 +49,29 @@ financeRoutes.post('/categories', requirePermission('finance.entries.manage'), a
 
 financeRoutes.get('/expenses', requirePermission('finance.reports.view'), async (c) => {
   // '*' so the list also answers before sql/087 (then: no VAT).
-  const { data, error } = await userDb(c)
-    .from('fin_expenses')
-    .select('*')
-    .eq('org_id', orgOf(c))
+  // ?q= searches on the server: number, note, supplier or category name (lib/search.ts; Ben, 25 Nov 2026).
+  const q = searchText(c);
+  let query = userDb(c).from('fin_expenses').select('*').eq('org_id', orgOf(c));
+  if (q) {
+    const [suppliers, categories] = await Promise.all([
+      idsMatching(userDb(c), 'pur_suppliers', 'name', orgOf(c), q),
+      idsMatching(userDb(c), 'fin_categories', 'name', orgOf(c), q),
+    ]);
+    query = query.or(
+      orFilter(
+        q,
+        ['number', 'note'],
+        [
+          ['supplier_id', suppliers],
+          ['category_id', categories],
+        ],
+      ),
+    );
+  }
+  const { data, error } = await query
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id')
     .range(...pageRange(c, 300));
   if (error) throw error;
   return ok(
@@ -104,7 +123,7 @@ financeRoutes.post('/expenses', requirePermission('finance.entries.manage'), asy
     p_category_id: categoryId,
     p_amount_minor: amount,
     p_supplier_id: supplierId || null,
-    p_note: text(b.note) || null,
+    p_note: textUpTo(b.note, 500, 'Note'),
     // only sent when given, so the call also works against a database without sql/087
     ...(vat ? { p_vat: vat } : {}),
   });
@@ -238,9 +257,13 @@ financeRoutes.get('/payments', requirePermission('finance.reports.view'), async 
   const rows = column
     ? await fetchAll<PaymentRow>((from, to) => base().eq(column, m![2]!).order('paid_on', { ascending: false }).order('id').range(from, to))
     : await (async () => {
-        const { data, error } = await base()
+        // ?q= searches on the server: the payment number or its note (lib/search.ts; Ben, 25 Nov 2026).
+        const q = searchText(c);
+        const searched = q ? base().or(orFilter(q, ['number', 'note'])) : base();
+        const { data, error } = await searched
           .order('paid_on', { ascending: false })
           .order('created_at', { ascending: false })
+          .order('id')
           .range(...pageRange(c, 300));
         if (error) throw error;
         return (data ?? []) as PaymentRow[];
@@ -479,7 +502,7 @@ financeRoutes.post('/payments', requirePermission('finance.entries.manage'), asy
     p_customer_invoice_id: ids.customer || null,
     p_supplier_invoice_id: ids.supplier || null,
     p_expense_id: ids.expense || null,
-    p_note: text(b.note) || null,
+    p_note: textUpTo(b.note, 500, 'Note'),
     p_treasury_account_id: treasuryAccountId || null,
   });
   return ok(c, made, 201);

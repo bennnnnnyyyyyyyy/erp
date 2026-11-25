@@ -4,6 +4,7 @@ import type { OrgSettings } from '@erp/shared';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { tr, trf } from '../../../lib/i18n';
+import { useDateGuard } from '../../../lib/dateGuard';
 import { ConfirmButton } from '../../../components/FormToggle';
 import { useSession } from '../../../session';
 import { todayIn } from '../../../lib/dates';
@@ -12,6 +13,7 @@ import { todayIn } from '../../../lib/dates';
 // admins). Each saves through its own route; the database checks the role again and writes the audit row.
 
 export function PeriodSettings({ org, onSaved }: { org: OrgSettings; onSaved: () => void }) {
+  const dates = useDateGuard();
   const session = useSession();
   const isOwner = session.role === 'owner';
   const canEdit = isOwner || session.role === 'admin';
@@ -50,7 +52,7 @@ export function PeriodSettings({ org, onSaved }: { org: OrgSettings; onSaved: ()
 
       <label>
         {tr('Lock date')}
-        <DateInput max={today} value={lockDate} onChange={(e) => setLockDate(e.target.value)} disabled={!isOwner} />
+        <DateInput max={today} value={lockDate} onChange={(e) => setLockDate(e.target.value)} disabled={!isOwner} onBad={dates.watch('lockDate')} />
         <span className="hint muted">
           {tr('Nothing dated on or before this day can be created or voided: invoices, supplier invoices, expenses and payments. Only an owner can change it, and every change is recorded in the audit log.')}
         </span>
@@ -58,7 +60,7 @@ export function PeriodSettings({ org, onSaved }: { org: OrgSettings; onSaved: ()
       {isOwner ? (
         <div className="flex flex-wrap items-center gap-2">
           {/* Locking stops everyone recording or voiding anything up to that day, so it asks first (UX audit). */}
-          <ConfirmButton label={busy === 'lock' ? tr('Saving…') : tr('Save lock date')} confirmLabel={tr('Yes, lock')} disabled={busy !== null || lockDate === (org.lockDate ?? '')}
+          <ConfirmButton label={busy === 'lock' ? tr('Saving…') : tr('Save lock date')} confirmLabel={tr('Yes, lock')} disabled={busy !== null || lockDate === (org.lockDate ?? '') || dates.blocked}
             question={lockDate ? trf('Lock everything dated {date} or earlier? Nobody can record or void anything in that period.', { date: lockDate }) : tr('Remove the lock?')}
             onConfirm={() => save('lock', '/v1/core/org/lock-date', { date: lockDate || null })} />
           {org.lockDate ? (

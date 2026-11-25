@@ -11,6 +11,9 @@ import { ErrorToast } from '../../components/Toast';
 import { api } from '../../lib/api';
 import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
+import { usePaged } from '../../lib/usePaged';
+import { useDateGuard } from '../../lib/dateGuard';
+import { ListView, type Column } from '../../components/views/ListView';
 import { useSession } from '../../session';
 import { todayIn } from '../../lib/dates';
 import { Pill, toMinor } from '../trade/common';
@@ -57,7 +60,10 @@ function useNotice() {
 export function ExpensesPage() {
   const session = useSession();
   const categories = useLoad(() => api<Category[]>('/v1/finance/categories'));
-  const expenses = useLoad(() => api<Expense[]>('/v1/finance/expenses'));
+  // Paged and searched on the server (Ben, 25 Nov 2026). Save waits while the date box holds a bad date.
+  const [search, setSearch] = useState('');
+  const expenses = usePaged<Expense>(`/v1/finance/expenses${search ? `?q=${encodeURIComponent(search)}` : ''}`, 300);
+  const dates = useDateGuard();
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));   // purchasing may be off
   const { message, busy, run, clear } = useNotice();
   const [date, setDate] = useState(today());
@@ -96,7 +102,7 @@ export function ExpensesPage() {
 
       <FormToggle label={tr('Record an expense')}>
         <div className="form-row">
-          <label>{tr('Date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>{tr('Date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} max={todayIn()} onBad={dates.watch('date')} /></label>
           <label>{tr('Category')}
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">{tr('Choose…')}</option>
@@ -131,7 +137,7 @@ export function ExpensesPage() {
           </div>
         ) : null}
         <div className="form-row">
-          <Button disabled={busy || !categoryId || toMinor(amount) <= 0 || (paidNow && noBox)} onClick={() => run(async () => {
+          <Button disabled={busy || dates.blocked || !categoryId || toMinor(amount) <= 0 || (paidNow && noBox)} onClick={() => run(async () => {
             const made = await api<{ id: string; number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note, vat: purchaseVatPayload(vatIn) }) });
             if (!paidNow) return trf('Expense {number} recorded.', { number: made.number });
             // The payment is a second step: if it is refused, the expense stays recorded and unpaid, and the message says so.
@@ -155,21 +161,41 @@ export function ExpensesPage() {
         </div>
       </FormToggle>
 
-      <h2 className="related">{tr('Recorded expenses')} <span className="muted small">{trf('(total {amount})', { amount: money(total, currency) })}</span></h2>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Category')}</th><th scope="col">{tr('Supplier')}</th><th scope="col">{tr('Note')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
-        {expenses.data.map((e) => (
-          <ClickRow key={e.id} to={`/finance/expenses/${e.id}`}><td><Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link></td><td className="nowrap">{formatDay(e.date, session.org)}</td><td>{category(e.categoryId)}</td><td>{supplier(e.supplierId)}</td><td>{e.note}</td><td className="right">{money(e.amountMinor, e.currency)}</td>
-            <td><Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
-        ))}
-        {!expenses.data.length && <tr><td colSpan={7} className="muted empty">{tr('No expenses yet.')}</td></tr>}
-      </tbody></table></div>
+      <h2 className="related">{tr('Recorded expenses')} <span className="muted small">{trf('(total of the {n} shown: {amount})', { n: expenses.data.length, amount: money(total, currency) })}</span></h2>
+      {/* Paged and searched on the server (Ben, 25 Nov 2026): number, note, supplier or category. */}
+      <ListView
+        rows={expenses.data}
+        columns={[
+          { key: 'number', label: tr('No.'), value: (e) => e.number, render: (e) => <Link to={`/finance/expenses/${e.id}`}><code>{e.number}</code></Link> },
+          { key: 'date', label: tr('Date'), value: (e) => e.date, render: (e) => <span className="nowrap">{formatDay(e.date, session.org)}</span> },
+          { key: 'category', label: tr('Category'), value: (e) => category(e.categoryId) },
+          { key: 'supplier', label: tr('Supplier'), value: (e) => supplier(e.supplierId) },
+          { key: 'note', label: tr('Note'), value: (e) => e.note ?? '' },
+          { key: 'amount', label: tr('Amount'), value: (e) => e.amountMinor / 100, render: (e) => money(e.amountMinor, e.currency), align: 'right' },
+          {
+            key: 'status',
+            label: tr('Status'),
+            value: (e) => (e.status === 'void' ? tr('Void') : tr('Recorded')),
+            render: (e) => <Pill status={e.status === 'void' ? 'cancelled' : 'received'} label={e.status === 'void' ? tr('Void') : tr('Recorded')} />,
+          },
+        ] satisfies Column<Expense>[]}
+        rowKey={(e) => e.id}
+        title={tr('Expenses')}
+        empty={tr('No expenses yet.')}
+        rowHref={(e) => `/finance/expenses/${e.id}`}
+        more={{ hasMore: expenses.hasMore, loading: expenses.loading, onMore: expenses.more, error: expenses.error }}
+        onServerSearch={setSearch}
+      />
     </section>
   );
 }
 
 export function PaymentsPage() {
   const session = useSession();
-  const payments = useLoad(() => api<Payment[]>('/v1/finance/payments'));
+  // Paged and searched on the server (number or note; Ben, 25 Nov 2026). Save waits while the date box holds a bad date.
+  const [search, setSearch] = useState('');
+  const payments = usePaged<Payment>(`/v1/finance/payments${search ? `?q=${encodeURIComponent(search)}` : ''}`, 300);
+  const dates = useDateGuard();
   // What can still be paid, with the outstanding balance worked out on the server over ALL payments (audit finding 1). Both
   // directions are loaded once, so switching the direction needs no second request.
   const openIn = useLoad(() => api<OpenItem[]>('/v1/finance/open-items?direction=in'));
@@ -268,7 +294,7 @@ export function PaymentsPage() {
           <label>{tr('Amount')}<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
         </div>
         <div className="form-row">
-          <label>{tr('Date')}<DateInput value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></label>
+          <label>{tr('Date')}<DateInput value={paidOn} onChange={(e) => setPaidOn(e.target.value)} max={todayIn()} onBad={dates.watch('paidOn')} /></label>
           <label>{tr('Method')}<select value={method} onChange={(e) => { setMethod(e.target.value); setBoxId(lastBox(e.target.value)); }}>{METHODS.map((m) => <option key={m} value={m}>{tr(m)}</option>)}</select></label>
           {needsBox ? (
             <label>{direction === 'in' ? tr('Paid into') : tr('Paid from')}
@@ -281,7 +307,7 @@ export function PaymentsPage() {
           ) : null}
           <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
         </div>
-        <div><Button disabled={busy || !chosen || toMinor(amount) <= 0 || toMinor(amount) > (chosen?.left ?? 0) || (needsBox && !boxes.some((b) => b.id === boxId))} onClick={() => run(async () => {
+        <div><Button disabled={busy || dates.blocked || !chosen || toMinor(amount) <= 0 || toMinor(amount) > (chosen?.left ?? 0) || (needsBox && !boxes.some((b) => b.id === boxId))} onClick={() => run(async () => {
           const [kind, id] = target.split(':');
           const made = await api<{ number: string }>('/v1/finance/payments', { method: 'POST', body: JSON.stringify({
             direction, amountMinor: toMinor(amount), paidOn, method, note,
@@ -295,14 +321,35 @@ export function PaymentsPage() {
       </FormToggle>
 
       <h2 className="related">{tr('Payments')}</h2>
-      <div className="table-wrap"><table><thead><tr><th scope="col">{tr('No.')}</th><th scope="col">{tr('Date')}</th><th scope="col">{tr('Payment type')}</th><th scope="col">{tr('For')}</th><th scope="col">{tr('Method')}</th><th scope="col" className="right">{tr('Amount')}</th><th scope="col">{tr('Status')}</th></tr></thead><tbody>
-        {payments.data.map((p) => (
-          <ClickRow key={p.id} to={`/finance/payments/${p.id}`}><td><Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link></td><td className="nowrap">{formatDay(p.paidOn, session.org)}</td><td><Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} /></td><td><Link to={targetPath(p)}>{label(p)}</Link></td><td>{tr(p.method)}</td>
-            <td className="right">{money(p.amountMinor, p.currency || currency)}</td>
-            <td><Pill status={p.status === 'void' ? 'cancelled' : 'received'} label={p.status === 'void' ? tr('Void') : tr('Recorded')} /></td></ClickRow>
-        ))}
-        {!payments.data.length && <tr><td colSpan={7} className="muted empty">{tr('No payments yet.')}</td></tr>}
-      </tbody></table></div>
+      {/* Paged and searched on the server (Ben, 25 Nov 2026): the payment number or its note. */}
+      <ListView
+        rows={payments.data}
+        columns={[
+          { key: 'number', label: tr('No.'), value: (p) => p.number, render: (p) => <Link to={`/finance/payments/${p.id}`}><code>{p.number}</code></Link> },
+          { key: 'date', label: tr('Date'), value: (p) => p.paidOn, render: (p) => <span className="nowrap">{formatDay(p.paidOn, session.org)}</span> },
+          {
+            key: 'direction',
+            label: tr('Payment type'),
+            value: (p) => (p.direction === 'in' ? tr('Received') : tr('Paid')),
+            render: (p) => <Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Received') : tr('Paid')} />,
+          },
+          { key: 'for', label: tr('For'), value: (p) => label(p), render: (p) => <Link to={targetPath(p)}>{label(p)}</Link> },
+          { key: 'method', label: tr('Method'), value: (p) => tr(p.method) },
+          { key: 'amount', label: tr('Amount'), value: (p) => p.amountMinor / 100, render: (p) => money(p.amountMinor, p.currency || currency), align: 'right' },
+          {
+            key: 'status',
+            label: tr('Status'),
+            value: (p) => (p.status === 'void' ? tr('Void') : tr('Recorded')),
+            render: (p) => <Pill status={p.status === 'void' ? 'cancelled' : 'received'} label={p.status === 'void' ? tr('Void') : tr('Recorded')} />,
+          },
+        ] satisfies Column<Payment>[]}
+        rowKey={(p) => p.id}
+        title={tr('Payments')}
+        empty={tr('No payments yet.')}
+        rowHref={(p) => `/finance/payments/${p.id}`}
+        more={{ hasMore: payments.hasMore, loading: payments.loading, onMore: payments.more, error: payments.error }}
+        onServerSearch={setSearch}
+      />
     </section>
   );
 }
