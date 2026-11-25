@@ -4,6 +4,7 @@ import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
 import { hasPermission } from '@erp/shared';
 import { ConfirmButton } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
+import { Notes } from '../../components/Notes';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { ListView, type Column } from '../../components/views/ListView';
@@ -292,6 +293,7 @@ export function CountPage() {
         </div>
       )}
 
+      <Notes entityType="stock_count" entityId={count.id} />
       <RecordHistory key={`${count.id}:${count.status}`} id={count.id} />
     </section>
   );

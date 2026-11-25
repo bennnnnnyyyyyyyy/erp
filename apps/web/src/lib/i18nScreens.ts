@@ -1554,4 +1554,17 @@ export const SCREENS_AR: Record<string, string> = {
   "Landmark": "علامة مميزة",
   "More information": "معلومات إضافية",
   "Enter the company tax registration and branch address in Settings → E-invoicing.": "أدخل التسجيل الضريبي للشركة وعنوان الفرع في الإعدادات ← الفاتورة الإلكترونية.",
+  // Notes on records (sql/113)
+  "Notes": "الملاحظات",
+  "Write a note": "اكتب ملاحظة",
+  "Write a note for your team…": "اكتب ملاحظة لفريقك…",
+  "Add note": "أضف ملاحظة",
+  "Note added.": "أُضيفت الملاحظة.",
+  "Note deleted.": "حُذفت الملاحظة.",
+  "Delete this note? It is kept in the history.": "حذف هذه الملاحظة؟ تبقى محفوظة في السجل.",
+  "No notes yet.": "لا توجد ملاحظات بعد.",
+  "Write the note": "اكتب الملاحظة",
+  "Unknown record type": "نوع سجل غير معروف",
+  "Unknown record": "سجل غير معروف",
+  "Unknown note": "ملاحظة غير معروفة",
 };

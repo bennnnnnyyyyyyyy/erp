@@ -1,6 +1,7 @@
 import { DateInput } from '../../components/DateInput';
 import { todayIn } from '../../lib/dates';
 import { Attachments } from '../../components/Attachments';
+import { Notes } from '../../components/Notes';
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
 import { formatMoney, hasPermission, type VatSettings } from '@erp/shared';
@@ -175,6 +176,7 @@ export function SupplierInvoicePage() {
       <SupplierNotes billId={inv.id} currency={inv.currency} lines={inv.lines} itemOf={itemOf} onChanged={invoice.reload} />
       <PaymentsAgainst field="supplierInvoiceId" id={inv.id} totalMinor={due} currency={inv.currency} />
       <Attachments entityType="supplier_bill" entityId={inv.id} />
+      <Notes entityType="supplier_bill" entityId={inv.id} />
       <RecordHistory key={inv.id} id={inv.id} currency={inv.currency} />
     </section>
   );

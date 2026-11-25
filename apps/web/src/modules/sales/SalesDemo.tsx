@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Attachments } from '../../components/Attachments';
+import { Notes } from '../../components/Notes';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -246,6 +247,7 @@ export function SalesOrderPage() {
       {o.status !== 'cancelled' && <Shipments orderId={o.id} customerName={customer?.name ?? ''} customerPhone={(customer as { phone?: string } | undefined)?.phone ?? ''} customerCity={(customer as { city?: string } | undefined)?.city ?? ''} />}
 
       {demoMode ? null : <Attachments entityType="sales_order" entityId={o.id} />}
+      {demoMode ? null : <Notes entityType="sales_order" entityId={o.id} />}
       <RecordHistory key={`${o.id}:${o.status}`} id={o.id} />
     </section>
   );

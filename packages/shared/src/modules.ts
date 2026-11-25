@@ -46,8 +46,11 @@ export const MODULES: readonly ModuleManifest[] = [
       // Attachments (sql/108): files on records. Everyone in the company reads them; members, admins and owners add them.
       'core.attachments.read',
       'core.attachments.add',
+      // Notes on records (sql/113): whoever can see the record reads its notes; members, admins and owners add them.
+      'core.notes.read',
+      'core.notes.add',
     ],
-    memberGrants: ['core.attachments.add'],
+    memberGrants: ['core.attachments.add', 'core.notes.add'],
     suite: 'Core',
   },
   // Permissions follow documentation/plans/INVENTORY_PLAN.md section 4. The database re-checks the role for

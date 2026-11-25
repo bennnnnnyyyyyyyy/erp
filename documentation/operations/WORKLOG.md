@@ -11,6 +11,29 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Notes on records (sql/113, test 110; NOT applied)
+
+**Objective.** Ben's decisions of 25 Nov (via erp-master): short notes on records, one shared table, soft delete, audited; a Notes panel
+beside Attachments.
+
+**Actions Completed.**
+- `sql/113_core_notes.sql`: `core_notes` (RLS, select only); `core_add_note`, `core_delete_note` (audited with the text). Who reads a
+  note copies the record table's own read rule (checked 25 Nov): expenses, payments, manual journals owners and admins; the rest every
+  member. Viewers read but do not add (viewers change nothing in the app). The writer deletes their own; owners and admins any.
+- Shared: `packages/shared/src/notes.ts` (14 record types), keys `core.notes.read` and `core.notes.add` (member grant).
+- API: `GET/POST /v1/core/notes`, `DELETE /v1/core/notes/:id` (`apps/api/src/modules/core/noteRoutes.ts`); 503 `not_set_up` before 113.
+- Web: `components/Notes.tsx` (hidden before 113 and in the sample build); shown beside Attachments on sales and purchase orders,
+  sales invoices, purchase bills, items (Files tab), customers, suppliers, expenses, and on payments, stock requests, transfers,
+  counts, tasks and manual journals. Arabic.
+- Test: `sql/tests/110_core_notes.sql`; API tests in `apps/api/test/reports.test.ts`.
+
+**Database / System Result.** Nothing applied. Rolled-back dry run on live, 25 Nov: RLS on, users select but cannot insert, users may
+add through the function, anonymous cannot; nothing left after the rollback. Tests 110 and 092 pass on live inside rolled-back
+transactions.
+
+**Safety Status.** SQL tests (PGlite) 108 passed, 0 failed; `tsc` 0 errors (api, web); tests api 832, web 236; `biome ci` 0 errors. Not
+checked in a browser. After "yes 113": apply, tests 110 and 092 on live; Ben adds and deletes a note on an invoice as a member.
+
 ## 2026-11-25 — Reports step 6: scheduled reports, plus small audit fixes (sql/112, test 109; NOT applied)
 
 **Objective.** Step 6 of the Reports & Insights plan (sections 3.3 and 7.6): send a saved company report on a schedule. With it, the

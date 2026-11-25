@@ -14,6 +14,7 @@ import {
 import { ClickRow } from '../../components/ClickRow';
 import { ConfirmButton } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
+import { Notes } from '../../components/Notes';
 import { Button } from '../../components/ui/button';
 import { api, apiDownload } from '../../lib/api';
 import { formatDateTime, formatDay } from '../../lib/format';
@@ -404,6 +405,7 @@ export function JournalPage() {
           </div>
         </div>
       ) : null}
+      <Notes entityType="journal" entityId={j.id} />
     </section>
   );
 }

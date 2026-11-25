@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Notes } from '../../components/Notes';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -215,6 +216,7 @@ export function TaskPage() {
         </div>
       )}
 
+      <Notes entityType="task" entityId={t.id} />
       <RecordHistory key={`${t.id}:${t.status}`} id={t.id} />
     </section>
   );

@@ -27,6 +27,26 @@ const routes: [string, string][] = [
   ['DELETE', `/v1/reports/schedules/${ID}`],
 ];
 
+describe('notes on records API (sql/113)', () => {
+  const notes = readFileSync(join(__dirname, '../src/modules/core/noteRoutes.ts'), 'utf8');
+  it.each([
+    ['GET', `/v1/core/notes?entityType=item&entityId=${ID}`],
+    ['POST', '/v1/core/notes'],
+    ['DELETE', `/v1/core/notes/${ID}`],
+  ])('%s %s needs a signed-in user', async (method, path) => {
+    const res = await app.request(path, { method }, env);
+    expect(res.status).toBe(401);
+  });
+  it('reads with the notes key, writes only through the database functions', () => {
+    expect(notes).toContain("get('/', requirePermission('core.notes.read')");
+    expect(notes).toContain("post('/', requirePermission('core.notes.add')");
+    expect(notes).toContain("delete('/:id', requirePermission('core.notes.add')");
+    expect(notes).toContain("'core_add_note'");
+    expect(notes).toContain("'core_delete_note'");
+    expect(notes.replaceAll('noteRoutes.delete(', '')).not.toMatch(/\.(insert|update|upsert|delete)\(/);
+  });
+});
+
 describe('scheduled reports API (sql/112)', () => {
   it('owners and admins only, through the database functions', () => {
     for (const r of ["get('/schedules'", "post('/schedules'", "patch('/schedules/:id'", "delete('/schedules/:id'"]) {

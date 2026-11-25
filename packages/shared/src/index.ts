@@ -19,3 +19,4 @@ export * from './reports';
 export * from './reportTemplates';
 export * from './salesForecast';
 export * from './reportSchedules';
+export * from './notes';

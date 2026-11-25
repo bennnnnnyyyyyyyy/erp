@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { localName, unitLabel } from '../../lib/names';
 import { mayDecide, OWN_REQUEST_TEXT } from '../../lib/approvals';
+import { Notes } from '../../components/Notes';
 import { RecordHistory } from '../../components/RecordHistory';
 import { Button } from '../../components/ui/button';
 import { Loading } from '../../components/Loading';
@@ -300,6 +301,7 @@ export function TransferPage() {
       {t.status === 'approved' && !can('inventory.transfers.dispatch') && <p className="notice">{tr('Approved. Awaiting dispatch from the source warehouse.')}</p>}
       {t.status === 'dispatched' && !can('inventory.transfers.receive') && <p className="notice">{tr('In transit. Awaiting receipt at the destination warehouse.')}</p>}
 
+      <Notes entityType="stock_transfer" entityId={t.id} />
       <RecordHistory key={`${t.id}:${t.status}`} id={t.id} />
     </section>
   );
