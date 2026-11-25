@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SALES_FORECAST_HORIZONS, formatMoney, type SalesForecast, type SalesForecastBy, type SalesForecastHorizon, type SalesForecastRow } from '@erp/shared';
 import { Loading } from '../../components/Loading';
-import { Button } from '../../components/ui/button';
+import { MoreMenu } from '../../components/MoreMenu';
 import { api } from '../../lib/api';
 import { formatDay } from '../../lib/format';
 import { currentLanguage, tr, trf } from '../../lib/i18n';
@@ -65,24 +65,32 @@ export function SalesForecastPage() {
 
   return (
     <section className="page wide">
-      <h1>{tr('Sales forecast')}</h1>
-      <p className="muted">{tr('What you are likely to sell next, from your own sales of the last 90 days.')}</p>
-      <div className="report-actions no-print">
-        <label>
-          {tr('By')}
-          <select value={by} onChange={(e) => change(e.target.value as SalesForecastBy, horizon)}>
-            <option value="item">{tr('Product')}</option>
-            <option value="customer">{tr('Customer')}</option>
-          </select>
-        </label>
-        <label>
-          {tr('Forecast for')}
-          <select value={horizon} onChange={(e) => change(by, Number(e.target.value) as SalesForecastHorizon)}>
-            {SALES_FORECAST_HORIZONS.map((h) => <option key={h} value={h}>{trf('the next {n} days', { n: h })}</option>)}
-          </select>
-        </label>
-        <Button variant="outline" disabled={!data.data || data.data.rows.length === 0} onClick={exportExcel}>{tr('Excel')}</Button>
-        <Button variant="outline" disabled={!data.data} onClick={() => window.print()}>{tr('Print')}</Button>
+      {/* Declutter (Ben, 25 Nov 2026): the title with a "More" menu, and the two choices as one sentence, as in the report builder. */}
+      <div className="rb-head">
+        <div className="rb-title">
+          <h1>{tr('Sales forecast')}</h1>
+          <p className="muted">{tr('What you are likely to sell next, from your own sales of the last 90 days.')}</p>
+        </div>
+        <div className="rb-head-actions no-print">
+          <MoreMenu
+            label={tr('More')}
+            items={[
+              { label: tr('Excel'), onClick: exportExcel, disabled: !data.data || data.data.rows.length === 0 },
+              { label: tr('Print'), onClick: () => window.print(), disabled: !data.data },
+            ]}
+          />
+        </div>
+      </div>
+      <div className="rb-sentence no-print" style={{ marginBlock: '0.75rem' }}>
+        <span>{tr('Forecast sales by')}</span>
+        <select aria-label={tr('By')} value={by} onChange={(e) => change(e.target.value as SalesForecastBy, horizon)}>
+          <option value="item">{tr('Product')}</option>
+          <option value="customer">{tr('Customer')}</option>
+        </select>
+        <span>{tr('for')}</span>
+        <select aria-label={tr('Forecast for')} value={horizon} onChange={(e) => change(by, Number(e.target.value) as SalesForecastHorizon)}>
+          {SALES_FORECAST_HORIZONS.map((h) => <option key={h} value={h}>{trf('the next {n} days', { n: h })}</option>)}
+        </select>
       </div>
 
       {!data.data ? (

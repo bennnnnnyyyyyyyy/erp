@@ -19,7 +19,7 @@ import {
   type SavedReport,
 } from '@erp/shared';
 import { DateInput } from '../../components/DateInput';
-import { ConfirmButton } from '../../components/FormToggle';
+import { MoreMenu, type MoreItem } from '../../components/MoreMenu';
 import { Loading } from '../../components/Loading';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
@@ -29,6 +29,7 @@ import { parseAmount } from '../../lib/numbers';
 import { navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
+import { safeFileName } from '../sales/print/docFileName';
 import { saveBlob, sheetToPdf } from '../sales/print/pdf';
 import { cellText, cellValue, headerLabel } from './cells';
 import { presetPeriod, templateDefinition, tidy } from './definition';
@@ -58,7 +59,6 @@ import { XLSX_TYPE, xlsxBytes } from './xlsx';
 // "Split again" under it. The report runs by itself a moment after each change.
 
 type Meta = { id: string | null; name: string; description: string; visibility: ReportVisibility; mine: boolean; templateKey: string | null };
-type Panel = { kind: 'filter'; index: number } | { kind: 'also' } | { kind: 'split2' } | { kind: 'more' } | null;
 const NEW_META: Meta = { id: null, name: '', description: '', visibility: 'private', mine: true, templateKey: null };
 const PDF_MAX_ROWS = 1000;
 const RUN_DELAY_MS = 350;
@@ -90,7 +90,9 @@ export function ReportBuilderPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [panel, setPanel] = useState<Panel>(null);
+  // Filters, more numbers, a second split, order and chart wait behind one "Options" control (declutter, Ben 25 Nov 2026).
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -124,7 +126,8 @@ export function ReportBuilderPage() {
   // Open a saved report, or a ready-made one (step 3: "Save" keeps the person's own copy), or start a new one. It runs by itself (below).
   useEffect(() => {
     if (!sources.data) return;
-    setPanel(null);
+    setOptionsOpen(false);
+    setConfirmDelete(false);
     setDatesOpen(false);
     if (templateKey) {
       const t = findReportTemplate(templateKey);
@@ -190,13 +193,12 @@ export function ReportBuilderPage() {
   const period = periodChoice(def);
   const showDates = !!source.period && (period === 'custom' || datesOpen);
   const canEditSaved = !!meta.id && (meta.visibility === 'private' ? meta.mine && canCreate : canManage);
-  const fileBase = (meta.name || tr(sourceLabel(def.source))).replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'report';
+  const fileBase = safeFileName(meta.name || tr(sourceLabel(def.source)));
   const curIdx = result?.columns.findIndex((c) => c.type === 'currency') ?? -1;
   const label = (raw: unknown, key: string) => {
     const col = result?.columns.find((c) => c.key === key);
     return cellText((raw ?? null) as string | number | null, col?.type ?? 'text', key, session.org?.defaultCurrency ?? null, session.org);
   };
-  const toggle = (p: NonNullable<Panel>) => setPanel((cur) => (cur && cur.kind === p.kind && (p.kind !== 'filter' || (cur.kind === 'filter' && cur.index === p.index)) ? null : p));
   // "Also show": every total that fits a column, not yet shown.
   const totalsShown = new Set((def.totals ?? []).map(totalKey));
   const moreTotals = source.columns.flatMap((c) => reportFnsFor(c.type).filter((fn) => fn !== 'count' || c === source.columns[0]).map((fn) => `${fn}_${c.key}`)).filter((k) => !totalsShown.has(k));
@@ -264,35 +266,85 @@ export function ReportBuilderPage() {
   }
 
   const filters = def.filters ?? [];
-  const openFilter = panel?.kind === 'filter' ? filters[panel.index] : undefined;
+  // Everything set besides the sentence, as one short line: the controls themselves wait in "Options" (declutter, Ben 25 Nov 2026).
+  const extras = [
+    ...filters.map((f) => filterText(f, typeOf(f.column), session.org)),
+    ...(groups[1] ? [trf('then by {column}', { column: tr(columnLabel(groups[1])) })] : []),
+    ...(def.totals ?? []).slice(1).map((t) => trf('also {what}', { what: headerLabel(totalKey(t)) })),
+    ...(def.sort?.[0] ? [trf('sorted by {column}', { column: headerLabel(def.sort[0].column, result ?? undefined) })] : []),
+    ...(def.limit ? [trf('at most {n} rows', { n: def.limit })] : []),
+  ];
+  const tooBigForPdf = (result?.rows.length ?? 0) > PDF_MAX_ROWS;
+  const moreItems: MoreItem[] = [
+    { label: tr('Excel'), onClick: exportExcel, disabled: !result || busy !== null },
+    {
+      label: busy === 'pdf' ? tr('Working…') : tr('PDF'),
+      onClick: () => void exportPdf(),
+      disabled: !result || busy !== null || tooBigForPdf,
+      title: tooBigForPdf ? trf('A PDF holds up to {n} rows: use Excel for more.', { n: PDF_MAX_ROWS }) : undefined,
+    },
+    { label: tr('Print'), onClick: () => window.print(), disabled: !result },
+    ...(meta.id && meta.visibility === 'company' && canAlert && (def.totals ?? []).length > 0
+      ? [{ label: tr('Alert me when'), onClick: () => setAlertOpen(true), disabled: busy !== null || dirty, title: dirty ? tr('Save your changes first.') : undefined }]
+      : []),
+    ...(meta.id && canEditSaved ? [{ label: tr('Delete'), onClick: () => setConfirmDelete(true), disabled: busy !== null, danger: true }] : []),
+  ];
+  const hint = !meta.id && meta.templateKey
+    ? tr('A ready-made report. Change anything and save it as your own.')
+    : meta.id && !canEditSaved
+      ? tr('You can change the settings and see the result, but only save them as a new report.')
+      : null;
 
   return (
     <section className="page wide">
-      <h1>{meta.id || meta.templateKey ? meta.name : tr('New report')}</h1>
-      {!meta.id && meta.templateKey && <p className="muted small no-print">{tr('A ready-made report. Change anything and save it as your own.')}</p>}
-      {meta.description && <p className="muted">{meta.description}</p>}
-      {meta.id && !canEditSaved && <p className="muted small no-print">{tr('You can change the settings and see the result, but only save them as a new report.')}</p>}
+      <div className="rb-head">
+        <div className="rb-title">
+          <h1>{meta.id || meta.templateKey ? meta.name : tr('New report')}</h1>
+          {(meta.description || hint) && (
+            <p className="muted">
+              {meta.description}
+              {meta.description && hint ? ' ' : ''}
+              {hint && <span className="small no-print">{hint}</span>}
+            </p>
+          )}
+        </div>
+        <div className="rb-head-actions no-print">
+          {running && <span className="muted small" aria-live="polite">{tr('Working…')}</span>}
+          {saved && <span className="muted small" role="status">{saved}</span>}
+          {canCreate && (
+            <Button disabled={busy !== null} onClick={() => setSaveOpen((o) => !o)}>
+              {meta.id && canEditSaved ? tr('Save changes') : tr('Save')}
+            </Button>
+          )}
+          <MoreMenu label={tr('More')} items={moreItems} />
+        </div>
+      </div>
+
+      {confirmDelete && meta.id && (
+        <div className="notice rb-confirm no-print" role="alertdialog" aria-label={tr('Delete')}>
+          <span>{trf('Delete the report "{name}"?', { name: meta.name })}</span>
+          <Button variant="destructive" size="sm" disabled={busy !== null} onClick={() => void remove()}>{tr('Yes, delete')}</Button>
+          <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>{tr('Cancel')}</Button>
+        </div>
+      )}
 
       <div className="rb no-print">
-        <label className="rb-data">
-          <span className="muted small">{tr('Data')}</span>
+        <div className="rb-sentence">
+          <span>{tr('From')}</span>
           <select
+            aria-label={tr('Data')}
             value={def.source}
             onChange={(e) => {
               const s = sources.data?.find((x) => x.key === e.target.value);
               if (s) {
                 set(startingDefinition(s));
                 setResult(null);
-                setPanel(null);
               }
             }}
           >
             {sources.data.map((s) => <option key={s.key} value={s.key}>{tr(sourceLabel(s.key))}</option>)}
           </select>
-        </label>
-
-        <div className="rb-sentence">
-          <span>{tr('Show')}</span>
+          <span>{tr('show')}</span>
           <select aria-label={tr('What to show')} value={measure} onChange={(e) => set(withMeasure(def, e.target.value, source))}>
             {[...measures, ...(measures.includes(measure) ? [] : [measure])].map((k) => <option key={k} value={k}>{measureLabel(k)}</option>)}
           </select>
@@ -338,214 +390,138 @@ export function ReportBuilderPage() {
           </div>
         )}
 
-        <div className="rb-chips">
-          {filters.map((f, i) => (
-            <span key={i} className="rb-chip" data-on={panel?.kind === 'filter' && panel.index === i}>
-              <button type="button" className="rb-chip-text" onClick={() => toggle({ kind: 'filter', index: i })}>
-                {filterText(f, typeOf(f.column), session.org)}
-              </button>
-              <button
-                type="button"
-                className="rb-chip-x"
-                aria-label={tr('Remove')}
-                onClick={() => {
-                  patch({ filters: filters.filter((_, n) => n !== i) });
-                  setPanel(null);
-                }}
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-          {groups[1] && (
-            <span className="rb-chip">
-              <span className="rb-chip-text">{trf('then by {column}', { column: tr(columnLabel(groups[1])) })}</span>
-              <button type="button" className="rb-chip-x" aria-label={tr('Remove')} onClick={() => patch({ groupBy: groups.slice(0, 1) })}>✕</button>
-            </span>
-          )}
-          {(def.totals ?? []).slice(1).map((t) => (
-            <span key={totalKey(t)} className="rb-chip">
-              <span className="rb-chip-text">{trf('also {what}', { what: headerLabel(totalKey(t)) })}</span>
-              <button
-                type="button"
-                className="rb-chip-x"
-                aria-label={tr('Remove')}
-                onClick={() => set(withMeasure({ ...def, totals: (def.totals ?? []).filter((x) => totalKey(x) !== totalKey(t)) }, measure, source))}
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-          {filters.length < REPORT_LIMITS.filters && (
-            <button
-              type="button"
-              className="rb-chip add"
-              onClick={() => {
-                const c = source.columns.find((x) => x.type === 'text') ?? source.columns[0];
-                if (!c) return;
-                patch({ filters: [...filters, { column: c.key, op: reportOpsFor(c.type)[0] as ReportFilterOp, value: null }] });
-                setPanel({ kind: 'filter', index: filters.length });
-              }}
-            >
-              {tr('+ Only include…')}
-            </button>
-          )}
-          <button type="button" className="rb-chip add" aria-pressed={panel?.kind === 'also'} onClick={() => toggle({ kind: 'also' })}>{tr('+ Also show…')}</button>
-          {grouped && !groups[1] && (
-            <button type="button" className="rb-chip add" aria-pressed={panel?.kind === 'split2'} onClick={() => toggle({ kind: 'split2' })}>{tr('+ Split again by…')}</button>
-          )}
-          <button type="button" className="rb-chip add" aria-pressed={panel?.kind === 'more'} onClick={() => toggle({ kind: 'more' })}>{tr('Order and rows…')}</button>
+        <div className="rb-options-row">
+          <button type="button" className="rb-options-btn" aria-expanded={optionsOpen} onClick={() => setOptionsOpen((o) => !o)}>
+            {tr('Options')}{extras.length > 0 ? ` (${extras.length})` : ''} <span aria-hidden="true">{optionsOpen ? '▴' : '▾'}</span>
+          </button>
+          {!optionsOpen && extras.length > 0 && <span className="muted small">{extras.join(' · ')}</span>}
         </div>
 
-        {panel?.kind === 'filter' && openFilter && (
-          <div className="rb-editor">
-            <span className="muted small">{tr('Only include lines where')}</span>
-            <FilterRow
-              key={panel.index}
-              source={source}
-              filter={openFilter}
-              onChange={(nf) => patch({ filters: filters.map((x, n) => (n === panel.index ? nf : x)) })}
-            />
-            <div><Button size="sm" variant="outline" onClick={() => setPanel(null)}>{tr('Done')}</Button></div>
-          </div>
-        )}
+        {optionsOpen && (
+          <div className="rb-options">
+            <div className="rb-option">
+              <h3>{tr('Only include lines where')}</h3>
+              {filters.map((f, i) => (
+                <div key={i} className="rb-filter">
+                  <FilterRow source={source} filter={f} onChange={(nf) => patch({ filters: filters.map((x, n) => (n === i ? nf : x)) })} />
+                  <Button size="sm" variant="ghost" aria-label={tr('Remove')} onClick={() => patch({ filters: filters.filter((_, n) => n !== i) })}>✕</Button>
+                </div>
+              ))}
+              {filters.length === 0 && <p className="muted small">{tr('Every line counts.')}</p>}
+              {filters.length < REPORT_LIMITS.filters && (
+                <div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const c = source.columns.find((x) => x.type === 'text') ?? source.columns[0];
+                      if (c) patch({ filters: [...filters, { column: c.key, op: reportOpsFor(c.type)[0] as ReportFilterOp, value: null }] });
+                    }}
+                  >
+                    {tr('Add a filter')}
+                  </Button>
+                </div>
+              )}
+            </div>
 
-        {panel?.kind === 'also' && (
-          <div className="rb-editor">
-            {measure !== LIST && (def.totals ?? []).length < REPORT_LIMITS.totals && (
-              <label>
-                <span className="muted small">{tr('Add a number')}</span>
+            <div className="rb-option">
+              <h3>{tr('Also show')}</h3>
+              {(def.totals ?? []).slice(1).map((t) => (
+                <div key={totalKey(t)} className="rb-filter">
+                  <span>{headerLabel(totalKey(t))}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={tr('Remove')}
+                    onClick={() => set(withMeasure({ ...def, totals: (def.totals ?? []).filter((x) => totalKey(x) !== totalKey(t)) }, measure, source))}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              ))}
+              {measure !== LIST && (def.totals ?? []).length < REPORT_LIMITS.totals && (
                 <select
+                  aria-label={tr('Add a number')}
                   value=""
                   onChange={(e) => {
                     const t = parseTotal(e.target.value);
                     if (t) patch({ totals: [...(def.totals ?? []), t] });
                   }}
                 >
-                  <option value="">{tr('Choose…')}</option>
+                  <option value="">{tr('Add a number')}</option>
                   {moreTotals.map((k) => <option key={k} value={k}>{headerLabel(k)}</option>)}
                 </select>
-              </label>
-            )}
-            {!grouped && (
-              <fieldset className="rb-columns">
-                <legend className="muted small">{tr('Columns in the list')}</legend>
-                <div className="report-checks">
+              )}
+              {!grouped && (
+                <div className="report-checks" role="group" aria-label={tr('Columns in the list')}>
                   {source.columns.map((c) => {
                     const on = (def.columns ?? []).includes(c.key);
                     return (
                       <label key={c.key} className="check">
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() => patch({ columns: on ? (def.columns ?? []).filter((k) => k !== c.key) : [...(def.columns ?? []), c.key] })}
-                        />
+                        <input type="checkbox" checked={on} onChange={() => patch({ columns: on ? (def.columns ?? []).filter((k) => k !== c.key) : [...(def.columns ?? []), c.key] })} />
                         {tr(columnLabel(c.key))}
                       </label>
                     );
                   })}
                 </div>
-              </fieldset>
+              )}
+            </div>
+
+            {grouped && (
+              <div className="rb-option">
+                <h3>{tr('Split each row again by')}</h3>
+                <select value={groups[1] ?? ''} onChange={(e) => patch({ groupBy: e.target.value ? [groups[0] as string, e.target.value] : groups.slice(0, 1) })}>
+                  <option value="">{tr('Nothing')}</option>
+                  {splitChoices(source).filter((k) => k !== groups[0]).map((k) => <option key={k} value={k}>{tr(columnLabel(k))}</option>)}
+                </select>
+              </div>
             )}
-            <div><Button size="sm" variant="outline" onClick={() => setPanel(null)}>{tr('Done')}</Button></div>
-          </div>
-        )}
 
-        {panel?.kind === 'split2' && (
-          <div className="rb-editor">
-            <label>
-              <span className="muted small">{tr('Split each row again by')}</span>
-              <select
-                value=""
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  patch({ groupBy: [groups[0] as string, e.target.value] });
-                  setPanel(null);
-                }}
-              >
-                <option value="">{tr('Choose…')}</option>
-                {splitChoices(source).filter((k) => k !== groups[0]).map((k) => <option key={k} value={k}>{tr(columnLabel(k))}</option>)}
-              </select>
-            </label>
-          </div>
-        )}
-
-        {panel?.kind === 'more' && (
-          <div className="rb-editor rb-row">
-            <label>
-              <span className="muted small">{tr('Sort by')}</span>
-              <select value={def.sort?.[0]?.column ?? ''} onChange={(e) => patch({ sort: e.target.value ? [{ column: e.target.value, dir: def.sort?.[0]?.dir ?? 'desc' }] : [] })}>
+            <div className="rb-option">
+              <h3>{tr('Order and rows')}</h3>
+              <select aria-label={tr('Sort by')} value={def.sort?.[0]?.column ?? ''} onChange={(e) => patch({ sort: e.target.value ? [{ column: e.target.value, dir: def.sort?.[0]?.dir ?? 'desc' }] : [] })}>
                 <option value="">{tr('Standard order')}</option>
                 {outKeys.map((k) => <option key={k} value={k}>{headerLabel(k, result ?? undefined)}</option>)}
               </select>
-            </label>
-            {def.sort?.[0] && (
-              <label>
-                <span className="muted small">{tr('Direction')}</span>
-                <select value={def.sort[0].dir} onChange={(e) => patch({ sort: [{ column: def.sort?.[0]?.column as string, dir: e.target.value as 'asc' | 'desc' }] })}>
+              {def.sort?.[0] && (
+                <select aria-label={tr('Direction')} value={def.sort[0].dir} onChange={(e) => patch({ sort: [{ column: def.sort?.[0]?.column as string, dir: e.target.value as 'asc' | 'desc' }] })}>
                   <option value="desc">{tr('Largest or newest first')}</option>
                   <option value="asc">{tr('Smallest or oldest first')}</option>
                 </select>
+              )}
+              <label>
+                <span className="muted small">{tr('Show at most (rows)')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={REPORT_LIMITS.rows}
+                  inputMode="numeric"
+                  placeholder={String(REPORT_LIMITS.rows)}
+                  value={def.limit ?? ''}
+                  onChange={(e) => patch({ limit: e.target.value ? Math.min(REPORT_LIMITS.rows, Math.max(1, Math.trunc(Number(e.target.value)) || 1)) : null })}
+                />
               </label>
+            </div>
+
+            {grouped && def.totals?.[0] && (
+              <div className="rb-option">
+                <h3>{tr('Chart')}</h3>
+                <select
+                  aria-label={tr('Chart')}
+                  value={def.chart?.type ?? ''}
+                  onChange={(e) => {
+                    const type = e.target.value as ReportChartType | '';
+                    patch({ chart: type ? { type, x: groups[0] as string, y: totalKey(def.totals?.[0] as NonNullable<ReportDefinition['totals']>[number]) } : null });
+                  }}
+                >
+                  {REPORT_CHART_TYPES.map((c) => <option key={c} value={c}>{tr(CHART_LABELS[c])}</option>)}
+                  <option value="">{tr('Table only')}</option>
+                </select>
+              </div>
             )}
-            <label>
-              <span className="muted small">{tr('Show at most (rows)')}</span>
-              <input
-                type="number"
-                min={1}
-                max={REPORT_LIMITS.rows}
-                inputMode="numeric"
-                placeholder={String(REPORT_LIMITS.rows)}
-                value={def.limit ?? ''}
-                onChange={(e) => patch({ limit: e.target.value ? Math.min(REPORT_LIMITS.rows, Math.max(1, Math.trunc(Number(e.target.value)) || 1)) : null })}
-              />
-            </label>
-            <div><Button size="sm" variant="outline" onClick={() => setPanel(null)}>{tr('Done')}</Button></div>
           </div>
         )}
       </div>
-
-      <div className="rb-bar no-print">
-        {grouped && def.totals?.[0] ? (
-          <div className="rb-chips">
-            {REPORT_CHART_TYPES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className="rb-chip"
-                aria-pressed={def.chart?.type === c}
-                onClick={() => patch({ chart: { type: c, x: groups[0] as string, y: totalKey(def.totals?.[0] as NonNullable<ReportDefinition['totals']>[number]) } })}
-              >
-                {tr(CHART_LABELS[c])}
-              </button>
-            ))}
-            <button type="button" className="rb-chip" aria-pressed={!def.chart} onClick={() => patch({ chart: null })}>{tr('Table only')}</button>
-          </div>
-        ) : <span />}
-        <div className="report-actions">
-          {running && <span className="muted small" aria-live="polite">{tr('Working…')}</span>}
-          {canCreate && (
-            <Button disabled={busy !== null} onClick={() => setSaveOpen((o) => !o)}>
-              {meta.id && canEditSaved ? tr('Save changes') : tr('Save')}
-            </Button>
-          )}
-          <Button variant="outline" disabled={!result || busy !== null} onClick={exportExcel}>{tr('Excel')}</Button>
-          <Button variant="outline" disabled={!result || busy !== null || (result?.rows.length ?? 0) > PDF_MAX_ROWS} onClick={exportPdf}>
-            {busy === 'pdf' ? tr('Working…') : tr('PDF')}
-          </Button>
-          <Button variant="outline" disabled={!result} onClick={() => window.print()}>{tr('Print')}</Button>
-          {meta.id && meta.visibility === 'company' && canAlert && (def.totals ?? []).length > 0 && (
-            <Button variant="outline" disabled={busy !== null || dirty} title={dirty ? tr('Save your changes first.') : undefined} onClick={() => setAlertOpen((o) => !o)}>
-              {tr('Alert me when')}
-            </Button>
-          )}
-          {meta.id && canEditSaved && (
-            <ConfirmButton label={tr('Delete')} confirmLabel={tr('Yes, delete')} question={trf('Delete the report "{name}"?', { name: meta.name })} disabled={busy !== null} onConfirm={remove} />
-          )}
-          {saved && <span className="muted small">{saved}</span>}
-        </div>
-      </div>
-      {result && result.rows.length > PDF_MAX_ROWS && <p className="muted small no-print">{trf('A PDF holds up to {n} rows: use Excel for more.', { n: PDF_MAX_ROWS })}</p>}
 
       {alertOpen && meta.id && !dirty && (
         <ReportAlert

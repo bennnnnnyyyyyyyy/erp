@@ -1,4 +1,4 @@
-import type { ReportCell, ReportDefinition, ReportResult, ReportSource, SavedReport } from '@erp/shared';
+import type { ReportCell, ReportDefinition, ReportResult, ReportSource, SalesForecast, SavedReport } from '@erp/shared';
 
 // Demo mode only (see demo.ts): two sample report sources with made-up rows, and a small in-memory "run", so the Reports & Insights
 // screens can be looked at with no API and no database. The real run is in the database (sql/109, rpt_run); this is not a copy of it.
@@ -163,6 +163,7 @@ function run(def: ReportDefinition): ReportResult {
 /** `/v1/reports/...` in demo mode. */
 export function handleReports(method: string, rest: string[], data: Record<string, unknown>): unknown {
   const [area, id] = rest;
+  if (area === 'forecast') return forecast(data as { by?: string; horizon?: string });
   if (area === 'sources') return SOURCES;
   if (area === 'run') return run(data.definition as ReportDefinition);
   if (area === 'saved') {
@@ -188,4 +189,38 @@ export function handleReports(method: string, rest: string[], data: Record<strin
     return r;
   }
   throw new Error('Not in the demo');
+}
+
+/** A made-up sales forecast (the real one is sql/110), so the forecast page can be looked at in the sample build. */
+function forecast(q: { by?: string; horizon?: number | string }): SalesForecast {
+  const by = q.by === 'customer' ? 'customer' : 'item';
+  const h = Number(q.horizon);
+  const horizon = (h === 60 || h === 90 ? h : 30) as 30 | 60 | 90;
+  const names = by === 'item' ? ITEMS.map((i) => i[0]) : CUSTOMERS;
+  return {
+    asOf: new Date().toISOString().slice(0, 10),
+    by,
+    horizon,
+    rows: names.map((name, i) => {
+      const last = 400_000 + i * 150_000;
+      const daily = Math.round(last / 30);
+      return {
+        id: `demo-${by}-${i}`,
+        code: by === 'item' ? `SKU-${100 + i}` : `C-${10 + i}`,
+        name,
+        nameAr: null,
+        uom: by === 'item' ? 'piece' : null,
+        qtyLast30: by === 'item' ? 20 + i * 7 : null,
+        qtyPrev30: by === 'item' ? 18 + i * 5 : null,
+        qtyOldest30: by === 'item' ? 15 + i * 4 : null,
+        dailyQty: by === 'item' ? (20 + i * 7) / 30 : null,
+        forecastQty: by === 'item' ? Math.round(((20 + i * 7) / 30) * horizon) : null,
+        invoices: 6 + i * 3,
+        historyDays: 90,
+        trend: i % 3 === 0 ? 'up' : i % 3 === 1 ? 'flat' : 'down',
+        confidence: i === 0 ? 'thin' : 'good',
+        values: [{ currency: 'EGP', last30Minor: last, prev30Minor: last - 50_000, oldest30Minor: last - 90_000, dailyMinor: daily, forecastMinor: daily * horizon }],
+      };
+    }),
+  };
 }

@@ -287,4 +287,15 @@ export const REPORTS_AR: Record<string, string> = {
   'Split each row again by': 'قسّم كل صف أيضًا حسب',
   'Show at most (rows)': 'اعرض على الأكثر (صفوف)',
   'Table only': 'جدول فقط',
+
+  // declutter (Ben, 25 Nov 2026): "From [data] show [what] by [split] for [period]", one "Options" control and a "More" menu
+  show: 'اعرض',
+  More: 'المزيد',
+  Options: 'الخيارات',
+  'sorted by {column}': 'مرتّب حسب {column}',
+  'at most {n} rows': '{n} صفًا على الأكثر',
+  'Every line counts.': 'كل الأسطر محسوبة.',
+  'Also show': 'اعرض أيضًا',
+  'Order and rows': 'الترتيب وعدد الصفوف',
+  'Forecast sales by': 'توقّع المبيعات حسب',
 };

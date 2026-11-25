@@ -74,7 +74,8 @@ export async function demoApi<T>(path: string, init: RequestInit = {}): Promise<
   const [pathname] = path.split('?');
   if (/^\/v1\/reports\//.test(pathname ?? '')) {
     const rest = (pathname ?? '').replace(/^\/v1\/reports\/?/, '').split('/').filter(Boolean);
-    return structuredClone(handleReports(method, rest, body<Record<string, unknown>>(init))) as T;
+    const query = Object.fromEntries(new URLSearchParams(path.split('?')[1] ?? ''));
+    return structuredClone(handleReports(method, rest, { ...query, ...body<Record<string, unknown>>(init) })) as T;
   }
   const area0 = /^\/v1\/(inventory|purchasing|sales)(?:\/|$)/.exec(pathname ?? '')?.[1] as 'inventory' | 'purchasing' | 'sales' | undefined;
   if (area0) {

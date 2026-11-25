@@ -331,8 +331,8 @@ export const APPS: AppDef[] = [
       // Step 2 (sql/109): the report builder; a saved report opens in it. The sample-data build runs it on two made-up sources
       // (lib/demoReports.ts), so the builder can be looked at without a database.
       { path: '/new', label: 'New report', permission: 'reports.custom.read', component: ReportBuilderPage },
-      // Step 4 (sql/110): the sales forecast. Real API only.
-      ...(demoMode ? [] : [{ path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage }]),
+      // Step 4 (sql/110): the sales forecast (the sample build has a made-up one, lib/demoReports.ts).
+      { path: '/forecast', label: 'Sales forecast', permission: 'reports.forecast.read', component: SalesForecastPage },
       { path: '/:id', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
       // Step 3: a ready-made report opens in the builder and runs at once.
       { path: '/template/:key', label: 'Report', permission: 'reports.custom.read', component: ReportBuilderPage, nav: false, parent: '' },
