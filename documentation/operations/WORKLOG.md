@@ -11,6 +11,20 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — sql/113 applied to live (notes on records)
+
+**Objective.** Ben's "yes 113" (via erp-master), after the rolled-back dry run in the entry "Notes on records" below. Ben confirmed
+that viewers read notes but do not add them.
+
+**Actions Completed.** Applied `sql/113_core_notes.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran tests
+110 and 092 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Before: no `core_notes`. After: `core_notes` with RLS; users add through `core_add_note`; anonymous
+neither reads nor adds; direct inserts refused (test 110). Tests 110 and 092 pass on live.
+
+**Safety Status.** The Notes panel and `/v1/core/notes` reach live when Ben merges and CI deploys (until then the old app shows no
+panel). Browser check after the deploy: as a member, add a note on a sales invoice; another member sees it; an admin deletes it.
+
 ## 2026-11-25 — sql/112 applied to live (scheduled reports and fixes)
 
 **Objective.** Ben's "yes 112" (via erp-master), after the rolled-back dry run in the entry "Reports step 6" below.
