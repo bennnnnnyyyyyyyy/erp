@@ -11,6 +11,35 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Dead ends, Ben's answers: next-step helper for every error, filled-in transfer, the 19 open findings (no migration)
+
+**Objective.** Ben answered the audit's 4 questions (via erp-master): build one next-step helper for every error; "which state is
+needed" goes into sql/112 with step 6; fill in the transfer from a sales order shortage; do the 19 open findings now.
+
+**Actions Completed.**
+- Next-step helper (commit d6ed392): `lib/nextStep.ts` maps error codes to what unblocks them (period locked, app off, account role,
+  receipt costs, cash box, not enough stock, batches, storage, VAT rate, not delivered, not received, own approval, count). `lib/api.ts`
+  adds the sentence to every error message; `components/NextStepBar.tsx` (in the Shell) offers the page that fixes it, only when the
+  person can open it, and closes on the next page. Test: every step has Arabic and a link is an app page.
+- Transfer (d6ed392): "Move from <warehouse>" opens the new transfer with item, quantity, from and to filled in (`lib/orderLink.ts`
+  `transferLink`, tests); with one warehouse the form says a second one is needed (link to Stock on hand).
+- The 19 findings (this commit; table `.temp/2026-11-25-dead-ends-audit.md`, all ticked): tour and Guide links only to pages the person
+  can open; Getting started steps link only to open pages; home summary needs Finance on and cards link only into apps that are on;
+  "Pending approvals" opens the requests waiting for approval; filtered request and transfer lists say what the filter found; approved
+  request shows "waiting for the warehouse"; sales order says who does the next step; payments box and credit-note list show their
+  error instead of "Loading…"; credit note asks for the return warehouse; purchase bill lines start at what is left to bill and the
+  button says what is missing; "Paid now" with no cash box points to Treasury; new orders say when there are no customers, suppliers,
+  items or warehouse; Receive goods with no warehouse no longer says "no permission"; ETA print checklist links each missing field
+  to its page; credit-note print Back returns where you came from; server details no longer show raw ids or role keys, and bank
+  statement refusals have their own messages (`apps/api/src/lib/rpc.ts`, 3 tests).
+- Arabic for every new text (`i18nScreens.ts`, `i18nErrors.ts`).
+
+**Database / System Result.** None. Into sql/112 with step 6: state errors that say which state is needed, the credit note's invoice
+id in its print data, the item name in stock shortage errors.
+
+**Safety Status.** `tsc` 0 errors (api, web); tests: api 811, web 231 passed; biome 0 errors. Not checked in a browser on real data.
+Found: no screen sets the company tax number and ETA activity code (API `PUT /v1/einvoicing/profile` exists): question for Ben.
+
 ## 2026-11-25 — Dead-ends audit of the old UI: 10 small fixes (no migration)
 
 **Objective.** erp-master (Ben's request): look across the old UI for Back links to dead pages, empty pickers with no reason, and blocked

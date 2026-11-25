@@ -30,7 +30,7 @@ export function GuidePage() {
     has('inventory') && hasPermission(session.permissions, 'inventory.request.create') ? '/inventory/requests/new' : undefined,
     has('inventory') ? '/inventory/requests' : undefined,
     hasAudit ? '/settings/audit' : undefined,
-    has('inventory') && !demoMode ? '/inventory/forecast' : undefined,
+    has('inventory') && !demoMode && hasPermission(session.permissions, 'inventory.forecast.read') ? '/inventory/forecast' : undefined,
   ];
 
   return (

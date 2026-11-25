@@ -14,6 +14,7 @@ import {
 } from '@erp/shared';
 import { tr, trf } from '../../../lib/i18n';
 import { docAppPath } from '../../../lib/docLink';
+import { Link } from '../../../lib/router';
 import { DocQr } from './DocQr';
 import { label, printDir, type PrintLabelKey } from './printLabels';
 import './print.css';
@@ -64,6 +65,28 @@ export function etaIssueText(issue: Issue, lines: PrintLine[]): string {
   }
 }
 
+/**
+ * Where a missing ETA field is set, when there is a page for it (dead-ends audit, 25 Nov 2026). The company tax number and activity
+ * code have no page in the app yet (a question for Ben).
+ */
+export function etaIssueLink(issue: Issue, lines: PrintLine[]): string | null {
+  const m = /^lines\[(\d+)\]/.exec(issue.path);
+  const itemId = m ? lines[Number(m[1])]?.itemId : undefined;
+  switch (issue.code) {
+    case 'BRANCH_ADDRESS':
+      return '/settings/branches';
+    case 'CUSTOMER':
+    case 'CUSTOMER_TAX_ID':
+    case 'CUSTOMER_TAX_IDENTITY':
+      return '/sales/customers';
+    case 'ITEM_CODE':
+    case 'UNIT_TYPE':
+      return itemId ? `/inventory/items/${itemId}` : null;
+    default:
+      return null;
+  }
+}
+
 export function PrintDocument({ data, options }: { data: DocPrintData; options: PrintOptions }) {
   const { layout, language: lang } = options;
   const s = data.settings;
@@ -84,7 +107,7 @@ export function PrintDocument({ data, options }: { data: DocPrintData; options: 
     return (
       <div className="print-missing" role="alert">
         <p><strong>{tr('The ETA layout cannot print yet. This is missing:')}</strong></p>
-        <ul>{eta.issues.map((i, n) => <li key={`${i.code}-${n}`}>{etaIssueText(i, data.lines)}</li>)}</ul>
+        <ul>{eta.issues.map((i, n) => <li key={`${i.code}-${n}`}>{etaIssueText(i, data.lines)}{etaIssueLink(i, data.lines) ? <> · <Link to={etaIssueLink(i, data.lines) as string}>{tr('Fix it')}</Link></> : null}</li>)}</ul>
       </div>
     );
   }

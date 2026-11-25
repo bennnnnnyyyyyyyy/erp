@@ -16,7 +16,7 @@ import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
 import { tr, trf } from '../../../lib/i18n';
-import { Link, useParam } from '../../../lib/router';
+import { BackLink as HistoryBackLink, Link, useParam } from '../../../lib/router';
 import { useLoad } from '../../../lib/useLoad';
 import { useSession } from '../../../session';
 import { PrintDocument } from './PrintDocument';
@@ -273,5 +273,6 @@ function isSendable(d: DocPrintData): boolean {
 function BackLink({ type, id, invoiceId }: { type: PrintDocType; id: string; invoiceId: string | null }) {
   if (type === 'invoice') return <Link to={`/sales/invoices/${id}`} className="back-link">{tr('← Sales invoice')}</Link>;
   if (type === 'draft' && invoiceId) return <Link to={`/sales/invoices/${invoiceId}`} className="back-link">{tr('← Sales invoice')}</Link>;
-  return <Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link>;
+  // A credit or debit note (or a draft not issued yet) is usually opened from its invoice: go back there (dead-ends audit, 25 Nov).
+  return <HistoryBackLink to="/sales/invoices" label={tr('← Sales invoices')} backLabel={tr('← Back')} />;
 }

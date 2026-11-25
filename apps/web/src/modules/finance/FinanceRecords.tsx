@@ -34,7 +34,8 @@ export function PaymentStatus({ status }: { status: 'recorded' | 'void' }) {
 /** Payments recorded against one invoice or expense, with what is paid and what is still owed. Hidden for people without finance access. */
 export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'customerInvoiceId' | 'supplierInvoiceId' | 'expenseId'; id: string; totalMinor: number; currency: string }) {
   const session = useSession();
-  const allowed = hasPermission(session.permissions, 'finance.reports.view');
+  // Finance switched off: nothing to show, and the request would only fail (dead-ends audit, 25 Nov).
+  const allowed = session.modules.includes('finance') && hasPermission(session.permissions, 'finance.reports.view');
   const prefix = field === 'customerInvoiceId' ? 'c' : field === 'supplierInvoiceId' ? 's' : 'e';
   // Every payment against this one record, from the server (the general list holds the newest 300 only).
   const payments = useLoad(() => (allowed ? api<Payment[]>(`/v1/finance/payments?for=${prefix}:${id}`) : none<Payment>()));
@@ -52,7 +53,7 @@ export function PaymentsAgainst({ field, id, totalMinor, currency }: { field: 'c
             <td className="right">{money(p.amountMinor, p.currency || currency)}</td><td><PaymentStatus status={p.status} /></td>
           </ClickRow>
         ))}
-        {!rows.length && <tr><td colSpan={5} className="muted empty">{payments.data ? tr('No payments recorded yet.') : tr('Loading…')}</td></tr>}
+        {!rows.length && <tr><td colSpan={5} className="muted empty">{payments.data ? tr('No payments recorded yet.') : payments.error ? <span className="error">{payments.error}</span> : tr('Loading…')}</td></tr>}
       </tbody></table></div>
       {left > 0 && hasPermission(session.permissions, 'finance.entries.manage') && (
         <p className="small"><Link to={`/finance/payments?for=${prefix}:${id}`}>{tr('Record a payment →')}</Link></p>

@@ -19,7 +19,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   { id: 'new-request', route: '/inventory/requests/new', selectors: ['section.page form', 'section.page h1'], permission: 'inventory.request.create', module: 'inventory' },
   { id: 'approve', route: '/inventory/requests', selectors: ['section.page .table-wrap', 'section.page table', 'section.page h1'], permission: 'inventory.items.read', module: 'inventory' },
   { id: 'ledger', route: '/inventory/ledger', selectors: ['section.page .table-wrap', 'section.page table', 'section.page h1'], permission: 'inventory.items.read', module: 'inventory' },
-  { id: 'audit', route: '/settings/audit', selectors: ['section.page .table-wrap', 'section.page table', 'section.page h1'], permission: 'core.audit.read' },
+  { id: 'audit', route: '/settings/audit', selectors: ['section.page .table-wrap', 'section.page table', 'section.page h1'], permission: 'core.org.manage' },
   { id: 'alerts', route: '/alerts', selectors: ['section.page .table-wrap', 'section.page table', 'section.page h1'], permission: 'alerts.rules.view', module: 'alerts' },
   { id: 'guide', route: '/guide', selectors: ['section.page h1'] },
 ];

@@ -50,3 +50,38 @@ describe('a database detail that repeats the message', () => {
     });
   });
 });
+
+describe('details people read (dead-ends audit, 25 Nov 2026)', () => {
+  const fakeClient = (error: { message: string; details?: string }) =>
+    ({ rpc: async () => ({ data: null, error: { code: 'P0001', hint: '', ...error } }) }) as unknown as SupabaseClient;
+
+  it('drops raw record ids', async () => {
+    await expect(
+      callRpc(fakeClient({ message: 'UNCOSTED_RECEIPTS', details: 'stock receipt 3f2a1b0c-1111-4222-8333-944445555666 has no cost' }), 'x'),
+    ).rejects.toMatchObject({
+      message: 'Some stock receipts have no cost yet: enter them in Accounting setup first: stock receipt has no cost',
+    });
+  });
+
+  it('writes an account role as words', async () => {
+    await expect(callRpc(fakeClient({ message: 'ACCOUNT_ROLE_MISSING', details: 'inventory_asset' }), 'x')).rejects.toMatchObject({
+      message: 'An account role is not set up in Accounting setup: inventory asset',
+      code: 'account_role_missing',
+    });
+  });
+
+  it('names the bank statement refusals instead of "something went wrong"', async () => {
+    await expect(
+      callRpc(fakeClient({ message: 'DUPLICATE_FILE', details: 'this file was already imported for this account' }), 'x'),
+    ).rejects.toMatchObject({
+      message: 'This file was already imported for this account',
+      code: 'duplicate_file',
+    });
+    await expect(
+      callRpc(fakeClient({ message: 'RECONCILE_DIFFERENCE', details: 'bank 100, books 90: difference 10' }), 'x'),
+    ).rejects.toMatchObject({
+      message: 'The statement does not match the books yet: bank 100, books 90: difference 10',
+      code: 'reconcile_difference',
+    });
+  });
+});

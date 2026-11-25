@@ -98,8 +98,8 @@ export function TransfersList() {
           columns={columns}
           rowKey={(t) => t.id}
           rowHref={(t) => `/inventory/transfers/${t.id}`}
-          empty={tr('No transfers yet. A transfer moves stock from one warehouse to another; a manager approves it first.')}
-          emptyAction={canCreate ? <Button onClick={() => navigate('/inventory/transfers/new')}>{tr('Move between warehouses')}</Button> : undefined}
+          empty={filter === 'submitted' ? tr('No transfers are waiting for approval.') : filter === 'dispatched' ? tr('No transfers are in transit.') : tr('No transfers yet. A transfer moves stock from one warehouse to another; a manager approves it first.')}
+          emptyAction={filter === 'all' && canCreate ? <Button onClick={() => navigate('/inventory/transfers/new')}>{tr('Move between warehouses')}</Button> : undefined}
           toolbar={
             <>
               <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label={tr('Filter')}>

@@ -29,7 +29,8 @@ export function RequestsList() {
   const who = usePeople();
   const requests = usePaged<DemoRequest>('/v1/inventory/requests', 200);
   const session = useSession();
-  const [filter, setFilter] = useState<'all' | 'submitted'>('all');
+  // ?status=submitted (the home card "Pending approvals") opens the list already filtered.
+  const [filter, setFilter] = useState<'all' | 'submitted'>(() => (new URLSearchParams(window.location.search).get('status') === 'submitted' ? 'submitted' : 'all'));
   const rows = (requests.data ?? []).filter((r) => filter === 'all' || r.status === 'submitted');
 
   const columns: Column<DemoRequest>[] = [
@@ -58,8 +59,8 @@ export function RequestsList() {
           rowKey={(r) => r.id}
           rowHref={(r) => `/inventory/requests/${r.id}`}
           more={{ hasMore: requests.hasMore, loading: requests.loading, onMore: requests.more }}
-          empty={tr('No requests yet. A request takes goods out of a warehouse; a manager approves it first.')}
-          emptyAction={hasPermission(session.permissions, 'inventory.request.create') ? <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button> : undefined}
+          empty={filter === 'submitted' ? tr('No requests are waiting for approval.') : tr('No requests yet. A request takes goods out of a warehouse; a manager approves it first.')}
+          emptyAction={filter === 'all' && hasPermission(session.permissions, 'inventory.request.create') ? <Button onClick={() => navigate('/inventory/requests/new')}>{tr('Send goods out')}</Button> : undefined}
           toolbar={
             <>
               <select className="narrow-select" value={filter} onChange={(e) => setFilter(e.target.value as 'all' | 'submitted')} aria-label={tr('Filter')}>
@@ -264,6 +265,8 @@ export function RequestPage() {
           {demoMode && <p className="hint muted small">{tr('Try approving a request you submitted yourself: it is refused. Switch person in the yellow bar to approve as someone else.')}</p>}
         </div>
       )}
+      {/* Dead-ends audit, 25 Nov: a salesperson opening an approved request from the order saw nothing about what happens next. */}
+      {r.status === 'approved' && !canIssue && <p className="notice">{tr('Approved. Waiting for the warehouse to issue it.')}</p>}
       {r.status === 'submitted' && !isManager && <p className="notice">{tr('Waiting for a manager to approve.')}{demoMode && tr(' Switch to Layla Hassan or Karim Adel in the yellow bar to approve it.')}</p>}
 
       {open && (canIssue || canCancel) && (

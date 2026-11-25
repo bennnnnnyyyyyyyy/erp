@@ -225,6 +225,9 @@ export function SalesOrderPage() {
 
       {/* Dead-ends audit, 25 Nov: say before asking the warehouse what is short, and offer the step that brings the stock. */}
       {o.status === 'open' && !demoMode && <StockShortage lines={o.lines} warehouseId={o.warehouseId} itemName={cat.itemName} warehouseName={cat.warehouseName} />}
+      {/* Dead-ends audit, 25 Nov: a person who cannot take the next step is told who does. */}
+      {o.status === 'open' && !canFulfil && !canManageOrder && <p className="muted small">{tr('A sales manager asks the warehouse for the stock.')}</p>}
+      {o.status === 'delivered' && !hasPermission(session.permissions, 'sales.invoices.manage') && <p className="muted small">{tr('An owner or admin creates the invoice.')}</p>}
       {o.status === 'open' && (canFulfil || canManageOrder) && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
           {canFulfil && <Button type="submit" disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</Button>}
