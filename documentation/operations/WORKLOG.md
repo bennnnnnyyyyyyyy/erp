@@ -11,6 +11,21 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Printed documents: the logo sits above the company name (no migration)
+
+**Objective.** Ben (screenshot, 25 Nov): a wide logo beside the company name squeezed the name and address into a strip one or two
+words wide.
+
+**Actions Completed.** `apps/web/src/modules/sales/print/print.css`: `.print-company` stacks the logo above the name and address
+(column, 2.5 mm gap); `.print-logo` is at most 20 mm high and 70 mm wide, keeping its shape. Same change another chat had made by
+mistake, uncommitted, in the main checkout (Ben discards that copy).
+
+**Database / System Result.** None.
+
+**Safety Status.** Checked with a temporary picture test (not kept): Simple, Detailed and ETA, English and Arabic, plus ETA in both
+languages, each with a wide (600×120) and a square logo: the name and address keep the full column, the header fits, every sheet stays
+one A4 page (pictures `.temp/print-logo/`). The 8 kept print pictures pass unchanged (the sample data has no logo).
+
 ## 2026-11-25 — Settings → E-invoicing: the company's ETA tax registration and branch address (no migration)
 
 **Objective.** Found in the dead-ends audit: no screen set the company's tax registration number, legal name and ETA activity code,
