@@ -299,6 +299,7 @@ export const REPORTS_AR: Record<string, string> = {
   'Order and rows': 'الترتيب وعدد الصفوف',
   'Forecast sales by': 'توقّع المبيعات حسب',
 
+  'Only the 500 with the most sales are listed.': 'تظهر أعلى 500 فقط من حيث المبيعات.',
   // step 6, scheduled reports (sql/112)
   'Send on a schedule': 'أرسله حسب جدول',
   'Send a company report to people on a schedule. Each person gets the totals and the first 5 rows, with a link to the full report. Only people who may see the report’s data get it.':

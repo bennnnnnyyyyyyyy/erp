@@ -98,6 +98,10 @@ export const ERRORS_AR: Record<string, string> = {
   'the price must be 0 or more': 'يجب أن يكون السعر صفرًا أو أكثر',
   'the cost must be 0 or more': 'يجب أن تكون التكلفة صفرًا أو أكثر',
   '7 to 15 digits (spaces, dashes and a leading + are fine)': 'من 7 إلى 15 رقمًا (المسافات والشرطات و+ في البداية مقبولة)',
+  // database rules (sql/114)
+  'the date cannot be after today': 'لا يمكن أن يكون التاريخ بعد اليوم',
+  'the date must be between 1900 and 2100': 'يجب أن يكون التاريخ بين 1900 و2100',
+  'the due time is in the past': 'موعد الاستحقاق في الماضي',
   // the country-aware phone rule (packages/shared/src/phone.ts; Ben, 25 Nov 2026)
   'an Egyptian number is 01x xxxx xxxx for a mobile, or the area code and number for a landline; a number in another country starts with + and its country code':
     'الرقم المصري للمحمول 01x xxxx xxxx، وللأرضي كود المنطقة ثم الرقم؛ ورقم أي دولة أخرى يبدأ بـ + ثم كود الدولة',

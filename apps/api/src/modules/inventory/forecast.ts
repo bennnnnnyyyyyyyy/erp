@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { userDb } from '../../lib/db.user';
-import { callRpc } from '../../lib/rpc';
+import { callRpcRows } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 
@@ -9,24 +9,23 @@ export function registerForecastRoutes(inventoryRoutes: Hono<AppEnv>) {
   // ------------------------------------------------------------------ stock forecast (sql/029): from the organization's own issue history
 
   inventoryRoutes.get('/forecast', requirePermission('inventory.forecast.read'), async (c) => {
-    const rows = await callRpc<
-      {
-        item_id: string;
-        sku: string;
-        name: string;
-        uom: string;
-        available: number;
-        daily_rate: number;
-        days_of_cover: number | null;
-        runs_out_on: string | null;
-        history_days: number;
-        issues_count: number;
-        confidence: 'good' | 'thin' | 'none';
-        lead_days: number;
-        on_order: number;
-        suggested_order: number | null;
-      }[]
-    >(userDb(c), 'inv_forecast', {});
+    // sql/114: one JSON value, not cut at 1,000 items (the old function while sql/114 is not applied)
+    const rows = await callRpcRows<{
+      item_id: string;
+      sku: string;
+      name: string;
+      uom: string;
+      available: number;
+      daily_rate: number;
+      days_of_cover: number | null;
+      runs_out_on: string | null;
+      history_days: number;
+      issues_count: number;
+      confidence: 'good' | 'thin' | 'none';
+      lead_days: number;
+      on_order: number;
+      suggested_order: number | null;
+    }>(userDb(c), 'inv_forecast_json', 'inv_forecast');
     return ok(
       c,
       rows.map((r) => ({

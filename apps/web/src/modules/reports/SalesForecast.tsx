@@ -101,6 +101,7 @@ export function SalesForecastPage() {
       ) : (
         <>
           <p className="muted small">{trf('Worked out on {date}.', { date: formatDay(data.data.asOf, session.org) })}</p>
+          {data.data.limited ? <p className="muted small">{tr('Only the 500 with the most sales are listed.')}</p> : null}
           <div className="table-wrap">
             <table>
               <thead>

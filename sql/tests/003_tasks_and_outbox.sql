@@ -201,8 +201,10 @@ begin
   ok := false;
   begin perform public.tsk_create_task('outsider', ue); exception when others then ok := (sqlerrm = 'INVALID_INPUT'); end;
   if not ok then raise exception 'FAIL S9b: a task was assigned to someone outside the organization'; end if;
-  tk1 := public.tsk_create_task('Count aisle 4', uc, now() - interval '10 minutes', 'by 5 pm');
+  -- since sql/114 a new task cannot be due in the past: made due in an hour, then (as the database) moved 10 minutes back, so it is overdue
+  tk1 := public.tsk_create_task('Count aisle 4', uc, now() + interval '1 hour', 'by 5 pm');
   reset role;
+  update public.tsk_tasks set due_at = now() - interval '10 minutes' where id = tk1;
   select count(*) into n from public.msg_outbox where entity_id = tk1 and kind = 'task_assigned' and recipient_id = uc;
   if n <> 1 then raise exception 'FAIL S9c: the assignee was not notified of the task'; end if;
   select count(*) into n from public.audit_log where org_id = oa and action = 'tasks.task.created' and entity_id = tk1::text;
