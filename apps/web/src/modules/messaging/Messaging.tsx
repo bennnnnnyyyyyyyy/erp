@@ -35,7 +35,7 @@ export function NotificationsPage() {
   const columns: Column<AppNotification>[] = [
     { key: 'when', label: tr('When'), value: (n) => n.createdAt, render: (n) => <span className="nowrap">{formatDateTime(n.createdAt, session.org)}</span> },
     { key: 'title', label: tr('Message'), value: (n) => n.title, render: (n) => (<>{n.readAt ? n.title : <strong>{n.title}</strong>}{n.body && <div><MessageBody body={n.body} /></div>}</>) },
-    { key: 'open', label: '', value: () => '', render: (n) => { const to = notificationTarget(n); return to ? <Link to={to}>{tr('Open')}</Link> : null; } },
+    { key: 'open', label: '', value: () => '', render: (n) => { const to = notificationTarget(n, session); return to ? <Link to={to}>{tr('Open')}</Link> : null; } },
   ];
 
   return (
@@ -63,6 +63,8 @@ export function NotificationsPage() {
 type OutboxRow = {
   id: string; recipientId: string | null; channel: string; kind: string; subject: string; status: 'pending' | 'sending' | 'sent' | 'failed' | 'expired' | 'cancelled';
   attempts: number; maxAttempts: number; nextAttemptAt: string; expiresAt: string; lastError: string | null; sentAt: string | null; createdAt: string;
+  /** The document the message carries (sql/107): an invoice or a credit or debit note. */
+  entityType?: string | null; entityId?: string | null;
   /** How it was delivered (sql/053): simulated, resend, slack-webhook … */
   deliveredVia?: string | null;
 };
@@ -102,7 +104,7 @@ export function OutboxPage() {
     { key: 'when', label: tr('Queued'), value: (m) => m.createdAt, render: (m) => <span className="nowrap">{formatDateTime(m.createdAt, session.org)}</span> },
     { key: 'to', label: tr('To'), value: (m) => (m.recipientId ? who(m.recipientId) : tr('Company channel')) },
     { key: 'kind', label: tr('Kind'), value: (m) => m.kind, render: (m) => tr(KIND_LABEL[m.kind] ?? m.kind) },
-    { key: 'subject', label: tr('Message'), value: (m) => m.subject, render: (m) => (<>{m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>) },
+    { key: 'subject', label: tr('Message'), value: (m) => m.subject, render: (m) => { const to = outboxDocPath(m); return (<>{to ? <Link to={to}>{m.subject}</Link> : m.subject}{m.lastError && <div className="error small">{m.lastError}</div>}</>); } },
     { key: 'channel', label: tr('Channel'), value: (m) => m.channel, render: (m) => (<>{m.channel}{m.deliveredVia && m.deliveredVia !== m.channel ? <div className="muted small">{m.deliveredVia}</div> : null}</>) },
     { key: 'status', label: tr('Status'), value: (m) => m.status, render: (m) => <span className={`pill st-${m.status}`}>{tr(STATUS_LABEL[m.status] ?? m.status)}</span> },
     { key: 'attempts', label: tr('Attempts'), value: (m) => m.attempts, align: 'right', render: (m) => `${m.attempts}/${m.maxAttempts}` },
@@ -127,4 +129,12 @@ export function OutboxPage() {
       )}
     </section>
   );
+}
+
+/** A message that carries a document opens it (Ben, 24 Nov 2026): an invoice on its page, a credit or debit note on its print page. */
+function outboxDocPath(m: Pick<OutboxRow, 'entityType' | 'entityId'>): string | null {
+  if (!m.entityId) return null;
+  if (m.entityType === 'sales_invoice') return `/sales/invoices/${m.entityId}`;
+  if (m.entityType === 'sales_note') return `/sales/print/note/${m.entityId}`;
+  return null;
 }

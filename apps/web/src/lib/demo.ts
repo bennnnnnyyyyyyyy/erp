@@ -50,9 +50,9 @@ const DEMO_MODULES: Omit<ModuleStatus, 'enabled'>[] = [
 // The shared list (MODULES) now has purchasing and sales too; the demo versions replace them instead of appearing twice (two
 // entries with the same key broke Settings > Apps; found by the smoke test).
 const ALL_DEMO_MODULES = [...MODULES.filter((m) => !DEMO_MODULES.some((d) => d.key === m.key)), ...DEMO_MODULES];
-const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales']);
+const enabledModules = new Set<string>([...MODULES.filter((m) => m.core).map((m) => m.key), 'inventory', 'purchasing', 'sales', 'reports']);
 // New UI only (24 Nov): sample books for the accounting screens Grant signs off (lib/demoAccounting.ts). The old UI's demo is unchanged.
-if (newUi) for (const k of ['accounting', 'finance', 'reports']) enabledModules.add(k);
+if (newUi) for (const k of ['accounting', 'finance']) enabledModules.add(k);
 
 let auditId = 0;
 const audit: (AuditEntry & { before: unknown; after: unknown })[] = [];
@@ -79,7 +79,10 @@ export async function demoApi<T>(path: string, init: RequestInit = {}): Promise<
   if (newUi && /^\/v1\/(accounting(\/|$)|finance\/vat-summary$)/.test(pathname ?? '')) {
     return structuredClone(handleAccounting(method, pathname ?? '', new URLSearchParams(search ?? ''), body<Record<string, unknown>>(init), demoActor.id)) as T;
   }
-  if (newUi && (pathname ?? '').startsWith('/v1/reports')) return structuredClone(handleReports(method, pathname ?? '', new URLSearchParams(search ?? ''))) as T;
+  if (/^\/v1\/reports\//.test(pathname ?? '')) {
+    const rest = (pathname ?? '').replace(/^\/v1\/reports\/?/, '').split('/').filter(Boolean);
+    return structuredClone(handleReports(method, rest, body<Record<string, unknown>>(init), new URLSearchParams(search ?? ''))) as T;
+  }
   const area0 = /^\/v1\/(inventory|purchasing|sales)(?:\/|$)/.exec(pathname ?? '')?.[1] as 'inventory' | 'purchasing' | 'sales' | undefined;
   if (area0) {
     const rest = (pathname ?? '').replace(/^\/v1\/[a-z]+\/?/, '').split('/').filter(Boolean);

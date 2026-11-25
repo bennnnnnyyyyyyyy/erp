@@ -13,6 +13,9 @@ export function presetPeriod(kind: ReportPeriodPreset, today: string = todayIn()
     return { from: ymd(first), to: ymd(last) };
   }
   if (kind === 'last_30') return { from: ymd(new Date(t.getTime() - 29 * 86_400_000)), to: today };
+  if (kind === 'last_90') return { from: ymd(new Date(t.getTime() - 89 * 86_400_000)), to: today };
+  // Twelve calendar months with this one, as the home card "Your main suppliers" counts them.
+  if (kind === 'last_12_months') return { from: ymd(new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() - 11, 1))), to: today };
   return { from: `${today.slice(0, 4)}-01-01`, to: today };
 }
 

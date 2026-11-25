@@ -78,7 +78,7 @@ alertsRoutes.get('/rules', requirePermission('alerts.rules.view'), async (c) => 
   const [rules, recipients, firings] = await Promise.all([
     db
       .from('alr_rules')
-      .select('id, name, kind, item_id, threshold, repeat_hours, enabled, created_at')
+      .select('id, name, kind, item_id, threshold, repeat_hours, enabled, created_at, report_id')
       .eq('org_id', orgOf(c))
       .is('deleted_at', null)
       .order('created_at'),
@@ -97,6 +97,7 @@ alertsRoutes.get('/rules', requirePermission('alerts.rules.view'), async (c) => 
         name: r.name,
         kind: r.kind,
         itemId: r.item_id,
+        reportId: r.report_id ?? null, // sql/111: a report alert's saved report (the Alerts page links to it)
         threshold: r.threshold === null ? null : Number(r.threshold),
         repeatHours: r.repeat_hours,
         enabled: r.enabled,

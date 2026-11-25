@@ -144,7 +144,7 @@ Running a report is not audited (it only reads), the same as opening any other r
 | Screen | Route | Permission | Notes |
 |---|---|---|---|
 | Library | `/reports` | `reports.library.read` | Areas: Sales, Buy, Stock, Money, Tax, then "My reports" and "Company reports". Each card opens the existing screen. Cards the person cannot open are not shown. |
-| Builder | `/reports/new`, `/reports/:id` | `reports.custom.read` | Left: source, columns, filters, group by, totals, chart. Right: the result table and the chart. Buttons: Run, Save, Excel, PDF, Print, "Alert me when", "Send on a schedule". |
+| Builder | `/reports/new`, `/reports/:id` | `reports.custom.read` | One sentence (Ben, 24 Nov 2026, option A): "Show [what] by [split] for [period]", with "+ Only include" (filters), "+ Also show" (more totals or list columns), "+ Split again by" and "Order and rows" under it; the report runs by itself after each change and shows right below (Bars, Line, Pie or Table only). Buttons: Save, Excel, PDF, Print, "Alert me when", "Send on a schedule". The saved definition is unchanged. |
 | Templates | inside the library | `reports.custom.read` | Each template opens in the builder; "Copy and change" saves your own version. |
 | Sales forecast | `/reports/forecast` | `reports.forecast.read` | By product or by customer; next 30/60/90 days; trend and confidence; the method in plain words on the screen. |
 | Schedules | `/reports/schedules` | `reports.schedules.manage` | List, add, pause, delete. |

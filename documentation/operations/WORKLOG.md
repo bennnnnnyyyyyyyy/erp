@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Main merged into the new UI (track-c, feat/bellvox-look; no SQL)
+
+**Objective.** Ben: merge main (PRs #121 and #122: report builder as one sentence, shortcuts, phone width, print and QR code, bell on
+the phone, deep links after sign-in) into `feat/bellvox-look`, by the plan in the track-c hand-over.
+
+**Actions Completed.**
+- Conflicts in `App.tsx`, `lib/demo.ts`, `lib/demoReports.ts`, `modules/registry.tsx` and this file. Both sides kept.
+- `App.tsx`: main's return-path imports and the new UI's lazy screens. The return path works for both UIs (it is in `App`).
+- `demoReports.ts`: main's file (two sources, the in-memory run, saved reports you can add and change) is the base. The new UI adds, only
+  when it is on: two saved reports with real definitions on those sources, and the sample sales forecast. Our old seven column-less
+  sources are gone, so the new UI's library shows the same ready-made reports as main's sample build.
+- `demo.ts`: main's reports call (now also passes the query) and the new UI's accounting sample books. `reports` is on for both UIs.
+- `registry.tsx`: main's `/sales/orders` list route (with the new list screen too) and main's report routes (builder in the sample
+  build); the forecast route is in the sample build only when the new UI is on.
+- `VatSummary.tsx` merged by itself; the exports the new UI uses are still there. No Arabic text is in two tables.
+
+**Database / System Result.** None.
+
+**Safety Status.** tsc 0 errors (shared, api, web); vitest shared 109, api 808, web 230 pass; biome: 4 warnings in `App.tsx`, the same
+lines as on main. Sample build (port 5180): 16 pages × 360 and 390 px × English and Arabic, none wider than the screen, no page errors;
+report library, forecast, builder, sales orders and trial balance checked to show data. Not pushed (Ben pushes).
+
 ## 2026-11-24 — New UI: report library and sales forecast in versions (track-c, feat/bellvox-look; no SQL)
 
 **Objective.** Ben (24 Nov): start the next new-UI pages. The Reports & Insights screens were only old screens inside the new frame;
@@ -76,6 +98,139 @@ and show Grant what we learned. Keep `feat/bellvox-look` up to date with main.
 **Safety Status.** tsc 0 errors (shared, api, web); vitest 87 + 793 + 199 pass; biome 0 errors on the changed files. Checks were run
 with the installed tools directly, because `node_modules/.bin` in the main checkout is empty after an `npm install` that reported
 "up to date" (`npm rebuild` in the main checkout should restore `npm run typecheck` and `npm test`). Not deployed.
+
+## 2026-11-24 — Phone: bell panel fixed; deep links survive sign-in (no migration)
+
+**Objective.** Ben's phone test on live (iPhone, Safari, dark mode): (1) a link into the app (the invoice QR code, bell, WhatsApp or
+email) must open that page after signing in; (2) the bell panel ran off the left edge and its rows were drawn over each other.
+
+**Actions Completed.**
+- Bell (`apps/web/src/styles.css`): each row keeps its full height (`flex: none`; Safari shrank the buttons in the scrolling list below
+  their text, so the text of one row was drawn over the next) and long words wrap. On a phone (720 px or less) the panel is fixed under
+  the top bar, 8 px from each screen edge, above the account button (it was at least 340 px wide and pinned to the bell).
+- Deep links (`apps/web/src/lib/returnTo.ts`, `App.tsx`): code check: signed out, the sign-in screen shows at the same address, so a
+  password sign-in already returned to the page. Google sign-in and the emailed links come back to the home address and lost it. Now
+  the page asked for (path and query) is kept for an hour while signed out and opened after sign-in when the app came back to home.
+  Only a page of this app is accepted (no "//host", no other site). `returnTo.test.ts`: 5 tests.
+- Seen in Ben's picture: "Low stock: R-FR2" three times (the old sql/013 message and the alert engine); stopping the old one is Ben's
+  answer 5, in migration 112 with step 6.
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 223 passed. The bell panel was checked in the sample-data build at 360 and 390 px, English
+and Arabic, light and dark, with rows like Ben's (the sample build has no bell, so its markup was added to the page for the check);
+pictures `.temp/reports-builder/bell-phone-after-*.jpg`. Not checked: Safari on a real iPhone, and Google sign-in on live (needs the
+live Supabase sign-in).
+
+## 2026-11-24 — Printed documents: bigger QR code, clean totals box (no migration)
+
+**Objective.** Ben: the QR code on printed invoices, drafts and notes was too small, and on the Simple layout the line under "Total"
+stopped halfway across the totals box.
+
+**Actions Completed.** `apps/web/src/modules/sales/print/print.css` only: the QR code is 30 mm square (was 20 mm), its caption beside
+it may be up to 45 mm wide (one line in one language; English and Arabic together take three short lines). Cause of the half line: the
+app's own table styles reached the totals box (a line under the label cell only, a grey stripe on one cell, and 100% width that
+squeezed the QR caption). The totals box now draws its own lines across both cells (a dark line above the total, a light one under
+it) and has its own width (at least 80 mm). Applies to every layout and language, the downloaded PDF (same page, `pdf.ts` unchanged)
+and the public link. Print layout pictures refreshed (`apps/web/e2e/print.e2e.ts-snapshots/`, 8 pictures), checked by eye: everything
+stays on one A4 page.
+
+**Database / System Result.** None.
+
+**Safety Status.** Print picture tests: 8 passed (desktop). Note: the picture tests allow 1% difference, so a size change of the QR code
+alone does not fail them; refresh them with `--update-snapshots=all` after a print change. Not checked: printing on paper, scanning the
+bigger code with a phone.
+
+## 2026-11-24 — Phone width: pages of an app with a long name were wider than the screen (old UI; no migration)
+
+**Objective.** At 360-390 px, the Reports & Insights pages were about 60 px wider than the screen (the account button was cut off and the
+page scrolled sideways). Ben's yes to fix it in the old UI.
+
+**Actions Completed.** Cause: the top bar's app link (`Shell.tsx`, `.topbar-app-link`) never shrinks (no wrap, fixed size in a flex
+row), and the shell's grid columns were plain `1fr`, which grow to their widest content. A long app name ("Reports & Insights") plus the
+top bar's buttons needed 431 px, so the column and every page under it became 431 px wide. Apps with short names fitted, so it showed
+only there; a long Arabic name would hit it too. `apps/web/src/styles.css`: shell columns are `minmax(0, 1fr)` (desktop and phone); on a
+phone the app link may shrink and its name ends in "…". Print styles unchanged. Track-c's new frame not touched.
+
+**Database / System Result.** None (CSS only).
+
+**Safety Status.** Measured in the sample-data build on 127.0.0.1 at 360 and 390 px, English and Arabic (right to left): home, Reports
+library, Sales orders list, New sales order form, report builder all fit (page width = screen width; before: 431 px). Pictures:
+`.temp/reports-builder/phone-width-*.jpg`. Web tests passed. Not checked on a real phone or on the live app.
+
+## 2026-11-24 — Shortcuts, Ben's answers: report periods match the home cards; overdue alert and sent documents link (no migration)
+
+**Objective.** Ben answered the 8 open items of the shortcut check (via erp-master, `.temp/2026-11-24-shortcuts-check.md`).
+
+**Actions Completed.**
+- Item 3: ready-made "Top 20 products" now covers the last 90 days and "Purchases by supplier" the last 12 months, like their home cards
+  (`packages/shared/src/reportTemplates.ts`; new period choices `last_90` and `last_12_months`, also offered in the builder's "for";
+  `definition.ts`, with tests; Arabic).
+- Item 4: the bell's "Money overdue" alert opens the ready-made "Money owed by age" when the person can open Reports & Insights, else
+  /finance/owed (`NotificationBell.tsx`, also the Messages page).
+- Item 6: the Messages page links a sent invoice to its page and a sent credit or debit note to its print page. `GET
+  /v1/messaging/outbox` now sends `entityType` and `entityId` (columns already readable, sql/008).
+- Items 2, 7, 8: kept as they are (Ben). Items 1 (members' report alert link) and 5 (stop the old "Low stock: <code>" notification
+  from sql/013's job) need SQL: they go into migration 112 with step 6, as Ben asked.
+
+**Database / System Result.** None (no SQL).
+
+**Safety Status.** `tsc` 0 errors (shared, api, web); tests: shared 109, api 808, web 218 passed; biome 0 errors. Not checked on real data.
+
+## 2026-11-24 — Report builder as one sentence (Ben's option A; no migration)
+
+**Objective.** Ben found the report builder's controls confusing (six boxes of settings before the report, technical words, a Run button
+that looked switched off). Two options were shown to him with pictures (`.temp/reports-builder/2026-11-24-builder-options.md`, taken
+from the sample-data build on 127.0.0.1); he picked A: one sentence on top, the report right under it.
+
+**Actions Completed.**
+- `apps/web/src/modules/reports/Builder.tsx`: the settings are "Show [what] by [split] for [period]" (`.rb-sentence`). "What" is a total
+  in plain words (a column added up, "Number of lines") or "Each line (a list)"; "by" is a text or date column or "Nothing (every
+  line)"; "for" is a period choice or "Pick dates…". Under it, chips: filters as short sentences (click to change, ✕ to remove),
+  "+ Only include…", "+ Also show…" (another total, or the list's columns), "+ Split again by…", "Order and rows…". Above the report:
+  Bars / Line / Pie / Table only. No Run button: the report runs 0.35 s after the last change, and a slower earlier answer is dropped.
+  Save is the main button.
+- New `modules/reports/sentence.ts` (the sentence's choices to and from the same definition; sql/109 and saved reports unchanged) and
+  `sentence.test.ts` (6 tests, each sentence gives a definition the shared check accepts).
+- `cells.ts`: headings in plain words ("Total", not "Sum of Total"; "Number of lines" for a count). Excel and alerts use the same names.
+- `styles.css` (`.rb-*`, logical properties; under 640 px each choice takes a full line). Arabic for every new text (`i18nReports.ts`).
+- Plan (`REPORTS_INSIGHTS_PLAN.md`, the Builder screen row) updated.
+
+**Database / System Result.** None (no SQL, no API change).
+
+**Safety Status.** `tsc` 0 errors (web); web tests 218 passed (Arabic coverage included); biome 0 errors (warnings are array-index keys,
+as before). Looked at in the sample-data build on 127.0.0.1 (desktop, 390 px, right-to-left; pictures `.temp/reports-builder/built-A-*`).
+Found there, not ours: at 390 px every page of the app is about 60 px wider than the screen (the app shell, also on the library page).
+Not checked on real data or the live app.
+
+## 2026-11-24 — Shortcuts: home cards open Reports & Insights; broken and empty links fixed (no migration)
+
+**Objective.** Ben's feedback on Reports steps 1-5 (via erp-master): tiles and cards about a report must open it in Reports & Insights, and
+every shortcut in the app that should point to a newer page must do so. A read-only sweep of `apps/web/src` listed every shortcut.
+
+**Actions Completed.**
+- Home (owner summary, `modules/core/OwnerHome.tsx`): "Receivables and payables" opens the ready-made report "Money owed by customer",
+  "Inventory value and expiry" opens "Stock by warehouse", "Top products" opens "Top 20 products", "Your main suppliers" opens "Purchases by
+  supplier", but only when the company has Reports & Insights switched on and the person has `reports.custom.read`; otherwise the old page
+  (new `modules/reports/reportLinks.ts`). "Profit and loss" (no ready-made report) and "Pending approvals" are unchanged.
+- Notifications (`components/NotificationBell.tsx`, also the Messages page): transfers, counts and adjustments now open their page (they
+  opened nothing). A report alert opens its saved report: `GET /v1/messaging/notifications` adds `reportId`, read with the person's own
+  sign-in from `alr_rules` (owners and admins only, sql/028); others still get the library.
+- Alerts page: a report alert links to its report (`GET /v1/alerts/rules` sends `reportId`, sql/111's column).
+- Broken link: "← Sales orders" (sales order page, new order form) went to `/sales/orders`, which the real app does not have ("Page not
+  found"); `registry.tsx` adds a hidden `/sales/orders` page with the same list.
+- Credit and debit notes: the VAT summary and the ledger (also statements and treasury, through `sourcePath`) link a note to its print page.
+- Guide (`help/helpContent.ts`, English and Arabic): removed "No printing or PDF of invoices yet"; importing from a file now exists
+  (Settings → Import from a file).
+- Sample-data build: the report builder now opens there on two made-up sources (`lib/demoReports.ts`), to look at the builder on
+  127.0.0.1 without a database (used for the builder options for Ben, `.temp/reports-builder/`).
+
+**Database / System Result.** None (no SQL). The two API changes read existing columns with the caller's own sign-in.
+
+**Safety Status.** `tsc` 0 errors (shared, api, web); tests: shared 109, api 808, web 212 passed; biome 0 errors on changed files (7 old web
+warnings). Not checked in a browser on real data. Open for Ben (unclear): members' report alerts need the report id stored on the
+notification (a migration, suggested with step 6); "Inventory value" card also shows expiry, which the stock report does not; card periods
+(90 days, 12 months) differ from the reports' (30 days, this month).
 
 ## 2026-11-24 — Reports & Insights: `sql/109`, `110`, `111` applied to live
 

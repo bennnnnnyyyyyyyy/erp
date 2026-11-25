@@ -4,6 +4,7 @@ import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
+import { Link } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
@@ -13,7 +14,7 @@ import { tr, trf } from '../../lib/i18n';
 // or approve anything. The rules are checked every five minutes. Owners and admins only.
 
 type Recipient = { type: 'team' | 'role' | 'user'; id?: string; role?: string };
-type Rule = { id: string; name: string; kind: Kind; itemId: string | null; threshold: number | null; repeatHours: number; enabled: boolean; recipients: Recipient[]; timesFired: number; lastFiredAt: string | null };
+type Rule = { id: string; name: string; kind: Kind; itemId: string | null; reportId?: string | null; threshold: number | null; repeatHours: number; enabled: boolean; recipients: Recipient[]; timesFired: number; lastFiredAt: string | null };
 type Team = { id: string; name: string; userIds: string[] };
 type Person = { userId: string; name: string };
 type Item = { id: string; sku: string; name: string };
@@ -115,7 +116,7 @@ export function AlertsPage() {
       <div className="table-wrap"><table><thead><tr><th scope="col">{tr('Rule')}</th><th scope="col">{tr('When')}</th><th scope="col">{tr('Recipients')}</th><th scope="col">{tr('Send again after')}</th><th scope="col">{tr('Times sent')}</th><th scope="col">{tr('State')}</th><th scope="col"><span className="sr-only">{tr('Actions')}</span></th></tr></thead><tbody>
         {rules.data.map((r) => (
           <tr key={r.id}><td>{r.name}</td>
-            <td>{ruleText(r)}</td>
+            <td>{r.kind === 'report_value' && r.reportId ? <Link to={`/reports/${r.reportId}`}>{ruleText(r)}</Link> : ruleText(r)}</td>
             <td>
               {changing?.id === r.id ? (
                 <span className="flex flex-wrap gap-2">
