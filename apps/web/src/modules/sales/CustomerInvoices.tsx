@@ -12,7 +12,7 @@ import { ClickRow } from '../../components/ClickRow';
 import { DateInput } from '../../components/DateInput';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { RecordHistory } from '../../components/RecordHistory';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { PaymentLinks } from '../finance/PaymentLinks';
 import { Pill } from '../trade/common';
@@ -79,6 +79,7 @@ export function CustomerInvoices() {
   const item = (id: string) => { const i = items.data?.find((v) => v.id === id); return i ? `${i.sku} · ${i.name}` : id; };
   const rows = orders.data.filter((o) => o.status !== 'cancelled').map((o) => ({ o, billing: billingFor(o.lines.map((l) => ({ orderLineId: l.id, itemId: l.itemId, qty: l.qty })), o.requestStatus, invoicedByLine) }));
   const open = rows.filter((r) => r.billing.some((b) => b.flag === 'under_invoiced'));
+  const waiting = rows.filter((r) => r.billing.length > 0 && r.billing.every((b) => b.flag === 'not_delivered')).length;
   const chosen = rows.find((r) => r.o.id === orderId);
   const canManage = session.permissions.includes('sales.invoices.manage');
   const vatOn = vat.data?.vatRegistered === true;
@@ -124,12 +125,25 @@ export function CustomerInvoices() {
       {canManage && (
         <FormToggle label={tr('Create an invoice')} open={formOpen} onOpenChange={setFormOpen}>
           <div className="form-row">
-            <label>{tr('Delivered sales order')}
-              <select value={orderId} disabled={!!editing} onChange={(e) => { setOrderId(e.target.value); setQty({}); }}>
-                <option value="">{tr('Choose an order…')}</option>
-                {open.map((r) => <option key={r.o.id} value={r.o.id}>{r.o.number} · {customer(r.o.customerId)}</option>)}
-              </select>
-            </label>
+            {/* Ben, 25 Nov: "choose an order doesn't show anything". Only delivered orders with something left to bill can be invoiced;
+                with none, say so and point to the orders still waiting for delivery instead of an empty list. */}
+            {open.length === 0 && !editing ? (
+              <div className="notice" role="status">
+                <p style={{ marginBlock: 0 }}>{tr('No delivered orders to invoice yet. An order can be invoiced once its goods have left the warehouse.')}</p>
+                {waiting > 0 ? (
+                  <Link to="/sales/orders">{trf(waiting === 1 ? 'See the {n} order waiting for delivery' : 'See the {n} orders waiting for delivery', { n: waiting })}</Link>
+                ) : (
+                  <Link to="/sales/orders/new">{tr('New sales order')}</Link>
+                )}
+              </div>
+            ) : (
+              <label>{tr('Delivered sales order')}
+                <select value={orderId} disabled={!!editing} onChange={(e) => { setOrderId(e.target.value); setQty({}); }}>
+                  <option value="">{tr('Choose an order…')}</option>
+                  {open.map((r) => <option key={r.o.id} value={r.o.id}>{r.o.number} · {customer(r.o.customerId)}</option>)}
+                </select>
+              </label>
+            )}
             <label>{tr('Invoice date')}<DateInput value={date} onChange={(e) => setDate(e.target.value)} required /></label>
           </div>
           {chosen && (
@@ -211,7 +225,7 @@ export function CustomerInvoicePage() {
   const lineItem = (orderLineId: string) => record.data?.order?.lines.find((l) => l.id === orderLineId)?.itemId;
   const theirCodes = codesFor(usePartyCodes('customer', record.data?.invoice.customerId), (record.data?.invoice.lines ?? []).map((l) => lineItem(l.orderLineId)));
 
-  if (record.error) return <section className="page"><Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link><Loading error={record.error} /></section>;
+  if (record.error) return <section className="page"><BackLink to="/sales/invoices" label={tr('← Sales invoices')} backLabel={tr('← Back')} /><Loading error={record.error} /></section>;
   if (!record.data || !customers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = record.data.invoice;
   const order = record.data.order;
@@ -245,7 +259,7 @@ export function CustomerInvoicePage() {
 
   return (
     <section className="page">
-      <Link to="/sales/invoices" className="back-link">{tr('← Sales invoices')}</Link>
+      <BackLink to="/sales/invoices" label={tr('← Sales invoices')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{inv.number}</h1>
         <Pill status={inv.status === 'void' ? 'cancelled' : 'received'} label={inv.status === 'void' ? tr('Void') : tr('Issued')} />

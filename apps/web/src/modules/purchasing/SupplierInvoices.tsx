@@ -12,7 +12,7 @@ import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { RecordHistory } from '../../components/RecordHistory';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { PaymentsAgainst } from '../finance/FinanceRecords';
 import { UnpaidBills } from './UnpaidBills';
 import { SupplierNotes } from './SupplierNotes';
@@ -93,7 +93,7 @@ export function SupplierInvoicePage() {
   // The supplier's own codes for these items (sql/099), as a "Their code" column when a line has one.
   const theirCodes = codesFor(usePartyCodes('supplier', invoice.data?.supplierId), (invoice.data?.lines ?? []).map((l) => l.itemId ?? undefined));
 
-  if (invoice.error) return <section className="page"><Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link><Loading error={invoice.error} /></section>;
+  if (invoice.error) return <section className="page"><BackLink to="/purchasing/invoices" label={tr('← Purchase invoices')} backLabel={tr('← Back')} /><Loading error={invoice.error} /></section>;
   if (!invoice.data || !suppliers.data || !items.data) return <section className="page"><Loading /></section>;
   const inv = invoice.data;
   const order = { number: inv.orderNumber };
@@ -112,7 +112,7 @@ export function SupplierInvoicePage() {
 
   return (
     <section className="page">
-      <Link to="/purchasing/invoices" className="back-link">{tr('← Purchase invoices')}</Link>
+      <BackLink to="/purchasing/invoices" label={tr('← Purchase invoices')} backLabel={tr('← Back')} />
       <div className="page-head"><h1 className="mono">{inv.number}</h1></div>
       <dl className="facts">
         <div><dt>{tr('Supplier')}</dt><dd>{supplier}</dd></div>

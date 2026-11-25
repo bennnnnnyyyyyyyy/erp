@@ -11,7 +11,7 @@ import { demoMode } from '../../lib/demo';
 import type { Party, PurchaseOrder } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
 import { todayIn } from '../../lib/dates';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
@@ -248,7 +248,7 @@ export function PurchaseOrderPage() {
 
   return (
     <section className="page">
-      <Link to="/purchasing/orders" className="back-link">{tr('← Purchase orders')}</Link>
+      <BackLink to="/purchasing/orders" label={tr('← Purchase orders')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{o.number}</h1>
         {statusPill(o)}

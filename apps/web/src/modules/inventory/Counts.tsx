@@ -12,7 +12,7 @@ import { formatDateTime } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
 import { formatQty, parseAmount } from '../../lib/numbers';
 import { usePeople } from '../../lib/people';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { useCatalog } from './Inventory';
@@ -203,7 +203,7 @@ export function CountPage() {
 
   return (
     <section className="page wide">
-      <Link to="/inventory/counts" className="back-link">{tr('← Stock counts')}</Link>
+      <BackLink to="/inventory/counts" label={tr('← Stock counts')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{count.number}</h1>
         <StatusPill status={count.status} />

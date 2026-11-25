@@ -13,7 +13,7 @@ import { demoMode } from '../../lib/demo';
 import type { DemoRequest, StockRow } from '../../lib/demoInventory';
 import { usePeople } from '../../lib/people';
 import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
@@ -137,7 +137,7 @@ export function NewRequest() {
 
   return (
     <section className="page">
-      <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
+      <BackLink to="/inventory/requests" label={tr('← Stock requests')} backLabel={tr('← Back')} />
       <h1>{tr('Send goods out')}</h1>
       <p className="muted">{tr('Stock leaves the warehouse. Your manager will be asked to approve this before the goods leave, and the quantities are reserved until they decide.')}</p>
       <p className="muted small">{tr('Want to add stock instead?')} <Link to="/inventory/receive">{tr('Receive goods')}</Link></p>
@@ -217,7 +217,7 @@ export function RequestPage() {
 
   return (
     <section className="page">
-      <Link to="/inventory/requests" className="back-link">{tr('← Stock requests')}</Link>
+      <BackLink to="/inventory/requests" label={tr('← Stock requests')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{r.number}</h1>
         <StatusPill status={r.status} />

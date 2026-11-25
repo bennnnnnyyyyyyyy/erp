@@ -1464,4 +1464,13 @@ export const SCREENS_AR: Record<string, string> = {
   "Use at least 8 characters for the password.": "استخدم 8 أحرف على الأقل لكلمة المرور.",
   "The two passwords are not the same.": "كلمتا المرور غير متطابقتين.",
   "The passwords don't match.": "كلمتا المرور غير متطابقتين.",
+  // Dead-ends audit (Ben, 25 Nov 2026): Back returns where you came from; empty invoice picker; not enough stock on a sales order.
+  "← Back": "→ رجوع",
+  "No delivered orders to invoice yet. An order can be invoiced once its goods have left the warehouse.": "لا توجد أوامر مُسلَّمة للفوترة بعد. يمكن فوترة الأمر بعد خروج بضاعته من المستودع.",
+  "See the {n} order waiting for delivery": "اعرض الأمر ({n}) الذي ينتظر التسليم",
+  "See the {n} orders waiting for delivery": "اعرض الأوامر ({n}) التي تنتظر التسليم",
+  "Not enough stock in {warehouse} to deliver this order:": "لا يوجد مخزون كافٍ في {warehouse} لتسليم هذا الأمر:",
+  "{item}: needs {need}, available {available}, short {short}.": "{item}: المطلوب {need}، المتاح {available}، الناقص {short}.",
+  "Move from {warehouse} ({qty} available)": "انقل من {warehouse} (المتاح {qty})",
+  "Ask a manager to order it or move it from another warehouse.": "اطلب من المدير شراءه أو نقله من مستودع آخر.",
 };

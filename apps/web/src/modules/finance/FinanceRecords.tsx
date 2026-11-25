@@ -9,7 +9,7 @@ import { ConfirmButton } from '../../components/FormToggle';
 import { ErrorToast } from '../../components/Toast';
 import { api } from '../../lib/api';
 import { tr, trf } from '../../lib/i18n';
-import { Link, useParam } from '../../lib/router';
+import { BackLink, Link, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { Pill } from '../trade/common';
@@ -90,7 +90,7 @@ export function PaymentPage() {
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));
   const voiding = useVoid(`/v1/finance/payments/${id}/void`, () => record.reload());
 
-  if (record.error) return <section className="page"><Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link><Loading error={record.error} /></section>;
+  if (record.error) return <section className="page"><BackLink to="/finance/payments" label={tr('← Payments')} backLabel={tr('← Back')} /><Loading error={record.error} /></section>;
   if (!record.data) return <section className="page"><Loading /></section>;
   const p = record.data.pay;
 
@@ -105,7 +105,7 @@ export function PaymentPage() {
 
   return (
     <section className="page">
-      <Link to="/finance/payments" className="back-link">{tr('← Payments')}</Link>
+      <BackLink to="/finance/payments" label={tr('← Payments')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{p.number}</h1>
         <Pill status={p.direction === 'in' ? 'received' : 'ordered'} label={p.direction === 'in' ? tr('Customer receipt') : tr('Payment to supplier or expense')} />
@@ -136,7 +136,7 @@ export function ExpensePage() {
   const suppliers = useLoad(() => api<Named[]>('/v1/purchasing/suppliers').catch(() => [] as Named[]));
   const voiding = useVoid(`/v1/finance/expenses/${id}/void`, () => expense.reload());
 
-  if (expense.error) return <section className="page"><Link to="/finance" className="back-link">{tr('← Expenses')}</Link><Loading error={expense.error} /></section>;
+  if (expense.error) return <section className="page"><BackLink to="/finance" label={tr('← Expenses')} backLabel={tr('← Back')} /><Loading error={expense.error} /></section>;
   if (!expense.data) return <section className="page"><Loading /></section>;
   const e = expense.data;
   const category = categories.data?.find((c) => c.id === e.categoryId)?.name ?? '—';
@@ -145,7 +145,7 @@ export function ExpensePage() {
 
   return (
     <section className="page">
-      <Link to="/finance" className="back-link">{tr('← Expenses')}</Link>
+      <BackLink to="/finance" label={tr('← Expenses')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{e.number}</h1>
         <PaymentStatus status={e.status} />

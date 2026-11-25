@@ -13,7 +13,7 @@ import { ListView, type Column } from '../../components/views/ListView';
 import { api } from '../../lib/api';
 import type { DemoItem, DemoWarehouse } from '../../lib/demoInventory';
 import type { Party } from '../../lib/demoTrade';
-import { Link, navigate } from '../../lib/router';
+import { BackLink, Link, navigate } from '../../lib/router';
 import { parseAmount, toMinor } from '../../lib/numbers';
 import { SearchSelect } from '../../components/SearchSelect';
 import { useLoad } from '../../lib/useLoad';
@@ -443,7 +443,7 @@ export function NewOrderForm(props: {
 
   return (
     <section className="page">
-      <Link to={props.backTo} className="back-link">← {props.backLabel}</Link>
+      <BackLink to={props.backTo} label={`← ${props.backLabel}`} backLabel={tr('← Back')} />
       <h1>{props.title}</h1>
       <p className="muted">{props.intro}</p>
       <form className="form-card stack" onSubmit={submit}>

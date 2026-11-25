@@ -9,11 +9,12 @@ import { api } from '../../lib/api';
 import { demoMode } from '../../lib/demo';
 import type { Party, SalesOrder, SOStatus } from '../../lib/demoTrade';
 import { formatDateTime } from '../../lib/format';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { usePaged } from '../../lib/usePaged';
 import { useSession } from '../../session';
 import { Shipments } from './Shipments';
+import { StockShortage } from './StockShortage';
 import { ConfirmButton } from '../../components/FormToggle';
 import { NewOrderForm, PartyList, Pill, useCatalog } from '../trade/common';
 
@@ -166,7 +167,7 @@ export function SalesOrderPage() {
 
   return (
     <section className="page">
-      <Link to="/sales/orders" className="back-link">{tr('← Sales orders')}</Link>
+      <BackLink to="/sales/orders" label={tr('← Sales orders')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{o.number}</h1>
         <Pill status={o.status} label={tr(STATUS[o.status])} />
@@ -222,6 +223,8 @@ export function SalesOrderPage() {
         </p>
       )}
 
+      {/* Dead-ends audit, 25 Nov: say before asking the warehouse what is short, and offer the step that brings the stock. */}
+      {o.status === 'open' && !demoMode && <StockShortage lines={o.lines} warehouseId={o.warehouseId} itemName={cat.itemName} warehouseName={cat.warehouseName} />}
       {o.status === 'open' && (canFulfil || canManageOrder) && (
         <div className="form-actions" style={{ marginBlockStart: '1rem' }}>
           {canFulfil && <Button type="submit" disabled={busy} onClick={() => act('request-stock', 'Stock requested. A manager now has to approve it.')}>{tr('Request stock from warehouse')}</Button>}

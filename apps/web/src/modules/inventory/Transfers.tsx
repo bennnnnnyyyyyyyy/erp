@@ -11,7 +11,7 @@ import { demoMode } from '../../lib/demo';
 import type { DemoTransfer, InTransitRow, StockRow, TransferStatus } from '../../lib/demoInventory';
 import { formatDateTime, ltrIsolate, qtyLine } from '../../lib/format';
 import { usePeople } from '../../lib/people';
-import { Link, navigate, useParam } from '../../lib/router';
+import { BackLink, Link, navigate, useParam } from '../../lib/router';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
 import { useCatalog } from './Inventory';
@@ -154,7 +154,7 @@ export function NewTransfer() {
 
   return (
     <section className="page">
-      <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
+      <BackLink to="/inventory/transfers" label={tr('← Stock transfers')} backLabel={tr('← Back')} />
       <h1>{tr('Move between warehouses')}</h1>
       <p className="muted">{tr('Your manager will be asked to approve this. The quantities are reserved at the first warehouse until then; the stock arrives at the second one when it is received there.')}</p>
       {error && <p className="error notice">{error}</p>}
@@ -216,7 +216,7 @@ export function TransferPage() {
 
   return (
     <section className="page">
-      <Link to="/inventory/transfers" className="back-link">{tr('← Stock transfers')}</Link>
+      <BackLink to="/inventory/transfers" label={tr('← Stock transfers')} backLabel={tr('← Back')} />
       <div className="page-head">
         <h1 className="mono">{t.number}</h1>
         <StatusPill status={t.status} />

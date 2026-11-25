@@ -11,6 +11,33 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Dead ends found by Ben: empty invoice picker, Back from a sales order, not enough stock (no migration)
+
+**Objective.** Ben, testing invoices on live: "choose an order doesn't show anything", "going back from a sales order takes me to a dead
+page", "when there isn't enough stock suggest the step that gets us stock".
+
+**Actions Completed.**
+- Empty picker (`sales/CustomerInvoices.tsx`): cause confirmed, not a bug in the data: the picker lists only delivered orders with
+  something left to invoice (an order is delivered when its stock request is issued, `packages/shared/src/billing.ts`); Ben had none,
+  as his orders could not be delivered for lack of stock. With none, the form now says so in plain words and links to the orders
+  waiting for delivery (with their number), or to a new sales order.
+- Back (`lib/router.tsx` `BackLink`, 23 back links on detail pages: sales and purchase orders, invoices, bills, payments, expenses,
+  stock requests, transfers, counts, items, tasks, bank statements): "← Back" returns to the page the person came from in this tab
+  (an invoice, the bell, a report), like the browser's back button. Opened from outside (QR code, email or WhatsApp link, reload),
+  it opens the list and names it ("← Sales orders"). The router counts in-app pages in the browser history (`erpDepth`). The dead
+  page itself: "← Sales orders" pointed to /sales/orders, which the real app lacked; fixed 24 Nov (PR #121, on live since 21:43 UTC).
+  `navigate()` no longer ignores a link to the same page with a different query.
+- Not enough stock (`sales/StockShortage.tsx`, `sales/shortage.ts`): an order that has not asked the warehouse yet shows, per item
+  short in its warehouse, needed / available / short, with "Create purchase order" for the missing quantity (filled in, as the low
+  stock pop-up does; only with `purchasing.orders.create` and Purchasing on) and "Move from <warehouse> (n available)" when another
+  warehouse has it (only with `inventory.transfers.create`; the transfer form is not filled in). Without either right: "Ask a manager".
+  (Stock is reserved when the request is made, so a shortage made "Request stock from warehouse" fail; it now shows before.)
+- Arabic for every new text (`i18nScreens.ts`). Tests: `StockShortage.test.ts` (shortage arithmetic, history depth).
+
+**Database / System Result.** None.
+
+**Safety Status.** `tsc` 0 errors; web tests 227 passed. Not checked in a browser on real data (the sample build has no stock check).
+
 ## 2026-11-24 — Phone: bell panel fixed; deep links survive sign-in (no migration)
 
 **Objective.** Ben's phone test on live (iPhone, Safari, dark mode): (1) a link into the app (the invoice QR code, bell, WhatsApp or
