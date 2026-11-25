@@ -11,6 +11,28 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — Settings → E-invoicing: the company's ETA tax registration and branch address (no migration)
+
+**Objective.** Found in the dead-ends audit: no screen set the company's tax registration number, legal name and ETA activity code,
+though the API existed and the ETA print layout asks for them. Ben's yes (via erp-master): build a small settings page in the old UI.
+
+**Actions Completed.**
+- New `apps/web/src/modules/core/settings/EInvoicingSettings.tsx`, Settings → E-invoicing (after "Invoices and documents";
+  permission `einvoicing.settings.read`, changes only with `einvoicing.settings.manage`; real app only): tax registration number,
+  legal name, ETA activity code and mode (test / live; the server refuses live until credentials and a signer exist) through the
+  existing `PUT /v1/einvoicing/profile`; the branch address that prints on ETA invoices through the existing
+  `POST/PUT /v1/einvoicing/branches`; readiness counts (items without ETA codes, customers without a tax identity) with links. With
+  the E-invoicing app off, the page says so and links to Settings → Apps.
+- Correction: the ETA print layout's "branch address" reads the ETA branch (tax_branches), not the company branch on Settings →
+  Branches; the "Fix it" link from this morning pointed there. Company tax number, activity code and branch address now link to the
+  new page through `lib/nextStep.ts` (`eta_company_missing`).
+- Arabic for every new text (`i18nScreens.ts`, page label in `i18nNav.ts`).
+
+**Database / System Result.** None (existing API and tables).
+
+**Safety Status.** `tsc` 0 errors; web tests 231 passed; biome 0 errors. Not checked in a browser (the sample build has no e-invoicing
+API); check on live: Settings → E-invoicing, save, then print an invoice with the ETA layout.
+
 ## 2026-11-25 — Dead ends, Ben's answers: next-step helper for every error, filled-in transfer, the 19 open findings (no migration)
 
 **Objective.** Ben answered the audit's 4 questions (via erp-master): build one next-step helper for every error; "which state is

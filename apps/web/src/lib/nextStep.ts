@@ -21,6 +21,9 @@ export const NEXT_STEPS: Record<string, NextStep> = {
   bill_qty_exceeds_received: { text: 'Receive the goods on the purchase order first.', to: '/purchasing/orders', label: 'Purchase orders' },
   self_approval: { text: 'Another owner or admin must approve it.' },
   count_incomplete: { text: 'Enter a counted quantity on every line, then try again.' },
+  // Not a server error: the ETA print layout's own check (sales/print/PrintDocument.tsx) when the company's tax registration or branch
+  // address is missing (Ben, 25 Nov 2026: Settings → E-invoicing).
+  eta_company_missing: { text: 'Enter the company tax registration and branch address in Settings → E-invoicing.', to: '/settings/einvoicing', label: 'E-invoicing' },
 };
 
 /** The next step for an error code, or undefined. */
