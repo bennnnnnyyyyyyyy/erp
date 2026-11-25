@@ -4,6 +4,7 @@ import { Loading } from '../../components/Loading';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
+import { demoMode } from '../../lib/demo';
 import { formatDateTime } from '../../lib/format';
 import { tr, trf } from '../../lib/i18n';
 import { Link } from '../../lib/router';
@@ -46,8 +47,9 @@ export function ReportSchedulesPage() {
   const schedules = useLoad(() => api<ReportSchedule[]>('/v1/reports/schedules'));
   const reports = useLoad(() => api<SavedReport[]>('/v1/reports/saved'));
   // Teams belong to the alerts app; with it switched off a schedule goes to roles and people only.
-  const teams = useLoad(() => api<Team[]>('/v1/alerts/teams').catch(() => [] as Team[]));
-  const people = useLoad(() => api<Person[]>('/v1/core/people'));
+  // The sample build has no people or alert teams to choose from (no API): empty lists there.
+  const teams = useLoad(() => (demoMode ? Promise.resolve([] as Team[]) : api<Team[]>('/v1/alerts/teams').catch(() => [] as Team[])));
+  const people = useLoad(() => (demoMode ? Promise.resolve([] as Person[]) : api<Person[]>('/v1/core/people')));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState(() => ({ ...EMPTY, reportId: reportFromAddress() }));
@@ -68,7 +70,9 @@ export function ReportSchedulesPage() {
 
   if (!schedules.data || !reports.data || !teams.data || !people.data)
     return (
-      <section className="page">
+      <section className="page wide">
+        {/* The heading shows while loading and on an error too (the smoke test of every screen needs one). */}
+        <h1>{tr('Scheduled reports')}</h1>
         <Loading error={schedules.error ?? reports.error ?? people.error} />
       </section>
     );
