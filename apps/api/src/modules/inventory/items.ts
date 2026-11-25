@@ -2,7 +2,7 @@ import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { pageRange } from '../../lib/paging';
+import { pageRange, readAllPages } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
 import { ok } from '../../lib/response';
@@ -54,8 +54,11 @@ export const BARCODE_RE = /^[!-~]{1,64}$/;
 
 export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   inventoryRoutes.get('/items', requirePermission('inventory.items.read'), async (c) => {
+    // Every item, 1000 at a time (lib/paging.ts: a single read stopped at 1000 rows).
     const list = (columns: string) =>
-      userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('sku');
+      readAllPages((from, to) =>
+        userDb(c).from('inv_items').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('sku').order('id').range(from, to),
+      );
     // Also on "permission denied" (42501): inv_items is read through column grants, and a new column without its grant must not
     // block every screen that lists items (sql/095 shipped without one; fixed by sql/096).
     const fallBack = (e: unknown) => !!e && (isMissingSchema(e) || (e as { code?: string }).code === '42501');
@@ -101,10 +104,16 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   });
 
   inventoryRoutes.get('/stock', requirePermission('inventory.items.read'), async (c) => {
-    const { data, error } = await userDb(c)
-      .from('inv_stock_balances')
-      .select('item_id, warehouse_id, on_hand, reserved')
-      .eq('org_id', orgOf(c));
+    // Items x warehouses passes 1000 rows quickly: read every page (lib/paging.ts).
+    const { data, error } = await readAllPages((from, to) =>
+      userDb(c)
+        .from('inv_stock_balances')
+        .select('item_id, warehouse_id, on_hand, reserved')
+        .eq('org_id', orgOf(c))
+        .order('item_id')
+        .order('warehouse_id')
+        .range(from, to),
+    );
     if (error) throw error;
     return ok(
       c,
@@ -383,12 +392,16 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   // Every item's extra units and its default buying and selling units, for the order forms' unit pickers (sql/044, sql/101). Before
   // sql/101 is applied the defaults are simply empty.
   inventoryRoutes.get('/item-units', requirePermission('inventory.items.read'), async (c) => {
-    const { data, error } = await userDb(c)
-      .from('inv_item_units')
-      .select('item_id, unit, factor, for_purchase, for_sale')
-      .eq('org_id', orgOf(c))
-      .is('deleted_at', null)
-      .order('factor');
+    const { data, error } = await readAllPages((from, to) =>
+      userDb(c)
+        .from('inv_item_units')
+        .select('item_id, unit, factor, for_purchase, for_sale')
+        .eq('org_id', orgOf(c))
+        .is('deleted_at', null)
+        .order('factor')
+        .order('id')
+        .range(from, to),
+    );
     if (error) throw error;
     const defaults = await userDb(c)
       .from('inv_items')

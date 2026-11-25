@@ -11,7 +11,7 @@ import {
   type SavedReport,
 } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { ok } from '../../lib/response';
@@ -26,7 +26,7 @@ export const reportsRoutes = new Hono<AppEnv>();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEMPLATE_RE = /^[a-z][a-z0-9_]{1,60}$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 /** A definition is small; anything larger is not one of ours. */
 const MAX_DEFINITION_CHARS = 20_000;
 

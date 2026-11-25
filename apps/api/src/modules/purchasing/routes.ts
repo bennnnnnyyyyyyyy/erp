@@ -1,8 +1,8 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { MAX_MINOR, invalid, isGoodQty, isIsoDay, jsonBody, partyBasics } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { pageRange } from '../../lib/paging';
+import { pageRange, readAllPages } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
@@ -269,8 +269,18 @@ purchasingRoutes.get('/supplier-prices', requirePermission('purchasing.prices.vi
 });
 
 purchasingRoutes.get('/suppliers', requirePermission('purchasing.suppliers.read'), async (c) => {
+  // Every supplier, 1000 at a time (lib/paging.ts: a single read stopped at 1000 rows).
   const read = (columns: string) =>
-    userDb(c).from('pur_suppliers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
+    readAllPages((from, to) =>
+      userDb(c)
+        .from('pur_suppliers')
+        .select(columns)
+        .eq('org_id', orgOf(c))
+        .is('deleted_at', null)
+        .order('name')
+        .order('id')
+        .range(from, to),
+    );
   // Until sql/076 is applied the new columns do not exist: read the old ones so the list still works.
   let { data, error } = await read(`id, code, name, contact, city, phone, payment_terms_days, ${SUPPLIER_DETAIL_COLUMNS}`);
   if (error && isMissingSchema(error)) ({ data, error } = await read('id, code, name, contact, city, phone, payment_terms_days'));
@@ -288,18 +298,17 @@ purchasingRoutes.put('/suppliers/:id/terms', requirePermission('purchasing.suppl
 // Fix a supplier's name, contact, city or phone (sql/062, decision D4). The code stays; the old and new values are audited.
 purchasingRoutes.put('/suppliers/:id', requirePermission('purchasing.suppliers.manage'), async (c) => {
   const body = await jsonBody(c);
-  const name = text(body.name);
-  if (!name) invalid('Supplier name is required');
+  const { name, contact, city, phone } = partyBasics(body, 'Supplier name');
   const id = idParam(c);
   await callRpc<void>(userDb(c), 'pur_update_supplier', {
     p_supplier_id: id,
     p_name: name,
-    p_contact: text(body.contact) || null,
-    p_city: text(body.city) || null,
-    p_phone: text(body.phone) || null,
+    p_contact: contact,
+    p_city: city,
+    p_phone: phone,
     ...supplierDetails(body),
   });
-  return ok(c, { id, name, contact: text(body.contact), city: text(body.city), phone: text(body.phone) });
+  return ok(c, { id, name, contact: contact ?? '', city: city ?? '', phone: phone ?? '' });
 });
 // Change a supplier's code (sql/050). The database allows owners and admins; codes are unique per company.
 purchasingRoutes.put('/suppliers/:id/code', requirePermission('purchasing.suppliers.manage'), async (c) => {
@@ -312,37 +321,33 @@ purchasingRoutes.get('/orders', requirePermission('purchasing.orders.read'), asy
 purchasingRoutes.get('/orders/:id', requirePermission('purchasing.orders.read'), async (c) => ok(c, await oneOrder(c, idParam(c))));
 purchasingRoutes.post('/suppliers', requirePermission('purchasing.suppliers.manage'), async (c) => {
   const body = await jsonBody(c);
-  const name = text(body.name);
-  if (!name) invalid('Supplier name is required');
+  const { name, contact, city, phone } = partyBasics(body, 'Supplier name');
   const id = await callRpc<string>(userDb(c), 'pur_create_supplier', {
     p_name: name,
-    p_contact: text(body.contact) || null,
-    p_city: text(body.city) || null,
-    p_phone: text(body.phone) || null,
+    p_contact: contact,
+    p_city: city,
+    p_phone: phone,
     // sql/050: a typed code, or an automatic one (S-00001) when empty.
     p_code: text(body.code) || null,
     ...supplierDetails(body),
   });
-  return ok(c, { id, name, contact: text(body.contact), city: text(body.city), phone: text(body.phone) }, 201);
+  return ok(c, { id, name, contact: contact ?? '', city: city ?? '', phone: phone ?? '' }, 201);
 });
 purchasingRoutes.post('/orders', requirePermission('purchasing.orders.create'), async (c) => {
   const body = await jsonBody(c);
   const supplierId = text(body.supplierId);
   const warehouseId = text(body.warehouseId);
-  const lines = (Array.isArray(body.lines) ? body.lines : [])
-    .map((line) => {
-      const value = line as Record<string, unknown>;
-      return { itemId: text(value.itemId), qty: Number(value.qty), unitCostMinor: Number(value.unitCostMinor), unit: text(value.unit) };
-    })
-    .filter(
-      (line) =>
-        UUID_RE.test(line.itemId) &&
-        Number.isFinite(line.qty) &&
-        line.qty > 0 &&
-        Number.isFinite(line.unitCostMinor) &&
-        Number.isInteger(line.unitCostMinor) &&
-        line.unitCostMinor >= 0,
-    );
+  const lines = (Array.isArray(body.lines) ? body.lines : []).map((line) => {
+    const value = line as Record<string, unknown>;
+    return { itemId: text(value.itemId), qty: Number(value.qty), unitCostMinor: Number(value.unitCostMinor), unit: text(value.unit) };
+  });
+  // A bad line refuses the order and says which (input audit, 25 Nov 2026: bad lines were dropped and the order saved without them).
+  lines.forEach((l, i) => {
+    if (!UUID_RE.test(l.itemId)) invalid(`Line ${i + 1}: choose an item`);
+    if (!isGoodQty(l.qty)) invalid(`Line ${i + 1}: the quantity must be above 0, with at most 3 decimals`);
+    if (!Number.isInteger(l.unitCostMinor) || l.unitCostMinor < 0 || l.unitCostMinor > MAX_MINOR)
+      invalid(`Line ${i + 1}: the cost must be 0 or more`);
+  });
   if (!UUID_RE.test(supplierId) || !UUID_RE.test(warehouseId) || lines.length === 0)
     invalid('Supplier, warehouse and at least one valid line are required');
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'pur_create_order', {
@@ -406,7 +411,7 @@ purchasingRoutes.post('/orders/:id/confirm', requirePermission('purchasing.order
   const body = await jsonBody(c);
   const date = text(body.promisedDate);
   const ref = text(body.supplierRef);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) invalid('promisedDate: a date (YYYY-MM-DD)');
+  if (!isIsoDay(date)) invalid('promisedDate: a date (YYYY-MM-DD)');
   if (ref.length > 60) invalid("The supplier's reference is at most 60 characters");
   await callRpc<unknown>(userDb(c), 'pur_confirm_order', { p_order_id: id, p_promised_date: date, p_supplier_ref: ref || null });
   return ok(c, await oneOrder(c, id));
@@ -566,6 +571,7 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
   const supplierId = text(body.supplierId);
   const orderId = text(body.orderId);
   const number = text(body.number);
+  if (number.length > 60) invalid("The supplier's invoice number: at most 60 characters");
   const invoiceDate = text(body.invoiceDate);
   const lines = (Array.isArray(body.lines) ? body.lines : [])
     .map((v) => {
@@ -584,7 +590,7 @@ purchasingRoutes.post('/supplier-invoices', requirePermission('purchasing.invoic
       };
     })
     .filter((l) => UUID_RE.test(l.orderLineId) && Number.isFinite(l.qty) && l.qty > 0);
-  if (!UUID_RE.test(supplierId) || !UUID_RE.test(orderId) || !number || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate) || lines.length === 0)
+  if (!UUID_RE.test(supplierId) || !UUID_RE.test(orderId) || !number || !isIsoDay(invoiceDate) || lines.length === 0)
     invalid('Supplier, received order, invoice number, date and billed quantities are required');
   const vat = parsePurchaseVat(body.vat);
   const id = await callRpc<string>(userDb(c), 'pur_record_supplier_invoice', {

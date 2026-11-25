@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import type { AccountLine, TreasuryAccount, TreasuryKind, TreasuryTransfer } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody, textUpTo } from '../../lib/body';
 import { csvResponse, minorToText } from '../../lib/csv';
 import { userDb } from '../../lib/db.user';
 import { pageRange } from '../../lib/paging';
@@ -18,7 +18,7 @@ export const treasuryRoutes = new Hono<AppEnv>();
 
 type Ctx = Context<AppEnv>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 const KINDS: TreasuryKind[] = ['cash', 'bank', 'clearing'];
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
 const num = (x: unknown) => Number(x ?? 0);
@@ -243,7 +243,7 @@ treasuryRoutes.post('/transfers', requirePermission('treasury.transfers.create')
     p_to: to,
     p_amount_minor: amount,
     p_date: date,
-    p_note: text(b.note).slice(0, 500) || null,
+    p_note: textUpTo(b.note, 500, 'Note'),
   });
   return ok(c, made, 201);
 });

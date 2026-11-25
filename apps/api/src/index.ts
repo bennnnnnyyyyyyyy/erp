@@ -14,6 +14,7 @@ import { parseWebhook, safeEqual, verifySignature } from './lib/whatsapp';
 import { processInbound } from './lib/whatsappInbound';
 import { processTelegramUpdate } from './lib/telegramInbound';
 import { HttpError, isMissingSchema } from './lib/errors';
+import { plainDbError } from './lib/rpc';
 import { fail, ok } from './lib/response';
 import { requireAuth } from './middleware/auth';
 import { KB, MB, limitBody } from './middleware/bodyLimit';
@@ -179,6 +180,12 @@ app.onError((err, c) => {
   if (isMissingSchema(err)) {
     console.error('missing database object (migration not applied?)', (err as { message?: string }).message);
     return fail(c, 503, 'This feature is not set up yet: its database update has not been applied', 'not_set_up');
+  }
+  // A timeout, a database rule or a busy server: a plain message, the raw text only in the log (input and speed audit, 25 Nov 2026).
+  const plain = plainDbError(err);
+  if (plain) {
+    console.error('database error', (err as { code?: string }).code, (err as { message?: string }).message);
+    return fail(c, plain.status as ContentfulStatusCode, plain.message, plain.code);
   }
   console.error(err);
   return fail(c, 500, 'Something went wrong on our side');

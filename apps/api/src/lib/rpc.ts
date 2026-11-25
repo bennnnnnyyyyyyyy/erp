@@ -169,3 +169,41 @@ export async function callRpc<T>(client: SupabaseClient, fn: string, args: Recor
   }
   return data as T;
 }
+
+/**
+ * A plain message for a Postgres error that is not one of our own reasons (input and speed audit, 25 Nov 2026): a statement timeout,
+ * a database rule (check, length, date, number) or a busy server all showed "Something went wrong on our side". Null when the code
+ * is not one of these (the caller keeps its generic 500). The raw text is logged, never shown.
+ */
+export function plainDbError(err: unknown): HttpError | null {
+  const code = (err as { code?: unknown } | null)?.code;
+  switch (code) {
+    case '57014':
+      return new HttpError(503, 'This took too long. Try a shorter period or fewer rows, or try again in a moment', 'timeout');
+    case '40P01':
+    case '40001':
+    case '53300':
+    case '55P03':
+      return new HttpError(503, 'The server is busy. Try again in a moment', 'busy');
+    case '42501':
+      return new HttpError(403, 'You are not allowed to do that', 'forbidden');
+    case '23505':
+      return new HttpError(409, 'That already exists', 'duplicate');
+    case '23503':
+      return new HttpError(409, 'That is still linked to other records', 'in_use');
+    case '23514':
+    case '23502':
+      return new HttpError(400, 'A value is missing or outside what is allowed', 'invalid_input');
+    case '22007':
+    case '22008':
+      return new HttpError(400, 'That date is not valid', 'invalid_input');
+    case '22003':
+      return new HttpError(400, 'A number is too large', 'invalid_input');
+    case '22001':
+      return new HttpError(400, 'A text is too long', 'invalid_input');
+    case '22P02':
+      return new HttpError(400, 'A value is not in the right form', 'invalid_input');
+    default:
+      return null;
+  }
+}

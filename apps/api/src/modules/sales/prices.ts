@@ -1,6 +1,6 @@
 import type { Context, Hono } from 'hono';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
@@ -13,7 +13,7 @@ import { requirePermission } from '../../middleware/tenant';
 // admins in the database. Before sql/097 is applied these routes answer 503 not_set_up (the app's missing-schema handler).
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
 const orgOf = (c: Context<AppEnv>) => c.var.tenant.orgId;
 const param = (c: Context<AppEnv>, name: string) => {

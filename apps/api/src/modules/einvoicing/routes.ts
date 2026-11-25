@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { DEFAULT_ETA_MODE, ETA_MODES } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { invalid, jsonBody, textUpTo } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
@@ -162,9 +162,13 @@ einvoicingRoutes.put('/profile', requirePermission('einvoicing.settings.manage')
   const mode = text(b.mode) || DEFAULT_ETA_MODE;
   if (!text(b.registrationNumber) || !text(b.legalName) || !text(b.activityCode))
     invalid('Registration number, legal name and activity code are required');
+  // Egypt's formats (input audit, 25 Nov 2026: any 3-30 letters and digits passed and would reach the ETA).
+  if (!/^\d{9}$/.test(text(b.registrationNumber).replace(/[\s-]/g, ''))) invalid('The tax registration number is 9 digits');
+  if (!/^\d{4}$/.test(text(b.activityCode))) invalid('The ETA activity code is 4 digits');
+  if (text(b.legalName).length > 200) invalid('Legal name: at most 200 characters');
   if (!(ETA_MODES as readonly string[]).includes(mode)) invalid('Mode must be preprod or production');
   await callRpc<void>(userDb(c), 'eta_save_profile', {
-    p_registration_number: text(b.registrationNumber),
+    p_registration_number: text(b.registrationNumber).replace(/[\s-]/g, ''),
     p_legal_name: text(b.legalName),
     p_activity_code: text(b.activityCode),
     p_mode: mode,
@@ -243,10 +247,21 @@ einvoicingRoutes.put('/customers/:id/tax', requirePermission('einvoicing.setting
   const b = await jsonBody(c);
   const type = text(b.taxIdType);
   if (type !== 'B' && type !== 'P' && type !== 'F') invalid('Tax identity type must be B (business), P (person) or F (foreign)');
+  // By type (input audit, 25 Nov 2026): a company's tax registration number is 9 digits, a person's national ID 14 digits.
+  const taxId = textUpTo(b.taxId, 30, 'Tax ID')?.replace(/[\s-]/g, '') ?? null;
+  if (taxId && type === 'B' && !/^\d{9}$/.test(taxId)) invalid('A business tax registration number is 9 digits');
+  if (taxId && type === 'P' && !/^[23]\d{13}$/.test(taxId)) invalid('A national ID is 14 digits');
+  for (const [k, label] of [
+    ['governate', 'Governorate'],
+    ['regionCity', 'Region or city'],
+    ['street', 'Street'],
+    ['buildingNumber', 'Building number'],
+  ] as const)
+    textUpTo(b[k], 100, label);
   await callRpc<void>(userDb(c), 'eta_set_customer_tax', {
     p_customer_id: id,
     p_tax_id_type: type,
-    p_tax_id: optional(b.taxId),
+    p_tax_id: taxId,
     p_country: optional(b.country),
     p_governate: optional(b.governate),
     p_region_city: optional(b.regionCity),

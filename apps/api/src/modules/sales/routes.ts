@@ -1,8 +1,8 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { MAX_MINOR, invalid, isGoodQty, isIsoDay, jsonBody, partyBasics } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { pageRange } from '../../lib/paging';
+import { pageRange, readAllPages } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { setLineUnits } from '../../lib/lineUnits';
 import { callRpc } from '../../lib/rpc';
@@ -172,8 +172,18 @@ type CustomerRow = {
 };
 
 salesRoutes.get('/customers', requirePermission('sales.customers.read'), async (c) => {
+  // Every customer, 1000 at a time (lib/paging.ts: a single read stopped at 1000 rows).
   const read = (columns: string) =>
-    userDb(c).from('sal_customers').select(columns).eq('org_id', orgOf(c)).is('deleted_at', null).order('name');
+    readAllPages((from, to) =>
+      userDb(c)
+        .from('sal_customers')
+        .select(columns)
+        .eq('org_id', orgOf(c))
+        .is('deleted_at', null)
+        .order('name')
+        .order('id')
+        .range(from, to),
+    );
   // Until sql/081 is applied the new columns do not exist: read the old ones so the list still works.
   // sql/097 adds the customer group; before it is applied the list reads without it.
   let { data, error } = await read(`id,code,name,contact,city,phone,payment_terms_days,${CUSTOMER_DETAIL_COLUMNS},customer_group_id`);
@@ -218,18 +228,17 @@ salesRoutes.put('/customers/:id/terms', requirePermission('sales.customers.manag
 // Fix a customer's name, contact, city or phone (sql/062, decision D4). The code stays; the old and new values are audited.
 salesRoutes.put('/customers/:id', requirePermission('sales.customers.manage'), async (c) => {
   const b = await jsonBody(c);
-  const name = text(b.name);
-  if (!name) invalid('Customer name is required');
+  const { name, contact, city, phone } = partyBasics(b, 'Customer name');
   const id = idParam(c);
   await callRpc<void>(userDb(c), 'sal_update_customer', {
     p_customer_id: id,
     p_name: name,
-    p_contact: text(b.contact) || null,
-    p_city: text(b.city) || null,
-    p_phone: text(b.phone) || null,
+    p_contact: contact,
+    p_city: city,
+    p_phone: phone,
     ...customerDetails(b),
   });
-  return ok(c, { id, kind: 'customer', name, contact: text(b.contact), city: text(b.city), phone: text(b.phone) });
+  return ok(c, { id, kind: 'customer', name, contact: contact ?? '', city: city ?? '', phone: phone ?? '' });
 });
 // Change a customer's code (sql/050). The database allows owners and admins; codes are unique per company.
 salesRoutes.put('/customers/:id/code', requirePermission('sales.customers.manage'), async (c) => {
@@ -242,31 +251,33 @@ salesRoutes.get('/orders', requirePermission('sales.orders.read'), async (c) => 
 salesRoutes.get('/orders/:id', requirePermission('sales.orders.read'), async (c) => ok(c, await one(c, idParam(c))));
 salesRoutes.post('/customers', requirePermission('sales.customers.manage'), async (c) => {
   const b = await jsonBody(c);
-  const name = text(b.name);
-  if (!name) invalid('Customer name is required');
+  const { name, contact, city, phone } = partyBasics(b, 'Customer name');
   const id = await callRpc<string>(userDb(c), 'sal_create_customer', {
     p_name: name,
-    p_contact: text(b.contact) || null,
-    p_city: text(b.city) || null,
-    p_phone: text(b.phone) || null,
+    p_contact: contact,
+    p_city: city,
+    p_phone: phone,
     // sql/050: a typed code, or an automatic one (C-00001) when empty.
     p_code: text(b.code) || null,
     ...customerDetails(b),
   });
-  return ok(c, { id, kind: 'customer', name, contact: text(b.contact), city: text(b.city), phone: text(b.phone) }, 201);
+  return ok(c, { id, kind: 'customer', name, contact: contact ?? '', city: city ?? '', phone: phone ?? '' }, 201);
 });
 salesRoutes.post('/orders', requirePermission('sales.orders.create'), async (c) => {
   const b = await jsonBody(c);
   const customerId = text(b.customerId),
     warehouseId = text(b.warehouseId);
-  const lines = (Array.isArray(b.lines) ? b.lines : [])
-    .map((v) => {
-      const l = v as Record<string, unknown>;
-      return { itemId: text(l.itemId), qty: Number(l.qty), unitPriceMinor: Number(l.unitPriceMinor), unit: text(l.unit) };
-    })
-    .filter(
-      (l) => UUID_RE.test(l.itemId) && Number.isFinite(l.qty) && l.qty > 0 && Number.isInteger(l.unitPriceMinor) && l.unitPriceMinor >= 0,
-    );
+  const lines = (Array.isArray(b.lines) ? b.lines : []).map((v) => {
+    const l = v as Record<string, unknown>;
+    return { itemId: text(l.itemId), qty: Number(l.qty), unitPriceMinor: Number(l.unitPriceMinor), unit: text(l.unit) };
+  });
+  // A bad line refuses the order and says which (input audit, 25 Nov 2026: bad lines were dropped and the order saved without them).
+  lines.forEach((l, i) => {
+    if (!UUID_RE.test(l.itemId)) invalid(`Line ${i + 1}: choose an item`);
+    if (!isGoodQty(l.qty)) invalid(`Line ${i + 1}: the quantity must be above 0, with at most 3 decimals`);
+    if (!Number.isInteger(l.unitPriceMinor) || l.unitPriceMinor < 0 || l.unitPriceMinor > MAX_MINOR)
+      invalid(`Line ${i + 1}: the price must be 0 or more`);
+  });
   if (!UUID_RE.test(customerId) || !UUID_RE.test(warehouseId) || !lines.length)
     invalid('Customer, warehouse and at least one valid line are required');
   const made = await callRpc<{ id: string }>(userDb(c), 'sal_create_order', {
@@ -427,7 +438,7 @@ salesRoutes.post('/orders/:id/invoices', requirePermission('sales.invoices.manag
       return { orderLineId: text(l.orderLineId), qty: Number(l.qty), ...(taxRateId ? { taxRateId } : {}) };
     })
     .filter((l) => UUID_RE.test(l.orderLineId) && Number.isFinite(l.qty) && l.qty > 0);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !lines.length) invalid('An invoice date and at least one valid line are required');
+  if (!isIsoDay(date) || !lines.length) invalid('An invoice date and at least one valid line are required');
   const made = await callRpc<{ id: string; number: string }>(userDb(c), 'sal_create_invoice', {
     p_order_id: id,
     p_invoice_date: date,

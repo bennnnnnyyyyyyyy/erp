@@ -22,7 +22,7 @@ import {
   type UncostedReceipt,
 } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody, textUpTo } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange } from '../../lib/paging';
 import { HttpError } from '../../lib/errors';
@@ -42,7 +42,7 @@ export const accountingRoutes = new Hono<AppEnv>();
 
 type Ctx = Context<AppEnv>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 const CUR_RE = /^[A-Z]{3}$/;
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
 const orgOf = (c: Ctx) => c.var.tenant.orgId;
@@ -612,7 +612,7 @@ function journalBody(b: Record<string, unknown>) {
       debitMinor: Number(l.debitMinor ?? 0),
       creditMinor: Number(l.creditMinor ?? 0),
       ...(partyType ? { partyType: partyType as 'customer' | 'supplier', partyId } : {}),
-      ...(text(l.memo) ? { memo: text(l.memo).slice(0, 500) } : {}),
+      ...(text(l.memo) ? { memo: textUpTo(l.memo, 500, 'Line memo') ?? '' } : {}),
     };
   });
   const problem = journalProblem(lines);
@@ -668,7 +668,7 @@ for (const [action, decision] of [
     const res = await callRpc<{ id: string; number: string; status: string; entryId: string | null }>(userDb(c), 'acc_decide_journal', {
       p_id: id,
       p_decision: decision,
-      p_comment: comment.slice(0, 500) || null,
+      p_comment: textUpTo(comment, 500, 'Comment'),
     });
     return ok(c, res);
   });
@@ -688,7 +688,11 @@ accountingRoutes.post('/journals/:id/reverse', requirePermission('accounting.jou
   const date = text(b.date);
   const memo = text(b.memo);
   if (!DATE_RE.test(date) || !memo) invalid('A date and a reason are required');
-  const entryId = await callRpc<string>(userDb(c), 'acc_reverse_journal', { p_id: id, p_date: date, p_memo: memo.slice(0, 500) });
+  const entryId = await callRpc<string>(userDb(c), 'acc_reverse_journal', {
+    p_id: id,
+    p_date: date,
+    p_memo: textUpTo(memo, 500, 'Memo') ?? '',
+  });
   return ok(c, { id, entryId });
 });
 

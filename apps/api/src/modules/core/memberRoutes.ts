@@ -86,7 +86,7 @@ memberRoutes.get('/invitations', requirePermission('core.users.manage'), async (
 memberRoutes.post('/', requirePermission('core.users.manage'), async (c) => {
   const body = await jsonBody(c);
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-  if (!EMAIL_RE.test(email)) invalid('Enter a valid email address');
+  if (!EMAIL_RE.test(email) || email.length > 254) invalid('Enter a valid email address');
   const role = body.role as Role;
   if (!ROLES.includes(role)) invalid(`Role must be one of ${ROLES.join(', ')}`);
   // The person's name is required (system audit 2026-11-03, finding 8): without it every screen shows an email prefix.

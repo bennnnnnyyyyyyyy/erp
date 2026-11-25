@@ -14,7 +14,7 @@ import {
   type SendDocType,
 } from '@erp/shared';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError } from '../../lib/errors';
 import { callRpc } from '../../lib/rpc';
@@ -28,7 +28,7 @@ import { requirePermission } from '../../middleware/tenant';
 // invoice or approved note) is in the database; these routes only check the permission early and shape the input.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 const orgOf = (c: Context<AppEnv>) => c.var.tenant.orgId;
 const text = (x: unknown) => (typeof x === 'string' ? x.trim() : '');
 

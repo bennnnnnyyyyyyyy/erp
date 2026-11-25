@@ -18,7 +18,7 @@ import {
 import { aiCapUsd } from '../../lib/ai';
 import { GOOGLE_CHAT_URL_PREFIX, isGoogleChatWebhookUrl } from '../../lib/channels/integrations';
 import type { AppEnv } from '../../env';
-import { invalid, jsonBody } from '../../lib/body';
+import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { HttpError, isMissingSchema } from '../../lib/errors';
 import { ok } from '../../lib/response';
@@ -285,7 +285,7 @@ integrationRoutes.put('/ai/consent', requirePermission('core.integrations.manage
 // ------------------------------------------------------------------ exchange rates (shared reference data, sql/053)
 
 const CUR_RE = /^[A-Za-z]{3}$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = ISO_DAY; // a real day, years 1900-2100 (lib/body.ts)
 
 // One pair on or before a date: ?from=USD&to=EGP&date=2026-11-06 (date defaults to today). Empty when no rate is known.
 fxRoutes.get('/rate', requirePermission('core.org.read'), async (c) => {
