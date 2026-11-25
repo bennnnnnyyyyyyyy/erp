@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { hasPermission } from '@erp/shared';
+import { FIELD_MAX, hasPermission, registryOk } from '@erp/shared';
+import { RegistryField, TextField } from '../../../components/Fields';
 import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
@@ -30,6 +31,9 @@ type Branch = {
 };
 type Settings = { profile: Profile | null; branches: Branch[] };
 type Readiness = { items: { total: number; missingCodes: number }; customers: { total: number; missingTaxIdentity: number } };
+
+/** Digits only (spaces or dashes between groups) and exactly n of them: the ETA registration number (9) and activity code (4). */
+const digitsExactly = (v: string, n: number) => registryOk(v) && v.replace(/[^0-9٠-٩۰-۹]/g, '').length === n;
 
 const EMPTY_PROFILE: Profile = { registrationNumber: '', legalName: '', activityCode: '', mode: 'preprod' };
 const EMPTY_BRANCH: Omit<Branch, 'id'> = {
@@ -87,6 +91,8 @@ function ProfileForm({ profile, saved, canManage, onSaved }: { profile: Profile;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const set = (k: keyof Profile) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const setV = (k: keyof Profile) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const valid = digitsExactly(form.registrationNumber, 9) && digitsExactly(form.activityCode, 4) && !!form.legalName.trim();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -108,9 +114,9 @@ function ProfileForm({ profile, saved, canManage, onSaved }: { profile: Profile;
       <h2 className="related">{tr('Tax registration')}</h2>
       {!saved && <p className="muted small" style={{ marginBlock: 0 }}>{tr('Not saved yet.')}</p>}
       <div className="form-row">
-        <label>{tr('Tax registration number')}<input required disabled={!canManage} value={form.registrationNumber} onChange={set('registrationNumber')} inputMode="numeric" dir="ltr" /></label>
-        <label>{tr('Legal name')}<input required disabled={!canManage} value={form.legalName} onChange={set('legalName')} /></label>
-        <label>{tr('ETA activity code')}<input required disabled={!canManage} value={form.activityCode} onChange={set('activityCode')} inputMode="numeric" dir="ltr" /></label>
+        <RegistryField label={tr('Tax registration number')} required disabled={!canManage} exact={9} value={form.registrationNumber} onChange={setV('registrationNumber')} />
+        <TextField label={tr('Legal name')} required disabled={!canManage} max={FIELD_MAX.name} value={form.legalName} onChange={setV('legalName')} />
+        <RegistryField label={tr('ETA activity code')} required disabled={!canManage} exact={4} value={form.activityCode} onChange={(v) => setV('activityCode')(v.replace(/[\s-]/g, ''))} />
         <label>{tr('Mode')}
           <select disabled={!canManage} value={form.mode} onChange={set('mode')}>
             <option value="preprod">{tr('Test (pre-production)')}</option>
@@ -119,7 +125,7 @@ function ProfileForm({ profile, saved, canManage, onSaved }: { profile: Profile;
         </label>
       </div>
       {message && <p className={message.ok ? 'notice' : 'error notice'} role={message.ok ? 'status' : 'alert'}>{message.text}</p>}
-      {canManage && <div><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : tr('Save')}</Button></div>}
+      {canManage && <div><Button type="submit" disabled={busy || !valid}>{busy ? tr('Saving…') : tr('Save')}</Button></div>}
     </form>
   );
 }
@@ -132,9 +138,10 @@ function BranchForm({ branch, canManage, onSaved }: { branch: Branch | null; can
   });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const set = (k: keyof Omit<Branch, 'id'>) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const field = (k: keyof Omit<Branch, 'id'>, label: string, required = false) => (
-    <label>{tr(label)}<input required={required} disabled={!canManage} value={form[k] ?? ''} onChange={set(k)} /></label>
+  const set = (k: keyof Omit<Branch, 'id'>) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // ETA address parts: at most 100 characters (sql/114); the branch code 20 and the branch name 200 (sql/036); more information 500.
+  const field = (k: keyof Omit<Branch, 'id'>, label: string, required = false, max = 100) => (
+    <TextField label={tr(label)} required={required} disabled={!canManage} max={max} value={form[k] ?? ''} onChange={set(k)} />
   );
 
   async function submit(e: FormEvent) {
@@ -157,8 +164,8 @@ function BranchForm({ branch, canManage, onSaved }: { branch: Branch | null; can
       <h2 className="related">{tr('Branch address on ETA invoices')}</h2>
       <p className="muted small" style={{ marginBlock: 0 }}>{tr('The address the ETA has for your company. The main branch has code 0.')}</p>
       <div className="form-row">
-        {field('branchCode', 'Branch code', true)}
-        {field('name', 'Branch name', true)}
+        {field('branchCode', 'Branch code', true, 20)}
+        {field('name', 'Branch name', true, FIELD_MAX.name)}
         {field('governate', 'Governorate', true)}
         {field('regionCity', 'Region or city', true)}
       </div>
@@ -171,7 +178,7 @@ function BranchForm({ branch, canManage, onSaved }: { branch: Branch | null; can
       <div className="form-row">
         {field('room', 'Room')}
         {field('landmark', 'Landmark')}
-        {field('additionalInformation', 'More information')}
+        {field('additionalInformation', 'More information', false, FIELD_MAX.notes)}
       </div>
       {message && <p className={message.ok ? 'notice' : 'error notice'} role={message.ok ? 'status' : 'alert'}>{message.text}</p>}
       {canManage && <div><Button type="submit" disabled={busy}>{busy ? tr('Saving…') : tr('Save')}</Button></div>}

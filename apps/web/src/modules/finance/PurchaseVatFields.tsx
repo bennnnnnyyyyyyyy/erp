@@ -1,4 +1,5 @@
 import type { VatSettings } from '@erp/shared';
+import { RegistryField, TextField, fieldOk } from '../../components/Fields';
 import { tr } from '../../lib/i18n';
 import { toMinor } from '../trade/common';
 
@@ -21,6 +22,9 @@ export function purchaseVatPayload(v: PurchaseVat): Record<string, unknown> | un
   if (v.noDeduct) out.deductible = false;
   return Object.keys(out).length ? out : undefined;
 }
+
+/** False while a box here cannot be saved (the supplier's tax number is digits only): the form keeps Save off. */
+export const purchaseVatOk = (v: PurchaseVat): boolean => fieldOk.registry(v.taxNumber);
 
 export function PurchaseVatFields({
   value,
@@ -69,15 +73,14 @@ export function PurchaseVatFields({
         ) : null}
       </div>
       <div className="form-row">
-        <label>
-          {value.vatClass === 'import' ? tr('Customs declaration number') : tr('Supplier\'s e-invoice number')}
-          <input value={value.ref} maxLength={100} onChange={(e) => set({ ref: e.target.value })} />
-        </label>
+        <TextField
+          label={value.vatClass === 'import' ? tr('Customs declaration number') : tr('Supplier\'s e-invoice number')}
+          max={100}
+          value={value.ref}
+          onChange={(v) => set({ ref: v })}
+        />
         {kind === 'expense' ? (
-          <label>
-            {tr('Supplier\'s tax number (optional)')}
-            <input value={value.taxNumber} maxLength={50} onChange={(e) => set({ taxNumber: e.target.value })} />
-          </label>
+          <RegistryField label={tr('Supplier\'s tax number (optional)')} max={50} value={value.taxNumber} onChange={(v) => set({ taxNumber: v })} />
         ) : null}
         {registered ? (
           <label className="flex items-center gap-2">

@@ -143,6 +143,20 @@ export function handleTrade(domain: 'purchasing' | 'sales', method: string, part
   if (area === (domain === 'purchasing' ? 'suppliers' : 'customers')) {
     if (method === 'GET') return parties.filter((p) => p.kind === kind);
     if (!canWrite(actor)) throw forbid();
+    // Edit (the same dialog as the real app; kept in memory): the same checks as a new one.
+    if (id && method === 'PUT') {
+      const party = parties.find((p) => p.id === id && p.kind === kind);
+      if (!party) throw new DemoRuleError(404, 'Not found', 'not_found');
+      const newName = String(body.name ?? '').trim();
+      if (!newName) throw new DemoRuleError(400, 'Name is required', 'invalid_input');
+      for (const [field, label, max] of [['name', 'Name', 200], ['contact', 'Contact', 120], ['city', 'City', 80]] as const) {
+        if (String(body[field] ?? '').trim().length > max) throw new DemoRuleError(400, `${label}: at most ${max} characters`, 'invalid_input');
+      }
+      if (!checkPhone(body.phone).ok) throw new DemoRuleError(400, `Phone: ${PHONE_RULE_MESSAGE}`, 'invalid_input');
+      Object.assign(party, { name: newName, contact: String(body.contact ?? '').trim(), city: String(body.city ?? '').trim(), phone: String(body.phone ?? '').trim() });
+      actor.log(`${domain}.${kind}.changed`, kind, party.id, `${kind === 'supplier' ? 'Supplier' : 'Customer'} ${newName} changed`);
+      return party;
+    }
     const name = String(body.name ?? '').trim();
     if (!name) throw new DemoRuleError(400, 'Name is required', 'invalid_input');
     // The same limits as the API (lib/body.ts partyBasics): the sample build saved a pasted paragraph as a name (Ben, 25 Nov 2026).

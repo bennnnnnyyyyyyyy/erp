@@ -14,6 +14,7 @@ import {
   type DocSettings,
 } from '@erp/shared';
 import { Loading } from '../../../components/Loading';
+import { TextField } from '../../../components/Fields';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { tr } from '../../../lib/i18n';
@@ -131,10 +132,10 @@ export function DocumentSettings() {
           <label>{tr('Space at the bottom (mm)')}<input type="number" min={0} max={150} value={s.marginBottomMm} onChange={(e) => set({ marginBottomMm: Number(e.target.value) })} /></label>
         </div>
       ) : null}
-      <label>{tr('Text under the company name (address, phone)')}<textarea rows={2} maxLength={1000} value={s.headerText ?? ''} onChange={(e) => set({ headerText: e.target.value })} /></label>
-      <label>{tr('Payment terms')}<textarea rows={2} maxLength={500} value={s.paymentTerms ?? ''} onChange={(e) => set({ paymentTerms: e.target.value })} /></label>
-      <label>{tr('Bank details')}<textarea rows={3} maxLength={1000} value={s.bankDetails ?? ''} onChange={(e) => set({ bankDetails: e.target.value })} /></label>
-      <label>{tr('Footer text')}<textarea rows={2} maxLength={1000} value={s.footerText ?? ''} onChange={(e) => set({ footerText: e.target.value })} /></label>
+      <TextField label={tr('Text under the company name (address, phone)')} multiline rows={2} max={1000} value={s.headerText ?? ''} onChange={(v) => set({ headerText: v })} />
+      <TextField label={tr('Payment terms')} multiline rows={2} max={500} value={s.paymentTerms ?? ''} onChange={(v) => set({ paymentTerms: v })} />
+      <TextField label={tr('Bank details')} multiline rows={3} max={1000} value={s.bankDetails ?? ''} onChange={(v) => set({ bankDetails: v })} />
+      <TextField label={tr('Footer text')} multiline rows={2} max={1000} value={s.footerText ?? ''} onChange={(v) => set({ footerText: v })} />
       <div className="form-row">
         <label>{tr('Language of the documents')}
           <select value={s.language} onChange={(e) => set({ language: e.target.value as DocLanguage })}>{DOC_LANGUAGES.map((l) => <option key={l} value={l}>{tr(LANGUAGE_LABEL[l])}</option>)}</select>

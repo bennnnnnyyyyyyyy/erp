@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loading } from '../../components/Loading';
+import { PhoneField, fieldOk } from '../../components/Fields';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
@@ -39,8 +40,8 @@ export function ConnectPhonePage() {
 
       <div className="form-card stack">
         <h2>{tr('Add a number')}</h2>
-        <label>{tr('WhatsApp number with country code')}<input inputMode="tel" placeholder="+20 100 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
-        <div><Button disabled={busy || phone.replace(/\D/g, '').length < 8} onClick={() => run(async () => {
+        <PhoneField label={tr('WhatsApp number with country code')} placeholder="+20 100 123 4567" value={phone} onChange={setPhone} />
+        <div><Button disabled={busy || phone.replace(/\D/g, '').length < 8 || !fieldOk.phone(phone)} onClick={() => run(async () => {
           await api('/v1/messaging/identities', { method: 'POST', body: JSON.stringify({ channel: 'whatsapp', address: phone }) });
           setPhone('');
           return tr('A 6-digit code was queued for that number. Type it below when it arrives (valid 10 minutes, 5 tries).');

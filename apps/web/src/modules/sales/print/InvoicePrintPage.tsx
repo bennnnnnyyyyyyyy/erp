@@ -12,6 +12,7 @@ import {
   type SendDocType,
 } from '@erp/shared';
 import { Loading } from '../../../components/Loading';
+import { EmailField, PhoneField, fieldOk } from '../../../components/Fields';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
@@ -208,15 +209,11 @@ export function InvoicePrintPage() {
         {canSend ? (
           <div className="print-toolbar" style={{ marginBlockStart: '0.75rem' }}>
             {whatsappByServer ? (
-              <label>{tr('Customer WhatsApp')}
-                <input type="tel" dir="ltr" value={phoneTo} onChange={(e) => setPhone(e.target.value)} placeholder="+20 100 000 0000" />
-              </label>
+              <PhoneField label={tr('Customer WhatsApp')} value={phoneTo} onChange={setPhone} placeholder="+20 100 000 0000" />
             ) : null}
-            <Button variant="outline" disabled={!!busy} onClick={doWhatsApp}>{whatsappByServer ? tr('Send by WhatsApp from the company') : tr('Send by WhatsApp')}</Button>
-            <label>{tr('Customer email')}
-              <input type="email" dir="ltr" value={emailTo} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
-            </label>
-            <Button variant="outline" disabled={!!busy || !looksLikeEmail(emailTo)} onClick={doEmail}>{emailByServer ? tr('Send by email from the company') : tr('Send by email')}</Button>
+            <Button variant="outline" disabled={!!busy || (whatsappByServer && !fieldOk.phone(phoneTo))} onClick={doWhatsApp}>{whatsappByServer ? tr('Send by WhatsApp from the company') : tr('Send by WhatsApp')}</Button>
+            <EmailField label={tr('Customer email')} value={emailTo} onChange={setEmail} placeholder="name@example.com" />
+            <Button variant="outline" disabled={!!busy || !looksLikeEmail(emailTo) || !fieldOk.email(emailTo)} onClick={doEmail}>{emailByServer ? tr('Send by email from the company') : tr('Send by email')}</Button>
             <Button variant="ghost" disabled={!!busy} onClick={doCopy}>{tr('Copy link')}</Button>
             {linkStatus.data?.active ? (
               <>

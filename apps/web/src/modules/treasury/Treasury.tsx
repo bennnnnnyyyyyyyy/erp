@@ -1,7 +1,11 @@
 import { DateInput } from '../../components/DateInput';
 import { todayIn } from '../../lib/dates';
 import { useState } from 'react';
-import { hasPermission, type AccountLine, type Branch, type TreasuryAccount, type TreasuryKind, type TreasuryTransfer } from '@erp/shared';
+import { FIELD_MAX, hasPermission, type AccountLine, type Branch, type TreasuryAccount, type TreasuryKind, type TreasuryTransfer } from '@erp/shared';
+import { BankAccountField, TextField, fieldOk } from '../../components/Fields';
+
+/** A cash box's or bank account's account number: at most 40 characters (sql/051). */
+const BANK_ACCOUNT_MAX = 40;
 import { ClickRow } from '../../components/ClickRow';
 import { ConfirmButton, FormToggle } from '../../components/FormToggle';
 import { Loading } from '../../components/Loading';
@@ -94,9 +98,9 @@ export function TreasuryPage() {
                 <option value="bank">{tr('Bank account')}</option>
               </select>
             </label>
-            <label>{tr('Code')}<input value={form.code} placeholder="CASH-2" onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} /></label>
-            <label>{tr('Name')}<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-            <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} /></label>
+            <TextField label={tr('Code')} max={20} value={form.code} placeholder="CASH-2" onChange={(v) => setForm({ ...form, code: v.toUpperCase() })} />
+            <TextField label={tr('Name')} max={120} value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+            <TextField label={tr('Name in Arabic (optional)')} max={120} dir="rtl" value={form.nameAr} onChange={(v) => setForm({ ...form, nameAr: v })} />
           </div>
           <div className="form-row">
             <label>{tr('Branch')}
@@ -108,13 +112,13 @@ export function TreasuryPage() {
             <label>{tr('Currency')}<input maxLength={3} placeholder={session.org?.defaultCurrency ?? 'EGP'} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></label>
             {form.kind === 'bank' ? (
               <>
-                <label>{tr('Bank name')}<input value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} /></label>
-                <label>{tr('Account number or IBAN')}<input value={form.bankAccountNo} maxLength={40} onChange={(e) => setForm({ ...form, bankAccountNo: e.target.value })} /></label>
+                <TextField label={tr('Bank name')} max={FIELD_MAX.bankName} value={form.bankName} onChange={(v) => setForm({ ...form, bankName: v })} />
+                <BankAccountField label={tr('Account number or IBAN')} value={form.bankAccountNo} onChange={(v) => setForm({ ...form, bankAccountNo: v.slice(0, BANK_ACCOUNT_MAX) })} />
               </>
             ) : null}
           </div>
           <p className="muted small">{tr('A new account in the books is created for it under group 19 (cash and banks).')}</p>
-          <div><Button disabled={busy || !form.code.trim() || !form.name.trim()} onClick={() => run(async () => {
+          <div><Button disabled={busy || !form.code.trim() || !form.name.trim() || (form.kind === 'bank' && !fieldOk.bankAccount(form.bankAccountNo))} onClick={() => run(async () => {
             await api('/v1/treasury/accounts', { method: 'POST', body: JSON.stringify({ ...form, createLedgerAccount: true }) });
             return trf('{code} added.', { code: form.code });
           }, () => { setForm({ ...form, code: '', name: '', nameAr: '', bankName: '', bankAccountNo: '' }); accounts.reload(); })}>{tr('Add')}</Button></div>
@@ -160,8 +164,8 @@ export function TreasuryAccountPage() {
         edit ? (
           <div className="form-card stack">
             <div className="form-row">
-              <label>{tr('Name')}<input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>
-              <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={edit.nameAr} onChange={(e) => setEdit({ ...edit, nameAr: e.target.value })} /></label>
+              <TextField label={tr('Name')} max={120} value={edit.name} onChange={(v) => setEdit({ ...edit, name: v })} />
+              <TextField label={tr('Name in Arabic (optional)')} max={120} dir="rtl" value={edit.nameAr} onChange={(v) => setEdit({ ...edit, nameAr: v })} />
               <label>{tr('Branch')}
                 <select value={edit.branchId} onChange={(e) => setEdit({ ...edit, branchId: e.target.value })}>
                   <option value="">{tr('No branch')}</option>
@@ -170,13 +174,13 @@ export function TreasuryAccountPage() {
               </label>
               {a.kind === 'bank' ? (
                 <>
-                  <label>{tr('Bank name')}<input value={edit.bankName} onChange={(e) => setEdit({ ...edit, bankName: e.target.value })} /></label>
-                  <label>{tr('Account number or IBAN')}<input value={edit.bankAccountNo} maxLength={40} onChange={(e) => setEdit({ ...edit, bankAccountNo: e.target.value })} /></label>
+                  <TextField label={tr('Bank name')} max={FIELD_MAX.bankName} value={edit.bankName} onChange={(v) => setEdit({ ...edit, bankName: v })} />
+                  <BankAccountField label={tr('Account number or IBAN')} value={edit.bankAccountNo} onChange={(v) => setEdit({ ...edit, bankAccountNo: v.slice(0, BANK_ACCOUNT_MAX) })} />
                 </>
               ) : null}
             </div>
             <div className="form-row">
-              <Button disabled={busy || !edit.name.trim()} onClick={() => save(edit)}>{tr('Save')}</Button>
+              <Button disabled={busy || !edit.name.trim() || (a.kind === 'bank' && !fieldOk.bankAccount(edit.bankAccountNo))} onClick={() => save(edit)}>{tr('Save')}</Button>
               <Button variant="ghost" onClick={() => setEdit(null)}>{tr('Cancel')}</Button>
             </div>
           </div>
@@ -262,7 +266,7 @@ export function TransfersPage() {
             <label>{tr('Amount')}<input inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
             <label>{tr('Date')}<DateInput value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} max={todayIn()} onBad={dates.watch('date')} /></label>
           </div>
-          <label>{tr('Note (optional)')}<input value={form.note} maxLength={500} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
+          <TextField label={tr('Note (optional)')} max={FIELD_MAX.notes} value={form.note} onChange={(v) => setForm({ ...form, note: v })} />
           <div><Button disabled={busy || !form.fromAccountId || !form.toAccountId || toMinor(form.amount) <= 0 || !form.date || dates.blocked} onClick={() => run(async () => {
             const r = await api<{ number: string }>('/v1/treasury/transfers', { method: 'POST', body: JSON.stringify({
               fromAccountId: form.fromAccountId, toAccountId: form.toAccountId, amountMinor: toMinor(form.amount), date: form.date, note: form.note,

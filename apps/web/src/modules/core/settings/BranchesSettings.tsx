@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { hasPermission, type Branch } from '@erp/shared';
+import { TextField } from '../../../components/Fields';
 import { ConfirmButton, FormToggle } from '../../../components/FormToggle';
 import { Loading } from '../../../components/Loading';
 import { Button } from '../../../components/ui/button';
@@ -40,9 +41,9 @@ export function BranchesSettings() {
       {canManage ? (
         <FormToggle label={tr('Add a branch')}>
           <div className="form-row">
-            <label>{tr('Code')}<input value={form.code} placeholder="ALX" onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} /></label>
-            <label>{tr('Name')}<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-            <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} /></label>
+            <TextField label={tr('Code')} max={20} value={form.code} placeholder="ALX" onChange={(v) => setForm({ ...form, code: v.toUpperCase() })} />
+            <TextField label={tr('Name')} max={120} value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+            <TextField label={tr('Name in Arabic (optional)')} max={120} dir="rtl" value={form.nameAr} onChange={(v) => setForm({ ...form, nameAr: v })} />
           </div>
           <div><Button disabled={busy || !form.code.trim() || !form.name.trim()} onClick={() => run(async () => {
             await api('/v1/core/branches', { method: 'POST', body: JSON.stringify(form) });
@@ -57,9 +58,9 @@ export function BranchesSettings() {
           <div key={b.id} className="form-card stack">
             {edit?.id === b.id ? (
               <div className="form-row">
-                <label>{tr('Code')}<input value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value.toUpperCase() })} /></label>
-                <label>{tr('Name')}<input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>
-                <label>{tr('Name in Arabic (optional)')}<input dir="rtl" value={edit.nameAr} onChange={(e) => setEdit({ ...edit, nameAr: e.target.value })} /></label>
+                <TextField label={tr('Code')} max={20} value={edit.code} onChange={(v) => setEdit({ ...edit, code: v.toUpperCase() })} />
+                <TextField label={tr('Name')} max={120} value={edit.name} onChange={(v) => setEdit({ ...edit, name: v })} />
+                <TextField label={tr('Name in Arabic (optional)')} max={120} dir="rtl" value={edit.nameAr} onChange={(v) => setEdit({ ...edit, nameAr: v })} />
                 <Button disabled={busy || !edit.code.trim() || !edit.name.trim()} onClick={() => save(b, edit)}>{tr('Save')}</Button>
                 <Button variant="ghost" onClick={() => setEdit(null)}>{tr('Cancel')}</Button>
               </div>

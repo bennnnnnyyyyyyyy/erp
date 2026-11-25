@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FIELD_MAX, phoneCharsOnly, phoneState } from '@erp/shared';
 import { Button } from '../../components/ui/button';
 import { UnitSelect } from '../../components/UnitSelect';
 import {
@@ -123,7 +124,10 @@ export function RowsSaver({ c, s, disabled, onSave }: { c: OnboardingContent; s:
 }
 
 /** `optional`: the column may be left empty; its header says so (demo note, 5 Nov: people could not tell what was required). */
-export type Col<T> = { key: keyof T & string; label: string; type?: 'text' | 'number'; list?: string; width?: string; optional?: boolean; unit?: boolean };
+export type Col<T> = { key: keyof T & string; label: string; type?: 'text' | 'number'; list?: string; width?: string; optional?: boolean; unit?: boolean; max?: number };
+
+/** The longest text a cell takes: by its column's name (name 200, contact 120, city 80, phone 20...), else 200. */
+const cellMax = (col: { key: string; max?: number }): number => col.max ?? (FIELD_MAX as Record<string, number>)[col.key] ?? FIELD_MAX.name;
 
 /** An editable table: one input per cell, add and remove rows. Logical properties only, so it mirrors in Arabic. */
 export function RowsTable<T extends Record<string, string | number | null>>({
@@ -174,7 +178,10 @@ export function RowsTable<T extends Record<string, string | number | null>>({
                       step={col.type === 'number' ? 'any' : undefined}
                       list={col.list}
                       value={r[col.key] === null || r[col.key] === undefined ? '' : String(r[col.key])}
-                      onChange={(e) => set(i, col.key, e.target.value)}
+                      // Ben, 25 Nov 2026: the box itself guides (the same limits as the API and the database, packages/shared fieldRules)
+                      maxLength={col.type === 'number' ? undefined : cellMax(col)}
+                      aria-invalid={col.key === 'phone' && phoneState(String(r[col.key] ?? '')) === 'invalid'}
+                      onChange={(e) => set(i, col.key, col.key === 'phone' ? phoneCharsOnly(e.target.value) : e.target.value)}
                     />
                   )}
                 </td>

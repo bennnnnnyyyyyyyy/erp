@@ -2,8 +2,9 @@ import { DateInput } from '../../components/DateInput';
 import { useEffect, useState } from 'react';
 import { formatDay } from '../../lib/format';
 import { Loading } from '../../components/Loading';
-import { formatMoney, hasPermission, type TreasuryAccount, type VatSettings } from '@erp/shared';
-import { PurchaseVatFields, emptyPurchaseVat, purchaseVatPayload, type PurchaseVat } from './PurchaseVatFields';
+import { FIELD_MAX, formatMoney, hasPermission, type TreasuryAccount, type VatSettings } from '@erp/shared';
+import { PurchaseVatFields, emptyPurchaseVat, purchaseVatOk, purchaseVatPayload, type PurchaseVat } from './PurchaseVatFields';
+import { TextField } from '../../components/Fields';
 import { ClickRow } from '../../components/ClickRow';
 import { FormToggle } from '../../components/FormToggle';
 import { Button } from '../../components/ui/button';
@@ -117,7 +118,7 @@ export function ExpensesPage() {
             </select>
           </label>
         </div>
-        <label>{tr('Note (optional)')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
+        <TextField label={tr('Note (optional)')} max={FIELD_MAX.notes} value={note} onChange={setNote} />
         <PurchaseVatFields value={vatIn} onChange={setVatIn} vat={vat.data} kind="expense" />
         {canPay ? (
           <div className="form-row">
@@ -137,7 +138,7 @@ export function ExpensesPage() {
           </div>
         ) : null}
         <div className="form-row">
-          <Button disabled={busy || dates.blocked || !categoryId || toMinor(amount) <= 0 || (paidNow && noBox)} onClick={() => run(async () => {
+          <Button disabled={busy || dates.blocked || !categoryId || toMinor(amount) <= 0 || (paidNow && noBox) || !purchaseVatOk(vatIn)} onClick={() => run(async () => {
             const made = await api<{ id: string; number: string }>('/v1/finance/expenses', { method: 'POST', body: JSON.stringify({ date, categoryId, amountMinor: toMinor(amount), supplierId, note, vat: purchaseVatPayload(vatIn) }) });
             if (!paidNow) return trf('Expense {number} recorded.', { number: made.number });
             // The payment is a second step: if it is refused, the expense stays recorded and unpaid, and the message says so.

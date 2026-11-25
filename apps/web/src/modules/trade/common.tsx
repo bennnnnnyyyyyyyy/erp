@@ -20,7 +20,8 @@ import { parseAmount, toMinor } from '../../lib/numbers';
 import { SearchSelect } from '../../components/SearchSelect';
 import { useLoad } from '../../lib/useLoad';
 import { useSession } from '../../session';
-import { checkPhone, formatMoney, hasPermission, PHONE_RULE_MESSAGE, vatLine, vatLineInclusive } from '@erp/shared';
+import { checkPhone, FIELD_MAX, formatMoney, hasPermission, PHONE_RULE_MESSAGE, vatLine, vatLineInclusive } from '@erp/shared';
+import { BankAccountField, EmailField, fieldOk, PhoneField, RegistryField, TextField } from '../../components/Fields';
 
 import { tr, trf } from '../../lib/i18n';
 import { usePartyCodes } from '../inventory/PartyCodes';
@@ -112,12 +113,19 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
   // Decision D4 (sql/062): fix a name, contact, city or phone later. The code never changes here; the change is in the history.
   const [editing, setEditing] = useState<Party | null>(null);
   const canManage = !addPermission || hasPermission(session.permissions, addPermission);
-  const canEdit = canManage && !demoMode;
+  // The sample build edits too (in memory, lib/demoTrade.ts), so the same dialog can be tried there.
+  const canEdit = canManage;
   const blank = { name: '', contact: '', city: '', phone: '', code: '', ...DETAIL_BLANK };
   const withDetails = detailed && !demoMode;
   const [form, setForm] = useState(blank);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const setTo = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // Save stays off while a box cannot be saved (the boxes say why, while the person types).
+  const formOk =
+    form.name.trim() !== '' &&
+    fieldOk.phone(form.phone) &&
+    (!withDetails || (fieldOk.email(form.email) && fieldOk.registry(form.taxNumber) && fieldOk.registry(form.commercialRegistry) && fieldOk.bankAccount(form.bankAccount)));
   const close = () => {
     setAdding(false);
     setEditing(null);
@@ -217,7 +225,7 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
                 {editing.code ? <> <code>{editing.code}</code></> : null}
               </p>
             )}
-            <label>{tr('Name')}<input required maxLength={200} value={form.name} onChange={set('name')} /></label>
+            <TextField label={tr('Name')} required max={FIELD_MAX.name} value={form.name} onChange={setTo('name')} />
             {editing && canSetTerms ? (
               // Saved on its own as soon as it changes (owners and admins; the database checks again), as before in the list.
               <label>{tr('Payment terms')} <span className="muted small">{tr('(days; empty = company default)')}</span>
@@ -225,33 +233,33 @@ export function PartyList({ title, endpoint, noun, addPermission, detailed }: { 
               </label>
             ) : null}
             <div className="form-row">
-              <label>{tr('Contact person (optional)')}<input maxLength={120} value={form.contact} onChange={set('contact')} /></label>
-              <label>{tr('City (optional)')}<input maxLength={80} value={form.city} onChange={set('city')} /></label>
+              <TextField label={tr('Contact person (optional)')} max={FIELD_MAX.contact} value={form.contact} onChange={setTo('contact')} />
+              <TextField label={tr('City (optional)')} max={FIELD_MAX.city} value={form.city} onChange={setTo('city')} />
             </div>
-            <label>{tr('Phone (optional)')}<input value={form.phone} onChange={set('phone')} placeholder="+20 …" /></label>
+            <PhoneField label={tr('Phone (optional)')} value={form.phone} onChange={setTo('phone')} />
             {withDetails ? (
               <>
                 <div className="form-row">
-                  <label>{tr('Tax registration number (optional)')}<input maxLength={40} value={form.taxNumber} onChange={set('taxNumber')} /></label>
-                  <label>{tr('Commercial registry number (optional)')}<input maxLength={40} value={form.commercialRegistry} onChange={set('commercialRegistry')} /></label>
+                  <RegistryField label={tr('Tax registration number (optional)')} value={form.taxNumber} onChange={setTo('taxNumber')} />
+                  <RegistryField label={tr('Commercial registry number (optional)')} max={FIELD_MAX.commercialRegistry} value={form.commercialRegistry} onChange={setTo('commercialRegistry')} />
                 </div>
                 <div className="form-row">
-                  <label>{tr('Email (optional)')}<input type="email" maxLength={200} value={form.email} onChange={set('email')} /></label>
+                  <EmailField label={tr('Email (optional)')} value={form.email} onChange={setTo('email')} />
                   <label>{tr('Default currency (optional)')}<input maxLength={3} placeholder="EGP" value={form.defaultCurrency} onChange={(e) => setForm((f) => ({ ...f, defaultCurrency: e.target.value.toUpperCase() }))} /></label>
                 </div>
-                <label>{tr('Address (optional)')}<input maxLength={500} value={form.address} onChange={set('address')} /></label>
+                <TextField label={tr('Address (optional)')} max={FIELD_MAX.address} value={form.address} onChange={setTo('address')} />
                 <div className="form-row">
-                  <label>{tr('Bank name (optional)')}<input maxLength={120} value={form.bankName} onChange={set('bankName')} /></label>
-                  <label>{tr('Bank account or IBAN (optional)')}<input maxLength={60} dir="ltr" value={form.bankAccount} onChange={set('bankAccount')} /></label>
+                  <TextField label={tr('Bank name (optional)')} max={FIELD_MAX.bankName} value={form.bankName} onChange={setTo('bankName')} />
+                  <BankAccountField label={tr('Bank account or IBAN (optional)')} value={form.bankAccount} onChange={setTo('bankAccount')} />
                 </div>
-                <label>{tr('Notes (optional)')}<textarea rows={3} maxLength={2000} value={form.notes} onChange={set('notes')} /></label>
+                <TextField label={tr('Notes (optional)')} multiline max={FIELD_MAX.longNotes} value={form.notes} onChange={setTo('notes')} />
               </>
             ) : null}
             {demoMode || editing ? null : (
               <label>{tr('Code (optional)')}<input value={form.code} onChange={set('code')} placeholder={tr('Automatic if empty')} /></label>
             )}
             {error && <p className="error">{error}</p>}
-            <div className="form-actions"><Button type="submit">{editing ? tr('Save changes') : <>{tr('Add')} {noun}</>}</Button></div>
+            <div className="form-actions"><Button type="submit" disabled={!formOk}>{editing ? tr('Save changes') : <>{tr('Add')} {noun}</>}</Button></div>
           </form>
           {editing && !demoMode ? <Attachments entityType={endpoint.includes('/suppliers') ? 'supplier' : 'customer'} entityId={editing.id} /> : null}
           {editing && !demoMode ? <Notes entityType={endpoint.includes('/suppliers') ? 'supplier' : 'customer'} entityId={editing.id} /> : null}
@@ -580,11 +588,11 @@ function QuickAddParty({ title, endpoint, onClose, onAdded }: { title: string; e
   return (
     <Modal title={title} onClose={onClose}>
       <form className="stack" onSubmit={add}>
-        <label>{tr('Name')}<input required autoFocus maxLength={200} value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <label>{tr('Phone')}<input inputMode="tel" maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+        <TextField label={tr('Name')} required max={FIELD_MAX.name} value={name} onChange={setName} />
+        <PhoneField label={tr('Phone')} value={phone} onChange={setPhone} />
         {error ? <p className="error">{error}</p> : null}
         <div className="form-actions">
-          <Button type="submit" disabled={busy || !name.trim()}>{busy ? tr('Saving…') : tr('Add and use')}</Button>
+          <Button type="submit" disabled={busy || !name.trim() || !fieldOk.phone(phone)}>{busy ? tr('Saving…') : tr('Add and use')}</Button>
           <Button type="button" variant="ghost" onClick={onClose}>{tr('Cancel')}</Button>
         </div>
       </form>
