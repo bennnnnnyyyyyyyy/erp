@@ -308,6 +308,51 @@ financeRoutes.get('/expenses/:id', requirePermission('finance.reports.view'), as
 // invoices and expenses (direction=out). The payment form offers exactly these, so an old unpaid invoice can always be paid.
 financeRoutes.get('/open-items', requirePermission('finance.reports.view'), async (c) => {
   const direction = c.req.query('direction') === 'out' ? 'out' : 'in';
+  const today = todayUtc();
+  // sql/114: summed in the database in one call (same rules). The reading below serves until it is applied.
+  try {
+    const rows = await callRpc<
+      {
+        kind: 'customer_invoice' | 'supplier_invoice' | 'expense';
+        id: string;
+        number: string;
+        partyId: string | null;
+        currency: string;
+        totalMinor: number;
+        paidMinor: number;
+        dueDate: string;
+        detail: string | null;
+      }[]
+    >(userDb(c), 'fin_open_items', { p_direction: direction });
+    const prefix = { customer_invoice: 'c', supplier_invoice: 's', expense: 'e' } as const;
+    return ok(
+      c,
+      rows
+        .map((r) => {
+          const total = Number(r.totalMinor);
+          const done = Number(r.paidMinor);
+          const late = daysOverdue(r.dueDate, today);
+          return {
+            value: `${prefix[r.kind]}:${r.id}`,
+            kind: r.kind,
+            id: r.id,
+            number: r.number,
+            partyId: r.partyId,
+            currency: r.currency,
+            totalMinor: total,
+            paidMinor: done,
+            leftMinor: total - done,
+            dueDate: r.dueDate,
+            daysOverdue: Math.max(0, late),
+            ageBucket: ageBucket(late),
+            ...(r.kind === 'expense' ? { detail: r.detail ?? '' } : {}),
+          };
+        })
+        .sort((a, b) => b.number.localeCompare(a.number)),
+    );
+  } catch (e) {
+    if (!isMissingSchema(e)) throw e;
+  }
   const org = orgOf(c);
   const db = () => userDb(c);
   const payments = await fetchAll<{
@@ -347,7 +392,6 @@ financeRoutes.get('/open-items', requirePermission('finance.reports.view'), asyn
     /** For expenses: category and note, so unpaid expenses can be told apart in the payment list (decision D7, 9 Nov 2026). */
     detail?: string;
   };
-  const today = todayUtc();
   const items: Item[] = [];
   const push = (
     kind: Item['kind'],
@@ -715,6 +759,28 @@ financeRoutes.post('/payment-links/:id/cancel', requirePermission('finance.entri
 // grouped by item. Every item, ranked by revenue, with quantity and share of the total. Read with the person's own sign-in (RLS).
 financeRoutes.get('/product-sales', requirePermission('finance.reports.view'), async (c) => {
   const days = Math.min(Math.max(Number(c.req.query('days') ?? 90) || 90, 1), 3660);
+  // sql/114: summed in the database in one call (same rules, the company's time zone). The reading below serves until it is applied.
+  try {
+    const r = await callRpc<{ since: string; totalMinor: number; rows: { itemId: string; qty: number; revenueMinor: number }[] }>(
+      userDb(c),
+      'fin_product_sales',
+      { p_days: days },
+    );
+    const sum = Number(r.totalMinor);
+    return ok(c, {
+      days,
+      since: r.since,
+      totalMinor: sum,
+      rows: r.rows.map((x) => ({
+        itemId: x.itemId,
+        qty: Number(x.qty),
+        revenueMinor: Number(x.revenueMinor),
+        sharePercent: sum > 0 ? Math.round((1000 * Number(x.revenueMinor)) / sum) / 10 : 0,
+      })),
+    });
+  } catch (e) {
+    if (!isMissingSchema(e)) throw e;
+  }
   const org = orgOf(c);
   // The last `days` days with today (as the ready-made report and, since sql/112, the home card count them): 90 days is today and the
   // 89 before it, not 91 days.

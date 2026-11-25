@@ -4,7 +4,7 @@ import { invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
 import { pageRange, readAllPages } from '../../lib/paging';
 import { HttpError, isMissingSchema } from '../../lib/errors';
-import { callRpc } from '../../lib/rpc';
+import { callRpc, callRpcRows } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 import { UUID_RE, idParam, orgOf, text } from './helpers';
@@ -278,10 +278,11 @@ export function registerItemRoutes(inventoryRoutes: Hono<AppEnv>) {
   // Average cost and stock value per item (sql/023 inv_item_costs). The database allows owners and admins only; others get FORBIDDEN,
   // and the item page then simply leaves cost out.
   inventoryRoutes.get('/item-costs', requirePermission('inventory.items.read'), async (c) => {
-    const rows = await callRpc<{ item_id: string; avg_cost_minor: number | null; on_hand: number; value_minor: number | null }[]>(
+    // sql/114: one JSON value, not cut at 1,000 items (the old function while sql/114 is not applied)
+    const rows = await callRpcRows<{ item_id: string; avg_cost_minor: number | null; on_hand: number; value_minor: number | null }>(
       userDb(c),
+      'inv_item_costs_json',
       'inv_item_costs',
-      {},
     );
     return ok(
       c,

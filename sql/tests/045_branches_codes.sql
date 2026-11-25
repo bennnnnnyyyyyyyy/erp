@@ -64,7 +64,7 @@ begin
   if not ok then raise exception 'FAIL C1d: bad customer code accepted'; end if;
   s1 := public.pur_create_supplier('Glass Co');
   if (select code from public.pur_suppliers where id = s1) <> 'S-00001' then raise exception 'FAIL C1e: first supplier code'; end if;
-  perform public.pur_create_supplier('Old call', 'contact', 'city', 'phone');   -- the sql/017 4-argument call still works
+  perform public.pur_create_supplier('Old call', 'contact', 'city', '01001234567');   -- the sql/017 4-argument call still works
 
   -- ---- C2: change a code; uniqueness on change; audit
   perform public.sal_set_customer_code(c1, 'NILE-1');

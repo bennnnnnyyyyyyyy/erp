@@ -32,7 +32,7 @@ begin
   if (select name || '|' || coalesce(contact, '') || '|' || coalesce(city, '') || '|' || coalesce(phone, '') from public.sal_customers where id = c)
      <> 'Delta Trading|Mona|Giza|+20 100 111 2222' then raise exception 'FAIL E1a: customer not updated'; end if;
   if (select sc.code from public.sal_customers sc where sc.id = c) is distinct from code then raise exception 'FAIL E1b: the code changed'; end if;
-  perform public.pur_update_supplier(s, 'Acme Supply', null, null, '0123');
+  perform public.pur_update_supplier(s, 'Acme Supply', null, null, '0227912345');
   if (select name from public.pur_suppliers where id = s) <> 'Acme Supply' then raise exception 'FAIL E1c: supplier not updated'; end if;
   perform public.inv_update_item(i, 'Gloves', 'قفازات');
   if (select name || '|' || coalesce(name_ar, '') || '|' || sku || '|' || uom from public.inv_items where id = i) <> 'Gloves|قفازات|ED-1|pair' then

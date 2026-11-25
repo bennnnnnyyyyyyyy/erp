@@ -35,4 +35,11 @@ export type SalesForecastRow = {
   values: SalesForecastValue[];
 };
 
-export type SalesForecast = { asOf: string; by: SalesForecastBy; horizon: SalesForecastHorizon; rows: SalesForecastRow[] };
+/** `limited` (sql/114): only the 500 products or customers with the most sales are listed. */
+export type SalesForecast = {
+  asOf: string;
+  by: SalesForecastBy;
+  horizon: SalesForecastHorizon;
+  rows: SalesForecastRow[];
+  limited?: boolean;
+};

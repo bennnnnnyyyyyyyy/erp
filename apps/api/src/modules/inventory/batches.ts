@@ -2,7 +2,7 @@ import type { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { ISO_DAY, invalid, jsonBody } from '../../lib/body';
 import { userDb } from '../../lib/db.user';
-import { callRpc } from '../../lib/rpc';
+import { callRpc, callRpcRows } from '../../lib/rpc';
 import { ok } from '../../lib/response';
 import { requirePermission } from '../../middleware/tenant';
 import { UUID_RE, idParam, orgOf, text } from './helpers';
@@ -132,20 +132,19 @@ export function registerBatchRoutes(inventoryRoutes: Hono<AppEnv>) {
 
   inventoryRoutes.get('/expiry', requirePermission('inventory.batches.read'), async (c) => {
     const days = Math.min(Math.max(Math.trunc(Number(c.req.query('days') ?? 90)) || 90, 0), 3650);
-    const rows = await callRpc<
-      {
-        batch_id: string;
-        item_id: string;
-        sku: string;
-        name: string;
-        batch_no: string;
-        warehouse_id: string;
-        qty: number;
-        expiry_date: string;
-        days_left: number;
-        status: string;
-      }[]
-    >(userDb(c), 'inv_expiry_report', { p_days: days });
+    // sql/114: one JSON value, not cut at 1,000 batches (the old function while sql/114 is not applied)
+    const rows = await callRpcRows<{
+      batch_id: string;
+      item_id: string;
+      sku: string;
+      name: string;
+      batch_no: string;
+      warehouse_id: string;
+      qty: number;
+      expiry_date: string;
+      days_left: number;
+      status: string;
+    }>(userDb(c), 'inv_expiry_report_json', 'inv_expiry_report', { p_days: days });
     return ok(
       c,
       rows.map((r) => ({

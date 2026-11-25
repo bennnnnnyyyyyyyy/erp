@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { HttpError } from './errors';
+import { HttpError, isMissingSchema } from './errors';
 
 // Reason codes raised by our Postgres functions (`raise exception 'CODE'`) and the HTTP answer for each.
 const REASONS: Record<string, { status: number; message: string; code: string }> = {
@@ -145,6 +145,24 @@ export function stockShortMessage(details: string): string | null {
 
 export const VAT_MISMATCH_MESSAGE =
   "The VAT entered is too far from the VAT worked out from the line rates: check the VAT you typed against the supplier's invoice, and the rate on each line";
+
+/**
+ * Rows of a set-returning function without the API layer's 1,000-row cut (sql/114): calls `jsonFn` (the same rows as one JSON
+ * value), or `rowsFn` (the old set-returning function) while the database does not have `jsonFn` yet.
+ */
+export async function callRpcRows<T>(
+  client: SupabaseClient,
+  jsonFn: string,
+  rowsFn: string,
+  args: Record<string, unknown> = {},
+): Promise<T[]> {
+  try {
+    return (await callRpc<T[] | null>(client, jsonFn, args)) ?? [];
+  } catch (e) {
+    if (!isMissingSchema(e)) throw e;
+    return (await callRpc<T[] | null>(client, rowsFn, args)) ?? [];
+  }
+}
 
 /** Calls a database function as the signed-in user and turns our reason codes into HTTP errors. */
 export async function callRpc<T>(client: SupabaseClient, fn: string, args: Record<string, unknown> = {}): Promise<T> {

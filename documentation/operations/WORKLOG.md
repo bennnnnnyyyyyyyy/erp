@@ -11,6 +11,59 @@ gets an entry with these four headings:
 Entry heading format: `## YYYY-MM-DD — Short title`. If it is not in this file, it has not been
 run or deployed.
 
+## 2026-11-25 — sql/114 applied to live (input and speed rules)
+
+**Objective.** Ben's "yes 114" (via erp-master), after the rolled-back dry run in the entry below.
+
+**Actions Completed.** Applied `sql/114_input_speed_rules.sql` to live (erp-live / ggoerp) with `supabase db query --linked -f`. Ran
+tests 111, 092, 003, 045 and 057 on live (each rolls back). `sql/README.md` row marked applied.
+
+**Database / System Result.** Verification after the apply: Ben's "+2015556487744" refused and Egyptian and UAE numbers accepted by
+`core__phone_ok`; the customer phone rule is in place NOT VALID; 7 posting-date checks; the task due check; the invoice-date index;
+users may call `fin_open_items` and `inv_item_costs_json`. All five tests pass on live. One existing customer phone does not fit the
+new rule (from the dry run); it is left as it is until that customer is next changed.
+
+**Decisions (Ben, 25 Nov 2026, via erp-master).**
+- Posting dates: the screen stops at today; the database allows up to **tomorrow** in the company's time zone (one day of margin for
+  time-zone settings).
+- Accepted as not done: the lock date on adjustments, counts, transfers, receipts and notes (the database dates them now and a lock
+  date cannot be in the future, so they cannot land in a locked period); a time limit set on the report functions (it would not stop
+  the statement already running; Supabase's limit for signed-in users applies and the API shows a plain message).
+
+**Safety Status.** The API's use of the new SQL functions reaches live when Ben merges and CI deploys (until then the old API code runs,
+unchanged). Ben's browser checks are in the reply to erp-master (25 Nov): see the 114 checklist there.
+
+## 2026-11-25 — The database side of the input and speed audit (sql/114, test 111; NOT applied)
+
+**Objective.** The audit's "for the database" list (`.temp/2026-11-25-input-speed-audit.md`) and Ben's answers: the database refuses
+what the API and screens already refuse, posting dates are not in the future, and the slow or cut-off reads are fixed.
+
+**Actions Completed.**
+- `sql/114_input_speed_rules.sql`:
+  - Rules: 26 CHECK rules added NOT VALID (new and changed rows are checked; existing rows are left alone until changed): phone by
+    country on customers and suppliers (`core__phone_ok`, same rule as the shared `checkPhone`), Egyptian mobile on shipments,
+    ETA numbers, customer tax ID, lengths, and caps (amounts 1e12 minor units, quantities 1e9).
+  - Dates: `core__posting_date_guard` on 7 tables (a real day 1900-2100, not after tomorrow in the company's time zone, checked when
+    the date is set or changed); `tsk__due_guard` (a new task is not due in the past, 5 minutes' grace). Not added: the lock date on
+    adjustments, counts, transfers, receipts and notes (they are dated now by the database and the lock date cannot be in the future).
+  - 11 indexes. `fin_open_items` and `fin_product_sales` (security definer, owners and admins, the caller's company).
+  - `rpt__execute` (sql/109) with "order by ... limit" instead of `row_number()`; `rpt_sales_forecast` (sql/110) at most 500
+    subjects with `limited`. No function-level time limit (it would not stop the running statement; Supabase's limit applies).
+  - `inv_item_costs_json`, `inv_forecast_json`, `inv_expiry_report_json`: the same rows as one JSON value.
+- API: `/v1/finance/open-items` and `/v1/finance/product-sales` call the SQL functions; the item costs, stock forecast and expiry
+  routes call the JSON forms (`lib/rpc.ts` `callRpcRows`). Each falls back to the old code while sql/114 is not applied.
+- Web: the forecast says when only the top 500 are listed; Arabic for the new messages.
+- Tests: new `sql/tests/111`; `sql/tests/003` (a task made due in an hour, then moved back to test overdue reminders), `045` and `057`
+  (test phones "phone" and "0123" replaced by real-shaped numbers); API test for the fallback.
+
+**Database / System Result.** Nothing applied. Rolled-back dry run on live (erp-live / ggoerp), 25 Nov: 26 rules, 7 date checks, the
+task check and 11 indexes added; **1 existing row breaks a new rule** (a customer phone; it stays until that customer is next
+changed); 0 posting dates after tomorrow; users may call `fin_open_items`, anonymous may not. Tests 111, 092, 003, 045 and 057 pass
+on live inside rolled-back transactions.
+
+**Safety Status.** SQL tests (PGlite) 109 passed, 0 failed; `tsc` 0 errors; tests shared 116, api 834, web 236; `biome ci` 0 errors.
+Not checked in a browser. After "yes 114": apply, the same tests on live; Ben: fix the one customer phone (Customers → that customer).
+
 ## 2026-11-25 — Ben's live test of the audit fixes: phone rule by country; long names in the form and the sample build (no migration)
 
 **Objective.** Ben's live test of PR #126 (via erp-master): item 25, "+2015556487744" (+20 and 11 digits) saved as a phone; item 26, a

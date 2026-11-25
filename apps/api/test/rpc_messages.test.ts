@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { callRpc, stockShortMessage, trimQty, VAT_MISMATCH_MESSAGE } from '../src/lib/rpc';
+import { callRpc, callRpcRows, stockShortMessage, trimQty, VAT_MISMATCH_MESSAGE } from '../src/lib/rpc';
 
 describe('stock shortage message', () => {
   it('drops trailing zeros from quantities', () => {
@@ -28,6 +28,23 @@ describe('stock shortage message', () => {
 
   it('leaves unknown details alone', () => {
     expect(stockShortMessage('something else')).toBeNull();
+  });
+});
+
+describe('rows without the 1,000-row cut (sql/114)', () => {
+  const client = (have: string[]) =>
+    ({
+      rpc: async (fn: string) =>
+        have.includes(fn)
+          ? { data: fn.endsWith('_json') ? [{ a: 1 }, { a: 2 }] : [{ a: 'old' }], error: null }
+          : { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn}`, details: '', hint: '' } },
+    }) as unknown as SupabaseClient;
+
+  it('uses the JSON function when the database has it', async () => {
+    expect(await callRpcRows(client(['x_json', 'x']), 'x_json', 'x')).toEqual([{ a: 1 }, { a: 2 }]);
+  });
+  it('falls back to the old function before sql/114', async () => {
+    expect(await callRpcRows(client(['x']), 'x_json', 'x')).toEqual([{ a: 'old' }]);
   });
 });
 
