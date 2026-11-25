@@ -4,7 +4,8 @@ import { Button } from '../../../components/ui/button';
 import { API_BASE_URL } from '../../../lib/api';
 import { tr } from '../../../lib/i18n';
 import { PrintDocument } from './PrintDocument';
-import { pdfName, saveBlob, sheetToPdf } from './pdf';
+import { docFileBase, pdfFileName } from './docFileName';
+import { saveBlob, sheetToPdf } from './pdf';
 
 // The page a customer opens from a WhatsApp or email link (/i/<token>). No sign-in, no menu: only the document, Print and Download PDF.
 // The token is the only key; the API answers a bare 404 for a missing, switched-off or voided link and we say only "not available".
@@ -32,7 +33,7 @@ export function PublicInvoicePage({ token }: { token: string }) {
         if (!res.ok || !body?.success || !body.data) return setState('error');
         setData(body.data);
         setState('ready');
-        document.title = body.data.document.number ?? document.title;
+        document.title = docFileBase(body.data.document, body.data.customer?.name, body.data.settings.language);
       })
       .catch(() => setState('error'));
   }, [token]);
@@ -42,7 +43,7 @@ export function PublicInvoicePage({ token }: { token: string }) {
     if (!el || !data) return;
     setBusy(true);
     try {
-      saveBlob(await sheetToPdf(el), pdfName(data.document.number));
+      saveBlob(await sheetToPdf(el), pdfFileName(data.document, data.customer?.name, data.settings.language));
     } finally {
       setBusy(false);
     }

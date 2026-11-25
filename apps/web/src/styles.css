@@ -708,6 +708,10 @@ tr.scan-row-warn > td { background: color-mix(in srgb, var(--signal-soft) 60%, t
 .report-actions { margin-block: 0.75rem; }
 .report-sheet { background: var(--card); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border); margin-block-start: 1rem; }
 .report-title { margin-block: 0 0.25rem; font-size: 1.2rem; }
+/* It repeats the page title on screen (Ben, 25 Nov 2026): shown only in print and in the PDF (Builder.tsx adds .capturing while drawing). */
+.report-sheet .report-title { display: none; }
+.report-sheet.capturing .report-title { display: block; }
+@media print { .report-sheet .report-title { display: block; } }
 /* Report builder as one sentence (Ben, 24 Nov 2026, option A): "Show [what] by [split] for [period]", chips under it, the report right below. */
 .rb { display: grid; gap: 0.6rem; margin-block: 0.75rem 0.5rem; }
 .rb-data { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
@@ -742,3 +746,38 @@ tr.scan-row-warn > td { background: color-mix(in srgb, var(--signal-soft) 60%, t
 .next-step-bar span { flex: 1 1 14rem; }
 .next-step-bar .next-step-link { font-weight: 600; }
 .next-step-bar button { background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0; min-height: 0; }
+/* "More" menu (components/MoreMenu.tsx): the same pop-up as the user menu, opening under its button. */
+.more-menu { position: relative; display: inline-block; }
+.more-menu .menu { min-width: 12rem; z-index: 30; }
+.menu-item.danger { color: var(--danger); }
+.menu-item:disabled { opacity: 0.5; cursor: default; }
+/* Reports declutter (Ben, 25 Nov 2026): the title with one main action and a "More" menu; the sentence; one "Options" control. */
+.rb-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem 1.5rem; }
+.rb-title { flex: 1 1 22rem; min-width: 0; }
+.rb-title h1 { margin-block-end: 0.2rem; }
+.rb-title p { margin-block: 0; }
+.rb-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.rb-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.rb-options-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.75rem; }
+.rb-options-btn { background: transparent; border: 0; padding: 0.2rem 0; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; min-height: 0; }
+.rb-options-btn:hover { text-decoration: underline; }
+.rb-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem 1.5rem; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--card); }
+.rb-option { display: grid; gap: 0.45rem; align-content: start; min-width: 0; }
+.rb-option h3 { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--muted-foreground); }
+.rb-option select, .rb-option input { margin-block-start: 0; }
+.rb-option label { display: grid; gap: 0.25rem; }
+.rb-filter { display: flex; align-items: center; gap: 0.25rem; min-width: 0; }
+.rb-filter .report-row { flex: 1; min-width: 0; }
+@media (max-width: 640px) {
+  .rb-head-actions { inline-size: 100%; }
+}
+/* The report library as a calm list by area (declutter, Ben 25 Nov 2026). */
+.report-search { display: block; max-inline-size: 28rem; margin-block: 1rem 0.5rem; }
+.report-search input { margin-block-start: 0; }
+.report-area { margin-block-start: 1.5rem; }
+.report-area h2 { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); margin: 0 0 0.4rem; padding-block-end: 0.3rem; border-block-end: 1px solid var(--border); }
+.report-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 0.15rem 2rem; }
+.report-list li { display: grid; gap: 0.1rem; padding-block: 0.55rem; min-width: 0; }
+.report-link-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+.report-link { font-weight: 600; text-decoration: none; }
+.report-link:hover { text-decoration: underline; }

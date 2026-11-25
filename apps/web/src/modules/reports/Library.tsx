@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReportSource, SavedReport } from '@erp/shared';
-import { PageIcon } from '../../components/icons';
-import { buttonVariants } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
-import { cn } from '../../lib/cn';
 import { tr } from '../../lib/i18n';
-import { Link } from '../../lib/router';
+import { Link, navigate } from '../../lib/router';
 import { useSession } from '../../session';
 import { resolveRoute, visibleApps } from '../registry';
 import { libraryFor } from './reportLibrary';
@@ -53,67 +52,63 @@ export function ReportLibraryPage() {
   const mine = shownSaved.filter((r) => r.visibility === 'private');
   const company = shownSaved.filter((r) => r.visibility === 'company');
   const anyAtAll = libraryFor(canOpen).length > 0 || saved.length > 0 || canBuild;
-  let tileIndex = 0;
-
-  const savedTiles = (list: SavedReport[]) => (
-    <div className="tiles">
+  // A calm list by area (declutter, Ben 25 Nov 2026): each report is its name and one short line; ready-made reports carry a small
+  // badge instead of repeating "Ready-made" in every description. No icons or boxed tiles.
+  const savedList = (list: SavedReport[]) => (
+    <ul className="report-list">
       {list.map((r) => (
-        <Link key={r.id} to={`/reports/${r.id}`} className="tile" style={{ '--i': tileIndex++ } as CSSProperties}>
-          <span className="tile-icon" aria-hidden="true"><PageIcon appKey="reports" path="" /></span>
-          <span className="tile-go" aria-hidden="true">→</span>
-          <span className="tile-name">{r.name}</span>
-          {r.description && <span className="tile-desc muted">{r.description}</span>}
-        </Link>
+        <li key={r.id}>
+          <Link to={`/reports/${r.id}`} className="report-link">{r.name}</Link>
+          {r.description && <span className="muted small">{r.description}</span>}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 
   return (
     <section className="page">
-      <h1>{tr('Report library')}</h1>
-      <p className="muted">{tr('Every report in one place, by area. You see the reports you are allowed to open.')}</p>
-      {anyAtAll && (
-        <div className="form-row">
-          <label>
-            {tr('Find a report')}
-            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr('For example: VAT, stock, owed')} />
-          </label>
-          {canBuild && <Link to="/reports/new" className={cn(buttonVariants(), 'no-underline')}>{tr('New report')}</Link>}
+      <div className="rb-head">
+        <div className="rb-title">
+          <h1>{tr('Report library')}</h1>
+          <p className="muted">{tr('Every report in one place, by area. You see the reports you are allowed to open.')}</p>
         </div>
+        {canBuild && <div className="rb-head-actions"><Button onClick={() => navigate('/reports/new')}>{tr('New report')}</Button></div>}
+      </div>
+      {anyAtAll && (
+        <label className="report-search">
+          <span className="sr-only">{tr('Find a report')}</span>
+          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr('Find a report')} aria-label={tr('Find a report')} />
+        </label>
       )}
       {!anyAtAll && <p className="muted">{tr('No reports are open to you yet. Ask an admin for access.')}</p>}
       {anyAtAll && areas.length === 0 && shownSaved.length === 0 && q && <p className="muted">{tr('No report matches your search.')}</p>}
       {mine.length > 0 && (
-        <div className="suite">
-          <h2 className="suite-heading">{tr('My reports')}</h2>
-          {savedTiles(mine)}
-        </div>
+        <section className="report-area">
+          <h2>{tr('My reports')}</h2>
+          {savedList(mine)}
+        </section>
       )}
       {company.length > 0 && (
-        <div className="suite">
-          <h2 className="suite-heading">{tr('Company reports')}</h2>
-          {savedTiles(company)}
-        </div>
+        <section className="report-area">
+          <h2>{tr('Company reports')}</h2>
+          {savedList(company)}
+        </section>
       )}
       {areas.map((area) => (
-        <div key={area.key} className="suite">
-          <h2 className="suite-heading">{tr(area.label)}</h2>
-          <div className="tiles">
-            {area.reports.map((r) => {
-              const app = resolveRoute(r.path, apps)?.app;
-              return (
-                <Link key={r.path} to={r.path} className="tile" style={{ '--i': tileIndex++ } as CSSProperties}>
-                  <span className="tile-icon" aria-hidden="true">
-                    <PageIcon appKey={app?.key ?? ''} path={app ? r.path.slice(app.basePath.length) : r.path} />
-                  </span>
-                  <span className="tile-go" aria-hidden="true">→</span>
-                  <span className="tile-name">{tr(r.title)}</span>
-                  <span className="tile-desc muted">{r.ready ? `${tr('Ready-made')} · ` : ''}{tr(r.description)}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+        <section key={area.key} className="report-area">
+          <h2>{tr(area.label)}</h2>
+          <ul className="report-list">
+            {area.reports.map((r) => (
+              <li key={r.path}>
+                <span className="report-link-row">
+                  <Link to={r.path} className="report-link">{tr(r.title)}</Link>
+                  {r.ready && <Badge variant="neutral">{tr('Ready-made')}</Badge>}
+                </span>
+                <span className="muted small">{tr(r.description)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
     </section>
   );
