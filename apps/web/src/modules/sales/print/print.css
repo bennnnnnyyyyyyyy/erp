@@ -30,8 +30,11 @@
 .print-sheet > *:not(.print-watermark) { position: relative; z-index: 1; }
 
 .print-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; margin-block-end: 6mm; }
-.print-company { display: flex; gap: 4mm; align-items: flex-start; }
-.print-logo { max-block-size: 24mm; max-inline-size: 45mm; object-fit: contain; }
+/* The logo sits above the name, not beside it: a wide logo beside the name squeezed the name and address into a strip one or two
+   words wide (Ben, 25 Nov 2026). Stacked, any logo shape leaves the text the whole column. (No flex: 1 here: it let the long ETA title
+   in two languages widen and squeezed this block instead.) */
+.print-company { display: flex; flex-direction: column; gap: 2.5mm; align-items: flex-start; }
+.print-logo { display: block; max-block-size: 20mm; max-inline-size: 70mm; inline-size: auto; block-size: auto; object-fit: contain; }
 .print-company-name { font-size: 13pt; font-weight: 700; }
 .print-title-block { text-align: end; min-inline-size: 60mm; }
 .print-title { font-size: 18pt; margin: 0 0 2mm; font-weight: 700; }
